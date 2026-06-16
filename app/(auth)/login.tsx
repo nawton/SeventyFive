@@ -43,7 +43,7 @@ export default function LoginScreen() {
         password,
       })
       if (error) Alert.alert('Registrering misslyckades', error.message)
-      else router.replace('/(app)/dashboard')
+      else router.replace('/(auth)/quiz')
     }
 
     setLoading(false)
