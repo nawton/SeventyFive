@@ -28,13 +28,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Lagrar tokens säkert på enheten istället för i AsyncStorage
     storage: ExpoSecureStoreAdapter,
-    // Uppdaterar tokens automatiskt i bakgrunden
     autoRefreshToken: true,
-    // Håller användaren inloggad mellan sessioner
     persistSession: true,
-    // Stäng av URL-detektering (används inte i native-appar)
     detectSessionInUrl: false,
+  },
+  global: {
+    // Tvinga React Natives inbyggda fetch — förhindrar att whatwg-fetch polyfill används
+    fetch: fetch.bind(globalThis),
   },
 })
