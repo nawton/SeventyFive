@@ -1,5 +1,9 @@
-import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native'
+import { useState } from 'react'
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
+import { supabase } from '@/lib/supabase'
+import { acceptChallenge as saveChallenge } from '@/services/challenge'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,13 +79,29 @@ const TEXT_SECONDARY = '#888888'
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function RecommendationScreen() {
-  const params = useLocalSearchParams<{ pressure: string }>()
+  const params = useLocalSearchParams<{ why: string; goal: string; pressure: string }>()
   const recommendedLevel = getRecommendedLevel(params.pressure ?? 'normal')
-  const level = LEVELS[recommendedLevel]
+  const [selectedLevel, setSelectedLevel] = useState<Level>(recommendedLevel)
+  const [loading, setLoading] = useState(false)
+  const level = LEVELS[selectedLevel]
 
-  function acceptChallenge() {
-    // TODO: spara vald nivå till Supabase, sätt upp user_challenge
-    router.replace('/(app)/dashboard')
+  async function handleAccept() {
+    setLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Ingen inloggad användare')
+
+      await saveChallenge(user.id, selectedLevel, {
+        why: params.why ?? '',
+        goal: params.goal ?? '',
+        pressure: params.pressure ?? 'normal',
+      })
+      router.replace('/(app)/dashboard')
+    } catch (e: any) {
+      Alert.alert('Något gick fel', e.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -117,17 +137,17 @@ export default function RecommendationScreen() {
                 key={slug}
                 style={[
                   styles.switcherButton,
-                  recommendedLevel === slug && {
+                  selectedLevel === slug && {
                     borderColor: level.color,
                     backgroundColor: level.color + '18',
                   },
                 ]}
-                onPress={() => router.setParams({ pressure: slug })}
+                onPress={() => setSelectedLevel(slug)}
               >
                 <Text
                   style={[
                     styles.switcherButtonText,
-                    recommendedLevel === slug && { color: level.color, fontWeight: '700' },
+                    selectedLevel === slug && { color: level.color, fontWeight: '700' },
                   ]}
                 >
                   {LEVELS[slug].name}
@@ -142,11 +162,15 @@ export default function RecommendationScreen() {
       {/* Accept */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.acceptButton, { backgroundColor: level.color }]}
-          onPress={acceptChallenge}
+          style={[styles.acceptButton, { backgroundColor: level.color }, loading && { opacity: 0.5 }]}
+          onPress={handleAccept}
+          disabled={loading}
           activeOpacity={0.8}
         >
-          <Text style={styles.acceptButtonText}>Acceptera utmaningen</Text>
+          {loading
+            ? <ActivityIndicator color="#000" />
+            : <Text style={styles.acceptButtonText}>Acceptera utmaningen</Text>
+          }
         </TouchableOpacity>
         <Text style={styles.disclaimer}>
           Dag 1 börjar idag. Du kan inte starta om utan att kontakta support.
@@ -252,6 +276,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
+  },
+  disabled: {
+    opacity: 0.5,
   },
   acceptButtonText: {
     color: '#000000',

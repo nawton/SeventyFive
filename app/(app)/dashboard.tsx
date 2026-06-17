@@ -1,26 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { supabase } from '@/lib/supabase'
+import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
+import {
+  getOrCreateTodayLog,
+  getOrCreateTaskCompletions,
+  setTaskCompleted,
+  markDayCompleted,
+  type TaskItem,
+} from '@/services/dailyLog'
+import type { TaskType } from '@/types/database'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type TaskId = 'workout1' | 'workout2' | 'diet' | 'water' | 'reading' | 'photo'
-
-interface Task {
-  id: TaskId
-  label: string
-  description: string
-  icon: React.ComponentProps<typeof Ionicons>['name']
-}
-
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const ORANGE = '#FF8F00'
 const BG = '#111111'
@@ -29,44 +30,13 @@ const BORDER = '#2C2C2E'
 const TEXT_PRIMARY = '#FFFFFF'
 const TEXT_SECONDARY = '#888888'
 
-const TASKS: Task[] = [
-  {
-    id: 'workout1',
-    label: 'Träningspass 1',
-    description: '45 min – valfri träning',
-    icon: 'barbell-outline',
-  },
-  {
-    id: 'workout2',
-    label: 'Träningspass 2',
-    description: '45 min – utomhus promenad/löpning',
-    icon: 'walk-outline',
-  },
-  {
-    id: 'diet',
-    label: 'Följ kosten',
-    description: 'Inga fuskmat idag',
-    icon: 'restaurant-outline',
-  },
-  {
-    id: 'water',
-    label: '4 liter vatten',
-    description: 'Håll dig hydrerad hela dagen',
-    icon: 'water-outline',
-  },
-  {
-    id: 'reading',
-    label: '10 sidor läsning',
-    description: 'Fackbok eller självutveckling',
-    icon: 'book-outline',
-  },
-  {
-    id: 'photo',
-    label: 'Progressfoto',
-    description: 'Ta dagens foto',
-    icon: 'camera-outline',
-  },
-]
+const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']> = {
+  workout:  'barbell-outline',
+  diet:     'restaurant-outline',
+  water:    'water-outline',
+  reading:  'book-outline',
+  photo:    'camera-outline',
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -79,55 +49,105 @@ function ProgressBar({ completed, total }: { completed: number; total: number })
   )
 }
 
-function TaskItem({
+function TaskCard({
   task,
-  done,
   onToggle,
 }: {
-  task: Task
-  done: boolean
+  task: TaskItem
   onToggle: () => void
 }) {
+  const icon = TASK_ICONS[task.type] ?? 'checkmark-circle-outline'
   return (
     <TouchableOpacity
-      style={[styles.taskCard, done && styles.taskCardDone]}
+      style={[styles.taskCard, task.completed && styles.taskCardDone]}
       onPress={onToggle}
       activeOpacity={0.7}
     >
       <View style={styles.taskIcon}>
-        <Ionicons name={task.icon} size={22} color={done ? ORANGE : TEXT_SECONDARY} />
+        <Ionicons name={icon} size={22} color={task.completed ? ORANGE : TEXT_SECONDARY} />
       </View>
       <View style={styles.taskText}>
-        <Text style={[styles.taskLabel, done && styles.taskLabelDone]}>{task.label}</Text>
-        <Text style={styles.taskDescription}>{task.description}</Text>
+        <Text style={[styles.taskLabel, task.completed && styles.taskLabelDone]}>
+          {task.name}
+        </Text>
+        {task.description && (
+          <Text style={styles.taskDescription}>{task.description}</Text>
+        )}
       </View>
-      <View style={[styles.checkbox, done && styles.checkboxDone]}>
-        {done && <Ionicons name="checkmark" size={16} color="#000000" />}
+      <View style={[styles.checkbox, task.completed && styles.checkboxDone]}>
+        {task.completed && <Ionicons name="checkmark" size={16} color="#000000" />}
       </View>
     </TouchableOpacity>
   )
 }
 
-// ─── Screen ──────────────────────────────────────────────────────────────────
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
-  const [completed, setCompleted] = useState<Set<TaskId>>(new Set())
+  const [userName, setUserName] = useState('')
+  const [currentDay, setCurrentDay] = useState(1)
+  const [levelName, setLevelName] = useState('')
+  const [tasks, setTasks] = useState<TaskItem[]>([])
+  const [dailyLogId, setDailyLogId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Hardkodad för nu – ersätts med riktig data från Supabase
-  const currentDay = 1
-  const totalDays = 75
-  const userName = 'Nawton'
+  useEffect(() => {
+    loadDashboard()
+  }, [])
 
-  function toggleTask(id: TaskId) {
-    setCompleted((prev) => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+  async function loadDashboard() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/(auth)/welcome'); return }
+
+      setUserName(user.email?.split('@')[0] ?? 'Nawton')
+
+      const challenge = await getActiveChallenge(user.id)
+      if (!challenge) { router.replace('/(auth)/quiz'); return }
+
+      const day = calculateCurrentDay(challenge.start_date)
+      setCurrentDay(day)
+      setLevelName((challenge as any).challenge_levels?.display_name ?? '')
+
+      const log = await getOrCreateTodayLog(challenge.id, user.id, day)
+      setDailyLogId(log.id)
+
+      const completions = await getOrCreateTaskCompletions(log.id, challenge.level_id)
+      setTasks(completions)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const completedCount = completed.size
-  const allDone = completedCount === TASKS.length
+  async function toggleTask(task: TaskItem) {
+    const updated = !task.completed
+
+    // Optimistisk uppdatering — UI svarar direkt
+    setTasks((prev) =>
+      prev.map((t) => t.completionId === task.completionId ? { ...t, completed: updated } : t)
+    )
+
+    await setTaskCompleted(task.completionId, updated)
+
+    // Om alla uppgifter är klara — markera dagen som avklarad
+    const allDone = tasks.every((t) =>
+      t.completionId === task.completionId ? updated : t.completed
+    )
+    if (allDone && dailyLogId) {
+      await markDayCompleted(dailyLogId)
+    }
+  }
+
+  const completedCount = tasks.filter((t) => t.completed).length
+  const allDone = tasks.length > 0 && completedCount === tasks.length
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={ORANGE} size="large" />
+      </View>
+    )
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -135,15 +155,16 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-
         {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Hej, {userName}</Text>
-            <Text style={styles.dayLabel}>Dag {currentDay} av {totalDays}</Text>
+            <Text style={styles.dayLabel}>
+              Dag {currentDay} av 75 · {levelName}
+            </Text>
           </View>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{userName[0]}</Text>
+            <Text style={styles.avatarText}>{userName[0]?.toUpperCase()}</Text>
           </View>
         </View>
 
@@ -152,10 +173,10 @@ export default function DashboardScreen() {
           <View style={styles.progressHeader}>
             <Text style={styles.cardTitle}>Dagens framsteg</Text>
             <Text style={styles.progressCount}>
-              {completedCount}/{TASKS.length}
+              {completedCount}/{tasks.length}
             </Text>
           </View>
-          <ProgressBar completed={completedCount} total={TASKS.length} />
+          <ProgressBar completed={completedCount} total={tasks.length} />
           {allDone && (
             <Text style={styles.allDoneText}>Dagen klar! Bra jobbat.</Text>
           )}
@@ -164,16 +185,14 @@ export default function DashboardScreen() {
         {/* Task list */}
         <Text style={styles.sectionTitle}>Dagens uppgifter</Text>
         <View style={styles.taskList}>
-          {TASKS.map((task) => (
-            <TaskItem
-              key={task.id}
+          {tasks.map((task) => (
+            <TaskCard
+              key={task.completionId}
               task={task}
-              done={completed.has(task.id)}
-              onToggle={() => toggleTask(task.id)}
+              onToggle={() => toggleTask(task)}
             />
           ))}
         </View>
-
       </ScrollView>
     </SafeAreaView>
   )
@@ -186,14 +205,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BG,
   },
+  centered: {
+    flex: 1,
+    backgroundColor: BG,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 32,
     gap: 20,
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -222,8 +245,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
-
-  // Card
   card: {
     backgroundColor: CARD,
     borderRadius: 16,
@@ -264,8 +285,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-
-  // Section
   sectionTitle: {
     color: TEXT_SECONDARY,
     fontSize: 13,
@@ -273,8 +292,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-
-  // Tasks
   taskList: {
     gap: 10,
   },
