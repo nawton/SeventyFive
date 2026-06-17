@@ -88,8 +88,9 @@ export default function RecommendationScreen() {
   async function handleAccept() {
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Ingen inloggad användare')
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
+      if (!user) { router.replace('/(auth)/login'); return }
 
       await saveChallenge(user.id, selectedLevel, {
         why: params.why ?? '',
