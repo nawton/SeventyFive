@@ -35,8 +35,16 @@ export default function LoginScreen() {
         email: trimmedEmail,
         password,
       })
-      if (error) Alert.alert('Inloggning misslyckades', error.message)
-      else router.replace('/(app)/dashboard')
+      if (error) {
+        const msg = error.message.includes('Email not confirmed')
+          ? 'Du behöver bekräfta din e-post. Kolla din inkorg.'
+          : error.message.includes('Invalid login credentials')
+          ? 'Fel e-post eller lösenord.'
+          : error.message
+        Alert.alert('Inloggning misslyckades', msg)
+      } else {
+        router.replace('/(app)/dashboard')
+      }
     } else {
       const { error } = await supabase.auth.signUp({
         email: trimmedEmail,
