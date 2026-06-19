@@ -101,6 +101,23 @@ export async function markDayCompleted(dailyLogId: string): Promise<void> {
     .eq('id', dailyLogId)
 }
 
+export async function markDayFailed(
+  dailyLogId: string,
+  reason: string
+): Promise<void> {
+  await supabase
+    .from('daily_logs')
+    .update({ status: 'failed' })
+    .eq('id', dailyLogId)
+
+  // Spara ursäkten på alla oavklarade tasks för dagen
+  await supabase
+    .from('task_completions')
+    .update({ failed_reason: reason })
+    .eq('daily_log_id', dailyLogId)
+    .eq('completed', false)
+}
+
 export interface DaySummary {
   dayNumber: number
   status: 'completed' | 'failed' | 'pending' | 'future'

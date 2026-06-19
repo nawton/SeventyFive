@@ -17,8 +17,10 @@ import {
   getOrCreateTaskCompletions,
   setTaskCompleted,
   markDayCompleted,
+  markDayFailed,
   type TaskItem,
 } from '@/services/dailyLog'
+import { FailModal } from '@/components/FailModal'
 import type { TaskType } from '@/types/database'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -90,6 +92,8 @@ export default function DashboardScreen() {
   const [tasks, setTasks] = useState<TaskItem[]>([])
   const [dailyLogId, setDailyLogId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [failModalVisible, setFailModalVisible] = useState(false)
+  const [dayFailed, setDayFailed] = useState(false)
 
   useEffect(() => {
     loadDashboard()
@@ -137,6 +141,13 @@ export default function DashboardScreen() {
     if (allDone && dailyLogId) {
       await markDayCompleted(dailyLogId)
     }
+  }
+
+  async function handleFail(reason: string) {
+    if (!dailyLogId) return
+    await markDayFailed(dailyLogId, reason)
+    setDayFailed(true)
+    setFailModalVisible(false)
   }
 
   const completedCount = tasks.filter((t) => t.completed).length
@@ -194,7 +205,29 @@ export default function DashboardScreen() {
             />
           ))}
         </View>
+
+        {/* Fail button */}
+        {!dayFailed && !allDone && (
+          <TouchableOpacity
+            style={styles.failButton}
+            onPress={() => setFailModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.failButtonText}>Dag missad</Text>
+          </TouchableOpacity>
+        )}
+        {dayFailed && (
+          <Text style={styles.dayFailedText}>Dagen är rapporterad som missad.</Text>
+        )}
+
       </ScrollView>
+
+      <FailModal
+        visible={failModalVisible}
+        onClose={() => setFailModalVisible(false)}
+        onConfirm={handleFail}
+      />
+
     </SafeAreaView>
   )
 }
@@ -345,5 +378,23 @@ const styles = StyleSheet.create({
   checkboxDone: {
     backgroundColor: ORANGE,
     borderColor: ORANGE,
+  },
+  failButton: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5393540',
+  },
+  failButtonText: {
+    color: '#E53935',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  dayFailedText: {
+    color: TEXT_SECONDARY,
+    fontSize: 13,
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 })
