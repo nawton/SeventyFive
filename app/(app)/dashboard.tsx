@@ -132,22 +132,32 @@ export default function DashboardScreen() {
       prev.map((t) => t.completionId === task.completionId ? { ...t, completed: updated } : t)
     )
 
-    await setTaskCompleted(task.completionId, updated)
+    try {
+      await setTaskCompleted(task.completionId, updated)
 
-    // Om alla uppgifter är klara — markera dagen som avklarad
-    const allDone = tasks.every((t) =>
-      t.completionId === task.completionId ? updated : t.completed
-    )
-    if (allDone && dailyLogId) {
-      await markDayCompleted(dailyLogId)
+      const allDone = tasks.every((t) =>
+        t.completionId === task.completionId ? updated : t.completed
+      )
+      if (allDone && dailyLogId) {
+        await markDayCompleted(dailyLogId)
+      }
+    } catch {
+      // Återställ vid fel — rulla tillbaka optimistisk uppdatering
+      setTasks((prev) =>
+        prev.map((t) => t.completionId === task.completionId ? { ...t, completed: task.completed } : t)
+      )
     }
   }
 
   async function handleFail(reason: string) {
     if (!dailyLogId) return
-    await markDayFailed(dailyLogId, reason)
-    setDayFailed(true)
-    setFailModalVisible(false)
+    try {
+      await markDayFailed(dailyLogId, reason)
+      setDayFailed(true)
+      setFailModalVisible(false)
+    } catch {
+      // Tyst fel — modalen förblir öppen
+    }
   }
 
   const completedCount = tasks.filter((t) => t.completed).length
