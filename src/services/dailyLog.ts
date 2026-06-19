@@ -101,6 +101,32 @@ export async function markDayCompleted(dailyLogId: string): Promise<void> {
     .eq('id', dailyLogId)
 }
 
+export interface DaySummary {
+  dayNumber: number
+  status: 'completed' | 'failed' | 'pending' | 'future'
+}
+
+export async function getAllDays(
+  challengeId: string,
+  currentDay: number
+): Promise<DaySummary[]> {
+  const { data: logs } = await supabase
+    .from('daily_logs')
+    .select('day_number, status')
+    .eq('challenge_id', challengeId)
+
+  const logMap = new Map((logs ?? []).map((l) => [l.day_number, l.status]))
+
+  return Array.from({ length: 75 }, (_, i) => {
+    const day = i + 1
+    if (day > currentDay) return { dayNumber: day, status: 'future' }
+    const status = logMap.get(day)
+    if (status === 'completed') return { dayNumber: day, status: 'completed' }
+    if (status === 'failed') return { dayNumber: day, status: 'failed' }
+    return { dayNumber: day, status: 'pending' }
+  })
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function toTaskItem(row: any): TaskItem {
