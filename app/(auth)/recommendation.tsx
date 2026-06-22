@@ -91,7 +91,7 @@ export default function RecommendationScreen() {
         goal: params.goal ?? '',
         pressure: params.pressure ?? 'normal',
       })
-      router.replace('/(app)/dashboard')
+      router.replace('/(auth)/schedule')
     } catch (e: any) {
       Alert.alert('Något gick fel', e.message)
     } finally {
