@@ -25,11 +25,12 @@ import type { TaskType } from '@/types/database'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ORANGE = '#FF8F00'
-const BG = '#111111'
-const CARD = '#1C1C1E'
-const BORDER = '#2C2C2E'
-const TEXT_PRIMARY = '#FFFFFF'
+const ORANGE  = '#FF8F00'
+const GREEN   = '#4CAF50'
+const BG      = '#111111'
+const CARD    = '#1C1C1E'
+const BORDER  = '#2C2C2E'
+const TEXT_PRIMARY   = '#FFFFFF'
 const TEXT_SECONDARY = '#888888'
 
 const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']> = {
@@ -42,11 +43,56 @@ const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function ProgressBar({ completed, total }: { completed: number; total: number }) {
-  const percent = total === 0 ? 0 : (completed / total) * 100
+function HeroCard({
+  currentDay,
+  levelName,
+  completedCount,
+  total,
+  allDone,
+}: {
+  currentDay: number
+  levelName: string
+  completedCount: number
+  total: number
+  allDone: boolean
+}) {
+  const challengePct = Math.round((currentDay / 75) * 100)
+
   return (
-    <View style={styles.progressTrack}>
-      <View style={[styles.progressFill, { width: `${percent}%` }]} />
+    <View style={styles.heroCard}>
+      <View style={styles.heroTop}>
+        <View>
+          <Text style={styles.heroLabel}>DAG</Text>
+          <View style={styles.heroDayRow}>
+            <Text style={styles.heroDayNum}>{currentDay}</Text>
+            <Text style={styles.heroDayOf}>/75</Text>
+          </View>
+        </View>
+        <View style={styles.heroRight}>
+          {levelName ? (
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelBadgeText}>{levelName.toUpperCase()}</Text>
+            </View>
+          ) : null}
+          <Text style={styles.heroChallengePct}>{challengePct}%</Text>
+        </View>
+      </View>
+
+      <View style={styles.heroBar}>
+        <View style={[styles.heroBarFill, { width: `${challengePct}%` }]} />
+      </View>
+
+      <View style={styles.heroFooter}>
+        <View style={[styles.heroStatusDot, {
+          backgroundColor: allDone ? GREEN : completedCount > 0 ? ORANGE : BORDER,
+        }]} />
+        <Text style={styles.heroFooterText}>
+          {allDone
+            ? 'Alla uppgifter klara idag'
+            : `${completedCount} av ${total} uppgifter klara`}
+        </Text>
+        {allDone && <Ionicons name="checkmark-circle" size={15} color={GREEN} />}
+      </View>
     </View>
   )
 }
@@ -65,19 +111,22 @@ function TaskCard({
       onPress={onToggle}
       activeOpacity={0.7}
     >
-      <View style={styles.taskIcon}>
-        <Ionicons name={icon} size={22} color={task.completed ? ORANGE : TEXT_SECONDARY} />
+      {task.completed && <View style={styles.taskAccent} />}
+      <View style={[styles.taskIcon, task.completed && styles.taskIconDone]}>
+        <Ionicons name={icon} size={20} color={task.completed ? ORANGE : TEXT_SECONDARY} />
       </View>
       <View style={styles.taskText}>
         <Text style={[styles.taskLabel, task.completed && styles.taskLabelDone]}>
           {task.name}
         </Text>
         {task.description && (
-          <Text style={styles.taskDescription}>{task.description}</Text>
+          <Text style={styles.taskDescription} numberOfLines={1}>
+            {task.description}
+          </Text>
         )}
       </View>
       <View style={[styles.checkbox, task.completed && styles.checkboxDone]}>
-        {task.completed && <Ionicons name="checkmark" size={16} color="#000000" />}
+        {task.completed && <Ionicons name="checkmark" size={13} color="#000" />}
       </View>
     </TouchableOpacity>
   )
@@ -95,9 +144,7 @@ export default function DashboardScreen() {
   const [failModalVisible, setFailModalVisible] = useState(false)
   const [dayFailed, setDayFailed] = useState(false)
 
-  useEffect(() => {
-    loadDashboard()
-  }, [])
+  useEffect(() => { loadDashboard() }, [])
 
   async function loadDashboard() {
     try {
@@ -126,23 +173,16 @@ export default function DashboardScreen() {
 
   async function toggleTask(task: TaskItem) {
     const updated = !task.completed
-
-    // Optimistisk uppdatering — UI svarar direkt
     setTasks((prev) =>
       prev.map((t) => t.completionId === task.completionId ? { ...t, completed: updated } : t)
     )
-
     try {
       await setTaskCompleted(task.completionId, updated)
-
       const allDone = tasks.every((t) =>
         t.completionId === task.completionId ? updated : t.completed
       )
-      if (allDone && dailyLogId) {
-        await markDayCompleted(dailyLogId)
-      }
+      if (allDone && dailyLogId) await markDayCompleted(dailyLogId)
     } catch {
-      // Återställ vid fel — rulla tillbaka optimistisk uppdatering
       setTasks((prev) =>
         prev.map((t) => t.completionId === task.completionId ? { ...t, completed: task.completed } : t)
       )
@@ -156,7 +196,7 @@ export default function DashboardScreen() {
       setDayFailed(true)
       setFailModalVisible(false)
     } catch {
-      // Tyst fel — modalen förblir öppen
+      // modal förblir öppen
     }
   }
 
@@ -181,31 +221,28 @@ export default function DashboardScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Hej, {userName}</Text>
-            <Text style={styles.dayLabel}>
-              Dag {currentDay} av 75 · {levelName}
-            </Text>
+            <Text style={styles.greetingSubtitle}>Håll i — du klarar det.</Text>
           </View>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{userName[0]?.toUpperCase()}</Text>
           </View>
         </View>
 
-        {/* Progress card */}
-        <View style={styles.card}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.cardTitle}>Dagens framsteg</Text>
-            <Text style={styles.progressCount}>
-              {completedCount}/{tasks.length}
-            </Text>
-          </View>
-          <ProgressBar completed={completedCount} total={tasks.length} />
-          {allDone && (
-            <Text style={styles.allDoneText}>Dagen klar! Bra jobbat.</Text>
-          )}
+        {/* Hero card */}
+        <HeroCard
+          currentDay={currentDay}
+          levelName={levelName}
+          completedCount={completedCount}
+          total={tasks.length}
+          allDone={allDone}
+        />
+
+        {/* Task section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>DAGENS UPPGIFTER</Text>
+          <Text style={styles.sectionCount}>{completedCount}/{tasks.length}</Text>
         </View>
 
-        {/* Task list */}
-        <Text style={styles.sectionTitle}>Dagens uppgifter</Text>
         <View style={styles.taskList}>
           {tasks.map((task) => (
             <TaskCard
@@ -216,14 +253,14 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        {/* Fail button */}
+        {/* Fail / done */}
         {!dayFailed && !allDone && (
           <TouchableOpacity
             style={styles.failButton}
             onPress={() => setFailModalVisible(true)}
             activeOpacity={0.7}
           >
-            <Text style={styles.failButtonText}>Dag missad</Text>
+            <Text style={styles.failButtonText}>Rapportera dag missad</Text>
           </TouchableOpacity>
         )}
         {dayFailed && (
@@ -237,7 +274,6 @@ export default function DashboardScreen() {
         onClose={() => setFailModalVisible(false)}
         onConfirm={handleFail}
       />
-
     </SafeAreaView>
   )
 }
@@ -258,9 +294,11 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
     gap: 20,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -268,12 +306,12 @@ const styles = StyleSheet.create({
   },
   greeting: {
     color: TEXT_PRIMARY,
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '700',
   },
-  dayLabel: {
+  greetingSubtitle: {
     color: TEXT_SECONDARY,
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 2,
   },
   avatar: {
@@ -285,72 +323,147 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#000000',
+    color: '#000',
     fontSize: 18,
     fontWeight: '700',
   },
-  card: {
+
+  // Hero card
+  heroCard: {
     backgroundColor: CARD,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     borderWidth: 1,
     borderColor: BORDER,
-    gap: 12,
+    gap: 14,
   },
-  progressHeader: {
+  heroTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  heroLabel: {
+    color: TEXT_SECONDARY,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  heroDayRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+    marginTop: 2,
+  },
+  heroDayNum: {
+    color: TEXT_PRIMARY,
+    fontSize: 64,
+    fontWeight: '800',
+    lineHeight: 64,
+  },
+  heroDayOf: {
+    color: TEXT_SECONDARY,
+    fontSize: 22,
+    fontWeight: '600',
+    paddingBottom: 10,
+  },
+  heroRight: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  levelBadge: {
+    backgroundColor: ORANGE + '20',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: ORANGE + '50',
+  },
+  levelBadgeText: {
+    color: ORANGE,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  heroChallengePct: {
+    color: TEXT_SECONDARY,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  heroBar: {
+    height: 4,
+    backgroundColor: BORDER,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  heroBarFill: {
+    height: '100%',
+    backgroundColor: ORANGE,
+    borderRadius: 2,
+  },
+  heroFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  heroStatusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  heroFooterText: {
+    color: TEXT_SECONDARY,
+    fontSize: 13,
+    flex: 1,
+  },
+
+  // Section header
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  cardTitle: {
-    color: TEXT_PRIMARY,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  progressCount: {
-    color: ORANGE,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: BORDER,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: ORANGE,
-    borderRadius: 3,
-  },
-  allDoneText: {
-    color: ORANGE,
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
+    marginBottom: -8,
   },
   sectionTitle: {
     color: TEXT_SECONDARY,
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
+  sectionCount: {
+    color: ORANGE,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  // Task list
   taskList: {
-    gap: 10,
+    gap: 8,
   },
   taskCard: {
     backgroundColor: CARD,
     borderRadius: 14,
-    padding: 16,
+    padding: 14,
+    paddingLeft: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     borderWidth: 1,
     borderColor: BORDER,
+    overflow: 'hidden',
   },
   taskCardDone: {
-    borderColor: ORANGE + '40',
+    borderColor: ORANGE + '35',
+    backgroundColor: '#1D1A14',
+  },
+  taskAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: ORANGE,
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
   },
   taskIcon: {
     width: 40,
@@ -359,6 +472,9 @@ const styles = StyleSheet.create({
     backgroundColor: BG,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  taskIconDone: {
+    backgroundColor: ORANGE + '18',
   },
   taskText: {
     flex: 1,
@@ -374,7 +490,7 @@ const styles = StyleSheet.create({
   },
   taskDescription: {
     color: TEXT_SECONDARY,
-    fontSize: 13,
+    fontSize: 12,
   },
   checkbox: {
     width: 26,
@@ -389,17 +505,21 @@ const styles = StyleSheet.create({
     backgroundColor: ORANGE,
     borderColor: ORANGE,
   },
+
+  // Fail
   failButton: {
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5393540',
+    borderColor: '#E5393530',
+    marginTop: 4,
   },
   failButtonText: {
     color: '#E53935',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   dayFailedText: {
     color: TEXT_SECONDARY,

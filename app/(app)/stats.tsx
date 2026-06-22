@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getAllDays, type DaySummary } from '@/services/dailyLog'
@@ -38,10 +39,23 @@ const DAY_COLORS: Record<DaySummary['status'], string> = {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string
+  value: string | number
+  icon: React.ComponentProps<typeof Ionicons>['name']
+  color: string
+}) {
   return (
     <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
+      <View style={[styles.statIconBox, { backgroundColor: color + '18' }]}>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   )
@@ -120,7 +134,6 @@ export default function StatsScreen() {
   }
 
   const completedDays = days.filter((d) => d.status === 'completed').length
-  const failedDays    = days.filter((d) => d.status === 'failed').length
   const streak        = calculateStreak(days, currentDay)
 
   if (loading) {
@@ -145,9 +158,9 @@ export default function StatsScreen() {
 
         {/* Stats row */}
         <View style={styles.statsRow}>
-          <StatCard label="Dag" value={`${currentDay}/75`} />
-          <StatCard label="Klarade" value={completedDays} />
-          <StatCard label="Streak" value={`${streak}🔥`} />
+          <StatCard label="Dag" value={`${currentDay}/75`} icon="calendar-outline" color={ORANGE} />
+          <StatCard label="Klarade" value={completedDays} icon="checkmark-circle-outline" color={GREEN} />
+          <StatCard label="Streak" value={`${streak}`} icon="flame-outline" color="#FF6B35" />
         </View>
 
         {/* Calendar */}
@@ -233,20 +246,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: CARD,
     borderRadius: 14,
-    padding: 16,
+    padding: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: BORDER,
-    gap: 4,
+    gap: 6,
+  },
+  statIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statValue: {
     color: TEXT_PRIMARY,
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   statLabel: {
     color: TEXT_SECONDARY,
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '500',
   },
   card: {
     backgroundColor: CARD,
