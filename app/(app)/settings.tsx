@@ -14,16 +14,7 @@ import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const ORANGE  = '#FF8F00'
-const BG      = '#111111'
-const CARD    = '#1C1C1E'
-const BORDER  = '#2C2C2E'
-const TEXT_PRIMARY   = '#FFFFFF'
-const TEXT_SECONDARY = '#888888'
-const RED     = '#E53935'
+import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -99,7 +90,7 @@ export default function SettingsScreen() {
       const challenge = await getActiveChallenge(session.user.id)
       if (challenge) {
         setCurrentDay(calculateCurrentDay(challenge.start_date))
-        setLevelName((challenge as any).challenge_levels?.display_name ?? '')
+        setLevelName(challenge.challenge_levels?.display_name ?? '')
         setStartDate(formatDate(challenge.start_date))
       }
     } finally {

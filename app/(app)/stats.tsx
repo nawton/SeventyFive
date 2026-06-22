@@ -12,17 +12,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getAllDays, type DaySummary } from '@/services/dailyLog'
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const ORANGE  = '#FF8F00'
-const GREEN   = '#4CAF50'
-const RED     = '#E53935'
-const BG      = '#111111'
-const CARD    = '#1C1C1E'
-const BORDER  = '#2C2C2E'
-const TEXT_PRIMARY   = '#FFFFFF'
-const TEXT_SECONDARY = '#888888'
+import { ORANGE, GREEN, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 const COLUMNS = 7
 const SCREEN_WIDTH = Dimensions.get('window').width
@@ -124,7 +114,7 @@ export default function StatsScreen() {
 
       const day = calculateCurrentDay(challenge.start_date)
       setCurrentDay(day)
-      setLevelName((challenge as any).challenge_levels?.display_name ?? '')
+      setLevelName(challenge.challenge_levels?.display_name ?? '')
 
       const allDays = await getAllDays(challenge.id, day)
       setDays(allDays)

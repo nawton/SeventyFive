@@ -21,17 +21,8 @@ import {
   type TaskItem,
 } from '@/services/dailyLog'
 import { FailModal } from '@/components/FailModal'
+import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { TaskType } from '@/types/database'
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const ORANGE  = '#FF8F00'
-const GREEN   = '#4CAF50'
-const BG      = '#111111'
-const CARD    = '#1C1C1E'
-const BORDER  = '#2C2C2E'
-const TEXT_PRIMARY   = '#FFFFFF'
-const TEXT_SECONDARY = '#888888'
 
 const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']> = {
   workout:  'barbell-outline',
@@ -159,10 +150,11 @@ export default function DashboardScreen() {
 
       const day = calculateCurrentDay(challenge.start_date)
       setCurrentDay(day)
-      setLevelName((challenge as any).challenge_levels?.display_name ?? '')
+      setLevelName(challenge.challenge_levels?.display_name ?? '')
 
       const log = await getOrCreateTodayLog(challenge.id, user.id, day)
       setDailyLogId(log.id)
+      if (log.status === 'failed') setDayFailed(true)
 
       const completions = await getOrCreateTaskCompletions(log.id, challenge.level_id)
       setTasks(completions)

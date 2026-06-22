@@ -68,13 +68,7 @@ function getRecommendedLevel(pressure: string): Level {
   return 'normal'
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const BG = '#111111'
-const CARD = '#1C1C1E'
-const BORDER = '#2C2C2E'
-const TEXT_PRIMARY = '#FFFFFF'
-const TEXT_SECONDARY = '#888888'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 

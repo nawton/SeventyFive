@@ -11,15 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const BG      = '#111111'
-const CARD    = '#1C1C1E'
-const BORDER  = '#2C2C2E'
-const RED     = '#E53935'
-const ORANGE  = '#FF8F00'
-const TEXT_PRIMARY   = '#FFFFFF'
-const TEXT_SECONDARY = '#888888'
+import { BG, CARD, BORDER, RED, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 // Hårdkodade motivationsvar — ersätts med OpenAI av Anton
 const AI_RESPONSES = [

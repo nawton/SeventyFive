@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -55,14 +56,7 @@ const QUESTIONS: Question[] = [
   },
 ]
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const ORANGE = '#FF8F00'
-const BG = '#111111'
-const CARD = '#1C1C1E'
-const BORDER = '#2C2C2E'
-const TEXT_PRIMARY = '#FFFFFF'
-const TEXT_SECONDARY = '#888888'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import type { UserChallengeWithLevel } from '@/types/database'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -51,7 +52,7 @@ export async function acceptChallenge(
   if (challengeError) throw challengeError
 }
 
-export async function getActiveChallenge(userId: string) {
+export async function getActiveChallenge(userId: string): Promise<UserChallengeWithLevel | null> {
   const { data } = await supabase
     .from('user_challenges')
     .select('*, challenge_levels(*)')
@@ -59,7 +60,7 @@ export async function getActiveChallenge(userId: string) {
     .eq('status', 'active')
     .maybeSingle()
 
-  return data
+  return data as UserChallengeWithLevel | null
 }
 
 export function calculateCurrentDay(startDate: string): number {

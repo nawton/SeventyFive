@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
+import { ORANGE } from '@/lib/theme'
 
 type Mode = 'login' | 'register'
 
@@ -123,8 +124,6 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   )
 }
-
-const ORANGE = '#FF8F00'
 
 const styles = StyleSheet.create({
   screen: {

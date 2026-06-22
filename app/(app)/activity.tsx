@@ -16,16 +16,8 @@ import {
   DIFFICULTY_COLORS,
   type Exercise,
 } from '@/services/exercises'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { ExerciseCategory } from '@/types/database'
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const ORANGE  = '#FF8F00'
-const BG      = '#111111'
-const CARD    = '#1C1C1E'
-const BORDER  = '#2C2C2E'
-const TEXT_PRIMARY   = '#FFFFFF'
-const TEXT_SECONDARY = '#888888'
 
 const CATEGORIES: Array<{ key: ExerciseCategory | 'all'; label: string }> = [
   { key: 'all',      label: 'Alla' },
