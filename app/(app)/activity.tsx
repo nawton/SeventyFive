@@ -196,12 +196,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   filterTab: {
+    height: 36,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 18,
     backgroundColor: CARD,
     borderWidth: 1,
     borderColor: BORDER,
+    justifyContent: 'center',
+    alignSelf: 'center',
   },
   filterTabActive: {
     backgroundColor: ORANGE,
