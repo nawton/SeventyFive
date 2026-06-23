@@ -3,7 +3,6 @@ import { View, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
 const ORANGE = '#FF8F00'
-const BG = '#111111'
 const TAB_BG = '#1C1C1E'
 const INACTIVE = '#555555'
 
@@ -60,7 +59,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          tabBarIcon: ({ color }) => <TabIcon name="settings-outline" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon name="person-outline" color={color} />,
         }}
       />
     </Tabs>
