@@ -169,6 +169,16 @@ export default function SettingsScreen() {
           </Section>
         ) : null}
 
+        {/* Schedule */}
+        <Section title="Schema">
+          <SettingRow
+            icon="time-outline"
+            label="Ditt dagsschema"
+            onPress={() => router.push('/(auth)/schedule?from=settings' as any)}
+            last
+          />
+        </Section>
+
         {/* Notifications */}
         <Section title="Notiser">
           <SettingRow
