@@ -119,43 +119,44 @@ export default function ActivityScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Träning</Text>
-        <Text style={styles.subtitle}>{exercises.length} övningar</Text>
-      </View>
-
-      {/* Category filter */}
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-      >
-        {CATEGORIES.map((cat) => (
-          <FilterTab
-            key={cat.key}
-            label={cat.label}
-            active={activeFilter === cat.key}
-            onPress={() => setActiveFilter(cat.key)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Exercise list */}
-      <ScrollView
-        contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[0]}
       >
-        {filtered.length === 0 ? (
-          <Text style={styles.empty}>Inga övningar hittades.</Text>
-        ) : (
-          filtered.map((exercise) => (
-            <ExerciseCard key={exercise.id} exercise={exercise} />
-          ))
-        )}
-      </ScrollView>
+        {/* Sticky header + filter */}
+        <View style={styles.stickyTop}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Träning</Text>
+            <Text style={styles.subtitle}>{exercises.length} övningar</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {CATEGORIES.map((cat) => (
+              <FilterTab
+                key={cat.key}
+                label={cat.label}
+                active={activeFilter === cat.key}
+                onPress={() => setActiveFilter(cat.key)}
+              />
+            ))}
+          </ScrollView>
+        </View>
 
+        {/* Exercise list */}
+        <View style={styles.list}>
+          {filtered.length === 0 ? (
+            <Text style={styles.empty}>Inga övningar hittades.</Text>
+          ) : (
+            filtered.map((exercise) => (
+              <ExerciseCard key={exercise.id} exercise={exercise} />
+            ))
+          )}
+        </View>
+
+      </ScrollView>
     </SafeAreaView>
   )
 }
@@ -172,6 +173,9 @@ const styles = StyleSheet.create({
     backgroundColor: BG,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stickyTop: {
+    backgroundColor: BG,
   },
   header: {
     paddingHorizontal: 20,
