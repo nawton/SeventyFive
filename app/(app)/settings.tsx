@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   View,
   Text,
@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import * as Notifications from 'expo-notifications'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
+import { getProfile } from '@/services/profile'
 import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -69,23 +71,26 @@ function SettingRow({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
-  const [email, setEmail] = useState('')
-  const [levelName, setLevelName] = useState('')
+  const [email, setEmail]           = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [avatarUrl, setAvatarUrl]   = useState<string | null>(null)
+  const [levelName, setLevelName]   = useState('')
   const [currentDay, setCurrentDay] = useState(1)
-  const [startDate, setStartDate] = useState('')
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadSettings()
-  }, [])
+  const [startDate, setStartDate]   = useState('')
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [loading, setLoading]       = useState(true)
 
   async function loadSettings() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) return
 
-      setEmail(session.user.email ?? '')
+      const userEmail = session.user.email ?? ''
+      setEmail(userEmail)
+
+      const profile = await getProfile(session.user.id)
+      setDisplayName(profile?.name ?? userEmail.split('@')[0] ?? '')
+      setAvatarUrl(profile?.avatar_url ?? null)
 
       const challenge = await getActiveChallenge(session.user.id)
       if (challenge) {
@@ -93,8 +98,40 @@ export default function SettingsScreen() {
         setLevelName(challenge.challenge_levels?.display_name ?? '')
         setStartDate(formatDate(challenge.start_date))
       }
+
+      // Kolla befintliga notistillstånd
+      const { status } = await Notifications.getPermissionsAsync()
+      setNotificationsEnabled(status === 'granted')
     } finally {
       setLoading(false)
+    }
+  }
+
+  useEffect(() => { loadSettings() }, [])
+
+  // Ladda om profil när man kommer tillbaka från edit-profile
+  useFocusEffect(useCallback(() => {
+    if (!loading) loadSettings()
+  }, [loading]))
+
+  async function handleNotificationToggle(value: boolean) {
+    if (value) {
+      const { status } = await Notifications.requestPermissionsAsync()
+      setNotificationsEnabled(status === 'granted')
+      if (status !== 'granted') {
+        Alert.alert(
+          'Notiser blockerade',
+          'Gå till Inställningar → SeventyFive och aktivera notiser manuellt.',
+          [{ text: 'OK' }]
+        )
+      }
+    } else {
+      // iOS/Android kan inte programmässigt stänga av — informera användaren
+      Alert.alert(
+        'Stäng av notiser',
+        'Gå till Inställningar → SeventyFive → Notiser för att stänga av.',
+        [{ text: 'OK' }]
+      )
     }
   }
 
@@ -116,7 +153,7 @@ export default function SettingsScreen() {
     )
   }
 
-  const userName = email.split('@')[0] ?? 'Nawton'
+  const initials = (displayName || email.split('@')[0] || '?')[0].toUpperCase()
 
   if (loading) {
     return (
@@ -136,40 +173,41 @@ export default function SettingsScreen() {
 
         {/* Profile */}
         <Section title="Profil">
-          <View style={styles.profileRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{userName[0]?.toUpperCase()}</Text>
+          <TouchableOpacity
+            style={styles.profileRow}
+            onPress={() => router.push('/(app)/edit-profile')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.avatarWrapper}>
+              <View style={styles.avatarPlaceholder}>
+                {avatarUrl && !avatarUrl.startsWith('http') ? (
+                  <Text style={styles.avatarEmoji}>{avatarUrl}</Text>
+                ) : (
+                  <Text style={styles.avatarText}>{initials}</Text>
+                )}
+              </View>
+              <View style={styles.avatarEditDot}>
+                <Ionicons name="pencil" size={9} color="#000" />
+              </View>
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{userName}</Text>
+              <Text style={styles.profileName}>{displayName || 'Lägg till namn'}</Text>
               <Text style={styles.profileEmail}>{email}</Text>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+          </TouchableOpacity>
         </Section>
 
         {/* Challenge */}
         {levelName ? (
           <Section title="Aktiv utmaning">
-            <SettingRow
-              icon="trophy-outline"
-              label="Nivå"
-              value={levelName}
-            />
-            <SettingRow
-              icon="calendar-outline"
-              label="Startdatum"
-              value={startDate}
-            />
-            <SettingRow
-              icon="flag-outline"
-              label="Dag"
-              value={`${currentDay} av 75`}
-              last
-            />
+            <SettingRow icon="trophy-outline"  label="Nivå"       value={levelName} />
+            <SettingRow icon="calendar-outline" label="Startdatum" value={startDate} />
+            <SettingRow icon="flag-outline"     label="Dag"        value={`${currentDay} av 75`} last />
           </Section>
         ) : null}
 
-        {/* Schedule */}
+        {/* Schema */}
         <Section title="Schema">
           <SettingRow
             icon="time-outline"
@@ -188,7 +226,7 @@ export default function SettingsScreen() {
             rightElement={
               <Switch
                 value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
+                onValueChange={handleNotificationToggle}
                 trackColor={{ false: BORDER, true: ORANGE }}
                 thumbColor="#fff"
               />
@@ -198,20 +236,11 @@ export default function SettingsScreen() {
 
         {/* App */}
         <Section title="App">
-          <SettingRow
-            icon="information-circle-outline"
-            label="Version"
-            value="1.0.0"
-          />
-          <SettingRow
-            icon="lock-closed-outline"
-            label="Integritetspolicy"
-            onPress={() => {}}
-            last
-          />
+          <SettingRow icon="information-circle-outline" label="Version" value="1.0.0" />
+          <SettingRow icon="lock-closed-outline" label="Integritetspolicy" onPress={() => {}} last />
         </Section>
 
-        {/* Logout */}
+        {/* Konto */}
         <Section title="Konto">
           <SettingRow
             icon="log-out-outline"
@@ -230,23 +259,16 @@ export default function SettingsScreen() {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(dateStr).toLocaleDateString('sv-SE', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  })
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  screen:  { flex: 1, backgroundColor: BG },
+  centered: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' },
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 16,
@@ -258,9 +280,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
   },
-  section: {
-    gap: 8,
-  },
+  section: { gap: 8 },
   sectionTitle: {
     color: TEXT_SECONDARY,
     fontSize: 12,
@@ -276,13 +296,18 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     overflow: 'hidden',
   },
+
+  // Profile card
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     gap: 14,
   },
-  avatar: {
+  avatarWrapper: {
+    position: 'relative',
+  },
+  avatarPlaceholder: {
     width: 52,
     height: 52,
     borderRadius: 26,
@@ -295,7 +320,24 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
   },
+  avatarEmoji: {
+    fontSize: 26,
+  },
+  avatarEditDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: ORANGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: CARD,
+  },
   profileInfo: {
+    flex: 1,
     gap: 2,
   },
   profileName: {
@@ -307,6 +349,8 @@ const styles = StyleSheet.create({
     color: TEXT_SECONDARY,
     fontSize: 13,
   },
+
+  // Setting row
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -327,9 +371,7 @@ const styles = StyleSheet.create({
     color: TEXT_PRIMARY,
     fontSize: 15,
   },
-  rowLabelDanger: {
-    color: RED,
-  },
+  rowLabelDanger: { color: RED },
   rowRight: {
     flexDirection: 'row',
     alignItems: 'center',

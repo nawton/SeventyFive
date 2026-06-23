@@ -242,8 +242,12 @@ export default function ScheduleScreen() {
         if (!session?.user) return
         const existing = await getSchedule(session.user.id)
         if (!existing) return
-        setSelectedTemplate('custom')
-        if (existing.wake_time)    setWakeTime(parseTime(existing.wake_time))
+
+        // Ladda sparad mall — faller tillbaka på 'custom' om ingen finns
+        const savedTemplate = (existing as any).template_id ?? 'custom'
+        setSelectedTemplate(TEMPLATES.some(t => t.id === savedTemplate) ? savedTemplate : 'custom')
+
+        if (existing.wake_time) setWakeTime(parseTime(existing.wake_time))
         const meals = existing.meal_times as { label: string; time: string }[] | null
         if (meals?.[0]) setBreakfast(parseTime(meals[0].time))
         if (meals?.[1]) setLunch(parseTime(meals[1].time))
@@ -277,8 +281,9 @@ export default function ScheduleScreen() {
       if (!session?.user) { router.replace('/(auth)/login'); return }
 
       await saveSchedule({
-        userId:   session.user.id,
-        wakeTime: toTimeString(wakeTime),
+        userId:      session.user.id,
+        templateId:  selectedTemplate,
+        wakeTime:    toTimeString(wakeTime),
         mealTimes: [
           { label: 'Frukost', time: toTimeString(breakfast) },
           { label: 'Lunch',   time: toTimeString(lunch) },
