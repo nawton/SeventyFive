@@ -62,6 +62,10 @@ export default function AppLayout() {
           tabBarIcon: ({ color }) => <TabIcon name="person-outline" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="edit-profile"
+        options={{ href: null }}
+      />
     </Tabs>
   )
 }
