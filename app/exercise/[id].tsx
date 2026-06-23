@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -43,10 +44,10 @@ export default function ExerciseDetailScreen() {
   const [bodyView, setBodyView] = useState<'front' | 'back'>(initSide)
   const [sets, setSets]         = useState<SetRow[]>([{ reps: '', weight: '' }])
   const [saving, setSaving]     = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
 
   const muscleData = muscles.map(slug => ({ slug, intensity: 1 as const }))
-  const muscleLabels = muscles.map(s => SLUG_LABELS[s]).filter(Boolean).join('  ·  ')
-  const diffColor = DIFFICULTY_COLORS[difficulty as keyof typeof DIFFICULTY_COLORS] ?? ORANGE
+  const diffColor  = DIFFICULTY_COLORS[difficulty as keyof typeof DIFFICULTY_COLORS] ?? ORANGE
 
   function updateSet(index: number, field: keyof SetRow, value: string) {
     setSets(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s))
@@ -109,7 +110,9 @@ export default function ExerciseDetailScreen() {
             <Ionicons name="chevron-back" size={22} color={TEXT_PRIMARY} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>{name}</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity style={styles.infoBtn} onPress={() => setInfoOpen(true)} activeOpacity={0.8}>
+            <Ionicons name="information-circle-outline" size={22} color={TEXT_PRIMARY} />
+          </TouchableOpacity>
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -127,59 +130,6 @@ export default function ExerciseDetailScreen() {
               </Text>
             </View>
           </View>
-
-          {/* Body map */}
-          <View style={styles.card}>
-            <View style={styles.cardTitleRow}>
-              <Text style={styles.cardTitle}>Muskelgrupper</Text>
-              <View style={styles.toggle}>
-                {(['front', 'back'] as const).map(side => (
-                  <TouchableOpacity
-                    key={side}
-                    style={[styles.toggleBtn, bodyView === side && styles.toggleBtnActive]}
-                    onPress={() => setBodyView(side)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.toggleText, bodyView === side && styles.toggleTextActive]}>
-                      {side === 'front' ? 'Fram' : 'Bak'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.bodyWrap}>
-              <Body
-                data={muscleData}
-                side={bodyView}
-                gender="male"
-                scale={1.6}
-                colors={[ORANGE]}
-                defaultFill="#2A2A2C"
-                border="rgba(255,255,255,0.10)"
-              />
-            </View>
-
-            {muscleLabels ? (
-              <View style={styles.muscleChips}>
-                {muscles.map(slug => (
-                  <View key={slug} style={styles.muscleChip}>
-                    <Text style={styles.muscleChipText}>{SLUG_LABELS[slug]}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text style={styles.noMuscles}>Inga muskler mappade för denna övning</Text>
-            )}
-          </View>
-
-          {/* Description */}
-          {description ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Om övningen</Text>
-              <Text style={styles.descText}>{description}</Text>
-            </View>
-          ) : null}
 
           {/* Log section */}
           <View style={styles.card}>
@@ -248,6 +198,76 @@ export default function ExerciseDetailScreen() {
         </View>
 
       </SafeAreaView>
+
+      {/* Info modal */}
+      <Modal visible={infoOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setInfoOpen(false)}>
+        <SafeAreaView style={styles.infoSheet} edges={['top', 'bottom']}>
+          <View style={styles.infoHeader}>
+            <Text style={styles.infoTitle}>{name}</Text>
+            <TouchableOpacity onPress={() => setInfoOpen(false)} activeOpacity={0.8}>
+              <Ionicons name="close" size={24} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.infoScroll} showsVerticalScrollIndicator={false}>
+
+            {/* Body map */}
+            <View style={styles.infoCard}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>Muskelgrupper</Text>
+                <View style={styles.toggle}>
+                  {(['front', 'back'] as const).map(side => (
+                    <TouchableOpacity
+                      key={side}
+                      style={[styles.toggleBtn, bodyView === side && styles.toggleBtnActive]}
+                      onPress={() => setBodyView(side)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.toggleText, bodyView === side && styles.toggleTextActive]}>
+                        {side === 'front' ? 'Fram' : 'Bak'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.bodyWrap}>
+                <Body
+                  data={muscleData}
+                  side={bodyView}
+                  gender="male"
+                  scale={1.6}
+                  colors={[ORANGE]}
+                  defaultFill="#2A2A2C"
+                  border="rgba(255,255,255,0.10)"
+                />
+              </View>
+
+              {muscles.length > 0 ? (
+                <View style={styles.muscleChips}>
+                  {muscles.map(slug => (
+                    <View key={slug} style={styles.muscleChip}>
+                      <Text style={styles.muscleChipText}>{SLUG_LABELS[slug]}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.noMuscles}>Inga muskler mappade för denna övning</Text>
+              )}
+            </View>
+
+            {/* Description */}
+            {description ? (
+              <View style={styles.infoCard}>
+                <Text style={styles.cardTitle}>Om övningen</Text>
+                <Text style={styles.descText}>{description}</Text>
+              </View>
+            ) : null}
+
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
     </KeyboardAvoidingView>
   )
 }
@@ -269,6 +289,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', flex: 1, textAlign: 'center',
+  },
+  infoBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: CARD,
+    alignItems: 'center', justifyContent: 'center',
   },
 
   scroll: { padding: 20, gap: 16, paddingBottom: 8 },
@@ -302,19 +327,6 @@ const styles = StyleSheet.create({
   toggleText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   toggleTextActive: { color: '#000' },
 
-  bodyWrap: { alignItems: 'center' },
-
-  muscleChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  muscleChip:  {
-    backgroundColor: 'rgba(255,143,0,0.15)',
-    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: ORANGE + '33',
-  },
-  muscleChipText: { color: ORANGE, fontSize: 13, fontWeight: '600' },
-  noMuscles:      { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center' },
-
-  descText: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 22 },
-
   setHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   setHeaderText: {
     color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600',
@@ -344,4 +356,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4, shadowRadius: 12,
   },
   saveBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
+
+  // Info sheet
+  infoSheet: { flex: 1, backgroundColor: BG },
+  infoHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  infoTitle: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', flex: 1, marginRight: 12 },
+  infoScroll: { padding: 20, gap: 16, paddingBottom: 32 },
+  infoCard: {
+    backgroundColor: CARD, borderRadius: 20,
+    borderWidth: 1, borderColor: BORDER,
+    padding: 20, gap: 14,
+  },
+  bodyWrap: { alignItems: 'center' },
+  muscleChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  muscleChip: {
+    backgroundColor: 'rgba(255,143,0,0.15)',
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
+    borderWidth: 1, borderColor: ORANGE + '33',
+  },
+  muscleChipText: { color: ORANGE, fontSize: 13, fontWeight: '600' },
+  noMuscles: { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center' },
+  descText: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 22 },
 })
