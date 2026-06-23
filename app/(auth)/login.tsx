@@ -11,6 +11,7 @@ import {
   StyleSheet,
 } from 'react-native'
 import { router } from 'expo-router'
+import { signInWithGoogle } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
 import { ORANGE } from '@/lib/theme'
 
@@ -21,6 +22,18 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+
+  async function handleGoogle() {
+    setGoogleLoading(true)
+    try {
+      const ok = await signInWithGoogle()
+      if (ok) router.replace('/(app)/dashboard')
+      else Alert.alert('Google-inloggning misslyckades', 'Försök igen.')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
 
   async function handleSubmit() {
     const trimmedEmail = email.trim()
@@ -74,6 +87,28 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.form}>
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogle}
+            disabled={googleLoading}
+            activeOpacity={0.8}
+          >
+            {googleLoading ? (
+              <ActivityIndicator color="#000" size="small" />
+            ) : (
+              <>
+                <Text style={styles.googleIcon}>G</Text>
+                <Text style={styles.googleText}>Fortsätt med Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>eller</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -188,5 +223,38 @@ const styles = StyleSheet.create({
   switchText: {
     color: '#555555',
     fontSize: 14,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+  },
+  googleIcon: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+  googleText: {
+    color: '#000000',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#2C2C2E',
+  },
+  dividerText: {
+    color: '#555555',
+    fontSize: 13,
   },
 })
