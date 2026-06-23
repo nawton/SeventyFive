@@ -9,6 +9,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import { router } from 'expo-router'
 import {
   getExercises,
   CATEGORY_LABELS,
@@ -58,12 +59,28 @@ function FilterTab({
   )
 }
 
+const GPS_KEYWORDS = ['löpning', 'running', 'jogging', 'cykling', 'cycling', 'promenad', 'walking', 'spring', 'intervallspring', 'gång']
+
+function usesMap(name: string): boolean {
+  const s = name.toLowerCase()
+  return GPS_KEYWORDS.some(kw => s.includes(kw))
+}
+
 function ExerciseCard({ exercise }: { exercise: Exercise }) {
   const diffColor = DIFFICULTY_COLORS[exercise.difficulty]
   const icon = CATEGORY_ICONS[exercise.category]
+  const hasMap = exercise.category === 'cardio' && usesMap(exercise.name)
+
+  function handlePress() {
+    if (hasMap) router.push({ pathname: '/cardio', params: { name: exercise.name } })
+  }
 
   return (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={handlePress}
+      activeOpacity={hasMap ? 0.75 : 1}
+    >
       <View style={styles.cardLeft}>
         <View style={styles.cardIcon}>
           <Ionicons name={icon} size={22} color={ORANGE} />
@@ -85,9 +102,15 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
           <Text style={styles.categoryText}>
             {CATEGORY_LABELS[exercise.category]}
           </Text>
+          {hasMap && (
+            <Ionicons name="map-outline" size={13} color={ORANGE} />
+          )}
         </View>
       </View>
-    </View>
+      {hasMap && (
+        <Ionicons name="chevron-forward" size={18} color="#444" style={{ alignSelf: 'center' }} />
+      )}
+    </TouchableOpacity>
   )
 }
 

@@ -9,7 +9,10 @@
     "scheme": "seventyfive",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.nawton.seventyfive"
+      "bundleIdentifier": "com.nawton.seventyfive",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Vi använder din plats för att spåra din löprutt."
+      }
     },
     "android": {
       "package": "com.nawton.seventyfive",
@@ -27,7 +30,13 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Vi använder din plats för att spåra din löprutt."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
