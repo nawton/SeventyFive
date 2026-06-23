@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -180,13 +179,13 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.avatarWrapper}>
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
+              <View style={styles.avatarPlaceholder}>
+                {avatarUrl && !avatarUrl.startsWith('http') ? (
+                  <Text style={styles.avatarEmoji}>{avatarUrl}</Text>
+                ) : (
                   <Text style={styles.avatarText}>{initials}</Text>
-                </View>
-              )}
+                )}
+              </View>
               <View style={styles.avatarEditDot}>
                 <Ionicons name="pencil" size={9} color="#000" />
               </View>
@@ -308,11 +307,6 @@ const styles = StyleSheet.create({
   avatarWrapper: {
     position: 'relative',
   },
-  avatarImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-  },
   avatarPlaceholder: {
     width: 52,
     height: 52,
@@ -325,6 +319,9 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 22,
     fontWeight: '700',
+  },
+  avatarEmoji: {
+    fontSize: 26,
   },
   avatarEditDot: {
     position: 'absolute',

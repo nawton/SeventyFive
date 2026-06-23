@@ -128,6 +128,7 @@ function TaskCard({
 
 export default function DashboardScreen() {
   const [userName, setUserName] = useState('')
+  const [userAvatar, setUserAvatar] = useState<string | null>(null)
   const [currentDay, setCurrentDay] = useState(1)
   const [levelName, setLevelName] = useState('')
   const [tasks, setTasks] = useState<TaskItem[]>([])
@@ -146,6 +147,7 @@ export default function DashboardScreen() {
 
       const profile = await getProfile(user.id)
       setUserName(profile?.name || user.email?.split('@')[0] || 'Nawton')
+      if (profile?.avatar_url) setUserAvatar(profile.avatar_url)
 
       const challenge = await getActiveChallenge(user.id)
       if (!challenge) { router.replace('/(auth)/quiz'); return }
@@ -218,7 +220,11 @@ export default function DashboardScreen() {
             <Text style={styles.greetingSubtitle}>Håll i — du klarar det.</Text>
           </View>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{userName[0]?.toUpperCase()}</Text>
+            {userAvatar && !userAvatar.startsWith('http') ? (
+              <Text style={styles.avatarEmoji}>{userAvatar}</Text>
+            ) : (
+              <Text style={styles.avatarText}>{userName[0]?.toUpperCase()}</Text>
+            )}
           </View>
         </View>
 
@@ -320,6 +326,9 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 18,
     fontWeight: '700',
+  },
+  avatarEmoji: {
+    fontSize: 22,
   },
 
   // Hero card
