@@ -12,6 +12,7 @@ import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
+import { getProfile } from '@/services/profile'
 import {
   getOrCreateTodayLog,
   getOrCreateTaskCompletions,
@@ -143,7 +144,8 @@ export default function DashboardScreen() {
       const user = session?.user
       if (!user) { router.replace('/(auth)/welcome'); return }
 
-      setUserName(user.email?.split('@')[0] ?? 'Nawton')
+      const profile = await getProfile(user.id)
+      setUserName(profile?.name || user.email?.split('@')[0] || 'Nawton')
 
       const challenge = await getActiveChallenge(user.id)
       if (!challenge) { router.replace('/(auth)/quiz'); return }
