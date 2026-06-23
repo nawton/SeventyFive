@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -108,7 +109,7 @@ function usesMap(name: string): boolean {
 
 // ─── Exercise card ────────────────────────────────────────────────────────────
 
-function ExerciseCard({ exercise }: { exercise: Exercise }) {
+function ExerciseCard({ exercise, query }: { exercise: Exercise; query: string }) {
   const diffColor = DIFFICULTY_COLORS[exercise.difficulty]
   const icon = CATEGORY_ICONS[exercise.category]
   const hasMap = exercise.category === 'cardio' && usesMap(exercise.name)
@@ -130,6 +131,20 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
     }
   }
 
+  // Highlight matching text in name
+  function HighlightedName() {
+    if (!query) return <Text style={styles.cardName}>{exercise.name}</Text>
+    const idx = exercise.name.toLowerCase().indexOf(query.toLowerCase())
+    if (idx === -1) return <Text style={styles.cardName}>{exercise.name}</Text>
+    return (
+      <Text style={styles.cardName}>
+        {exercise.name.slice(0, idx)}
+        <Text style={styles.highlight}>{exercise.name.slice(idx, idx + query.length)}</Text>
+        {exercise.name.slice(idx + query.length)}
+      </Text>
+    )
+  }
+
   return (
     <TouchableOpacity
       style={styles.card}
@@ -142,7 +157,7 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
         </View>
       </View>
       <View style={styles.cardBody}>
-        <Text style={styles.cardName}>{exercise.name}</Text>
+        <HighlightedName />
         {exercise.description && (
           <Text style={styles.cardDescription} numberOfLines={2}>
             {exercise.description}
@@ -178,6 +193,7 @@ export default function ActivityScreen() {
   const [exercises, setExercises]       = useState<Exercise[]>([])
   const [activeFilter, setActiveFilter] = useState<ExerciseCategory | 'all'>('all')
   const [muscleFilter, setMuscleFilter] = useState<MuscleGroup>('all')
+  const [searchQuery, setSearchQuery]   = useState('')
   const [loading, setLoading]           = useState(true)
 
   useEffect(() => {
@@ -189,16 +205,23 @@ export default function ActivityScreen() {
 
   function handleCategoryFilter(key: ExerciseCategory | 'all') {
     setActiveFilter(key)
-    setMuscleFilter('all') // reset muscle filter when switching category
+    setMuscleFilter('all')
   }
 
   const byCategory = activeFilter === 'all'
     ? exercises
     : exercises.filter(e => e.category === activeFilter)
 
-  const filtered = activeFilter === 'strength' && muscleFilter !== 'all'
+  const byMuscle = activeFilter === 'strength' && muscleFilter !== 'all'
     ? byCategory.filter(e => getExerciseMuscleGroup(e.name) === muscleFilter)
     : byCategory
+
+  const filtered = searchQuery.trim()
+    ? byMuscle.filter(e =>
+        e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : byMuscle
 
   if (loading) {
     return (
@@ -213,12 +236,34 @@ export default function ActivityScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[0]}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Sticky header + filter */}
         <View style={styles.stickyTop}>
           <View style={styles.header}>
             <Text style={styles.title}>Träning</Text>
             <Text style={styles.subtitle}>{filtered.length} övningar</Text>
+          </View>
+
+          {/* Search bar */}
+          <View style={styles.searchWrap}>
+            <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Sök övning..."
+              placeholderTextColor={TEXT_SECONDARY}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={17} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Category filter */}
@@ -268,10 +313,12 @@ export default function ActivityScreen() {
         {/* Exercise list */}
         <View style={styles.list}>
           {filtered.length === 0 ? (
-            <Text style={styles.empty}>Inga övningar hittades.</Text>
+            <Text style={styles.empty}>
+              {searchQuery ? `Inga övningar matchar "${searchQuery}"` : 'Inga övningar hittades.'}
+            </Text>
           ) : (
             filtered.map((exercise) => (
-              <ExerciseCard key={exercise.id} exercise={exercise} />
+              <ExerciseCard key={exercise.id} exercise={exercise} query={searchQuery} />
             ))
           )}
         </View>
@@ -300,7 +347,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 12,
+    paddingBottom: 10,
     gap: 2,
   },
   title: {
@@ -311,6 +358,32 @@ const styles = StyleSheet.create({
   subtitle: {
     color: TEXT_SECONDARY,
     fontSize: 14,
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    height: 44,
+    backgroundColor: CARD,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BORDER,
+    gap: 8,
+  },
+  searchIcon: {
+    flexShrink: 0,
+  },
+  searchInput: {
+    flex: 1,
+    color: TEXT_PRIMARY,
+    fontSize: 15,
+    padding: 0,
+  },
+  highlight: {
+    color: ORANGE,
+    fontWeight: '700',
   },
   filterRow: {
     paddingHorizontal: 20,
