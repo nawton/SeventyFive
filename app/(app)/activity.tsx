@@ -17,6 +17,7 @@ import {
   DIFFICULTY_COLORS,
   type Exercise,
 } from '@/services/exercises'
+import { getMusclesForName } from '@/lib/muscles'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { ExerciseCategory } from '@/types/database'
 
@@ -27,6 +28,45 @@ const CATEGORIES: Array<{ key: ExerciseCategory | 'all'; label: string }> = [
   { key: 'mobility', label: 'Rörlighet' },
   { key: 'hiit',     label: 'HIIT' },
 ]
+
+type MuscleGroup = 'all' | 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'core'
+
+const MUSCLE_GROUPS: Array<{ key: MuscleGroup; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = [
+  { key: 'all',       label: 'Alla',   icon: 'apps-outline' },
+  { key: 'chest',     label: 'Bröst',  icon: 'body-outline' },
+  { key: 'back',      label: 'Rygg',   icon: 'git-merge-outline' },
+  { key: 'legs',      label: 'Ben',    icon: 'walk-outline' },
+  { key: 'shoulders', label: 'Axlar',  icon: 'barbell-outline' },
+  { key: 'arms',      label: 'Armar',  icon: 'fitness-outline' },
+  { key: 'core',      label: 'Mage',   icon: 'ellipse-outline' },
+]
+
+const SLUG_TO_GROUP: Record<string, MuscleGroup> = {
+  chest:          'chest',
+  'upper-back':   'back',
+  'lower-back':   'back',
+  trapezius:      'back',
+  quadriceps:     'legs',
+  hamstring:      'legs',
+  gluteal:        'legs',
+  calves:         'legs',
+  adductors:      'legs',
+  deltoids:       'shoulders',
+  biceps:         'arms',
+  triceps:        'arms',
+  forearm:        'arms',
+  abs:            'core',
+  obliques:       'core',
+}
+
+function getExerciseMuscleGroup(name: string): MuscleGroup {
+  const slugs = getMusclesForName(name)
+  for (const slug of slugs) {
+    const group = SLUG_TO_GROUP[slug]
+    if (group) return group
+  }
+  return 'all'
+}
 
 const CATEGORY_ICONS: Record<ExerciseCategory, React.ComponentProps<typeof Ionicons>['name']> = {
   strength: 'barbell-outline',
@@ -66,20 +106,35 @@ function usesMap(name: string): boolean {
   return GPS_KEYWORDS.some(kw => s.includes(kw))
 }
 
+// ─── Exercise card ────────────────────────────────────────────────────────────
+
 function ExerciseCard({ exercise }: { exercise: Exercise }) {
   const diffColor = DIFFICULTY_COLORS[exercise.difficulty]
   const icon = CATEGORY_ICONS[exercise.category]
   const hasMap = exercise.category === 'cardio' && usesMap(exercise.name)
 
   function handlePress() {
-    if (hasMap) router.push({ pathname: '/cardio', params: { name: exercise.name } })
+    if (hasMap) {
+      router.push({ pathname: '/cardio', params: { name: exercise.name } })
+    } else {
+      router.push({
+        pathname: '/exercise/[id]',
+        params: {
+          id: exercise.id,
+          name: exercise.name,
+          description: exercise.description ?? '',
+          category: exercise.category,
+          difficulty: exercise.difficulty,
+        },
+      })
+    }
   }
 
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={handlePress}
-      activeOpacity={hasMap ? 0.75 : 1}
+      activeOpacity={0.75}
     >
       <View style={styles.cardLeft}>
         <View style={styles.cardIcon}>
@@ -107,9 +162,12 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
           )}
         </View>
       </View>
-      {hasMap && (
-        <Ionicons name="chevron-forward" size={18} color="#444" style={{ alignSelf: 'center' }} />
-      )}
+      <Ionicons
+        name={hasMap ? 'chevron-forward' : 'add-circle-outline'}
+        size={18}
+        color={hasMap ? '#444' : ORANGE}
+        style={{ alignSelf: 'center' }}
+      />
     </TouchableOpacity>
   )
 }
@@ -117,9 +175,10 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ActivityScreen() {
-  const [exercises, setExercises] = useState<Exercise[]>([])
+  const [exercises, setExercises]       = useState<Exercise[]>([])
   const [activeFilter, setActiveFilter] = useState<ExerciseCategory | 'all'>('all')
-  const [loading, setLoading] = useState(true)
+  const [muscleFilter, setMuscleFilter] = useState<MuscleGroup>('all')
+  const [loading, setLoading]           = useState(true)
 
   useEffect(() => {
     getExercises()
@@ -128,9 +187,18 @@ export default function ActivityScreen() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filtered = activeFilter === 'all'
+  function handleCategoryFilter(key: ExerciseCategory | 'all') {
+    setActiveFilter(key)
+    setMuscleFilter('all') // reset muscle filter when switching category
+  }
+
+  const byCategory = activeFilter === 'all'
     ? exercises
-    : exercises.filter((e) => e.category === activeFilter)
+    : exercises.filter(e => e.category === activeFilter)
+
+  const filtered = activeFilter === 'strength' && muscleFilter !== 'all'
+    ? byCategory.filter(e => getExerciseMuscleGroup(e.name) === muscleFilter)
+    : byCategory
 
   if (loading) {
     return (
@@ -150,8 +218,10 @@ export default function ActivityScreen() {
         <View style={styles.stickyTop}>
           <View style={styles.header}>
             <Text style={styles.title}>Träning</Text>
-            <Text style={styles.subtitle}>{exercises.length} övningar</Text>
+            <Text style={styles.subtitle}>{filtered.length} övningar</Text>
           </View>
+
+          {/* Category filter */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -162,10 +232,37 @@ export default function ActivityScreen() {
                 key={cat.key}
                 label={cat.label}
                 active={activeFilter === cat.key}
-                onPress={() => setActiveFilter(cat.key)}
+                onPress={() => handleCategoryFilter(cat.key)}
               />
             ))}
           </ScrollView>
+
+          {/* Muscle group filter — only shown under Styrka */}
+          {activeFilter === 'strength' && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.muscleFilterRow}
+            >
+              {MUSCLE_GROUPS.map((mg) => (
+                <TouchableOpacity
+                  key={mg.key}
+                  style={[styles.muscleTab, muscleFilter === mg.key && styles.muscleTabActive]}
+                  onPress={() => setMuscleFilter(mg.key)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={mg.icon}
+                    size={14}
+                    color={muscleFilter === mg.key ? '#000' : TEXT_SECONDARY}
+                  />
+                  <Text style={[styles.muscleTabText, muscleFilter === mg.key && styles.muscleTabTextActive]}>
+                    {mg.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* Exercise list */}
@@ -309,5 +406,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
     fontSize: 15,
+  },
+
+  muscleFilterRow: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  muscleTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  muscleTabActive: {
+    backgroundColor: ORANGE,
+    borderColor: ORANGE,
+  },
+  muscleTabText: {
+    color: TEXT_SECONDARY,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  muscleTabTextActive: {
+    color: '#000',
+    fontWeight: '700',
   },
 })
