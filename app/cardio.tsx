@@ -274,13 +274,20 @@ export default function CardioScreen() {
   async function startTracking() {
     setStatus('running')
     paceTs.current = 0
-    timerRef.current = setInterval(() => setElapsed(s => {
-      const v = s + 1
-      elapsedRef.current = v
-      return v
-    }), 1000)
+    timerRef.current = setInterval(() => {
+      setElapsed(s => {
+        const v = s + 1
+        elapsedRef.current = v
+        return v
+      })
+      // Nollställ nu/km om ingen GPS-rörelse på 5 sekunder
+      if (paceTs.current > 0 && Date.now() - paceTs.current > 5000) {
+        smoothedPaceRef.current = 0
+        setCurrentPaceSec(0)
+      }
+    }, 1000)
     locationSub.current = await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 3000, distanceInterval: 8 },
+      { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 3 },
       (loc) => {
         if (loc.coords.accuracy && loc.coords.accuracy > 30) return
 

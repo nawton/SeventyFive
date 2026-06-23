@@ -241,8 +241,18 @@ export default function ActivityScreen() {
         {/* Sticky header + filter */}
         <View style={styles.stickyTop}>
           <View style={styles.header}>
-            <Text style={styles.title}>Träning</Text>
-            <Text style={styles.subtitle}>{filtered.length} övningar</Text>
+            <View>
+              <Text style={styles.title}>Träning</Text>
+              <Text style={styles.subtitle}>{filtered.length} övningar</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.buildBtn}
+              onPress={() => router.push('/workout-builder')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={18} color="#000" />
+              <Text style={styles.buildBtnText}>Skapa pass</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Search bar */}
@@ -348,7 +358,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 10,
-    gap: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: {
     color: TEXT_PRIMARY,
@@ -358,6 +370,20 @@ const styles = StyleSheet.create({
   subtitle: {
     color: TEXT_SECONDARY,
     fontSize: 14,
+  },
+  buildBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: ORANGE,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  buildBtnText: {
+    color: '#000',
+    fontSize: 13,
+    fontWeight: '700',
   },
   searchWrap: {
     flexDirection: 'row',

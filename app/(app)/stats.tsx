@@ -504,6 +504,14 @@ function WorkoutDetail({ workout, allWorkouts, onClose, onDeleted }: {
   )
 }
 
+type StatsTab = 'overview' | 'cardio' | 'styrka'
+
+const TABS: Array<{ key: StatsTab; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = [
+  { key: 'overview', label: 'Översikt', icon: 'grid-outline' },
+  { key: 'cardio',   label: 'Cardio',   icon: 'walk-outline' },
+  { key: 'styrka',   label: 'Styrka',   icon: 'barbell-outline' },
+]
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function StatsScreen() {
@@ -516,6 +524,7 @@ export default function StatsScreen() {
   const [bodyView, setBodyView]               = useState<'front' | 'back'>('front')
   const [selectedWorkout, setSelectedWorkout] = useState<CardioWorkout | null>(null)
   const [selectedDay, setSelectedDay]         = useState<DaySummary | null>(null)
+  const [activeTab, setActiveTab]             = useState<StatsTab>('overview')
   const [loading, setLoading]                 = useState(true)
 
   useFocusEffect(useCallback(() => { loadStats() }, []))
@@ -543,7 +552,6 @@ export default function StatsScreen() {
     }
   }
 
-  // Muscle frequency from strength workouts
   const muscleFreq = new Map<Slug, number>()
   for (const w of strengthWorkouts) {
     getMusclesForName(w.name).forEach(slug => {
@@ -575,135 +583,213 @@ export default function StatsScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        <View style={styles.header}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
           <Text style={styles.title}>Framsteg</Text>
           <Text style={styles.subtitle}>{levelName}</Text>
         </View>
+      </View>
 
-        {/* Stats row */}
-        <View style={styles.statsRow}>
-          <StatCard label="Dag"     value={`${currentDay}/75`} icon="calendar-outline"        color={ORANGE} />
-          <StatCard label="Klarade" value={completedDays}       icon="checkmark-circle-outline" color={GREEN} />
-          <StatCard label="Streak"  value={`${streak}`}         icon="flame-outline"            color="#FF6B35" />
-        </View>
-
-        {/* Calendar */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>75 dagar</Text>
-          <Legend />
-          <View style={styles.grid}>
-            {days.map(day => (
-              <DaySquare
-                key={day.dayNumber}
-                day={day}
-                currentDay={currentDay}
-                onPress={day.status !== 'future' && startDate ? () => setSelectedDay(day) : undefined}
-              />
-            ))}
-          </View>
-        </View>
-
-        {/* Completion bar */}
-        <View style={styles.card}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.cardTitle}>Total framgång</Text>
-            <Text style={styles.progressPercent}>
-              {currentDay > 1 ? Math.round((completedDays / (currentDay - 1)) * 100) : 0}%
-            </Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${(completedDays / 75) * 100}%` }]} />
-          </View>
-          <Text style={styles.progressCaption}>{completedDays} av 75 dagar klarade</Text>
-        </View>
-
-        {/* Cardio section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Cardio</Text>
-          <Text style={styles.sectionSub}>{workouts.length} pass totalt</Text>
-        </View>
-
-        <View style={styles.workoutStatsRow}>
-          {[
-            { icon: 'map-outline' as const,      value: totalKm.toFixed(1),               label: 'km totalt',   color: ORANGE },
-            { icon: 'flash-outline' as const,     value: totalCals.toLocaleString('sv-SE'), label: 'kcal',        color: '#7C5CBF' },
-            { icon: 'stopwatch-outline' as const, value: bestPace,                          label: 'bästa tempo', color: GREEN },
-          ].map(s => (
-            <View key={s.label} style={styles.workoutStatCard}>
-              <Ionicons name={s.icon} size={18} color={s.color} />
-              <Text style={[styles.workoutStatValue, { color: s.color }]}>{s.value}</Text>
-              <Text style={styles.workoutStatLabel}>{s.label}</Text>
-            </View>
-          ))}
-        </View>
-
-        {workouts.length > 0 && <WeeklyGraph workouts={workouts} />}
-
-        {/* Muscle map */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Styrka</Text>
-          <Text style={styles.sectionSub}>{strengthWorkouts.length} pass totalt</Text>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.muscleCardHeader}>
-            <Text style={styles.cardTitle}>Tränade muskler</Text>
-            <View style={styles.bodyToggle}>
-              {(['front', 'back'] as const).map(side => (
-                <TouchableOpacity
-                  key={side}
-                  style={[styles.bodyToggleBtn, bodyView === side && styles.bodyToggleBtnActive]}
-                  onPress={() => setBodyView(side)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.bodyToggleText, bodyView === side && styles.bodyToggleTextActive]}>
-                    {side === 'front' ? 'Fram' : 'Bak'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.bodyWrap}>
-            <Body
-              data={muscleData}
-              side={bodyView}
-              gender="male"
-              scale={1.6}
-              colors={[ORANGE + 'AA', ORANGE]}
-              defaultFill="#2A2A2C"
-              border="rgba(255,255,255,0.10)"
+      {/* Tab bar */}
+      <View style={styles.tabBar}>
+        {TABS.map(tab => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+            onPress={() => setActiveTab(tab.key)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={tab.icon}
+              size={16}
+              color={activeTab === tab.key ? '#000' : TEXT_SECONDARY}
             />
-          </View>
-
-          {strengthWorkouts.length === 0 && (
-            <Text style={styles.muscleEmpty}>
-              Logga styrketräning för att se vilka muskler du tränat
+            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+              {tab.label}
             </Text>
-          )}
-        </View>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-        {workouts.length > 0 ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Senaste träningar</Text>
-            <View>
-              {workouts.slice(0, 10).map((w, i) => (
-                <WorkoutRow
-                  key={w.id}
-                  workout={w}
-                  last={i === Math.min(workouts.length, 10) - 1}
-                  onPress={() => setSelectedWorkout(w)}
-                />
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* ── ÖVERSIKT ── */}
+        {activeTab === 'overview' && (
+          <>
+            <View style={styles.statsRow}>
+              <StatCard label="Dag"     value={`${currentDay}/75`} icon="calendar-outline"        color={ORANGE} />
+              <StatCard label="Klarade" value={completedDays}       icon="checkmark-circle-outline" color={GREEN} />
+              <StatCard label="Streak"  value={`${streak}`}         icon="flame-outline"            color="#FF6B35" />
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>75 dagar</Text>
+              <Legend />
+              <View style={styles.grid}>
+                {days.map(day => (
+                  <DaySquare
+                    key={day.dayNumber}
+                    day={day}
+                    currentDay={currentDay}
+                    onPress={day.status !== 'future' && startDate ? () => setSelectedDay(day) : undefined}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.cardTitle}>Total framgång</Text>
+                <Text style={styles.progressPercent}>
+                  {currentDay > 1 ? Math.round((completedDays / (currentDay - 1)) * 100) : 0}%
+                </Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${(completedDays / 75) * 100}%` }]} />
+              </View>
+              <Text style={styles.progressCaption}>{completedDays} av 75 dagar klarade</Text>
+            </View>
+          </>
+        )}
+
+        {/* ── CARDIO ── */}
+        {activeTab === 'cardio' && (
+          <>
+            <View style={styles.workoutStatsRow}>
+              {[
+                { icon: 'map-outline' as const,      value: totalKm.toFixed(1),               label: 'km totalt',   color: ORANGE },
+                { icon: 'flash-outline' as const,     value: totalCals.toLocaleString('sv-SE'), label: 'kcal',        color: '#7C5CBF' },
+                { icon: 'stopwatch-outline' as const, value: bestPace,                          label: 'bästa tempo', color: GREEN },
+              ].map(s => (
+                <View key={s.label} style={styles.workoutStatCard}>
+                  <Ionicons name={s.icon} size={18} color={s.color} />
+                  <Text style={[styles.workoutStatValue, { color: s.color }]}>{s.value}</Text>
+                  <Text style={styles.workoutStatLabel}>{s.label}</Text>
+                </View>
               ))}
             </View>
-          </View>
-        ) : (
-          <View style={styles.emptyWorkouts}>
-            <Ionicons name="fitness-outline" size={32} color="rgba(255,255,255,0.15)" />
-            <Text style={styles.emptyWorkoutsText}>Inga sparade träningar ännu</Text>
-          </View>
+
+            {workouts.length > 0 ? (
+              <>
+                <WeeklyGraph workouts={workouts} />
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Senaste träningar</Text>
+                  <View>
+                    {workouts.slice(0, 10).map((w, i) => (
+                      <WorkoutRow
+                        key={w.id}
+                        workout={w}
+                        last={i === Math.min(workouts.length, 10) - 1}
+                        onPress={() => setSelectedWorkout(w)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </>
+            ) : (
+              <View style={styles.emptyWorkouts}>
+                <Ionicons name="walk-outline" size={40} color="rgba(255,255,255,0.12)" />
+                <Text style={styles.emptyWorkoutsText}>Inga cardio-pass sparade ännu</Text>
+              </View>
+            )}
+          </>
+        )}
+
+        {/* ── STYRKA ── */}
+        {activeTab === 'styrka' && (
+          <>
+            <View style={styles.workoutStatsRow}>
+              <View style={styles.workoutStatCard}>
+                <Ionicons name="barbell-outline" size={18} color={ORANGE} />
+                <Text style={[styles.workoutStatValue, { color: ORANGE }]}>{strengthWorkouts.length}</Text>
+                <Text style={styles.workoutStatLabel}>pass totalt</Text>
+              </View>
+              <View style={styles.workoutStatCard}>
+                <Ionicons name="trophy-outline" size={18} color={GREEN} />
+                <Text style={[styles.workoutStatValue, { color: GREEN }]}>
+                  {strengthWorkouts.length > 0
+                    ? Array.from(new Set(strengthWorkouts.map(w => w.name))).length
+                    : 0}
+                </Text>
+                <Text style={styles.workoutStatLabel}>unika övningar</Text>
+              </View>
+              <View style={styles.workoutStatCard}>
+                <Ionicons name="body-outline" size={18} color="#7C5CBF" />
+                <Text style={[styles.workoutStatValue, { color: '#7C5CBF' }]}>{muscleFreq.size}</Text>
+                <Text style={styles.workoutStatLabel}>muskelgrupper</Text>
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.muscleCardHeader}>
+                <Text style={styles.cardTitle}>Tränade muskler</Text>
+                <View style={styles.bodyToggle}>
+                  {(['front', 'back'] as const).map(side => (
+                    <TouchableOpacity
+                      key={side}
+                      style={[styles.bodyToggleBtn, bodyView === side && styles.bodyToggleBtnActive]}
+                      onPress={() => setBodyView(side)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.bodyToggleText, bodyView === side && styles.bodyToggleTextActive]}>
+                        {side === 'front' ? 'Fram' : 'Bak'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.bodyWrap}>
+                <Body
+                  data={muscleData}
+                  side={bodyView}
+                  gender="male"
+                  scale={1.6}
+                  colors={[ORANGE + 'AA', ORANGE]}
+                  defaultFill="#2A2A2C"
+                  border="rgba(255,255,255,0.10)"
+                />
+              </View>
+
+              {strengthWorkouts.length === 0 && (
+                <Text style={styles.muscleEmpty}>
+                  Logga styrketräning för att se vilka muskler du tränat
+                </Text>
+              )}
+            </View>
+
+            {strengthWorkouts.length > 0 && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Senaste pass</Text>
+                {strengthWorkouts.slice(0, 8).map((w, i) => {
+                  const sets = w.data.sets.length
+                  const totalReps = w.data.sets.reduce((s, r) => s + r.reps, 0)
+                  const date = new Date(w.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
+                  const last = i === Math.min(strengthWorkouts.length, 8) - 1
+                  return (
+                    <View key={w.id} style={[styles.workoutRow, !last && styles.workoutRowBorder]}>
+                      <View style={styles.workoutRowIcon}>
+                        <Ionicons name="barbell-outline" size={18} color={ORANGE} />
+                      </View>
+                      <View style={styles.workoutRowBody}>
+                        <View style={styles.workoutRowTop}>
+                          <Text style={styles.workoutRowName}>{w.name}</Text>
+                          <Text style={styles.workoutRowDate}>{date}</Text>
+                        </View>
+                        <View style={styles.workoutRowMeta}>
+                          <Text style={styles.workoutRowStat}>{sets} set</Text>
+                          <Text style={styles.workoutRowDot}>·</Text>
+                          <Text style={styles.workoutRowStat}>{totalReps} reps</Text>
+                        </View>
+                      </View>
+                    </View>
+                  )
+                })}
+              </View>
+            )}
+          </>
         )}
 
       </ScrollView>
@@ -738,9 +824,42 @@ const styles = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: BG },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll:   { paddingHorizontal: GRID_PADDING, paddingTop: 16, paddingBottom: 40, gap: 20 },
-  header:   { gap: 4 },
+  header:   { paddingHorizontal: GRID_PADDING, paddingTop: 16, paddingBottom: 12 },
   title:    { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '700' },
   subtitle: { color: TEXT_SECONDARY, fontSize: 14 },
+
+  tabBar: {
+    flexDirection: 'row',
+    marginHorizontal: GRID_PADDING,
+    marginBottom: 4,
+    backgroundColor: CARD,
+    borderRadius: 16,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: BORDER,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  tabActive: {
+    backgroundColor: ORANGE,
+  },
+  tabText: {
+    color: TEXT_SECONDARY,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: '#000',
+    fontWeight: '700',
+  },
 
   // Glass button
   glassBtn: {
