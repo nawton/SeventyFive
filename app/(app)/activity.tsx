@@ -329,72 +329,15 @@ function SessionEditor({
                 </View>
               ))}
 
-              {/* Toggle picker */}
+              {/* Open fullscreen picker */}
               <TouchableOpacity
                 style={ed.pickerToggle}
-                onPress={() => setShowPicker(p => !p)}
+                onPress={() => setShowPicker(true)}
                 activeOpacity={0.8}
               >
-                <Ionicons name={showPicker ? 'chevron-up' : 'add'} size={17} color={ORANGE} />
-                <Text style={ed.pickerToggleText}>
-                  {showPicker ? 'Stäng' : 'Lägg till övning'}
-                </Text>
+                <Ionicons name="add" size={17} color={ORANGE} />
+                <Text style={ed.pickerToggleText}>Lägg till övning</Text>
               </TouchableOpacity>
-
-              {showPicker && (
-                <View style={ed.picker}>
-                  {/* Filter pills */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={ed.pickerFilters}
-                  >
-                    {PICKER_FILTERS.map(f => (
-                      <TouchableOpacity
-                        key={f.key}
-                        style={[ed.pickerPill, pickerFilter === f.key && ed.pickerPillActive]}
-                        onPress={() => setPickerFilter(f.key)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[ed.pickerPillText, pickerFilter === f.key && ed.pickerPillTextActive]}>
-                          {f.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-
-                  {/* Exercise list */}
-                  <ScrollView
-                    style={ed.pickerList}
-                    nestedScrollEnabled
-                    showsVerticalScrollIndicator={false}
-                  >
-                    {pickerExercises.map(ex => {
-                      const already = drafts.some(d => d.exercise_name === ex.name)
-                      return (
-                        <TouchableOpacity
-                          key={ex.id}
-                          style={[ed.pickerRow, already && ed.pickerRowAdded]}
-                          onPress={() => !already && addExercise(ex.name)}
-                          activeOpacity={already ? 1 : 0.7}
-                        >
-                          <Ionicons
-                            name={CATEGORY_ICONS[ex.category]}
-                            size={15}
-                            color={already ? TEXT_SECONDARY : ORANGE}
-                          />
-                          <Text style={[ed.pickerRowName, already && { color: TEXT_SECONDARY }]} numberOfLines={1}>
-                            {ex.name}
-                          </Text>
-                          {already
-                            ? <Ionicons name="checkmark" size={15} color={TEXT_SECONDARY} />
-                            : <Ionicons name="add-circle-outline" size={18} color={ORANGE} />}
-                        </TouchableOpacity>
-                      )
-                    })}
-                  </ScrollView>
-                </View>
-              )}
             </View>
 
             {/* Save */}
@@ -413,6 +356,80 @@ function SessionEditor({
           <View style={{ height: insets.bottom }} />
         </View>
       </KeyboardAvoidingView>
+
+      {/* ── Fullscreen exercise picker ── */}
+      <Modal visible={showPicker} animationType="slide" onRequestClose={() => setShowPicker(false)}>
+        <SafeAreaView style={ed.pickerScreen}>
+          {/* Header */}
+          <View style={ed.pickerHeader}>
+            <TouchableOpacity onPress={() => setShowPicker(false)} style={ed.iconBtn} activeOpacity={0.7}>
+              <Ionicons name="chevron-down" size={22} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
+            <Text style={ed.title}>Lägg till övning</Text>
+            <TouchableOpacity
+              onPress={() => setShowPicker(false)}
+              style={[ed.iconBtn, { backgroundColor: ORANGE }]}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: '#000', fontWeight: '700', fontSize: 13 }}>Klar</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Added count */}
+          {drafts.length > 0 && (
+            <View style={ed.addedBanner}>
+              <Ionicons name="checkmark-circle" size={15} color={ORANGE} />
+              <Text style={ed.addedBannerText}>{drafts.length} övning{drafts.length !== 1 ? 'ar' : ''} valda</Text>
+            </View>
+          )}
+
+          {/* Filter pills */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={ed.pickerFilters}
+          >
+            {PICKER_FILTERS.map(f => (
+              <TouchableOpacity
+                key={f.key}
+                style={[ed.pickerPill, pickerFilter === f.key && ed.pickerPillActive]}
+                onPress={() => setPickerFilter(f.key)}
+                activeOpacity={0.7}
+              >
+                <Text style={[ed.pickerPillText, pickerFilter === f.key && ed.pickerPillTextActive]}>
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Exercise list */}
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+            {pickerExercises.map(ex => {
+              const already = drafts.some(d => d.exercise_name === ex.name)
+              return (
+                <TouchableOpacity
+                  key={ex.id}
+                  style={[ed.pickerRow, already && ed.pickerRowAdded]}
+                  onPress={() => already ? removeDraft(drafts.find(d => d.exercise_name === ex.name)!.key) : addExercise(ex.name)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[ed.pickerIcon, already && { backgroundColor: ORANGE + '20' }]}>
+                    <Ionicons name={CATEGORY_ICONS[ex.category]} size={18} color={already ? ORANGE : TEXT_SECONDARY} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[ed.pickerRowName, already && { color: ORANGE }]}>{ex.name}</Text>
+                    <Text style={ed.pickerRowSub}>{CATEGORY_LABELS[ex.category]}</Text>
+                  </View>
+                  <View style={[ed.pickerAddBtn, already && { backgroundColor: ORANGE }]}>
+                    <Ionicons name={already ? 'checkmark' : 'add'} size={18} color={already ? '#000' : TEXT_SECONDARY} />
+                  </View>
+                </TouchableOpacity>
+              )
+            })}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </Modal>
   )
 }
@@ -967,28 +984,44 @@ const ed = StyleSheet.create({
   },
   pickerToggleText: { color: ORANGE, fontSize: 14, fontWeight: '600' },
 
-  picker: {
-    backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER,
-    overflow: 'hidden', marginTop: 4,
-  },
-  pickerFilters: { paddingHorizontal: 10, paddingVertical: 10, gap: 6 },
-  pickerPill: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14,
-    backgroundColor: BG, borderWidth: 1, borderColor: BORDER,
-  },
-  pickerPillActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
-  pickerPillText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500' },
-  pickerPillTextActive: { color: '#000', fontWeight: '700' },
-
-  pickerList: { maxHeight: 200, borderTopWidth: 1, borderTopColor: BORDER },
-  pickerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 11,
+  // Fullscreen picker
+  pickerScreen:  { flex: 1, backgroundColor: BG },
+  pickerHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
     borderBottomWidth: 1, borderBottomColor: BORDER,
   },
-  pickerRowAdded:  { opacity: 0.5 },
-  pickerRowName:   { flex: 1, color: TEXT_PRIMARY, fontSize: 14 },
+  addedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 20, paddingVertical: 8,
+    backgroundColor: ORANGE + '15', borderBottomWidth: 1, borderBottomColor: ORANGE + '30',
+  },
+  addedBannerText: { color: ORANGE, fontSize: 13, fontWeight: '600' },
+  pickerFilters: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
+  pickerPill: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18,
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
+  pickerPillActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
+  pickerPillText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
+  pickerPillTextActive: { color: '#000', fontWeight: '700' },
+  pickerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  pickerRowAdded: { backgroundColor: ORANGE + '08' },
+  pickerIcon: {
+    width: 42, height: 42, borderRadius: 12,
+    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
+  },
+  pickerRowName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  pickerRowSub:  { color: TEXT_SECONDARY, fontSize: 12, marginTop: 1 },
+  pickerAddBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   saveBtn: {
     backgroundColor: ORANGE, borderRadius: 14,
