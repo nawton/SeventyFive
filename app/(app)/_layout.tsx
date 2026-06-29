@@ -33,17 +33,14 @@ const TAB_CFG: { name: string; icon: IconName; isAdd?: boolean }[] = [
 // ─── Custom liquid-glass tab bar ──────────────────────────────────────────────
 
 function GlassTabBar({ state, navigation }: BottomTabBarProps) {
-  const insets   = useSafeAreaInsets()
+  const insets    = useSafeAreaInsets()
   const slideAnim = useRef(new Animated.Value(0)).current
   const [barW, setBarW] = useState(0)
 
-  // Only the routes that have a TAB_CFG entry (excludes href:null screens)
   const routes = state.routes.filter(r => TAB_CFG.some(c => c.name === r.name))
   const tabW   = barW > 0 ? barW / routes.length : 0
-
   const visIdx = routes.findIndex(r => r.key === state.routes[state.index]?.key)
 
-  // Spring to new tab when state.index changes
   useEffect(() => {
     if (visIdx < 0 || tabW <= 0) return
     Animated.spring(slideAnim, {
@@ -54,31 +51,23 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
     }).start()
   }, [visIdx, tabW])
 
-  // PanResponder — drag finger to slide between tabs
-  const panResponder = useRef(
+  // Drag on the tab bar itself to slide the bubble live
+  const barPan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, g) =>
         Math.abs(g.dx) > 6 && Math.abs(g.dx) > Math.abs(g.dy),
       onPanResponderMove: (_, g) => {
         if (tabW <= 0) return
-        const rawIdx = (g.moveX - TAB_SIDE) / tabW
-        slideAnim.setValue(Math.max(0, Math.min(routes.length - 1, rawIdx)))
+        const raw = (g.moveX - TAB_SIDE) / tabW
+        slideAnim.setValue(Math.max(0, Math.min(routes.length - 1, raw)))
       },
       onPanResponderRelease: (_, g) => {
         if (tabW <= 0) return
-        const rawIdx  = (g.moveX - TAB_SIDE) / tabW
-        const snapIdx = Math.round(Math.max(0, Math.min(routes.length - 1, rawIdx)))
-        Animated.spring(slideAnim, {
-          toValue: snapIdx,
-          useNativeDriver: false,
-          tension: 220,
-          friction: 22,
-        }).start()
-        const target = routes[snapIdx]
-        if (target && target.key !== state.routes[state.index]?.key) {
-          navigation.navigate(target.name)
-        }
+        const snap = Math.round(Math.max(0, Math.min(routes.length - 1, (g.moveX - TAB_SIDE) / tabW)))
+        Animated.spring(slideAnim, { toValue: snap, useNativeDriver: false, tension: 220, friction: 22 }).start()
+        const target = routes[snap]
+        if (target && target.key !== state.routes[state.index]?.key) navigation.navigate(target.name)
       },
     })
   ).current
@@ -87,21 +76,20 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
   const bubbleH = TAB_H - PAD * 2
   const bubbleR = bubbleH / 2
 
-  const translateX =
-    tabW > 0
-      ? slideAnim.interpolate({
-          inputRange:  routes.map((_, i) => i),
-          outputRange: routes.map((_, i) => i * tabW + PAD),
-        })
-      : slideAnim
+  const translateX = tabW > 0
+    ? slideAnim.interpolate({
+        inputRange:  routes.map((_, i) => i),
+        outputRange: routes.map((_, i) => i * tabW + PAD),
+      })
+    : slideAnim
 
   return (
     <View
       style={[styles.wrap, { bottom: TAB_BOT + insets.bottom }]}
       onLayout={e => setBarW(e.nativeEvent.layout.width)}
-      {...panResponder.panHandlers}
+      {...barPan.panHandlers}
     >
-      {/* ── Frosted glass bar ── */}
+      {/* Frosted glass bar */}
       <View style={[StyleSheet.absoluteFill, styles.barClip]}>
         <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
         <LinearGradient
@@ -112,15 +100,11 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
         <View style={[StyleSheet.absoluteFill, styles.barBorder]} />
       </View>
 
-      {/* ── Sliding glass bubble ── */}
+      {/* Sliding glass bubble */}
       {bubbleW > 0 && (
         <Animated.View
           pointerEvents="none"
-          style={[
-            styles.bubble,
-            { width: bubbleW, height: bubbleH, borderRadius: bubbleR,
-              transform: [{ translateX }] },
-          ]}
+          style={[styles.bubble, { width: bubbleW, height: bubbleH, borderRadius: bubbleR, transform: [{ translateX }] }]}
         >
           <View style={[StyleSheet.absoluteFill, { borderRadius: bubbleR, overflow: 'hidden' }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
@@ -130,24 +114,20 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
               style={StyleSheet.absoluteFill}
             />
           </View>
-          <View style={[StyleSheet.absoluteFill, { borderRadius: bubbleR,
-            borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.75)' }]} />
+          <View style={[StyleSheet.absoluteFill, { borderRadius: bubbleR, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.75)' }]} />
         </Animated.View>
       )}
 
-      {/* ── Tab buttons ── */}
+      {/* Tab buttons */}
       {routes.map(route => {
         const cfg      = TAB_CFG.find(c => c.name === route.name)!
         const isFocused = route.key === state.routes[state.index]?.key
-
         return (
           <TouchableOpacity
             key={route.key}
             style={styles.tabBtn}
             onPress={() => {
-              const ev = navigation.emit({
-                type: 'tabPress', target: route.key, canPreventDefault: true,
-              })
+              const ev = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })
               if (!isFocused && !ev.defaultPrevented) navigation.navigate(route.name)
             }}
             activeOpacity={1}
@@ -157,11 +137,7 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
                 <Ionicons name="add" size={26} color="#000" />
               </View>
             ) : (
-              <Ionicons
-                name={cfg.icon}
-                size={22}
-                color={isFocused ? '#111' : 'rgba(255,255,255,0.55)'}
-              />
+              <Ionicons name={cfg.icon} size={22} color={isFocused ? '#111' : 'rgba(255,255,255,0.55)'} />
             )}
           </TouchableOpacity>
         )
@@ -173,21 +149,58 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 export default function AppLayout() {
+  const insets = useSafeAreaInsets()
+
+  // Refs so the swipe PanResponder (created once) can always read current nav state
+  const stateRef = useRef<any>(null)
+  const navRef   = useRef<any>(null)
+
+  // Horizontal swipe on any screen content → switch tab
+  const screenSwipe = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
+      // Only claim clear horizontal swipes; let vertical scroll pass through
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 30 && Math.abs(g.dx) > Math.abs(g.dy) * 2.5,
+      onPanResponderRelease: (_, g) => {
+        const state = stateRef.current
+        const nav   = navRef.current
+        if (!state || !nav) return
+        const routes = state.routes.filter((r: any) => TAB_CFG.some(c => c.name === r.name))
+        const visIdx = routes.findIndex((r: any) => r.key === state.routes[state.index]?.key)
+        if (g.dx < -40 && visIdx < routes.length - 1) nav.navigate(routes[visIdx + 1].name)
+        else if (g.dx > 40 && visIdx > 0)             nav.navigate(routes[visIdx - 1].name)
+      },
+    })
+  ).current
+
+  // padding = tab bar height + its gap from bottom + safe-area so NO screen is ever covered
+  const bottomPad = TAB_H + TAB_BOT + insets.bottom
+
   return (
-    <Tabs
-      tabBar={props => <GlassTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        sceneContainerStyle: { paddingBottom: TAB_H + TAB_BOT },
-      }}
-    >
-      <Tabs.Screen name="dashboard" />
-      <Tabs.Screen name="activity" />
-      <Tabs.Screen name="add" />
-      <Tabs.Screen name="stats" />
-      <Tabs.Screen name="settings" />
-      <Tabs.Screen name="edit-profile" options={{ href: null }} />
-    </Tabs>
+    <View style={{ flex: 1 }} {...screenSwipe.panHandlers}>
+      <Tabs
+        tabBar={props => {
+          // Keep refs fresh on every render so the swipe handler sees the latest state
+          stateRef.current = props.state
+          navRef.current   = props.navigation
+          return <GlassTabBar {...props} />
+        }}
+        screenOptions={{
+          headerShown: false,
+          tabBarHideOnKeyboard: true,
+          sceneContainerStyle: { paddingBottom: bottomPad },
+        }}
+      >
+        <Tabs.Screen name="dashboard" />
+        <Tabs.Screen name="activity" />
+        <Tabs.Screen name="add" />
+        <Tabs.Screen name="stats" />
+        <Tabs.Screen name="settings" />
+        <Tabs.Screen name="edit-profile" options={{ href: null }} />
+      </Tabs>
+    </View>
   )
 }
 
@@ -202,24 +215,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: TAB_R,
   },
-  barClip: {
-    borderRadius: TAB_R,
-    overflow: 'hidden',
-  },
-  barBorder: {
-    borderRadius: TAB_R,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.20)',
-  },
-  bubble: {
-    position: 'absolute',
-    top: PAD,
-  },
+  barClip:   { borderRadius: TAB_R, overflow: 'hidden' },
+  barBorder: { borderRadius: TAB_R, borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)' },
+  bubble:    { position: 'absolute', top: PAD },
   tabBtn: {
-    flex: 1,
-    height: TAB_H,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1, height: TAB_H,
+    alignItems: 'center', justifyContent: 'center',
   },
   addCircle: {
     width: 48, height: 48, borderRadius: 24,
@@ -227,11 +228,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: ORANGE,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
+    shadowOpacity: 0.55, shadowRadius: 10,
   },
-  addCircleFocused: {
-    shadowOpacity: 0.85,
-    shadowRadius: 18,
-  },
+  addCircleFocused: { shadowOpacity: 0.85, shadowRadius: 18 },
 })
