@@ -779,7 +779,7 @@ export default function ActivityScreen() {
             </View>
           ) : (
             <View style={styles.restDay}>
-              <Text style={styles.restDayEmoji}>😴</Text>
+              <Ionicons name="moon-outline" size={44} color={BORDER} />
               <Text style={styles.restDayTitle}>Vildag</Text>
               <Text style={styles.restDayText}>Inget pass schemalagt {WEEKDAYS[selectedDay - 1].toLowerCase()}</Text>
               <TouchableOpacity style={styles.addRestBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
@@ -789,52 +789,9 @@ export default function ActivityScreen() {
             </View>
           )}
 
-          {/* ── Veckoöversikt ── */}
-          {sessions.length > 0 && (
-            <View style={styles.weekOverview}>
-              <Text style={styles.weekOverviewTitle}>HELA VECKAN</Text>
-              {WEEKDAYS.map((d, i) => {
-                const num  = i + 1
-                const daySessions = sessions.filter(s => s.weekdays.includes(num))
-                const isToday = num === todayIso()
-                const isSelected = num === selectedDay
-                return (
-                  <TouchableOpacity
-                    key={num}
-                    style={[styles.weekRow, isSelected && styles.weekRowSelected]}
-                    onPress={() => setSelectedDay(num)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.weekRowDay, isToday && { color: ORANGE }, isSelected && { color: ORANGE, fontWeight: '700' }]}>
-                      {d}
-                      {isToday ? '  •' : ''}
-                    </Text>
-                    <View style={styles.weekRowSessions}>
-                      {daySessions.length === 0 ? (
-                        <Text style={styles.weekRowRest}>Vila</Text>
-                      ) : (
-                        daySessions.map(s => {
-                          const done = s.exercises.length > 0 && s.exercises.every(e => checked[e.id])
-                          return (
-                            <View key={s.id} style={[styles.weekRowBadge, done && styles.weekRowBadgeDone]}>
-                              <Text style={[styles.weekRowBadgeText, done && styles.weekRowBadgeTextDone]} numberOfLines={1}>
-                                {s.name}
-                              </Text>
-                              {done && <Ionicons name="checkmark" size={11} color="#000" />}
-                            </View>
-                          )
-                        })
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-          )}
-
           {sessions.length === 0 && (
             <View style={styles.restDay}>
-              <Text style={styles.restDayEmoji}>🏋️</Text>
+              <Ionicons name="barbell-outline" size={44} color={BORDER} />
               <Text style={styles.restDayTitle}>Bygg ditt schema</Text>
               <Text style={styles.restDayText}>Skapa ditt första träningspass</Text>
               <TouchableOpacity style={styles.addRestBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
@@ -1072,8 +1029,7 @@ const styles = StyleSheet.create({
 
   // Rest day
   restDay: { alignItems: 'center', paddingVertical: 44, gap: 6 },
-  restDayEmoji:  { fontSize: 44, marginBottom: 4 },
-  restDayTitle:  { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '700' },
+  restDayTitle:  { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '700', marginTop: 8 },
   restDayText:   { color: TEXT_SECONDARY, fontSize: 14 },
   addRestBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -1081,29 +1037,6 @@ const styles = StyleSheet.create({
     borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9,
   },
   addRestBtnText: { color: ORANGE, fontSize: 14, fontWeight: '600' },
-
-  // Week overview
-  weekOverview: { marginTop: 28, paddingHorizontal: 16 },
-  weekOverviewTitle: {
-    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
-    letterSpacing: 1.5, marginBottom: 10,
-  },
-  weekRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: BORDER,
-  },
-  weekRowSelected: {},
-  weekRowDay: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600', width: 32 },
-  weekRowSessions: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  weekRowRest: { color: BORDER, fontSize: 13, fontStyle: 'italic' },
-  weekRowBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: CARD, borderRadius: 10, borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 10, paddingVertical: 5,
-  },
-  weekRowBadgeDone:     { backgroundColor: '#4CAF50' + '20', borderColor: '#4CAF50' + '40' },
-  weekRowBadgeText:     { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '500' },
-  weekRowBadgeTextDone: { color: '#4CAF50' },
 
   // Övningar tab
   stickyTop: { backgroundColor: BG, paddingTop: 8 },
