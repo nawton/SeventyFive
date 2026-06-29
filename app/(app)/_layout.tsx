@@ -4,7 +4,6 @@ import {
   View,
   StyleSheet,
   Animated,
-  TouchableOpacity,
   PanResponder,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
@@ -41,33 +40,61 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
   const tabW   = barW > 0 ? barW / routes.length : 0
   const visIdx = routes.findIndex(r => r.key === state.routes[state.index]?.key)
 
+  // Refs so PanResponder callbacks (created once) always read fresh values
+  const tabWRef   = useRef(tabW)
+  const visIdxRef = useRef(visIdx)
+  const routesRef = useRef(routes)
+  useEffect(() => { tabWRef.current = tabW },     [tabW])
+  useEffect(() => { visIdxRef.current = visIdx }, [visIdx])
+  useEffect(() => { routesRef.current = routes },  [routes])
+
+  // Spring bubble to current tab whenever navigation changes
   useEffect(() => {
     if (visIdx < 0 || tabW <= 0) return
     Animated.spring(slideAnim, {
-      toValue: visIdx,
-      useNativeDriver: false,
-      tension: 220,
-      friction: 22,
+      toValue: visIdx, useNativeDriver: false, tension: 220, friction: 22,
     }).start()
   }, [visIdx, tabW])
 
-  // Drag on the tab bar itself to slide the bubble live
+  const snap = (x: number) =>
+    Math.round(Math.max(0, Math.min(routesRef.current.length - 1, (x - TAB_SIDE) / tabWRef.current)))
+
+  // Instagram-style: capture touch immediately → bubble jumps to finger, follows drag, snaps on release
   const barPan = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, g) =>
-        Math.abs(g.dx) > 6 && Math.abs(g.dx) > Math.abs(g.dy),
-      onPanResponderMove: (_, g) => {
-        if (tabW <= 0) return
-        const raw = (g.moveX - TAB_SIDE) / tabW
-        slideAnim.setValue(Math.max(0, Math.min(routes.length - 1, raw)))
+      onStartShouldSetPanResponder: () => true,   // claim the touch right away
+
+      onPanResponderGrant: e => {
+        if (tabWRef.current <= 0) return
+        const raw = (e.nativeEvent.pageX - TAB_SIDE) / tabWRef.current
+        // Move bubble instantly to touch position (no animation lag)
+        slideAnim.setValue(Math.max(0, Math.min(routesRef.current.length - 1, raw)))
       },
+
+      onPanResponderMove: (_, g) => {
+        if (tabWRef.current <= 0) return
+        const raw = (g.moveX - TAB_SIDE) / tabWRef.current
+        slideAnim.setValue(Math.max(0, Math.min(routesRef.current.length - 1, raw)))
+      },
+
       onPanResponderRelease: (_, g) => {
-        if (tabW <= 0) return
-        const snap = Math.round(Math.max(0, Math.min(routes.length - 1, (g.moveX - TAB_SIDE) / tabW)))
-        Animated.spring(slideAnim, { toValue: snap, useNativeDriver: false, tension: 220, friction: 22 }).start()
-        const target = routes[snap]
-        if (target && target.key !== state.routes[state.index]?.key) navigation.navigate(target.name)
+        if (tabWRef.current <= 0) return
+        const idx = snap(g.moveX)
+        Animated.spring(slideAnim, {
+          toValue: idx, useNativeDriver: false, tension: 220, friction: 22,
+        }).start()
+        const target = routesRef.current[idx]
+        if (target) {
+          const ev = navigation.emit({ type: 'tabPress', target: target.key, canPreventDefault: true })
+          if (!ev.defaultPrevented) navigation.navigate(target.name)
+        }
+      },
+
+      // If OS steals the gesture (e.g. notification pull-down) snap back to current tab
+      onPanResponderTerminate: () => {
+        Animated.spring(slideAnim, {
+          toValue: visIdxRef.current, useNativeDriver: false, tension: 220, friction: 22,
+        }).start()
       },
     })
   ).current
@@ -118,20 +145,12 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
         </Animated.View>
       )}
 
-      {/* Tab buttons */}
+      {/* Tab items — no TouchableOpacity needed; PanResponder handles both taps and drags */}
       {routes.map(route => {
         const cfg      = TAB_CFG.find(c => c.name === route.name)!
         const isFocused = route.key === state.routes[state.index]?.key
         return (
-          <TouchableOpacity
-            key={route.key}
-            style={styles.tabBtn}
-            onPress={() => {
-              const ev = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })
-              if (!isFocused && !ev.defaultPrevented) navigation.navigate(route.name)
-            }}
-            activeOpacity={1}
-          >
+          <View key={route.key} style={styles.tabBtn}>
             {cfg.isAdd ? (
               <View style={[styles.addCircle, isFocused && styles.addCircleFocused]}>
                 <Ionicons name="add" size={26} color="#000" />
@@ -139,7 +158,7 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
             ) : (
               <Ionicons name={cfg.icon} size={22} color={isFocused ? '#111' : 'rgba(255,255,255,0.55)'} />
             )}
-          </TouchableOpacity>
+          </View>
         )
       })}
     </View>
