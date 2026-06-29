@@ -409,6 +409,7 @@ function SessionEditor({
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            style={ed.pickerFilterStrip}
             contentContainerStyle={ed.pickerFilters}
           >
             {PICKER_FILTERS.map(f => (
@@ -1037,7 +1038,8 @@ const ed = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
   },
   pickerSearchInput: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, padding: 0 },
-  pickerFilters: { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
+  pickerFilterStrip: { height: 52, flexGrow: 0 },
+  pickerFilters: { paddingHorizontal: 16, alignItems: 'center', gap: 8 },
   pickerPill: {
     paddingHorizontal: 18, paddingVertical: 10, borderRadius: 22,
     backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
