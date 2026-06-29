@@ -77,3 +77,46 @@ export async function deleteWorkoutSession(id: string): Promise<void> {
   const { error } = await supabase.from('workout_sessions').delete().eq('id', id)
   if (error) throw error
 }
+
+// ─── Completions ──────────────────────────────────────────────────────────────
+
+function isoDate(date: Date): string {
+  return date.toISOString().split('T')[0]
+}
+
+/** Returns the calendar date (YYYY-MM-DD) for a given weekday (1=Mon…7=Sun) in the current week. */
+export function dateForWeekday(weekdayNum: number): string {
+  const today = new Date()
+  const todayWd = today.getDay() || 7
+  const diff = weekdayNum - todayWd
+  const target = new Date(today)
+  target.setDate(today.getDate() + diff)
+  return isoDate(target)
+}
+
+export async function getCompletedSessionIds(userId: string, date: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('workout_completions')
+    .select('session_id')
+    .eq('user_id', userId)
+    .eq('completed_date', date)
+  if (error) throw error
+  return (data ?? []).map(r => r.session_id)
+}
+
+export async function completeSession(sessionId: string, userId: string, date: string): Promise<void> {
+  const { error } = await supabase
+    .from('workout_completions')
+    .insert({ session_id: sessionId, user_id: userId, completed_date: date })
+  // ignore unique-violation (already completed)
+  if (error && error.code !== '23505') throw error
+}
+
+export async function uncompleteSession(sessionId: string, date: string): Promise<void> {
+  const { error } = await supabase
+    .from('workout_completions')
+    .delete()
+    .eq('session_id', sessionId)
+    .eq('completed_date', date)
+  if (error) throw error
+}

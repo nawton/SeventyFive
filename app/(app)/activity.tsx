@@ -28,8 +28,13 @@ import {
   createWorkoutSession,
   updateWorkoutSession,
   deleteWorkoutSession,
+  getCompletedSessionIds,
+  completeSession,
+  uncompleteSession,
+  dateForWeekday,
   type WorkoutSession,
 } from '@/services/workoutSchedule'
+import { SwipeableSessionCard } from '@/components/SwipeableSessionCard'
 import { getMusclesForName } from '@/lib/muscles'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { ExerciseCategory } from '@/types/database'
@@ -541,14 +546,18 @@ export default function ActivityScreen() {
   const [editorVisible, setEditorVisible]   = useState(false)
   const [editingSession, setEditingSession] = useState<WorkoutSession | null>(null)
   const [checked, setChecked]               = useState<Record<string, boolean>>({})
+  const [completedIds, setCompletedIds]     = useState<Set<string>>(new Set())
 
-  async function loadData(uid: string) {
-    const [exs, sess] = await Promise.all([
+  async function loadData(uid: string, dayForCompletions?: number) {
+    const date = dateForWeekday(dayForCompletions ?? selectedDay)
+    const [exs, sess, ids] = await Promise.all([
       getExercises().catch(() => [] as Exercise[]),
       getWorkoutSessions(uid).catch(() => [] as WorkoutSession[]),
+      getCompletedSessionIds(uid, date).catch(() => [] as string[]),
     ])
     setExercises(exs)
     setSessions(sess)
+    setCompletedIds(new Set(ids))
   }
 
   useEffect(() => {
@@ -564,6 +573,15 @@ export default function ActivityScreen() {
     if (userId) loadData(userId)
   }, [userId]))
 
+  // Reload completions when selected day changes
+  useEffect(() => {
+    if (!userId) return
+    const date = dateForWeekday(selectedDay)
+    getCompletedSessionIds(userId, date)
+      .then(ids => setCompletedIds(new Set(ids)))
+      .catch(() => {})
+  }, [selectedDay, userId])
+
   function openEditor(session: WorkoutSession | null) {
     setEditingSession(session)
     setEditorVisible(true)
@@ -571,6 +589,23 @@ export default function ActivityScreen() {
 
   function toggleCheck(exId: string) {
     setChecked(prev => ({ ...prev, [exId]: !prev[exId] }))
+  }
+
+  function handleComplete(sessionId: string) {
+    if (!userId) return
+    const date = dateForWeekday(selectedDay)
+    setCompletedIds(prev => new Set([...prev, sessionId]))
+    completeSession(sessionId, userId, date).catch(() => {
+      setCompletedIds(prev => { const n = new Set(prev); n.delete(sessionId); return n })
+    })
+  }
+
+  function handleUncomplete(sessionId: string) {
+    const date = dateForWeekday(selectedDay)
+    setCompletedIds(prev => { const n = new Set(prev); n.delete(sessionId); return n })
+    uncompleteSession(sessionId, date).catch(() => {
+      setCompletedIds(prev => new Set([...prev, sessionId]))
+    })
   }
 
   const sessionsForDay  = sessions.filter(s => s.weekdays.includes(selectedDay))
@@ -674,108 +709,18 @@ export default function ActivityScreen() {
           {/* ── Today's sessions — workout cards ── */}
           {sessionsForDay.length > 0 ? (
             <View style={styles.sessionList}>
-              {sessionsForDay.map(s => {
-                const total     = s.exercises.length
-                const doneCount = s.exercises.filter(e => checked[e.id]).length
-                const allDone   = total > 0 && doneCount === total
-                const pct       = total > 0 ? doneCount / total : 0
-                return (
-                  <View key={s.id} style={[styles.workoutCard, allDone && styles.workoutCardDone]}>
-
-                    {/* Header row */}
-                    <View style={styles.workoutCardHeader}>
-                      <View style={[styles.sessionIcon, allDone && styles.sessionIconDone]}>
-                        <Ionicons
-                          name={allDone ? 'checkmark' : 'barbell-outline'}
-                          size={18}
-                          color={allDone ? '#000' : ORANGE}
-                        />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.sessionName}>{s.name}</Text>
-                        <Text style={styles.sessionMeta}>
-                          {total === 0 ? 'Inga övningar' : allDone ? 'Avslutat 💪' : `${doneCount} av ${total} klara`}
-                        </Text>
-                      </View>
-                      {/* Percent badge */}
-                      {total > 0 && !allDone && (
-                        <View style={styles.pctBadge}>
-                          <Text style={styles.pctText}>{Math.round(pct * 100)}%</Text>
-                        </View>
-                      )}
-                      <TouchableOpacity
-                        onPress={() => openEditor(s)}
-                        style={styles.editBtn}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      >
-                        <Ionicons name="ellipsis-horizontal" size={18} color={TEXT_SECONDARY} />
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* Progress bar */}
-                    {total > 0 && (
-                      <View style={styles.progressBarWrap}>
-                        <View style={styles.progressBar}>
-                          <View style={[
-                            styles.progressFill,
-                            { width: `${pct * 100}%` as any },
-                            allDone && { backgroundColor: '#4CAF50' },
-                          ]} />
-                        </View>
-                      </View>
-                    )}
-
-                    {/* Exercise checklist */}
-                    {s.exercises.length === 0 ? (
-                      <TouchableOpacity
-                        style={styles.addExHint}
-                        onPress={() => openEditor(s)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="add-circle-outline" size={16} color={ORANGE} />
-                        <Text style={styles.addExHintText}>Lägg till övningar</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      s.exercises.map((ex, idx) => {
-                        const done = !!checked[ex.id]
-                        return (
-                          <TouchableOpacity
-                            key={ex.id}
-                            style={[
-                              styles.checkRow,
-                              idx === 0 && styles.checkRowFirst,
-                              done && styles.checkRowDone,
-                            ]}
-                            onPress={() => toggleCheck(ex.id)}
-                            activeOpacity={0.65}
-                          >
-                            <View style={[styles.checkbox, done && styles.checkboxDone]}>
-                              {done && <Ionicons name="checkmark" size={12} color="#000" fontWeight="700" />}
-                            </View>
-                            <Text style={[styles.checkName, done && styles.checkNameDone]} numberOfLines={1}>
-                              {ex.exercise_name}
-                            </Text>
-                            {(ex.sets || ex.reps) && (
-                              <View style={[styles.setsBadge, done && { opacity: 0.35 }]}>
-                                <Text style={styles.setsText}>
-                                  {[ex.sets && `${ex.sets}×`, ex.reps].filter(Boolean).join('')}
-                                </Text>
-                              </View>
-                            )}
-                          </TouchableOpacity>
-                        )
-                      })
-                    )}
-
-                    {/* Done banner */}
-                    {allDone && (
-                      <View style={styles.doneBanner}>
-                        <Text style={styles.doneBannerText}>Passet avslutat — bra jobbat!</Text>
-                      </View>
-                    )}
-                  </View>
-                )
-              })}
+              {sessionsForDay.map(s => (
+                <SwipeableSessionCard
+                  key={s.id}
+                  session={s}
+                  checked={checked}
+                  isCompleted={completedIds.has(s.id)}
+                  onToggleExercise={toggleCheck}
+                  onComplete={() => handleComplete(s.id)}
+                  onUncomplete={() => handleUncomplete(s.id)}
+                  onEdit={() => openEditor(s)}
+                />
+              ))}
             </View>
           ) : (
             <View style={styles.restDay}>
@@ -965,67 +910,7 @@ const styles = StyleSheet.create({
 
   sessionList: { paddingHorizontal: 16, gap: 14 },
 
-  // Workout card
-  workoutCard: {
-    backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1, borderColor: BORDER, overflow: 'hidden',
-  },
-  workoutCardDone: { borderColor: '#4CAF50' + '50' },
-  workoutCardHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12,
-  },
-  sessionIcon: {
-    width: 42, height: 42, borderRadius: 13,
-    backgroundColor: ORANGE + '20', alignItems: 'center', justifyContent: 'center',
-  },
-  sessionIconDone: { backgroundColor: '#4CAF50' },
-  sessionName:   { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
-  sessionMeta:   { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
-  pctBadge:      { backgroundColor: ORANGE + '20', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
-  pctText:       { color: ORANGE, fontSize: 13, fontWeight: '700' },
-  editBtn: {
-    width: 32, height: 32, borderRadius: 10,
-    backgroundColor: BG, alignItems: 'center', justifyContent: 'center',
-  },
-
-  progressBarWrap: { paddingHorizontal: 16, paddingBottom: 4 },
-  progressBar: { height: 4, backgroundColor: BORDER, borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: 4, backgroundColor: ORANGE, borderRadius: 2 },
-
-  addExHint: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderTopWidth: 1, borderTopColor: BORDER,
-  },
-  addExHintText: { color: ORANGE, fontSize: 14, fontWeight: '500' },
-
-  checkRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderTopWidth: 1, borderTopColor: BORDER,
-  },
-  checkRowFirst: {},
-  checkRowDone:  { backgroundColor: 'rgba(255,255,255,0.02)' },
-  checkbox: {
-    width: 26, height: 26, borderRadius: 13,
-    borderWidth: 2, borderColor: BORDER,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  checkboxDone:    { backgroundColor: ORANGE, borderColor: ORANGE },
-  checkName:       { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '500' },
-  checkNameDone:   { color: TEXT_SECONDARY, textDecorationLine: 'line-through', opacity: 0.6 },
-  setsBadge: {
-    backgroundColor: BG, borderRadius: 8, borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 9, paddingVertical: 4,
-  },
-  setsText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
-  doneBanner: {
-    backgroundColor: '#4CAF50' + '18',
-    paddingVertical: 12, paddingHorizontal: 16,
-    alignItems: 'center', borderTopWidth: 1, borderTopColor: '#4CAF50' + '30',
-  },
-  doneBannerText: { color: '#4CAF50', fontSize: 14, fontWeight: '600' },
+  // Session cards are rendered by SwipeableSessionCard component
 
   // Rest day
   restDay: { alignItems: 'center', paddingVertical: 44, gap: 6 },
