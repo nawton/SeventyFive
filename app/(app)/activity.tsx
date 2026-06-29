@@ -222,11 +222,12 @@ function SessionEditor({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={ed.overlay}>
-        <KeyboardAvoidingView
-          style={ed.sheet}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+      <KeyboardAvoidingView
+        style={ed.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
+        <View style={ed.sheet}>
           {/* Header */}
           <View style={ed.header}>
             <TouchableOpacity onPress={onClose} style={ed.iconBtn} activeOpacity={0.7}>
@@ -372,8 +373,8 @@ function SessionEditor({
 
           </ScrollView>
           <View style={{ height: insets.bottom }} />
-        </KeyboardAvoidingView>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
@@ -876,7 +877,7 @@ const ed = StyleSheet.create({
   sheet: {
     backgroundColor: BG,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    maxHeight: '92%',
+    height: '88%',
   },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
