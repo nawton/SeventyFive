@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   View,
   Text,
@@ -122,13 +122,13 @@ function SessionEditor({
   userId: string
 }) {
   const insets = useSafeAreaInsets()
-  const [name, setName]           = useState('')
-  const [weekdays, setWeekdays]   = useState<number[]>([])
-  const [drafts, setDrafts]       = useState<DraftExercise[]>([])
-  const [exSearch, setExSearch]   = useState('')
-  const [saving, setSaving]       = useState(false)
-  const [deleting, setDeleting]   = useState(false)
-  const searchRef = useRef<TextInput>(null)
+  const [name, setName]             = useState('')
+  const [weekdays, setWeekdays]     = useState<number[]>([])
+  const [drafts, setDrafts]         = useState<DraftExercise[]>([])
+  const [showPicker, setShowPicker] = useState(false)
+  const [pickerFilter, setPickerFilter] = useState('all')
+  const [saving, setSaving]         = useState(false)
+  const [deleting, setDeleting]     = useState(false)
 
   useEffect(() => {
     if (!visible) return
@@ -146,7 +146,8 @@ function SessionEditor({
       setWeekdays([todayIso()])
       setDrafts([])
     }
-    setExSearch('')
+    setShowPicker(false)
+    setPickerFilter('all')
   }, [visible, session])
 
   function toggleDay(d: number) {
@@ -157,7 +158,6 @@ function SessionEditor({
 
   function addExercise(exName: string) {
     setDrafts(prev => [...prev, { key: Date.now().toString(), exercise_name: exName, sets: '3', reps: '10' }])
-    setExSearch('')
   }
 
   function updateDraft(key: string, field: 'sets' | 'reps', value: string) {
@@ -214,11 +214,24 @@ function SessionEditor({
     ])
   }
 
-  const searchResults = exSearch.trim().length > 0
-    ? exercises
-        .filter(e => e.name.toLowerCase().includes(exSearch.toLowerCase()))
-        .slice(0, 6)
-    : []
+  const PICKER_FILTERS = [
+    { key: 'all',       label: 'Alla' },
+    { key: 'legs',      label: 'Ben' },
+    { key: 'chest',     label: 'Bröst' },
+    { key: 'back',      label: 'Rygg' },
+    { key: 'shoulders', label: 'Axlar' },
+    { key: 'arms',      label: 'Armar' },
+    { key: 'core',      label: 'Mage' },
+    { key: 'cardio',    label: 'Cardio' },
+    { key: 'mobility',  label: 'Rörlighet' },
+    { key: 'hiit',      label: 'HIIT' },
+  ]
+
+  const pickerExercises = exercises.filter(e => {
+    if (pickerFilter === 'all') return true
+    if (['cardio', 'mobility', 'hiit'].includes(pickerFilter)) return e.category === pickerFilter
+    return e.category === 'strength' && getExerciseMuscleGroup(e.name) === pickerFilter
+  })
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -316,45 +329,70 @@ function SessionEditor({
                 </View>
               ))}
 
-              {/* Search to add exercise */}
-              <View style={ed.searchWrap}>
-                <Ionicons name="add" size={18} color={TEXT_SECONDARY} />
-                <TextInput
-                  ref={searchRef}
-                  style={ed.searchInput}
-                  value={exSearch}
-                  onChangeText={setExSearch}
-                  placeholder="Sök eller skriv övningsnamn…"
-                  placeholderTextColor={TEXT_SECONDARY}
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={() => {
-                    if (exSearch.trim()) { addExercise(exSearch.trim()) }
-                  }}
-                />
-                {exSearch.trim().length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => addExercise(exSearch.trim())}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Ionicons name="return-down-back" size={18} color={ORANGE} />
-                  </TouchableOpacity>
-                )}
-              </View>
+              {/* Toggle picker */}
+              <TouchableOpacity
+                style={ed.pickerToggle}
+                onPress={() => setShowPicker(p => !p)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name={showPicker ? 'chevron-up' : 'add'} size={17} color={ORANGE} />
+                <Text style={ed.pickerToggleText}>
+                  {showPicker ? 'Stäng' : 'Lägg till övning'}
+                </Text>
+              </TouchableOpacity>
 
-              {searchResults.length > 0 && (
-                <View style={ed.suggestions}>
-                  {searchResults.map(ex => (
-                    <TouchableOpacity
-                      key={ex.id}
-                      style={ed.suggestion}
-                      onPress={() => addExercise(ex.name)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name={CATEGORY_ICONS[ex.category]} size={15} color={ORANGE} />
-                      <Text style={ed.suggestionText}>{ex.name}</Text>
-                    </TouchableOpacity>
-                  ))}
+              {showPicker && (
+                <View style={ed.picker}>
+                  {/* Filter pills */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={ed.pickerFilters}
+                  >
+                    {PICKER_FILTERS.map(f => (
+                      <TouchableOpacity
+                        key={f.key}
+                        style={[ed.pickerPill, pickerFilter === f.key && ed.pickerPillActive]}
+                        onPress={() => setPickerFilter(f.key)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[ed.pickerPillText, pickerFilter === f.key && ed.pickerPillTextActive]}>
+                          {f.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  {/* Exercise list */}
+                  <ScrollView
+                    style={ed.pickerList}
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {pickerExercises.map(ex => {
+                      const already = drafts.some(d => d.exercise_name === ex.name)
+                      return (
+                        <TouchableOpacity
+                          key={ex.id}
+                          style={[ed.pickerRow, already && ed.pickerRowAdded]}
+                          onPress={() => !already && addExercise(ex.name)}
+                          activeOpacity={already ? 1 : 0.7}
+                        >
+                          <Ionicons
+                            name={CATEGORY_ICONS[ex.category]}
+                            size={15}
+                            color={already ? TEXT_SECONDARY : ORANGE}
+                          />
+                          <Text style={[ed.pickerRowName, already && { color: TEXT_SECONDARY }]} numberOfLines={1}>
+                            {ex.name}
+                          </Text>
+                          {already
+                            ? <Ionicons name="checkmark" size={15} color={TEXT_SECONDARY} />
+                            : <Ionicons name="add-circle-outline" size={18} color={ORANGE} />}
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </ScrollView>
                 </View>
               )}
             </View>
@@ -921,25 +959,36 @@ const ed = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 6, textAlign: 'center',
   },
 
-  searchWrap: {
+  pickerToggle: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 10, paddingHorizontal: 14,
     backgroundColor: CARD, borderRadius: 10,
-    borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 12, paddingVertical: 10,
-    marginTop: 4,
+    borderWidth: 1, borderColor: ORANGE + '50', marginTop: 4,
   },
-  searchInput: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, padding: 0 },
+  pickerToggleText: { color: ORANGE, fontSize: 14, fontWeight: '600' },
 
-  suggestions: {
-    backgroundColor: CARD, borderRadius: 10,
-    borderWidth: 1, borderColor: BORDER, overflow: 'hidden', marginTop: 4,
+  picker: {
+    backgroundColor: CARD, borderRadius: 12,
+    borderWidth: 1, borderColor: BORDER,
+    overflow: 'hidden', marginTop: 4,
   },
-  suggestion: {
+  pickerFilters: { paddingHorizontal: 10, paddingVertical: 10, gap: 6 },
+  pickerPill: {
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14,
+    backgroundColor: BG, borderWidth: 1, borderColor: BORDER,
+  },
+  pickerPillActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
+  pickerPillText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500' },
+  pickerPillTextActive: { color: '#000', fontWeight: '700' },
+
+  pickerList: { maxHeight: 200, borderTopWidth: 1, borderTopColor: BORDER },
+  pickerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 12,
+    paddingHorizontal: 14, paddingVertical: 11,
     borderBottomWidth: 1, borderBottomColor: BORDER,
   },
-  suggestionText: { color: TEXT_PRIMARY, fontSize: 14 },
+  pickerRowAdded:  { opacity: 0.5 },
+  pickerRowName:   { flex: 1, color: TEXT_PRIMARY, fontSize: 14 },
 
   saveBtn: {
     backgroundColor: ORANGE, borderRadius: 14,
