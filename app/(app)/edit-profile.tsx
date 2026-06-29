@@ -152,20 +152,30 @@ export default function EditProfileScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      {/* Fixed header — outside ScrollView so it stays pinned */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Redigera profil</Text>
+        <TouchableOpacity
+          style={styles.checkBtn}
+          onPress={handleSave}
+          disabled={saving}
+          activeOpacity={0.7}
+        >
+          {saving
+            ? <ActivityIndicator color={ORANGE} size="small" />
+            : <Ionicons name="checkmark" size={22} color={ORANGE} />}
+        </TouchableOpacity>
+      </View>
+
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-              <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
-            </TouchableOpacity>
-            <Text style={styles.title}>Redigera profil</Text>
-            <View style={{ width: 40 }} />
-          </View>
 
           {/* Avatar preview */}
           <View style={styles.previewSection}>
@@ -325,11 +335,18 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4,
+    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+    backgroundColor: BG,
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
+  },
+  checkBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: ORANGE + '60',
   },
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
 
