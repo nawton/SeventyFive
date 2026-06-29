@@ -30,11 +30,101 @@ const GRID_PADDING = 20
 const GAP          = 6
 const SQUARE_SIZE  = Math.floor((SCREEN_WIDTH - GRID_PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS)
 
-const WEEKDAY_LABELS = ['M', 'T', 'O', 'T', 'F', 'L', 'S']
+const MONTHS_SV = ['Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December']
+const WEEKDAY_SHORT = ['MÅN','TIS','ONS','TOR','FRE','LÖR','SÖN']
+const CAL_GAP  = 4
+const CAL_SIZE = Math.floor((SCREEN_WIDTH - GRID_PADDING * 2 - 40 - CAL_GAP * 6) / 7)
 
-function getStartOffset(startDate: string): number {
-  // Returns 0=Måndag … 6=Söndag
-  return (new Date(startDate).getDay() + 6) % 7
+function getChallengeDay(date: Date, startDate: string): number | null {
+  const start = new Date(startDate); start.setHours(0,0,0,0)
+  const d     = new Date(date);      d.setHours(0,0,0,0)
+  const diff  = Math.round((d.getTime() - start.getTime()) / 86400000)
+  return diff >= 0 && diff < 75 ? diff + 1 : null
+}
+
+function buildCalendarCells(year: number, month: number): Date[] {
+  const firstDay   = new Date(year, month, 1)
+  const offset     = (firstDay.getDay() + 6) % 7
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const prevDays   = new Date(year, month, 0).getDate()
+  const cells: Date[] = []
+  for (let i = offset - 1; i >= 0; i--)      cells.push(new Date(year, month - 1, prevDays - i))
+  for (let d = 1; d <= daysInMonth; d++)       cells.push(new Date(year, month, d))
+  const rem = (7 - (cells.length % 7)) % 7
+  for (let d = 1; d <= rem; d++)               cells.push(new Date(year, month + 1, d))
+  return cells
+}
+
+function CalendarView({ days, startDate, currentDay, onPressDay }: {
+  days: DaySummary[]; startDate: string | null
+  currentDay: number; onPressDay: (d: DaySummary) => void
+}) {
+  const init = startDate ? new Date(startDate) : new Date()
+  const [view, setView] = useState(new Date(init.getFullYear(), init.getMonth(), 1))
+  const yr = view.getFullYear(); const mo = view.getMonth()
+  const cells = buildCalendarCells(yr, mo)
+  const today = new Date()
+
+  return (
+    <View style={styles.calCard}>
+      {/* Month navigation */}
+      <View style={styles.calHeader}>
+        <TouchableOpacity style={styles.calNavBtn} onPress={() => setView(new Date(yr, mo - 1, 1))} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={20} color={TEXT_PRIMARY} />
+        </TouchableOpacity>
+        <Text style={styles.calMonthLabel}>{MONTHS_SV[mo]} {yr}</Text>
+        <TouchableOpacity style={styles.calNavBtn} onPress={() => setView(new Date(yr, mo + 1, 1))} activeOpacity={0.7}>
+          <Ionicons name="chevron-forward" size={20} color={TEXT_PRIMARY} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Weekday headers */}
+      <View style={styles.calWeekRow}>
+        {WEEKDAY_SHORT.map(d => (
+          <View key={d} style={styles.calWeekCell}>
+            <Text style={styles.calWeekLabel}>{d}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Day grid */}
+      <View style={styles.calGrid}>
+        {cells.map((date, i) => {
+          const isCurrentMonth = date.getMonth() === mo
+          const challengeDay   = startDate ? getChallengeDay(date, startDate) : null
+          const summary        = challengeDay ? days[challengeDay - 1] : null
+          const isToday        = sameDay(date, today)
+          const isChallengeDay = !!summary
+
+          const bgColor = summary
+            ? DAY_COLORS[summary.status] === 'rgba(255,255,255,0.08)' ? 'transparent' : DAY_COLORS[summary.status]
+            : 'transparent'
+
+          const showTodayRing = isToday && (!summary || summary.status === 'future' || summary.status === 'pending')
+
+          return (
+            <TouchableOpacity
+              key={i}
+              style={[styles.calDay, { backgroundColor: bgColor }, showTodayRing && styles.calDayToday]}
+              onPress={() => summary && summary.status !== 'future' ? onPressDay(summary) : undefined}
+              activeOpacity={summary && summary.status !== 'future' ? 0.75 : 1}
+            >
+              <Text style={[
+                styles.calDayText,
+                !isCurrentMonth && styles.calDayTextOther,
+                isChallengeDay && summary!.status !== 'future' && { color: '#fff', fontWeight: '700' },
+                isToday && styles.calDayTextToday,
+              ]}>
+                {date.getDate()}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+
+      <Legend />
+    </View>
+  )
 }
 
 const DAY_COLORS: Record<DaySummary['status'], string> = {
@@ -631,34 +721,12 @@ export default function StatsScreen() {
               <StatCard label="Streak"  value={`${streak}`}         icon="flame-outline"            color="#FF6B35" />
             </View>
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>75 dagar</Text>
-              <Legend />
-
-              {/* Weekday headers */}
-              <View style={styles.weekdayRow}>
-                {WEEKDAY_LABELS.map((l, i) => (
-                  <View key={i} style={styles.weekdayCell}>
-                    <Text style={styles.weekdayLabel}>{l}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Calendar grid aligned to correct weekday */}
-              <View style={styles.grid}>
-                {Array.from({ length: startDate ? getStartOffset(startDate) : 0 }, (_, i) => (
-                  <View key={`off-${i}`} style={[styles.square, { backgroundColor: 'transparent' }]} />
-                ))}
-                {days.map(day => (
-                  <DaySquare
-                    key={day.dayNumber}
-                    day={day}
-                    currentDay={currentDay}
-                    onPress={day.status !== 'future' && startDate ? () => setSelectedDay(day) : undefined}
-                  />
-                ))}
-              </View>
-            </View>
+            <CalendarView
+              days={days}
+              startDate={startDate}
+              currentDay={currentDay}
+              onPressDay={setSelectedDay}
+            />
 
             <View style={styles.card}>
               <View style={styles.progressHeader}>
@@ -909,9 +977,35 @@ const styles = StyleSheet.create({
   legendDot:   { width: 10, height: 10, borderRadius: 5 },
   legendLabel: { color: TEXT_SECONDARY, fontSize: 12 },
 
-  weekdayRow:   { flexDirection: 'row', gap: GAP, marginBottom: 2 },
-  weekdayCell:  { width: SQUARE_SIZE, alignItems: 'center' },
-  weekdayLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
+  // Calendar
+  calCard: {
+    backgroundColor: CARD, borderRadius: 20,
+    borderWidth: 1, borderColor: BORDER,
+    padding: 20, gap: 16,
+  },
+  calHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  calNavBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  calMonthLabel: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
+  calWeekRow:  { flexDirection: 'row', justifyContent: 'space-between' },
+  calWeekCell: { width: CAL_SIZE, alignItems: 'center' },
+  calWeekLabel:{ color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
+  calGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: CAL_GAP },
+  calDay: {
+    width: CAL_SIZE, height: CAL_SIZE, borderRadius: CAL_SIZE / 2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  calDayToday: {
+    borderWidth: 2, borderColor: ORANGE,
+  },
+  calDayText:      { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '500' },
+  calDayTextOther: { color: 'rgba(255,255,255,0.2)' },
+  calDayTextToday: { color: ORANGE, fontWeight: '700' },
 
   grid:             { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   square:           { width: SQUARE_SIZE, height: SQUARE_SIZE, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
