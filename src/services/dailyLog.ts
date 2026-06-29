@@ -139,7 +139,9 @@ export async function getAllDays(
     if (day > currentDay) return { dayNumber: day, status: 'future' }
     const status = logMap.get(day)
     if (status === 'completed') return { dayNumber: day, status: 'completed' }
-    if (status === 'failed') return { dayNumber: day, status: 'failed' }
+    if (status === 'failed')    return { dayNumber: day, status: 'failed' }
+    // Past days without a completed/failed log are missed → red
+    if (day < currentDay)       return { dayNumber: day, status: 'failed' }
     return { dayNumber: day, status: 'pending' }
   })
 }
