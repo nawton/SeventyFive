@@ -125,8 +125,9 @@ function SessionEditor({
   const [name, setName]             = useState('')
   const [weekdays, setWeekdays]     = useState<number[]>([])
   const [drafts, setDrafts]         = useState<DraftExercise[]>([])
-  const [showPicker, setShowPicker] = useState(false)
+  const [showPicker, setShowPicker]     = useState(false)
   const [pickerFilter, setPickerFilter] = useState('all')
+  const [pickerSearch, setPickerSearch] = useState('')
   const [saving, setSaving]         = useState(false)
   const [deleting, setDeleting]     = useState(false)
 
@@ -148,6 +149,7 @@ function SessionEditor({
     }
     setShowPicker(false)
     setPickerFilter('all')
+    setPickerSearch('')
   }, [visible, session])
 
   function toggleDay(d: number) {
@@ -227,10 +229,16 @@ function SessionEditor({
     { key: 'hiit',      label: 'HIIT' },
   ]
 
-  const pickerExercises = exercises.filter(e => {
-    if (pickerFilter === 'all') return true
-    if (['cardio', 'mobility', 'hiit'].includes(pickerFilter)) return e.category === pickerFilter
-    return e.category === 'strength' && getExerciseMuscleGroup(e.name) === pickerFilter
+  // Deduplicate by name (DB may have duplicate rows), then filter
+  const uniqueExercises = [...new Map(exercises.map(e => [e.name.toLowerCase(), e])).values()]
+  const pickerExercises = uniqueExercises.filter(e => {
+    const matchesFilter = pickerFilter === 'all'
+      ? true
+      : ['cardio', 'mobility', 'hiit'].includes(pickerFilter)
+        ? e.category === pickerFilter
+        : e.category === 'strength' && getExerciseMuscleGroup(e.name) === pickerFilter
+    const matchesSearch = pickerSearch.trim() === '' || e.name.toLowerCase().includes(pickerSearch.toLowerCase())
+    return matchesFilter && matchesSearch
   })
 
   return (
@@ -359,7 +367,8 @@ function SessionEditor({
 
       {/* ── Fullscreen exercise picker ── */}
       <Modal visible={showPicker} animationType="slide" onRequestClose={() => setShowPicker(false)}>
-        <SafeAreaView style={ed.pickerScreen}>
+        <View style={[ed.pickerScreen, { paddingTop: insets.top }]}>
+
           {/* Header */}
           <View style={ed.pickerHeader}>
             <TouchableOpacity onPress={() => setShowPicker(false)} style={ed.iconBtn} activeOpacity={0.7}>
@@ -368,20 +377,33 @@ function SessionEditor({
             <Text style={ed.title}>Lägg till övning</Text>
             <TouchableOpacity
               onPress={() => setShowPicker(false)}
-              style={[ed.iconBtn, { backgroundColor: ORANGE }]}
+              style={ed.klarBtn}
               activeOpacity={0.8}
             >
-              <Text style={{ color: '#000', fontWeight: '700', fontSize: 13 }}>Klar</Text>
+              <Text style={ed.klarBtnText}>Klar{drafts.length > 0 ? ` (${drafts.length})` : ''}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Added count */}
-          {drafts.length > 0 && (
-            <View style={ed.addedBanner}>
-              <Ionicons name="checkmark-circle" size={15} color={ORANGE} />
-              <Text style={ed.addedBannerText}>{drafts.length} övning{drafts.length !== 1 ? 'ar' : ''} valda</Text>
-            </View>
-          )}
+          {/* Search bar */}
+          <View style={ed.pickerSearchBar}>
+            <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} />
+            <TextInput
+              style={ed.pickerSearchInput}
+              value={pickerSearch}
+              onChangeText={setPickerSearch}
+              placeholder="Sök övning…"
+              placeholderTextColor={TEXT_SECONDARY}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+            />
+            {pickerSearch.length > 0 && (
+              <TouchableOpacity onPress={() => setPickerSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={17} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* Filter pills */}
           <ScrollView
@@ -403,15 +425,21 @@ function SessionEditor({
             ))}
           </ScrollView>
 
+          {/* Count */}
+          <Text style={ed.pickerCount}>{pickerExercises.length} övningar</Text>
+
           {/* Exercise list */}
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
             {pickerExercises.map(ex => {
               const already = drafts.some(d => d.exercise_name === ex.name)
               return (
                 <TouchableOpacity
                   key={ex.id}
                   style={[ed.pickerRow, already && ed.pickerRowAdded]}
-                  onPress={() => already ? removeDraft(drafts.find(d => d.exercise_name === ex.name)!.key) : addExercise(ex.name)}
+                  onPress={() => already
+                    ? removeDraft(drafts.find(d => d.exercise_name === ex.name)!.key)
+                    : addExercise(ex.name)
+                  }
                   activeOpacity={0.7}
                 >
                   <View style={[ed.pickerIcon, already && { backgroundColor: ORANGE + '20' }]}>
@@ -421,14 +449,19 @@ function SessionEditor({
                     <Text style={[ed.pickerRowName, already && { color: ORANGE }]}>{ex.name}</Text>
                     <Text style={ed.pickerRowSub}>{CATEGORY_LABELS[ex.category]}</Text>
                   </View>
-                  <View style={[ed.pickerAddBtn, already && { backgroundColor: ORANGE }]}>
+                  <View style={[ed.pickerAddBtn, already && { backgroundColor: ORANGE, borderColor: ORANGE }]}>
                     <Ionicons name={already ? 'checkmark' : 'add'} size={18} color={already ? '#000' : TEXT_SECONDARY} />
                   </View>
                 </TouchableOpacity>
               )
             })}
+            {pickerExercises.length === 0 && (
+              <Text style={{ color: TEXT_SECONDARY, textAlign: 'center', marginTop: 40, fontSize: 15 }}>
+                Inga övningar hittades
+              </Text>
+            )}
           </ScrollView>
-        </SafeAreaView>
+        </View>
       </Modal>
     </Modal>
   )
@@ -988,23 +1021,34 @@ const ed = StyleSheet.create({
   pickerScreen:  { flex: 1, backgroundColor: BG },
   pickerHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
     borderBottomWidth: 1, borderBottomColor: BORDER,
   },
-  addedBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 20, paddingVertical: 8,
-    backgroundColor: ORANGE + '15', borderBottomWidth: 1, borderBottomColor: ORANGE + '30',
+  klarBtn: {
+    backgroundColor: ORANGE, borderRadius: 20,
+    paddingHorizontal: 18, paddingVertical: 9,
   },
-  addedBannerText: { color: ORANGE, fontSize: 13, fontWeight: '600' },
-  pickerFilters: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
+  klarBtnText: { color: '#000', fontWeight: '700', fontSize: 14 },
+  pickerSearchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 16, marginVertical: 10,
+    paddingHorizontal: 14, height: 46,
+    backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  pickerSearchInput: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, padding: 0 },
+  pickerFilters: { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
   pickerPill: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18,
+    paddingHorizontal: 18, paddingVertical: 10, borderRadius: 22,
     backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
   },
   pickerPillActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
-  pickerPillText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
+  pickerPillText:       { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '500' },
   pickerPillTextActive: { color: '#000', fontWeight: '700' },
+  pickerCount: {
+    color: TEXT_SECONDARY, fontSize: 12, paddingHorizontal: 20,
+    paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
   pickerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingHorizontal: 20, paddingVertical: 14,
@@ -1012,13 +1056,13 @@ const ed = StyleSheet.create({
   },
   pickerRowAdded: { backgroundColor: ORANGE + '08' },
   pickerIcon: {
-    width: 42, height: 42, borderRadius: 12,
+    width: 44, height: 44, borderRadius: 12,
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
   },
   pickerRowName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  pickerRowSub:  { color: TEXT_SECONDARY, fontSize: 12, marginTop: 1 },
+  pickerRowSub:  { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   pickerAddBtn: {
-    width: 34, height: 34, borderRadius: 17,
+    width: 36, height: 36, borderRadius: 18,
     backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
     alignItems: 'center', justifyContent: 'center',
   },
