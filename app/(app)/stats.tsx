@@ -30,6 +30,13 @@ const GRID_PADDING = 20
 const GAP          = 6
 const SQUARE_SIZE  = Math.floor((SCREEN_WIDTH - GRID_PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS)
 
+const WEEKDAY_LABELS = ['M', 'T', 'O', 'T', 'F', 'L', 'S']
+
+function getStartOffset(startDate: string): number {
+  // Returns 0=Måndag … 6=Söndag
+  return (new Date(startDate).getDay() + 6) % 7
+}
+
 const DAY_COLORS: Record<DaySummary['status'], string> = {
   completed: GREEN,
   failed:    RED,
@@ -627,7 +634,21 @@ export default function StatsScreen() {
             <View style={styles.card}>
               <Text style={styles.cardTitle}>75 dagar</Text>
               <Legend />
+
+              {/* Weekday headers */}
+              <View style={styles.weekdayRow}>
+                {WEEKDAY_LABELS.map((l, i) => (
+                  <View key={i} style={styles.weekdayCell}>
+                    <Text style={styles.weekdayLabel}>{l}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Calendar grid aligned to correct weekday */}
               <View style={styles.grid}>
+                {Array.from({ length: startDate ? getStartOffset(startDate) : 0 }, (_, i) => (
+                  <View key={`off-${i}`} style={[styles.square, { backgroundColor: 'transparent' }]} />
+                ))}
                 {days.map(day => (
                   <DaySquare
                     key={day.dayNumber}
@@ -887,6 +908,10 @@ const styles = StyleSheet.create({
   legendItem:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot:   { width: 10, height: 10, borderRadius: 5 },
   legendLabel: { color: TEXT_SECONDARY, fontSize: 12 },
+
+  weekdayRow:   { flexDirection: 'row', gap: GAP, marginBottom: 2 },
+  weekdayCell:  { width: SQUARE_SIZE, alignItems: 'center' },
+  weekdayLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
 
   grid:             { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   square:           { width: SQUARE_SIZE, height: SQUARE_SIZE, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
