@@ -25,26 +25,30 @@ export async function updateProfile(userId: string, updates: Partial<ProfileData
 export async function uploadAvatar(userId: string, uri: string): Promise<string> {
   const path = `${userId}.jpg`
 
-  // Read file as base64 — works with ph:// and file:// URIs in React Native
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Inte inloggad')
+
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
+  const anonKey    = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+
+  // FileSystem.uploadAsync uses native HTTP — avoids fetch polyfill issues
+  // and works with both file:// and ph:// URIs from ImagePicker
+  const uploadUrl = `${supabaseUrl}/storage/v1/object/avatars/${path}`
+  const result = await FileSystem.uploadAsync(uploadUrl, uri, {
+    httpMethod: 'POST',
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: anonKey,
+      'Content-Type': 'image/jpeg',
+      'x-upsert': 'true',
+    },
   })
 
-  // Convert base64 → Uint8Array (fetch() can't read local file URIs in RN)
-  const binaryStr = atob(base64)
-  const bytes = new Uint8Array(binaryStr.length)
-  for (let i = 0; i < binaryStr.length; i++) {
-    bytes[i] = binaryStr.charCodeAt(i)
-  }
-
-  const { error } = await supabase.storage
-    .from('avatars')
-    .upload(path, bytes, { upsert: true, contentType: 'image/jpeg' })
-
-  if (error) {
-    // Common cause: storage bucket "avatars" doesn't exist yet.
-    // Run supabase/create_avatars_bucket.sql in Supabase SQL Editor.
-    throw new Error(`Kunde inte ladda upp bilden: ${error.message}. Kontrollera att storage-bucketen "avatars" finns i Supabase.`)
+  if (result.status >= 400) {
+    let msg = result.body
+    try { msg = JSON.parse(result.body)?.message ?? result.body } catch { /* */ }
+    throw new Error(`Kunde inte ladda upp bilden (${result.status}): ${msg}. Kontrollera att storage-bucketen "avatars" finns i Supabase.`)
   }
 
   const { data } = supabase.storage.from('avatars').getPublicUrl(path)
