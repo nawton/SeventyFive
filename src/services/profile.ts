@@ -41,7 +41,11 @@ export async function uploadAvatar(userId: string, uri: string): Promise<string>
     .from('avatars')
     .upload(path, bytes, { upsert: true, contentType: 'image/jpeg' })
 
-  if (error) throw error
+  if (error) {
+    // Common cause: storage bucket "avatars" doesn't exist yet.
+    // Run supabase/create_avatars_bucket.sql in Supabase SQL Editor.
+    throw new Error(`Kunde inte ladda upp bilden: ${error.message}. Kontrollera att storage-bucketen "avatars" finns i Supabase.`)
+  }
 
   const { data } = supabase.storage.from('avatars').getPublicUrl(path)
   return data.publicUrl

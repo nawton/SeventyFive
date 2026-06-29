@@ -14,7 +14,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Notifications from 'expo-notifications'
+import Constants from 'expo-constants'
 import { supabase } from '@/lib/supabase'
+
+const IS_EXPO_GO = Constants.appOwnership === 'expo'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getProfile } from '@/services/profile'
 import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
@@ -100,9 +103,13 @@ export default function SettingsScreen() {
         setStartDate(formatDate(challenge.start_date))
       }
 
-      // Kolla befintliga notistillstånd
-      const { status } = await Notifications.getPermissionsAsync()
-      setNotificationsEnabled(status === 'granted')
+      // expo-notifications fungerar inte i Expo Go (SDK 53+)
+      if (!IS_EXPO_GO) {
+        try {
+          const { status } = await Notifications.getPermissionsAsync()
+          setNotificationsEnabled(status === 'granted')
+        } catch { /* ignore in unsupported envs */ }
+      }
     } finally {
       setLoading(false)
     }
@@ -116,24 +123,21 @@ export default function SettingsScreen() {
   }, [loading]))
 
   async function handleNotificationToggle(value: boolean) {
-    if (value) {
-      const { status } = await Notifications.requestPermissionsAsync()
-      setNotificationsEnabled(status === 'granted')
-      if (status !== 'granted') {
-        Alert.alert(
-          'Notiser blockerade',
-          'Gå till Inställningar → SeventyFive och aktivera notiser manuellt.',
-          [{ text: 'OK' }]
-        )
-      }
-    } else {
-      // iOS/Android kan inte programmässigt stänga av — informera användaren
-      Alert.alert(
-        'Stäng av notiser',
-        'Gå till Inställningar → SeventyFive → Notiser för att stänga av.',
-        [{ text: 'OK' }]
-      )
+    if (IS_EXPO_GO) {
+      Alert.alert('Kräver development build', 'Push-notiser fungerar inte i Expo Go. Bygg appen med expo-dev-client för att aktivera notiser.')
+      return
     }
+    try {
+      if (value) {
+        const { status } = await Notifications.requestPermissionsAsync()
+        setNotificationsEnabled(status === 'granted')
+        if (status !== 'granted') {
+          Alert.alert('Notiser blockerade', 'Gå till Inställningar → SeventyFive och aktivera notiser manuellt.')
+        }
+      } else {
+        Alert.alert('Stäng av notiser', 'Gå till Inställningar → SeventyFive → Notiser för att stänga av.')
+      }
+    } catch { /* ignore */ }
   }
 
   async function handleLogout() {
@@ -225,15 +229,19 @@ export default function SettingsScreen() {
           <SettingRow
             icon="notifications-outline"
             label="Push-notiser"
+            value={IS_EXPO_GO ? 'Kräver dev build' : undefined}
             last
             rightElement={
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={handleNotificationToggle}
-                trackColor={{ false: BORDER, true: ORANGE }}
-                thumbColor="#fff"
-              />
+              IS_EXPO_GO ? undefined : (
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={handleNotificationToggle}
+                  trackColor={{ false: BORDER, true: ORANGE }}
+                  thumbColor="#fff"
+                />
+              )
             }
+            onPress={IS_EXPO_GO ? handleNotificationToggle.bind(null, false) : undefined}
           />
         </Section>
 
