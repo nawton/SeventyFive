@@ -24,20 +24,16 @@ import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/th
 
 const AVATAR_SECTIONS = [
   {
-    label: 'Träning & Sport',
-    items: ['💪', '🏋️', '🏃', '🧘', '🥊', '🏊', '🚴', '🧗', '🤸', '⛹️', '🏇', '🤼', '🥋', '🎽', '🏄', '🤾'],
+    label: 'Träning',
+    items: ['💪', '🏋️', '🏃', '🧘', '🥊', '🚴', '🤸', '🏊'],
   },
   {
     label: 'Motivation',
-    items: ['🔥', '⚡', '🎯', '🏆', '👑', '💎', '🌟', '🚀', '⚔️', '🛡️', '🦁', '🐺', '🦅', '🐉', '💯', '✊'],
-  },
-  {
-    label: 'Natur & Energi',
-    items: ['🌊', '🏔️', '🌪️', '❄️', '☀️', '🌙', '⭐', '🌈', '🍃', '🌿', '🌸', '🎋'],
+    items: ['🔥', '⚡', '🎯', '🏆', '👑', '🦁', '🦅', '🚀'],
   },
   {
     label: 'Livsstil',
-    items: ['🥗', '🥩', '💧', '📖', '🎵', '🧠', '❤️', '🙏', '👊', '🤛', '🕹️', '🎮'],
+    items: ['🌊', '🏔️', '☀️', '🌙', '💧', '❤️', '🎵', '🧠'],
   },
 ]
 
@@ -182,7 +178,7 @@ export default function EditProfileScreen() {
 
           {/* Emoji / Foto tabs */}
           <View style={styles.tabs}>
-            {(['emoji', 'photo'] as AvatarTab[]).map(tab => (
+            {(['photo', 'emoji'] as AvatarTab[]).map(tab => (
               <TouchableOpacity
                 key={tab}
                 style={[styles.tab, activeTab === tab && styles.tabActive]}
@@ -190,12 +186,12 @@ export default function EditProfileScreen() {
                 activeOpacity={0.8}
               >
                 <Ionicons
-                  name={tab === 'emoji' ? 'happy-outline' : 'image-outline'}
+                  name={tab === 'photo' ? 'image-outline' : 'happy-outline'}
                   size={17}
                   color={activeTab === tab ? '#000' : TEXT_SECONDARY}
                 />
                 <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                  {tab === 'emoji' ? 'Emoji' : 'Foto'}
+                  {tab === 'photo' ? 'Foto' : 'Emoji'}
                 </Text>
               </TouchableOpacity>
             ))}
