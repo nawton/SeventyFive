@@ -99,10 +99,12 @@ function CalendarView({ days, startDate, currentDay, onPressDay }: {
           const isPending = summary?.status === 'pending'
           const isFuture  = summary?.status === 'future'
 
-          // Pending (today's challenge day): ring only, no fill
-          const bgColor = summary && !isPending && !isFuture
-            ? DAY_COLORS[summary.status]
-            : 'transparent'
+          // Pending: ring only, future: subtle fill, completed/failed: status color
+          const bgColor = isFuture
+            ? 'rgba(255,255,255,0.07)'
+            : summary && !isPending
+              ? DAY_COLORS[summary.status]
+              : 'transparent'
 
           return (
             <TouchableOpacity
