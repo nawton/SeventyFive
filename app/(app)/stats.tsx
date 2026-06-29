@@ -96,24 +96,31 @@ function CalendarView({ days, startDate, currentDay, onPressDay }: {
           const isToday        = sameDay(date, today)
           const isChallengeDay = !!summary
 
-          const bgColor = summary
-            ? DAY_COLORS[summary.status] === 'rgba(255,255,255,0.08)' ? 'transparent' : DAY_COLORS[summary.status]
-            : 'transparent'
+          const isPending = summary?.status === 'pending'
+          const isFuture  = summary?.status === 'future'
 
-          const showTodayRing = isToday && (!summary || summary.status === 'future' || summary.status === 'pending')
+          // Pending (today's challenge day): ring only, no fill
+          const bgColor = summary && !isPending && !isFuture
+            ? DAY_COLORS[summary.status]
+            : 'transparent'
 
           return (
             <TouchableOpacity
               key={i}
-              style={[styles.calDay, { backgroundColor: bgColor }, showTodayRing && styles.calDayToday]}
+              style={[
+                styles.calDay,
+                { backgroundColor: bgColor },
+                isPending && styles.calDayPending,
+                isToday && !isPending && styles.calDayTodayRing,
+              ]}
               onPress={() => summary && summary.status !== 'future' ? onPressDay(summary) : undefined}
               activeOpacity={summary && summary.status !== 'future' ? 0.75 : 1}
             >
               <Text style={[
                 styles.calDayText,
                 !isCurrentMonth && styles.calDayTextOther,
-                isChallengeDay && summary!.status !== 'future' && { color: '#fff', fontWeight: '700' },
-                isToday && styles.calDayTextToday,
+                summary && !isFuture && !isPending && { color: '#fff', fontWeight: '700' },
+                isPending && styles.calDayTextPending,
               ]}>
                 {date.getDate()}
               </Text>
@@ -1000,12 +1007,15 @@ const styles = StyleSheet.create({
     width: CAL_SIZE, height: CAL_SIZE, borderRadius: CAL_SIZE / 2,
     alignItems: 'center', justifyContent: 'center',
   },
-  calDayToday: {
+  calDayPending: {
     borderWidth: 2, borderColor: ORANGE,
   },
-  calDayText:      { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '500' },
-  calDayTextOther: { color: 'rgba(255,255,255,0.2)' },
-  calDayTextToday: { color: ORANGE, fontWeight: '700' },
+  calDayTodayRing: {
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
+  },
+  calDayText:        { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '500' },
+  calDayTextOther:   { color: 'rgba(255,255,255,0.2)' },
+  calDayTextPending: { color: ORANGE, fontWeight: '800' },
 
   grid:             { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   square:           { width: SQUARE_SIZE, height: SQUARE_SIZE, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
