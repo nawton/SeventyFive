@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
@@ -139,6 +139,18 @@ export default function DashboardScreen() {
   const [dayFailed, setDayFailed] = useState(false)
 
   useEffect(() => { loadDashboard() }, [])
+
+  // Refresh name + avatar silently when returning from edit-profile
+  useFocusEffect(useCallback(() => {
+    if (loading) return
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return
+      getProfile(session.user.id).then(profile => {
+        if (profile?.name) setUserName(profile.name)
+        setUserAvatar(profile?.avatar_url ?? null)
+      })
+    })
+  }, [loading]))
 
   async function loadDashboard() {
     try {
