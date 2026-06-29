@@ -120,8 +120,7 @@ function CalendarView({ days, startDate, currentDay, onPressDay }: {
             >
               <Text style={[
                 styles.calDayText,
-                !isCurrentMonth && styles.calDayTextOther,
-                summary && !isFuture && !isPending && { color: '#fff', fontWeight: '700' },
+                summary && !isFuture && !isPending && { fontWeight: '700' },
                 isPending && styles.calDayTextPending,
               ]}>
                 {date.getDate()}
