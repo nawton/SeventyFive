@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
   },
   calDayText:        { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '500' },
   calDayTextOther:   { color: 'rgba(255,255,255,0.2)' },
-  calDayTextPending: { color: ORANGE, fontWeight: '800' },
+  calDayTextPending: { color: '#fff', fontWeight: '800' },
 
   grid:             { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   square:           { width: SQUARE_SIZE, height: SQUARE_SIZE, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
