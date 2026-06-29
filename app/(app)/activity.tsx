@@ -621,142 +621,225 @@ export default function ActivityScreen() {
       {activeTab === 'schema' && (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.schemaScroll}>
 
-          {/* Day selector + Nytt pass */}
-          <View style={styles.dayHeaderRow}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayRow}>
-              {WEEKDAYS.map((d, i) => {
-                const num = i + 1
-                const active = selectedDay === num
-                const isToday = num === todayIso()
-                const hasSessions = sessions.some(s => s.weekdays.includes(num))
-                return (
-                  <TouchableOpacity
-                    key={num}
-                    style={[styles.dayPill, active && styles.dayPillActive]}
-                    onPress={() => setSelectedDay(num)}
-                    activeOpacity={0.7}
-                  >
-                    {isToday && !active && <View style={styles.todayIndicator} />}
-                    <Text style={[styles.dayPillText, active && styles.dayPillTextActive]}>{d}</Text>
-                    {hasSessions && <View style={[styles.dayDot, active && { backgroundColor: '#000' }]} />}
-                  </TouchableOpacity>
-                )
-              })}
-            </ScrollView>
+          {/* ── Week strip ── */}
+          <View style={styles.weekStrip}>
+            {WEEKDAYS.map((d, i) => {
+              const num     = i + 1
+              const active  = selectedDay === num
+              const isToday = num === todayIso()
+              const daysSessions = sessions.filter(s => s.weekdays.includes(num))
+              const totalEx = daysSessions.reduce((acc, s) => acc + s.exercises.length, 0)
+              const doneEx  = daysSessions.reduce((acc, s) =>
+                acc + s.exercises.filter(e => checked[e.id]).length, 0)
+              const allDone = totalEx > 0 && doneEx === totalEx
+              return (
+                <TouchableOpacity
+                  key={num}
+                  style={[styles.weekDay, active && styles.weekDayActive, isToday && !active && styles.weekDayToday]}
+                  onPress={() => setSelectedDay(num)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.weekDayLabel, active && styles.weekDayLabelActive, isToday && !active && styles.weekDayLabelToday]}>
+                    {d}
+                  </Text>
+                  <View style={[
+                    styles.weekDayDot,
+                    daysSessions.length > 0 && styles.weekDayDotFull,
+                    allDone && styles.weekDayDotDone,
+                    active && daysSessions.length > 0 && !allDone && styles.weekDayDotActive,
+                  ]} />
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+
+          {/* ── Selected day header ── */}
+          <View style={styles.dayHeader}>
+            <View>
+              <Text style={styles.dayName}>
+                {selectedDay === todayIso() ? 'Idag' : WEEKDAYS[selectedDay - 1]}
+              </Text>
+              {sessionsForDay.length > 0 && (
+                <Text style={styles.daySubtitle}>
+                  {sessionsForDay.length} pass · {sessionsForDay.reduce((a, s) => a + s.exercises.length, 0)} övningar
+                </Text>
+              )}
+            </View>
             <TouchableOpacity style={styles.addBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
               <Ionicons name="add" size={20} color="#000" />
+              <Text style={styles.addBtnText}>Nytt pass</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Sessions for selected day — expanded with checkboxes */}
+          {/* ── Today's sessions — workout cards ── */}
           {sessionsForDay.length > 0 ? (
             <View style={styles.sessionList}>
               {sessionsForDay.map(s => {
-                const doneCount = s.exercises.filter(e => checked[e.id]).length
                 const total     = s.exercises.length
+                const doneCount = s.exercises.filter(e => checked[e.id]).length
+                const allDone   = total > 0 && doneCount === total
+                const pct       = total > 0 ? doneCount / total : 0
                 return (
-                  <View key={s.id} style={styles.workoutCard}>
-                    {/* Card header */}
+                  <View key={s.id} style={[styles.workoutCard, allDone && styles.workoutCardDone]}>
+
+                    {/* Header row */}
                     <View style={styles.workoutCardHeader}>
-                      <View style={styles.sessionIcon}>
-                        <Ionicons name="barbell-outline" size={18} color={ORANGE} />
+                      <View style={[styles.sessionIcon, allDone && styles.sessionIconDone]}>
+                        <Ionicons
+                          name={allDone ? 'checkmark' : 'barbell-outline'}
+                          size={18}
+                          color={allDone ? '#000' : ORANGE}
+                        />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.sessionName}>{s.name}</Text>
-                        {total > 0 && (
-                          <Text style={styles.sessionMeta}>
-                            {doneCount}/{total} klara
-                          </Text>
-                        )}
+                        <Text style={styles.sessionMeta}>
+                          {total === 0 ? 'Inga övningar' : allDone ? 'Avslutat 💪' : `${doneCount} av ${total} klara`}
+                        </Text>
                       </View>
+                      {/* Percent badge */}
+                      {total > 0 && !allDone && (
+                        <View style={styles.pctBadge}>
+                          <Text style={styles.pctText}>{Math.round(pct * 100)}%</Text>
+                        </View>
+                      )}
                       <TouchableOpacity
                         onPress={() => openEditor(s)}
                         style={styles.editBtn}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
-                        <Ionicons name="create-outline" size={18} color={TEXT_SECONDARY} />
+                        <Ionicons name="ellipsis-horizontal" size={18} color={TEXT_SECONDARY} />
                       </TouchableOpacity>
                     </View>
 
                     {/* Progress bar */}
                     {total > 0 && (
-                      <View style={styles.progressBar}>
-                        <View style={[styles.progressFill, { width: `${(doneCount / total) * 100}%` as any }]} />
+                      <View style={styles.progressBarWrap}>
+                        <View style={styles.progressBar}>
+                          <View style={[
+                            styles.progressFill,
+                            { width: `${pct * 100}%` as any },
+                            allDone && { backgroundColor: '#4CAF50' },
+                          ]} />
+                        </View>
                       </View>
                     )}
 
                     {/* Exercise checklist */}
                     {s.exercises.length === 0 ? (
-                      <Text style={styles.noExercises}>Inga övningar tillagda</Text>
+                      <TouchableOpacity
+                        style={styles.addExHint}
+                        onPress={() => openEditor(s)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="add-circle-outline" size={16} color={ORANGE} />
+                        <Text style={styles.addExHintText}>Lägg till övningar</Text>
+                      </TouchableOpacity>
                     ) : (
-                      s.exercises.map(ex => {
+                      s.exercises.map((ex, idx) => {
                         const done = !!checked[ex.id]
                         return (
                           <TouchableOpacity
                             key={ex.id}
-                            style={styles.checkRow}
+                            style={[
+                              styles.checkRow,
+                              idx === 0 && styles.checkRowFirst,
+                              done && styles.checkRowDone,
+                            ]}
                             onPress={() => toggleCheck(ex.id)}
-                            activeOpacity={0.7}
+                            activeOpacity={0.65}
                           >
                             <View style={[styles.checkbox, done && styles.checkboxDone]}>
-                              {done && <Ionicons name="checkmark" size={13} color="#000" />}
+                              {done && <Ionicons name="checkmark" size={12} color="#000" fontWeight="700" />}
                             </View>
-                            <Text style={[styles.checkName, done && styles.checkNameDone]}>
+                            <Text style={[styles.checkName, done && styles.checkNameDone]} numberOfLines={1}>
                               {ex.exercise_name}
                             </Text>
                             {(ex.sets || ex.reps) && (
-                              <Text style={[styles.checkMeta, done && { opacity: 0.4 }]}>
-                                {[ex.sets && `${ex.sets} set`, ex.reps && ex.reps].filter(Boolean).join(' · ')}
-                              </Text>
+                              <View style={[styles.setsBadge, done && { opacity: 0.35 }]}>
+                                <Text style={styles.setsText}>
+                                  {[ex.sets && `${ex.sets}×`, ex.reps].filter(Boolean).join('')}
+                                </Text>
+                              </View>
                             )}
                           </TouchableOpacity>
                         )
                       })
+                    )}
+
+                    {/* Done banner */}
+                    {allDone && (
+                      <View style={styles.doneBanner}>
+                        <Text style={styles.doneBannerText}>Passet avslutat — bra jobbat!</Text>
+                      </View>
                     )}
                   </View>
                 )
               })}
             </View>
           ) : (
-            <View style={styles.emptyDay}>
-              <Ionicons name="calendar-outline" size={40} color={BORDER} />
-              <Text style={styles.emptyDayText}>Inget pass schemalagt</Text>
-              <TouchableOpacity onPress={() => openEditor(null)} activeOpacity={0.8}>
-                <Text style={styles.emptyDayLink}>+ Lägg till ett pass</Text>
+            <View style={styles.restDay}>
+              <Text style={styles.restDayEmoji}>😴</Text>
+              <Text style={styles.restDayTitle}>Vildag</Text>
+              <Text style={styles.restDayText}>Inget pass schemalagt {WEEKDAYS[selectedDay - 1].toLowerCase()}</Text>
+              <TouchableOpacity style={styles.addRestBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
+                <Ionicons name="add" size={15} color={ORANGE} />
+                <Text style={styles.addRestBtnText}>Lägg till pass</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* All other sessions — compact, no checkboxes */}
-          {sessionsOtherDay.length > 0 && (
-            <View style={styles.allSessions}>
-              <Text style={styles.allSessionsTitle}>ÖVRIGA PASS</Text>
-              {sessionsOtherDay.map(s => (
-                <View key={s.id} style={styles.allSessionRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.allSessionName}>{s.name}</Text>
-                    <Text style={styles.allSessionDays}>
-                      {s.weekdays.sort().map(d => WEEKDAYS[d - 1]).join(', ') || 'Ingen dag vald'}
-                    </Text>
-                  </View>
+          {/* ── Veckoöversikt ── */}
+          {sessions.length > 0 && (
+            <View style={styles.weekOverview}>
+              <Text style={styles.weekOverviewTitle}>HELA VECKAN</Text>
+              {WEEKDAYS.map((d, i) => {
+                const num  = i + 1
+                const daySessions = sessions.filter(s => s.weekdays.includes(num))
+                const isToday = num === todayIso()
+                const isSelected = num === selectedDay
+                return (
                   <TouchableOpacity
-                    onPress={() => openEditor(s)}
-                    style={styles.editBtn}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    key={num}
+                    style={[styles.weekRow, isSelected && styles.weekRowSelected]}
+                    onPress={() => setSelectedDay(num)}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="create-outline" size={18} color={TEXT_SECONDARY} />
+                    <Text style={[styles.weekRowDay, isToday && { color: ORANGE }, isSelected && { color: ORANGE, fontWeight: '700' }]}>
+                      {d}
+                      {isToday ? '  •' : ''}
+                    </Text>
+                    <View style={styles.weekRowSessions}>
+                      {daySessions.length === 0 ? (
+                        <Text style={styles.weekRowRest}>Vila</Text>
+                      ) : (
+                        daySessions.map(s => {
+                          const done = s.exercises.length > 0 && s.exercises.every(e => checked[e.id])
+                          return (
+                            <View key={s.id} style={[styles.weekRowBadge, done && styles.weekRowBadgeDone]}>
+                              <Text style={[styles.weekRowBadgeText, done && styles.weekRowBadgeTextDone]} numberOfLines={1}>
+                                {s.name}
+                              </Text>
+                              {done && <Ionicons name="checkmark" size={11} color="#000" />}
+                            </View>
+                          )
+                        })
+                      )}
+                    </View>
                   </TouchableOpacity>
-                </View>
-              ))}
+                )
+              })}
             </View>
           )}
 
           {sessions.length === 0 && (
-            <View style={styles.emptyDay}>
-              <Ionicons name="barbell-outline" size={44} color={BORDER} />
-              <Text style={styles.emptyDayText}>Inga pass skapade än</Text>
-              <TouchableOpacity onPress={() => openEditor(null)} activeOpacity={0.8}>
-                <Text style={styles.emptyDayLink}>+ Skapa ditt första pass</Text>
+            <View style={styles.restDay}>
+              <Text style={styles.restDayEmoji}>🏋️</Text>
+              <Text style={styles.restDayTitle}>Bygg ditt schema</Text>
+              <Text style={styles.restDayText}>Skapa ditt första träningspass</Text>
+              <TouchableOpacity style={styles.addRestBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
+                <Ionicons name="add" size={15} color={ORANGE} />
+                <Text style={styles.addRestBtnText}>Nytt pass</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -887,99 +970,140 @@ const styles = StyleSheet.create({
   screenTabTextActive: { color: '#000', fontWeight: '700' },
 
   // Schema tab
-  schemaScroll: { paddingBottom: 48, gap: 0 },
-  dayHeaderRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingRight: 16, paddingVertical: 4,
-  },
-  dayRow: { paddingLeft: 16, paddingVertical: 10, gap: 8, flexGrow: 1 },
-  dayPill: {
-    alignItems: 'center', gap: 3,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: 22, backgroundColor: CARD,
-    borderWidth: 1, borderColor: BORDER, minWidth: 50,
-  },
-  dayPillActive: { backgroundColor: ORANGE, borderColor: ORANGE },
-  dayPillText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  dayPillTextActive: { color: '#000', fontWeight: '700' },
-  dayDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: ORANGE },
-  todayIndicator: {
-    position: 'absolute', top: 5, right: 5,
-    width: 5, height: 5, borderRadius: 2.5, backgroundColor: ORANGE,
-  },
+  schemaScroll: { paddingBottom: 60 },
 
+  // Week strip (7 equal columns)
+  weekStrip: {
+    flexDirection: 'row', paddingHorizontal: 16,
+    paddingTop: 8, paddingBottom: 4, gap: 6,
+  },
+  weekDay: {
+    flex: 1, alignItems: 'center', paddingVertical: 10,
+    borderRadius: 14, gap: 6,
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
+  weekDayActive:  { backgroundColor: ORANGE, borderColor: ORANGE },
+  weekDayToday:   { borderColor: ORANGE },
+  weekDayLabel:   { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  weekDayLabelActive: { color: '#000', fontWeight: '800' },
+  weekDayLabelToday:  { color: ORANGE },
+  weekDayDot:     { width: 5, height: 5, borderRadius: 3, backgroundColor: 'transparent' },
+  weekDayDotFull: { backgroundColor: ORANGE },
+  weekDayDotDone: { backgroundColor: '#4CAF50' },
+  weekDayDotActive: { backgroundColor: '#000' },
+
+  // Day header
+  dayHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12,
+  },
+  dayName:     { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800' },
+  daySubtitle: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
   addBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center',
-    marginLeft: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: ORANGE, borderRadius: 22,
+    paddingHorizontal: 14, paddingVertical: 9,
   },
+  addBtnText: { color: '#000', fontSize: 13, fontWeight: '700' },
 
-  emptyDay: { alignItems: 'center', paddingVertical: 52, gap: 10 },
-  emptyDayText: { color: TEXT_SECONDARY, fontSize: 16 },
-  emptyDayLink: { color: ORANGE, fontSize: 15, fontWeight: '600', marginTop: 4 },
+  sessionList: { paddingHorizontal: 16, gap: 14 },
 
-  sessionList: { paddingHorizontal: 16, gap: 12, paddingTop: 4 },
-
-  // Workout card (day view, expanded)
+  // Workout card
   workoutCard: {
-    backgroundColor: CARD, borderRadius: 18,
+    backgroundColor: CARD, borderRadius: 20,
     borderWidth: 1, borderColor: BORDER, overflow: 'hidden',
   },
+  workoutCardDone: { borderColor: '#4CAF50' + '50' },
   workoutCardHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 16, paddingBottom: 12,
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12,
   },
   sessionIcon: {
-    width: 40, height: 40, borderRadius: 11,
-    backgroundColor: ORANGE + '18', alignItems: 'center', justifyContent: 'center',
+    width: 42, height: 42, borderRadius: 13,
+    backgroundColor: ORANGE + '20', alignItems: 'center', justifyContent: 'center',
   },
-  sessionName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  sessionMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 1 },
+  sessionIconDone: { backgroundColor: '#4CAF50' },
+  sessionName:   { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
+  sessionMeta:   { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+  pctBadge:      { backgroundColor: ORANGE + '20', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  pctText:       { color: ORANGE, fontSize: 13, fontWeight: '700' },
   editBtn: {
-    width: 34, height: 34, borderRadius: 10,
+    width: 32, height: 32, borderRadius: 10,
     backgroundColor: BG, alignItems: 'center', justifyContent: 'center',
   },
 
-  progressBar: {
-    height: 3, backgroundColor: BORDER,
-    marginHorizontal: 16, borderRadius: 2, marginBottom: 4,
-  },
-  progressFill: {
-    height: 3, backgroundColor: ORANGE, borderRadius: 2,
-  },
+  progressBarWrap: { paddingHorizontal: 16, paddingBottom: 4 },
+  progressBar: { height: 4, backgroundColor: BORDER, borderRadius: 2, overflow: 'hidden' },
+  progressFill: { height: 4, backgroundColor: ORANGE, borderRadius: 2 },
 
-  noExercises: {
-    color: TEXT_SECONDARY, fontSize: 14, paddingHorizontal: 16, paddingBottom: 14, marginTop: 4,
-  },
-  checkRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 16, paddingVertical: 13,
+  addExHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 16, paddingVertical: 14,
     borderTopWidth: 1, borderTopColor: BORDER,
   },
+  addExHintText: { color: ORANGE, fontSize: 14, fontWeight: '500' },
+
+  checkRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderTopWidth: 1, borderTopColor: BORDER,
+  },
+  checkRowFirst: {},
+  checkRowDone:  { backgroundColor: 'rgba(255,255,255,0.02)' },
   checkbox: {
-    width: 24, height: 24, borderRadius: 12,
+    width: 26, height: 26, borderRadius: 13,
     borderWidth: 2, borderColor: BORDER,
     alignItems: 'center', justifyContent: 'center',
   },
-  checkboxDone: { backgroundColor: ORANGE, borderColor: ORANGE },
-  checkName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '500' },
-  checkNameDone: { color: TEXT_SECONDARY, textDecorationLine: 'line-through' },
-  checkMeta: { color: TEXT_SECONDARY, fontSize: 13 },
+  checkboxDone:    { backgroundColor: ORANGE, borderColor: ORANGE },
+  checkName:       { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '500' },
+  checkNameDone:   { color: TEXT_SECONDARY, textDecorationLine: 'line-through', opacity: 0.6 },
+  setsBadge: {
+    backgroundColor: BG, borderRadius: 8, borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 9, paddingVertical: 4,
+  },
+  setsText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  doneBanner: {
+    backgroundColor: '#4CAF50' + '18',
+    paddingVertical: 12, paddingHorizontal: 16,
+    alignItems: 'center', borderTopWidth: 1, borderTopColor: '#4CAF50' + '30',
+  },
+  doneBannerText: { color: '#4CAF50', fontSize: 14, fontWeight: '600' },
 
-  // Other sessions (compact)
-  allSessions: { marginTop: 24, paddingHorizontal: 16, gap: 0 },
-  allSessionsTitle: {
+  // Rest day
+  restDay: { alignItems: 'center', paddingVertical: 44, gap: 6 },
+  restDayEmoji:  { fontSize: 44, marginBottom: 4 },
+  restDayTitle:  { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '700' },
+  restDayText:   { color: TEXT_SECONDARY, fontSize: 14 },
+  addRestBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 12, borderWidth: 1, borderColor: ORANGE,
+    borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9,
+  },
+  addRestBtnText: { color: ORANGE, fontSize: 14, fontWeight: '600' },
+
+  // Week overview
+  weekOverview: { marginTop: 28, paddingHorizontal: 16 },
+  weekOverviewTitle: {
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
-    letterSpacing: 1.5, marginBottom: 8, paddingHorizontal: 4,
+    letterSpacing: 1.5, marginBottom: 10,
   },
-  allSessionRow: {
+  weekRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8,
+    paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: BORDER,
   },
-  allSessionName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  allSessionDays: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+  weekRowSelected: {},
+  weekRowDay: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600', width: 32 },
+  weekRowSessions: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  weekRowRest: { color: BORDER, fontSize: 13, fontStyle: 'italic' },
+  weekRowBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: CARD, borderRadius: 10, borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 10, paddingVertical: 5,
+  },
+  weekRowBadgeDone:     { backgroundColor: '#4CAF50' + '20', borderColor: '#4CAF50' + '40' },
+  weekRowBadgeText:     { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '500' },
+  weekRowBadgeTextDone: { color: '#4CAF50' },
 
   // Övningar tab
   stickyTop: { backgroundColor: BG, paddingTop: 8 },
