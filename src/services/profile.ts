@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system'
 import { supabase } from '@/lib/supabase'
 
 export interface ProfileData {
@@ -22,15 +23,23 @@ export async function updateProfile(userId: string, updates: Partial<ProfileData
 }
 
 export async function uploadAvatar(userId: string, uri: string): Promise<string> {
-  const ext = uri.split('.').pop() ?? 'jpg'
-  const path = `avatars/${userId}.${ext}`
+  const path = `${userId}.jpg`
 
-  const response = await fetch(uri)
-  const blob = await response.blob()
+  // Read file as base64 — works with ph:// and file:// URIs in React Native
+  const base64 = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  })
+
+  // Convert base64 → Uint8Array (fetch() can't read local file URIs in RN)
+  const binaryStr = atob(base64)
+  const bytes = new Uint8Array(binaryStr.length)
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i)
+  }
 
   const { error } = await supabase.storage
     .from('avatars')
-    .upload(path, blob, { upsert: true, contentType: `image/${ext}` })
+    .upload(path, bytes, { upsert: true, contentType: 'image/jpeg' })
 
   if (error) throw error
 
