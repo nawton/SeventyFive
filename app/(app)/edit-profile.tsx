@@ -173,7 +173,7 @@ export default function EditProfileScreen() {
                 placeholder="Ditt namn"
                 placeholderTextColor={TEXT_SECONDARY}
                 returnKeyType="done"
-                onSubmitEditing={handleSave}
+                onSubmitEditing={() => nameRef.current?.blur()}
                 autoCapitalize="words"
                 autoCorrect={false}
               />
