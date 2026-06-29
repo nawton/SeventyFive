@@ -538,8 +538,9 @@ export default function ActivityScreen() {
   const [muscleFilter, setMuscleFilter] = useState<MuscleGroup>('all')
   const [searchQuery, setSearchQuery]   = useState('')
   const [loading, setLoading]           = useState(true)
-  const [editorVisible, setEditorVisible] = useState(false)
+  const [editorVisible, setEditorVisible]   = useState(false)
   const [editingSession, setEditingSession] = useState<WorkoutSession | null>(null)
+  const [checked, setChecked]               = useState<Record<string, boolean>>({})
 
   async function loadData(uid: string) {
     const [exs, sess] = await Promise.all([
@@ -568,7 +569,12 @@ export default function ActivityScreen() {
     setEditorVisible(true)
   }
 
-  const sessionsForDay = sessions.filter(s => s.weekdays.includes(selectedDay))
+  function toggleCheck(exId: string) {
+    setChecked(prev => ({ ...prev, [exId]: !prev[exId] }))
+  }
+
+  const sessionsForDay  = sessions.filter(s => s.weekdays.includes(selectedDay))
+  const sessionsOtherDay = sessions.filter(s => !s.weekdays.includes(selectedDay))
 
   // Exercise filtering
   const byCategory = catFilter === 'all' ? exercises : exercises.filter(e => e.category === catFilter)
@@ -614,41 +620,104 @@ export default function ActivityScreen() {
       {/* ── Schema tab ── */}
       {activeTab === 'schema' && (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.schemaScroll}>
-          {/* Day selector */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayRow}>
-            {WEEKDAYS.map((d, i) => {
-              const num = i + 1
-              const active = selectedDay === num
-              const hasSessions = sessions.some(s => s.weekdays.includes(num))
-              return (
-                <TouchableOpacity
-                  key={num}
-                  style={[styles.dayPill, active && styles.dayPillActive]}
-                  onPress={() => setSelectedDay(num)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.dayPillText, active && styles.dayPillTextActive]}>{d}</Text>
-                  {hasSessions && <View style={[styles.dayDot, active && { backgroundColor: '#000' }]} />}
-                </TouchableOpacity>
-              )
-            })}
-          </ScrollView>
 
-          {/* Day label */}
-          <View style={styles.dayLabelRow}>
-            <Text style={styles.dayLabel}>{WEEKDAYS[selectedDay - 1]}</Text>
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => openEditor(null)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add" size={18} color="#000" />
-              <Text style={styles.addBtnText}>Nytt pass</Text>
+          {/* Day selector + Nytt pass */}
+          <View style={styles.dayHeaderRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayRow}>
+              {WEEKDAYS.map((d, i) => {
+                const num = i + 1
+                const active = selectedDay === num
+                const isToday = num === todayIso()
+                const hasSessions = sessions.some(s => s.weekdays.includes(num))
+                return (
+                  <TouchableOpacity
+                    key={num}
+                    style={[styles.dayPill, active && styles.dayPillActive]}
+                    onPress={() => setSelectedDay(num)}
+                    activeOpacity={0.7}
+                  >
+                    {isToday && !active && <View style={styles.todayIndicator} />}
+                    <Text style={[styles.dayPillText, active && styles.dayPillTextActive]}>{d}</Text>
+                    {hasSessions && <View style={[styles.dayDot, active && { backgroundColor: '#000' }]} />}
+                  </TouchableOpacity>
+                )
+              })}
+            </ScrollView>
+            <TouchableOpacity style={styles.addBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
+              <Ionicons name="add" size={20} color="#000" />
             </TouchableOpacity>
           </View>
 
-          {/* Sessions for this day */}
-          {sessionsForDay.length === 0 ? (
+          {/* Sessions for selected day — expanded with checkboxes */}
+          {sessionsForDay.length > 0 ? (
+            <View style={styles.sessionList}>
+              {sessionsForDay.map(s => {
+                const doneCount = s.exercises.filter(e => checked[e.id]).length
+                const total     = s.exercises.length
+                return (
+                  <View key={s.id} style={styles.workoutCard}>
+                    {/* Card header */}
+                    <View style={styles.workoutCardHeader}>
+                      <View style={styles.sessionIcon}>
+                        <Ionicons name="barbell-outline" size={18} color={ORANGE} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.sessionName}>{s.name}</Text>
+                        {total > 0 && (
+                          <Text style={styles.sessionMeta}>
+                            {doneCount}/{total} klara
+                          </Text>
+                        )}
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => openEditor(s)}
+                        style={styles.editBtn}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="create-outline" size={18} color={TEXT_SECONDARY} />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Progress bar */}
+                    {total > 0 && (
+                      <View style={styles.progressBar}>
+                        <View style={[styles.progressFill, { width: `${(doneCount / total) * 100}%` as any }]} />
+                      </View>
+                    )}
+
+                    {/* Exercise checklist */}
+                    {s.exercises.length === 0 ? (
+                      <Text style={styles.noExercises}>Inga övningar tillagda</Text>
+                    ) : (
+                      s.exercises.map(ex => {
+                        const done = !!checked[ex.id]
+                        return (
+                          <TouchableOpacity
+                            key={ex.id}
+                            style={styles.checkRow}
+                            onPress={() => toggleCheck(ex.id)}
+                            activeOpacity={0.7}
+                          >
+                            <View style={[styles.checkbox, done && styles.checkboxDone]}>
+                              {done && <Ionicons name="checkmark" size={13} color="#000" />}
+                            </View>
+                            <Text style={[styles.checkName, done && styles.checkNameDone]}>
+                              {ex.exercise_name}
+                            </Text>
+                            {(ex.sets || ex.reps) && (
+                              <Text style={[styles.checkMeta, done && { opacity: 0.4 }]}>
+                                {[ex.sets && `${ex.sets} set`, ex.reps && ex.reps].filter(Boolean).join(' · ')}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        )
+                      })
+                    )}
+                  </View>
+                )
+              })}
+            </View>
+          ) : (
             <View style={styles.emptyDay}>
               <Ionicons name="calendar-outline" size={40} color={BORDER} />
               <Text style={styles.emptyDayText}>Inget pass schemalagt</Text>
@@ -656,71 +725,42 @@ export default function ActivityScreen() {
                 <Text style={styles.emptyDayLink}>+ Lägg till ett pass</Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <View style={styles.sessionList}>
-              {sessionsForDay.map(s => (
-                <TouchableOpacity
-                  key={s.id}
-                  style={styles.sessionCard}
-                  onPress={() => openEditor(s)}
-                  activeOpacity={0.75}
-                >
-                  <View style={styles.sessionCardLeft}>
-                    <View style={styles.sessionIcon}>
-                      <Ionicons name="barbell-outline" size={20} color={ORANGE} />
-                    </View>
-                    <View style={styles.sessionInfo}>
-                      <Text style={styles.sessionName}>{s.name}</Text>
-                      <Text style={styles.sessionMeta}>
-                        {s.exercises.length > 0
-                          ? `${s.exercises.length} övning${s.exercises.length !== 1 ? 'ar' : ''}`
-                          : 'Inga övningar'}
-                      </Text>
-                      {s.exercises.length > 0 && (
-                        <Text style={styles.sessionExNames} numberOfLines={1}>
-                          {s.exercises.slice(0, 3).map(e => e.exercise_name).join(' · ')}
-                          {s.exercises.length > 3 ? ' …' : ''}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                  <View style={styles.sessionDays}>
-                    {s.weekdays.sort().map(d => (
-                      <View key={d} style={[styles.sessionDayDot, d === selectedDay && styles.sessionDayDotActive]}>
-                        <Text style={[styles.sessionDayText, d === selectedDay && { color: '#000' }]}>
-                          {WEEKDAYS[d - 1]}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
-                </TouchableOpacity>
-              ))}
-            </View>
           )}
 
-          {/* All sessions summary */}
-          {sessions.length > 0 && (
+          {/* All other sessions — compact, no checkboxes */}
+          {sessionsOtherDay.length > 0 && (
             <View style={styles.allSessions}>
-              <Text style={styles.allSessionsTitle}>ALLA PASS</Text>
-              {sessions
-                .filter(s => !s.weekdays.includes(selectedDay))
-                .map(s => (
-                  <TouchableOpacity
-                    key={s.id}
-                    style={styles.allSessionRow}
-                    onPress={() => openEditor(s)}
-                    activeOpacity={0.7}
-                  >
+              <Text style={styles.allSessionsTitle}>ÖVRIGA PASS</Text>
+              {sessionsOtherDay.map(s => (
+                <View key={s.id} style={styles.allSessionRow}>
+                  <View style={{ flex: 1 }}>
                     <Text style={styles.allSessionName}>{s.name}</Text>
                     <Text style={styles.allSessionDays}>
                       {s.weekdays.sort().map(d => WEEKDAYS[d - 1]).join(', ') || 'Ingen dag vald'}
                     </Text>
-                    <Ionicons name="chevron-forward" size={14} color={TEXT_SECONDARY} />
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => openEditor(s)}
+                    style={styles.editBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="create-outline" size={18} color={TEXT_SECONDARY} />
                   </TouchableOpacity>
-                ))}
+                </View>
+              ))}
             </View>
           )}
+
+          {sessions.length === 0 && (
+            <View style={styles.emptyDay}>
+              <Ionicons name="barbell-outline" size={44} color={BORDER} />
+              <Text style={styles.emptyDayText}>Inga pass skapade än</Text>
+              <TouchableOpacity onPress={() => openEditor(null)} activeOpacity={0.8}>
+                <Text style={styles.emptyDayLink}>+ Skapa ditt första pass</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
         </ScrollView>
       )}
 
@@ -847,66 +887,99 @@ const styles = StyleSheet.create({
   screenTabTextActive: { color: '#000', fontWeight: '700' },
 
   // Schema tab
-  schemaScroll: { paddingBottom: 40, gap: 0 },
-  dayRow: { paddingHorizontal: 20, paddingVertical: 14, gap: 10 },
+  schemaScroll: { paddingBottom: 48, gap: 0 },
+  dayHeaderRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingRight: 16, paddingVertical: 4,
+  },
+  dayRow: { paddingLeft: 16, paddingVertical: 10, gap: 8, flexGrow: 1 },
   dayPill: {
-    alignItems: 'center', gap: 4,
+    alignItems: 'center', gap: 3,
     paddingHorizontal: 14, paddingVertical: 10,
     borderRadius: 22, backgroundColor: CARD,
-    borderWidth: 1, borderColor: BORDER, minWidth: 52,
+    borderWidth: 1, borderColor: BORDER, minWidth: 50,
   },
   dayPillActive: { backgroundColor: ORANGE, borderColor: ORANGE },
   dayPillText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   dayPillTextActive: { color: '#000', fontWeight: '700' },
   dayDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: ORANGE },
-
-  dayLabelRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, marginBottom: 12,
+  todayIndicator: {
+    position: 'absolute', top: 5, right: 5,
+    width: 5, height: 5, borderRadius: 2.5, backgroundColor: ORANGE,
   },
-  dayLabel: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '700' },
+
   addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: ORANGE, borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 8,
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center',
+    marginLeft: 8,
   },
-  addBtnText: { color: '#000', fontSize: 13, fontWeight: '700' },
 
-  emptyDay: { alignItems: 'center', paddingVertical: 48, gap: 10 },
+  emptyDay: { alignItems: 'center', paddingVertical: 52, gap: 10 },
   emptyDayText: { color: TEXT_SECONDARY, fontSize: 16 },
   emptyDayLink: { color: ORANGE, fontSize: 15, fontWeight: '600', marginTop: 4 },
 
-  sessionList: { paddingHorizontal: 20, gap: 10 },
-  sessionCard: {
-    backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER,
-    padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12,
+  sessionList: { paddingHorizontal: 16, gap: 12, paddingTop: 4 },
+
+  // Workout card (day view, expanded)
+  workoutCard: {
+    backgroundColor: CARD, borderRadius: 18,
+    borderWidth: 1, borderColor: BORDER, overflow: 'hidden',
   },
-  sessionCardLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  workoutCardHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 16, paddingBottom: 12,
+  },
   sessionIcon: {
-    width: 44, height: 44, borderRadius: 12,
+    width: 40, height: 40, borderRadius: 11,
     backgroundColor: ORANGE + '18', alignItems: 'center', justifyContent: 'center',
   },
-  sessionInfo: { flex: 1, gap: 2 },
   sessionName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  sessionMeta: { color: TEXT_SECONDARY, fontSize: 12 },
-  sessionExNames: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
-  sessionDays: { flexDirection: 'row', gap: 4, flexWrap: 'wrap', maxWidth: 100 },
-  sessionDayDot: {
-    paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: BORDER,
+  sessionMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 1 },
+  editBtn: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: BG, alignItems: 'center', justifyContent: 'center',
   },
-  sessionDayDotActive: { backgroundColor: ORANGE, borderColor: ORANGE },
-  sessionDayText: { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '600' },
 
-  allSessions: { marginTop: 28, paddingHorizontal: 20, gap: 2 },
-  allSessionsTitle: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: 8 },
-  allSessionRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER,
+  progressBar: {
+    height: 3, backgroundColor: BORDER,
+    marginHorizontal: 16, borderRadius: 2, marginBottom: 4,
   },
-  allSessionName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600', flex: 1 },
-  allSessionDays: { color: TEXT_SECONDARY, fontSize: 13 },
+  progressFill: {
+    height: 3, backgroundColor: ORANGE, borderRadius: 2,
+  },
+
+  noExercises: {
+    color: TEXT_SECONDARY, fontSize: 14, paddingHorizontal: 16, paddingBottom: 14, marginTop: 4,
+  },
+  checkRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingVertical: 13,
+    borderTopWidth: 1, borderTopColor: BORDER,
+  },
+  checkbox: {
+    width: 24, height: 24, borderRadius: 12,
+    borderWidth: 2, borderColor: BORDER,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  checkboxDone: { backgroundColor: ORANGE, borderColor: ORANGE },
+  checkName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '500' },
+  checkNameDone: { color: TEXT_SECONDARY, textDecorationLine: 'line-through' },
+  checkMeta: { color: TEXT_SECONDARY, fontSize: 13 },
+
+  // Other sessions (compact)
+  allSessions: { marginTop: 24, paddingHorizontal: 16, gap: 0 },
+  allSessionsTitle: {
+    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
+    letterSpacing: 1.5, marginBottom: 8, paddingHorizontal: 4,
+  },
+  allSessionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8,
+  },
+  allSessionName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  allSessionDays: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
 
   // Övningar tab
   stickyTop: { backgroundColor: BG, paddingTop: 8 },
