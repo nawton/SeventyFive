@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system'
+import { FileSystemUploadType } from 'expo-file-system'
 import { supabase } from '@/lib/supabase'
 
 export interface ProfileData {
@@ -36,7 +37,7 @@ export async function uploadAvatar(userId: string, uri: string): Promise<string>
   const uploadUrl = `${supabaseUrl}/storage/v1/object/avatars/${path}`
   const result = await FileSystem.uploadAsync(uploadUrl, uri, {
     httpMethod: 'POST',
-    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    uploadType: FileSystemUploadType.BINARY_CONTENT,
     headers: {
       Authorization: `Bearer ${session.access_token}`,
       apikey: anonKey,
