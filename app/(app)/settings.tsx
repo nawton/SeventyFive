@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   Switch,
   ScrollView,
@@ -180,7 +181,9 @@ export default function SettingsScreen() {
           >
             <View style={styles.avatarWrapper}>
               <View style={styles.avatarPlaceholder}>
-                {avatarUrl && !avatarUrl.startsWith('http') ? (
+                {avatarUrl?.startsWith('http') ? (
+                  <Image source={{ uri: avatarUrl }} style={styles.avatarPhoto} />
+                ) : avatarUrl ? (
                   <Text style={styles.avatarEmoji}>{avatarUrl}</Text>
                 ) : (
                   <Text style={styles.avatarText}>{initials}</Text>
@@ -314,6 +317,11 @@ const styles = StyleSheet.create({
     backgroundColor: ORANGE,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarPhoto: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   avatarText: {
     color: '#000',

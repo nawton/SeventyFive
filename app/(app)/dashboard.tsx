@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -224,7 +225,9 @@ export default function DashboardScreen() {
             onPress={() => router.push('/(app)/settings')}
             activeOpacity={0.8}
           >
-            {userAvatar && !userAvatar.startsWith('http') ? (
+            {userAvatar?.startsWith('http') ? (
+              <Image source={{ uri: userAvatar }} style={styles.avatarPhoto} />
+            ) : userAvatar ? (
               <Text style={styles.avatarEmoji}>{userAvatar}</Text>
             ) : (
               <Text style={styles.avatarText}>{userName[0]?.toUpperCase()}</Text>
@@ -325,6 +328,11 @@ const styles = StyleSheet.create({
     backgroundColor: ORANGE,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarPhoto: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   avatarText: {
     color: '#000',
