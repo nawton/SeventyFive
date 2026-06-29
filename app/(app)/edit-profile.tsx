@@ -11,8 +11,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
+  TouchableWithoutFeedback,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
@@ -20,38 +22,22 @@ import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
-// ─── Emoji options ────────────────────────────────────────────────────────────
-
 const AVATAR_SECTIONS = [
-  {
-    label: 'Träning',
-    items: ['💪', '🏋️', '🏃', '🧘', '🥊', '🚴', '🤸', '🏊'],
-  },
-  {
-    label: 'Motivation',
-    items: ['🔥', '⚡', '🎯', '🏆', '👑', '🦁', '🦅', '🚀'],
-  },
-  {
-    label: 'Livsstil',
-    items: ['🌊', '🏔️', '☀️', '🌙', '💧', '❤️', '🎵', '🧠'],
-  },
+  { label: 'Träning',    items: ['💪', '🏋️', '🏃', '🧘', '🥊', '🚴', '🤸', '🏊'] },
+  { label: 'Motivation', items: ['🔥', '⚡', '🎯', '🏆', '👑', '🦁', '🦅', '🚀'] },
+  { label: 'Livsstil',   items: ['🌊', '🏔️', '☀️', '🌙', '💧', '❤️', '🎵', '🧠'] },
 ]
 
-type AvatarTab = 'emoji' | 'photo'
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
 export default function EditProfileScreen() {
-  const [name, setName]         = useState('')
-  const [email, setEmail]       = useState('')
-  const [userId, setUserId]     = useState<string | null>(null)
-  const [loading, setLoading]   = useState(true)
-  const [saving, setSaving]     = useState(false)
-
-  // Avatar state
-  const [activeTab, setActiveTab] = useState<AvatarTab>('emoji')
-  const [emoji, setEmoji]         = useState<string | null>(null)
-  const [photoUri, setPhotoUri]   = useState<string | null>(null) // local or existing URL
+  const insets = useSafeAreaInsets()
+  const [name, setName]       = useState('')
+  const [email, setEmail]     = useState('')
+  const [userId, setUserId]   = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving]   = useState(false)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [emoji, setEmoji]     = useState<string | null>(null)
+  const [photoUri, setPhotoUri] = useState<string | null>(null)
 
   const nameRef = useRef<TextInput>(null)
 
@@ -67,10 +53,8 @@ export default function EditProfileScreen() {
         if (profile?.avatar_url) {
           if (profile.avatar_url.startsWith('http')) {
             setPhotoUri(profile.avatar_url)
-            setActiveTab('photo')
           } else {
             setEmoji(profile.avatar_url)
-            setActiveTab('emoji')
           }
         }
       } finally {
@@ -94,6 +78,8 @@ export default function EditProfileScreen() {
     })
     if (!result.canceled && result.assets[0]) {
       setPhotoUri(result.assets[0].uri)
+      setEmoji(null)
+      setModalVisible(false)
     }
   }
 
@@ -101,24 +87,14 @@ export default function EditProfileScreen() {
     const trimmed = name.trim()
     if (!trimmed) { Alert.alert('Ange ett namn'); return }
     if (!userId) return
-
     setSaving(true)
     try {
       let avatarUrl = ''
-
-      if (activeTab === 'photo' && photoUri) {
-        if (photoUri.startsWith('http')) {
-          // Unchanged existing photo
-          avatarUrl = photoUri
-        } else {
-          // New local photo — upload first
-          avatarUrl = await uploadAvatar(userId, photoUri)
-        }
-      } else if (activeTab === 'emoji' && emoji) {
+      if (photoUri) {
+        avatarUrl = photoUri.startsWith('http') ? photoUri : await uploadAvatar(userId, photoUri)
+      } else if (emoji) {
         avatarUrl = emoji
       }
-      // '' → use initials (default)
-
       await updateProfile(userId, { name: trimmed, avatar_url: avatarUrl })
       router.back()
     } catch (e: any) {
@@ -128,17 +104,11 @@ export default function EditProfileScreen() {
     }
   }
 
-  const initials  = (name.trim() || email.split('@')[0] || '?')[0].toUpperCase()
-  const isDefault = activeTab === 'emoji' && !emoji
+  const initials = (name.trim() || email.split('@')[0] || '?')[0].toUpperCase()
 
-  // What to show in the big preview circle
-  function PreviewAvatar() {
-    if (activeTab === 'photo' && photoUri) {
-      return <Image source={{ uri: photoUri }} style={styles.previewPhoto} />
-    }
-    if (activeTab === 'emoji' && emoji) {
-      return <Text style={styles.avatarEmoji}>{emoji}</Text>
-    }
+  function AvatarContent() {
+    if (photoUri) return <Image source={{ uri: photoUri }} style={styles.previewPhoto} />
+    if (emoji)    return <Text style={styles.avatarEmoji}>{emoji}</Text>
     return <Text style={styles.avatarInitials}>{initials}</Text>
   }
 
@@ -152,18 +122,14 @@ export default function EditProfileScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      {/* Fixed header — outside ScrollView so it stays pinned */}
+
+      {/* ── Fixed header ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
         </TouchableOpacity>
         <Text style={styles.title}>Redigera profil</Text>
-        <TouchableOpacity
-          style={styles.checkBtn}
-          onPress={handleSave}
-          disabled={saving}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.checkBtn} onPress={handleSave} disabled={saving} activeOpacity={0.7}>
           {saving
             ? <ActivityIndicator color={ORANGE} size="small" />
             : <Ionicons name="checkmark" size={22} color={ORANGE} />}
@@ -176,104 +142,25 @@ export default function EditProfileScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-
-          {/* Avatar preview */}
+          {/* ── Avatar with pencil ── */}
           <View style={styles.previewSection}>
-            <View style={styles.avatarPreview}>
-              <PreviewAvatar />
+            <View style={styles.avatarWrapper}>
+              <View style={styles.avatarCircle}>
+                <AvatarContent />
+              </View>
+              <TouchableOpacity
+                style={styles.pencilBtn}
+                onPress={() => setModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="pencil" size={13} color="#fff" />
+              </TouchableOpacity>
             </View>
             <Text style={styles.previewName}>{name || 'Ditt namn'}</Text>
             <Text style={styles.previewEmail}>{email}</Text>
           </View>
 
-          {/* Emoji / Foto tabs */}
-          <View style={styles.tabs}>
-            {(['photo', 'emoji'] as AvatarTab[]).map(tab => (
-              <TouchableOpacity
-                key={tab}
-                style={[styles.tab, activeTab === tab && styles.tabActive]}
-                onPress={() => setActiveTab(tab)}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name={tab === 'photo' ? 'image-outline' : 'happy-outline'}
-                  size={17}
-                  color={activeTab === tab ? '#000' : TEXT_SECONDARY}
-                />
-                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                  {tab === 'photo' ? 'Foto' : 'Emoji'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* ── Emoji tab ── */}
-          {activeTab === 'emoji' && (
-            <View style={styles.pickerSection}>
-              {/* Reset to initial */}
-              <TouchableOpacity
-                style={[styles.resetBtn, isDefault && styles.resetBtnActive]}
-                onPress={() => setEmoji(null)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.resetCircle, isDefault && styles.resetCircleActive]}>
-                  <Text style={[styles.resetLetter, isDefault && { color: ORANGE }]}>{initials}</Text>
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={[styles.resetLabel, isDefault && { color: ORANGE }]}>Standard (bokstav)</Text>
-                  <Text style={styles.resetSub}>Visar första bokstaven i ditt namn</Text>
-                </View>
-                {isDefault && <Ionicons name="checkmark-circle" size={20} color={ORANGE} />}
-              </TouchableOpacity>
-
-              {/* Emoji sections */}
-              {AVATAR_SECTIONS.map(section => (
-                <View key={section.label} style={styles.emojiSection}>
-                  <Text style={styles.sectionLabel}>{section.label}</Text>
-                  <View style={styles.emojiGrid}>
-                    {section.items.map(e => (
-                      <TouchableOpacity
-                        key={e}
-                        style={[styles.emojiBtn, emoji === e && styles.emojiBtnActive]}
-                        onPress={() => setEmoji(e)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.emoji}>{e}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* ── Foto tab ── */}
-          {activeTab === 'photo' && (
-            <View style={styles.photoSection}>
-              {photoUri ? (
-                <>
-                  <Image source={{ uri: photoUri }} style={styles.photoPreviewLarge} />
-                  <TouchableOpacity style={styles.changePhotoBtn} onPress={pickPhoto} activeOpacity={0.8}>
-                    <Ionicons name="image-outline" size={18} color={ORANGE} />
-                    <Text style={styles.changePhotoBtnText}>Byt bild</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setPhotoUri(null)} activeOpacity={0.7}>
-                    <Text style={styles.removePhotoText}>Ta bort foto</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity style={styles.pickPhotoBtn} onPress={pickPhoto} activeOpacity={0.8}>
-                  <View style={styles.pickPhotoIcon}>
-                    <Ionicons name="image-outline" size={36} color={TEXT_SECONDARY} />
-                  </View>
-                  <Text style={styles.pickPhotoBtnText}>Välj bild från bibliotek</Text>
-                  <Text style={styles.pickPhotoSub}>Bilderna beskärs automatiskt till cirkel</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
-          {/* Name */}
+          {/* ── Name ── */}
           <View style={styles.fieldSection}>
             <Text style={styles.fieldLabel}>VISNINGSNAMN</Text>
             <View style={styles.inputWrapper}>
@@ -293,7 +180,7 @@ export default function EditProfileScreen() {
             </View>
           </View>
 
-          {/* Email (locked) */}
+          {/* ── Email (locked) ── */}
           <View style={styles.fieldSection}>
             <Text style={styles.fieldLabel}>E-POST</Text>
             <View style={[styles.inputWrapper, { opacity: 0.5 }]}>
@@ -307,7 +194,7 @@ export default function EditProfileScreen() {
             </View>
           </View>
 
-          {/* Save */}
+          {/* ── Save button ── */}
           <TouchableOpacity
             style={[styles.saveBtn, saving && { opacity: 0.6 }]}
             onPress={handleSave}
@@ -316,12 +203,88 @@ export default function EditProfileScreen() {
           >
             {saving
               ? <ActivityIndicator color="#000" />
-              : <Text style={styles.saveBtnText}>Spara ändringar</Text>
-            }
+              : <Text style={styles.saveBtnText}>Spara ändringar</Text>}
           </TouchableOpacity>
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Avatar picker bottom sheet ── */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+            <View style={StyleSheet.absoluteFill} />
+          </TouchableWithoutFeedback>
+
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Välj profilbild</Text>
+
+            {/* Quick options */}
+            <View style={styles.quickRow}>
+              {/* Photo */}
+              <TouchableOpacity style={styles.quickBtn} onPress={pickPhoto} activeOpacity={0.8}>
+                <View style={styles.quickIcon}>
+                  <Ionicons name="image-outline" size={24} color={TEXT_PRIMARY} />
+                </View>
+                <Text style={styles.quickLabel}>Foto</Text>
+              </TouchableOpacity>
+
+              {/* Initials */}
+              <TouchableOpacity
+                style={[styles.quickBtn, !photoUri && !emoji && styles.quickBtnActive]}
+                onPress={() => { setPhotoUri(null); setEmoji(null); setModalVisible(false) }}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.quickIcon, !photoUri && !emoji && styles.quickIconActive]}>
+                  <Text style={[styles.quickInitial, !photoUri && !emoji && { color: ORANGE }]}>
+                    {initials}
+                  </Text>
+                </View>
+                <Text style={[styles.quickLabel, !photoUri && !emoji && { color: ORANGE }]}>
+                  Bokstav
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Divider */}
+            <View style={styles.sheetDivider} />
+            <Text style={styles.emojiHeader}>EMOJI</Text>
+
+            {/* Emoji grid */}
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 240 }}>
+              {AVATAR_SECTIONS.map(section => (
+                <View key={section.label} style={styles.emojiSection}>
+                  <Text style={styles.sectionLabel}>{section.label}</Text>
+                  <View style={styles.emojiGrid}>
+                    {section.items.map(e => (
+                      <TouchableOpacity
+                        key={e}
+                        style={[styles.emojiBtn, emoji === e && styles.emojiBtnActive]}
+                        onPress={() => { setEmoji(e); setPhotoUri(null); setModalVisible(false) }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.emojiText}>{e}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Cancel */}
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)} activeOpacity={0.7}>
+              <Text style={styles.cancelText}>Avbryt</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   )
 }
@@ -331,15 +294,16 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: BG },
   centered: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' },
-  scroll:   { paddingBottom: 48, gap: 24 },
+  scroll:   { paddingBottom: 48, gap: 28 },
 
+  // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
     borderBottomWidth: 1, borderBottomColor: BORDER,
     backgroundColor: BG,
   },
-  backBtn: {
+  iconBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
   },
@@ -350,90 +314,28 @@ const styles = StyleSheet.create({
   },
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
 
-  // Preview
-  previewSection: { alignItems: 'center', gap: 8, paddingTop: 4 },
-  avatarPreview: {
-    width: 100, height: 100, borderRadius: 50,
+  // Avatar preview
+  previewSection: { alignItems: 'center', gap: 8, paddingTop: 16 },
+  avatarWrapper:  { position: 'relative' },
+  avatarCircle: {
+    width: 110, height: 110, borderRadius: 55,
     backgroundColor: ORANGE + '22',
     borderWidth: 2.5, borderColor: ORANGE,
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
-  previewPhoto:    { width: 100, height: 100, borderRadius: 50 },
-  avatarEmoji:     { fontSize: 52 },
-  avatarInitials:  { color: ORANGE, fontSize: 44, fontWeight: '700' },
-  previewName:     { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '700', marginTop: 4 },
-  previewEmail:    { color: TEXT_SECONDARY, fontSize: 13 },
-
-  // Tabs
-  tabs: {
-    flexDirection: 'row', marginHorizontal: 20,
-    backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: BORDER, padding: 4, gap: 4,
-  },
-  tab: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 10, borderRadius: 10,
-  },
-  tabActive:     { backgroundColor: ORANGE },
-  tabText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
-  tabTextActive: { color: '#000', fontWeight: '700' },
-
-  // Emoji picker
-  pickerSection: { paddingHorizontal: 20, gap: 16 },
-  sectionLabel:  { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.3 },
-
-  resetBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1.5, borderColor: BORDER, padding: 14,
-  },
-  resetBtnActive:     { borderColor: ORANGE, backgroundColor: ORANGE + '10' },
-  resetCircle: {
-    width: 46, height: 46, borderRadius: 23,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  previewPhoto:   { width: 110, height: 110, borderRadius: 55 },
+  avatarEmoji:    { fontSize: 56 },
+  avatarInitials: { color: ORANGE, fontSize: 48, fontWeight: '700' },
+  pencilBtn: {
+    position: 'absolute', bottom: 2, right: 2,
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: ORANGE,
     alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: BG,
   },
-  resetCircleActive: { backgroundColor: ORANGE + '25' },
-  resetLetter:  { color: TEXT_SECONDARY, fontSize: 20, fontWeight: '700' },
-  resetLabel:   { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  resetSub:     { color: TEXT_SECONDARY, fontSize: 12 },
-
-  emojiSection: { gap: 10 },
-  emojiGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  emojiBtn: {
-    width: 54, height: 54, borderRadius: 14,
-    backgroundColor: CARD, borderWidth: 1.5, borderColor: BORDER,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  emojiBtnActive: { borderColor: ORANGE, backgroundColor: ORANGE + '18' },
-  emoji:          { fontSize: 26 },
-
-  // Photo tab
-  photoSection: {
-    paddingHorizontal: 20, alignItems: 'center', gap: 16,
-  },
-  pickPhotoBtn: {
-    width: '100%', paddingVertical: 40,
-    backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1.5, borderColor: BORDER, borderStyle: 'dashed',
-    alignItems: 'center', gap: 10,
-  },
-  pickPhotoIcon:    { opacity: 0.5 },
-  pickPhotoBtnText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
-  pickPhotoSub:     { color: TEXT_SECONDARY, fontSize: 13 },
-  photoPreviewLarge: {
-    width: 180, height: 180, borderRadius: 90,
-    borderWidth: 3, borderColor: ORANGE,
-  },
-  changePhotoBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 20, paddingVertical: 12,
-  },
-  changePhotoBtnText: { color: ORANGE, fontSize: 15, fontWeight: '600' },
-  removePhotoText:    { color: TEXT_SECONDARY, fontSize: 14, textDecorationLine: 'underline' },
+  previewName:  { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '700', marginTop: 4 },
+  previewEmail: { color: TEXT_SECONDARY, fontSize: 13 },
 
   // Fields
   fieldSection: { paddingHorizontal: 20, gap: 8 },
@@ -456,4 +358,66 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35, shadowRadius: 12,
   },
   saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+
+  // Modal / bottom sheet
+  modalContainer: {
+    flex: 1, justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  sheet: {
+    backgroundColor: CARD,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: BORDER, alignSelf: 'center', marginBottom: 4,
+  },
+  sheetTitle: {
+    color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', textAlign: 'center',
+  },
+
+  // Quick option buttons (Foto / Bokstav)
+  quickRow: { flexDirection: 'row', gap: 12 },
+  quickBtn: {
+    flex: 1, alignItems: 'center', gap: 8,
+    backgroundColor: BG, borderRadius: 14,
+    borderWidth: 1.5, borderColor: BORDER,
+    paddingVertical: 16,
+  },
+  quickBtnActive: { borderColor: ORANGE, backgroundColor: ORANGE + '10' },
+  quickIcon: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
+  },
+  quickIconActive: { backgroundColor: ORANGE + '20' },
+  quickInitial: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '700' },
+  quickLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+
+  sheetDivider: { height: 1, backgroundColor: BORDER },
+  emojiHeader: {
+    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5,
+  },
+
+  // Emoji
+  emojiSection: { gap: 8, marginBottom: 12 },
+  sectionLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.3 },
+  emojiGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  emojiBtn: {
+    width: 50, height: 50, borderRadius: 13,
+    backgroundColor: BG, borderWidth: 1.5, borderColor: BORDER,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  emojiBtnActive: { borderColor: ORANGE, backgroundColor: ORANGE + '18' },
+  emojiText: { fontSize: 24 },
+
+  // Cancel
+  cancelBtn: {
+    backgroundColor: BG, borderRadius: 14,
+    paddingVertical: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: BORDER,
+  },
+  cancelText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
 })
