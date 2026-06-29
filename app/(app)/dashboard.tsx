@@ -219,13 +219,17 @@ export default function DashboardScreen() {
             <Text style={styles.greeting}>Hej, {userName}</Text>
             <Text style={styles.greetingSubtitle}>Håll i — du klarar det.</Text>
           </View>
-          <View style={styles.avatar}>
+          <TouchableOpacity
+            style={styles.avatar}
+            onPress={() => router.push('/(app)/settings')}
+            activeOpacity={0.8}
+          >
             {userAvatar && !userAvatar.startsWith('http') ? (
               <Text style={styles.avatarEmoji}>{userAvatar}</Text>
             ) : (
               <Text style={styles.avatarText}>{userName[0]?.toUpperCase()}</Text>
             )}
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Hero card */}
