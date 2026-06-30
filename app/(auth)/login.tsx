@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -13,16 +13,21 @@ import {
 import { router } from 'expo-router'
 import { signInWithGoogle } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
+import { updateProfile } from '@/services/profile'
 import { ORANGE } from '@/lib/theme'
 
 type Mode = 'login' | 'register'
 
 export default function LoginScreen() {
   const [mode, setMode] = useState<Mode>('login')
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+
+  const emailRef    = useRef<TextInput>(null)
+  const passwordRef = useRef<TextInput>(null)
 
   async function handleGoogle() {
     setGoogleLoading(true)
@@ -37,6 +42,12 @@ export default function LoginScreen() {
 
   async function handleSubmit() {
     const trimmedEmail = email.trim()
+    const trimmedName  = name.trim()
+
+    if (mode === 'register' && !trimmedName) {
+      Alert.alert('Fyll i ditt namn')
+      return
+    }
     if (!trimmedEmail || !password) {
       Alert.alert('Fyll i email och lösenord')
       return
@@ -60,15 +71,31 @@ export default function LoginScreen() {
         router.replace('/(app)/dashboard')
       }
     } else {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
       })
-      if (error) Alert.alert('Registrering misslyckades', error.message)
-      else router.replace('/(auth)/quiz')
+      if (error) {
+        Alert.alert('Registrering misslyckades', error.message)
+      } else {
+        if (data.user) {
+          try { await updateProfile(data.user.id, { name: trimmedName }) } catch { /* non-blocking */ }
+        }
+        setName('')
+        setPassword('')
+        setMode('login')
+        Alert.alert('Konto skapat!', 'Logga in med dina uppgifter.')
+      }
     }
 
     setLoading(false)
+  }
+
+  function switchMode() {
+    setMode(m => m === 'login' ? 'register' : 'login')
+    setName('')
+    setEmail('')
+    setPassword('')
   }
 
   return (
@@ -109,7 +136,21 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
+          {mode === 'register' && (
+            <TextInput
+              style={styles.input}
+              placeholder="Ditt namn"
+              placeholderTextColor="#555"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
+            />
+          )}
           <TextInput
+            ref={emailRef}
             style={styles.input}
             placeholder="Email"
             placeholderTextColor="#555"
@@ -118,14 +159,19 @@ export default function LoginScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
           />
           <TextInput
+            ref={passwordRef}
             style={styles.input}
             placeholder="Lösenord"
             placeholderTextColor="#555"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
           />
 
           <TouchableOpacity
@@ -146,7 +192,7 @@ export default function LoginScreen() {
 
         <TouchableOpacity
           style={styles.switchButton}
-          onPress={() => setMode(mode === 'login' ? 'register' : 'login')}
+          onPress={switchMode}
         >
           <Text style={styles.switchText}>
             {mode === 'login'
