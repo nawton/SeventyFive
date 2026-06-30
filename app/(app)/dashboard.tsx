@@ -7,10 +7,24 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedProps,
+  withTiming,
+  withRepeat,
+  withSequence,
+  withSpring,
+  Easing,
+} from 'react-native-reanimated'
+import Svg, { Circle } from 'react-native-svg'
+import { LinearGradient } from 'expo-linear-gradient'
+import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getProfile } from '@/services/profile'
@@ -23,131 +37,207 @@ import {
   type TaskItem,
 } from '@/services/dailyLog'
 import { FailModal } from '@/components/FailModal'
-import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { TaskType } from '@/types/database'
 
-const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']> = {
-  workout:  'barbell-outline',
-  diet:     'restaurant-outline',
-  water:    'water-outline',
-  reading:  'book-outline',
-  photo:    'camera-outline',
+const { width: SW } = Dimensions.get('window')
+
+const ORANGE    = '#FF8F00'
+const SCENE_BG  = '#0A0A0B'
+const CARD_BG   = '#131315'
+const CARD_BORDER = '#1E1E21'
+const TASK_GAP  = 10
+const TASK_W    = (SW - 40 - TASK_GAP) / 2
+
+// ── Ring constants ─────────────────────────────────────────────────────────────
+const R_SIZE   = 118
+const R_STROKE = 9
+const R_RADIUS = (R_SIZE - R_STROKE) / 2
+const R_CIRCUM = 2 * Math.PI * R_RADIUS
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle)
+
+// ── Per-type config ────────────────────────────────────────────────────────────
+const TASK_COLORS: Record<TaskType, string> = {
+  workout: '#FF8F00',
+  water:   '#00BCD4',
+  diet:    '#66BB6A',
+  reading: '#AB47BC',
+  photo:   '#EC407A',
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']> = {
+  workout: 'barbell-outline',
+  diet:    'restaurant-outline',
+  water:   'water-outline',
+  reading: 'book-outline',
+  photo:   'camera-outline',
+}
 
-function HeroCard({
-  currentDay,
-  levelName,
-  completedCount,
-  total,
-  allDone,
-}: {
-  currentDay: number
-  levelName: string
-  completedCount: number
-  total: number
-  allDone: boolean
-}) {
-  const challengePct = Math.round((currentDay / 75) * 100)
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function getGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 5)  return 'God natt'
+  if (h < 12) return 'God morgon'
+  if (h < 17) return 'God eftermiddag'
+  if (h < 21) return 'God kväll'
+  return 'God natt'
+}
+
+function getSubtitle(completed: number, total: number): string {
+  if (total > 0 && completed === total) return 'Alla uppgifter klara — grym prestation!'
+  const h = new Date().getHours()
+  if (h >= 21) return 'Sista chansen idag — kör hårt.'
+  if (h < 12)  return 'Dags att sätta igång.'
+  return 'Håll i — du klarar det.'
+}
+
+// ── Progress Ring ──────────────────────────────────────────────────────────────
+function ProgressRing({ completed, total }: { completed: number; total: number }) {
+  const progress   = useSharedValue(0)
+  const isComplete = total > 0 && completed === total
+  const ringColor  = isComplete ? '#4CAF50' : ORANGE
+
+  useEffect(() => {
+    progress.value = withTiming(
+      total > 0 ? completed / total : 0,
+      { duration: 1000, easing: Easing.out(Easing.cubic) }
+    )
+  }, [completed, total])
+
+  const arcProps = useAnimatedProps(() => ({
+    strokeDashoffset: R_CIRCUM * (1 - progress.value),
+  }))
 
   return (
-    <View style={styles.heroCard}>
-      <View style={styles.heroTop}>
-        <View>
-          <Text style={styles.heroLabel}>DAG</Text>
-          <View style={styles.heroDayRow}>
-            <Text style={styles.heroDayNum}>{currentDay}</Text>
-            <Text style={styles.heroDayOf}>/75</Text>
-          </View>
-        </View>
-        <View style={styles.heroRight}>
-          {levelName ? (
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelBadgeText}>{levelName.toUpperCase()}</Text>
-            </View>
-          ) : null}
-          <Text style={styles.heroChallengePct}>{challengePct}%</Text>
-        </View>
-      </View>
-
-      <View style={styles.heroBar}>
-        <View style={[styles.heroBarFill, { width: `${challengePct}%` }]} />
-      </View>
-
-      <View style={styles.heroFooter}>
-        <View style={[styles.heroStatusDot, {
-          backgroundColor: allDone ? GREEN : completedCount > 0 ? ORANGE : BORDER,
-        }]} />
-        <Text style={styles.heroFooterText}>
-          {allDone
-            ? 'Alla uppgifter klara idag'
-            : `${completedCount} av ${total} uppgifter klara`}
-        </Text>
-        {allDone && <Ionicons name="checkmark-circle" size={15} color={GREEN} />}
+    <View style={[s.ringWrap, { shadowColor: ringColor }]}>
+      <Svg
+        width={R_SIZE}
+        height={R_SIZE}
+        style={{ transform: [{ rotate: '-90deg' }] }}
+      >
+        <Circle
+          cx={R_SIZE / 2} cy={R_SIZE / 2} r={R_RADIUS}
+          stroke="#1E1E21" strokeWidth={R_STROKE} fill="none"
+        />
+        <AnimatedCircle
+          cx={R_SIZE / 2} cy={R_SIZE / 2} r={R_RADIUS}
+          stroke={ringColor} strokeWidth={R_STROKE} fill="none"
+          strokeDasharray={`${R_CIRCUM}`}
+          animatedProps={arcProps}
+          strokeLinecap="round"
+        />
+      </Svg>
+      <View style={s.ringCenter}>
+        <Text style={[s.ringNum, { color: ringColor }]}>{completed}</Text>
+        <Text style={s.ringDenom}>/{total}</Text>
+        <Text style={s.ringLabel}>KLART</Text>
       </View>
     </View>
   )
 }
 
-function TaskCard({
-  task,
-  onToggle,
-}: {
-  task: TaskItem
-  onToggle: () => void
-}) {
-  const icon = TASK_ICONS[task.type] ?? 'checkmark-circle-outline'
+// ── Task Grid Card ─────────────────────────────────────────────────────────────
+function TaskGridCard({ task, onToggle }: { task: TaskItem; onToggle: () => void }) {
+  const color = TASK_COLORS[task.type] ?? ORANGE
+  const icon  = TASK_ICONS[task.type]  ?? 'checkmark-outline'
+  const scale = useSharedValue(1)
+
+  const aStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }))
+
+  function handlePress() {
+    scale.value = withSequence(
+      withTiming(0.92, { duration: 80 }),
+      withSpring(1, { damping: 12, stiffness: 200 })
+    )
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    onToggle()
+  }
+
   return (
-    <TouchableOpacity
-      style={[styles.taskCard, task.completed && styles.taskCardDone]}
-      onPress={onToggle}
-      activeOpacity={0.7}
-    >
-      {task.completed && <View style={styles.taskAccent} />}
-      <View style={[styles.taskIcon, task.completed && styles.taskIconDone]}>
-        <Ionicons name={icon} size={20} color={task.completed ? ORANGE : TEXT_SECONDARY} />
-      </View>
-      <View style={styles.taskText}>
-        <Text style={[styles.taskLabel, task.completed && styles.taskLabelDone]}>
+    <Animated.View style={[aStyle, { width: TASK_W }]}>
+      <TouchableOpacity
+        style={[
+          s.taskCard,
+          task.completed && {
+            borderColor: color + '45',
+            backgroundColor: color + '0E',
+          },
+        ]}
+        onPress={handlePress}
+        activeOpacity={0.85}
+      >
+        {task.completed && (
+          <View style={[s.taskSidebar, { backgroundColor: color }]} />
+        )}
+        <View style={s.taskCardTop}>
+          <View style={[s.taskIconBox, { backgroundColor: color + '1C' }]}>
+            <Ionicons name={icon} size={17} color={color} />
+          </View>
+          <View style={[s.taskCheck, task.completed && { backgroundColor: color, borderColor: color }]}>
+            {task.completed && <Ionicons name="checkmark" size={10} color="#000" />}
+          </View>
+        </View>
+        <Text
+          style={[s.taskName, task.completed && s.taskNameDone]}
+          numberOfLines={2}
+        >
           {task.name}
         </Text>
-        {task.description && (
-          <Text style={styles.taskDescription} numberOfLines={1}>
-            {task.description}
-          </Text>
-        )}
-      </View>
-      <View style={[styles.checkbox, task.completed && styles.checkboxDone]}>
-        {task.completed && <Ionicons name="checkmark" size={13} color="#000" />}
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   )
 }
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
+// ── Dashboard Screen ───────────────────────────────────────────────────────────
 export default function DashboardScreen() {
-  const [userName, setUserName] = useState('')
+  const [userName, setUserName]     = useState('')
   const [userAvatar, setUserAvatar] = useState<string | null>(null)
   const [currentDay, setCurrentDay] = useState(1)
-  const [levelName, setLevelName] = useState('')
-  const [tasks, setTasks] = useState<TaskItem[]>([])
+  const [levelName, setLevelName]   = useState('')
+  const [tasks, setTasks]           = useState<TaskItem[]>([])
   const [dailyLogId, setDailyLogId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [failModalVisible, setFailModalVisible] = useState(false)
-  const [dayFailed, setDayFailed] = useState(false)
+  const [loading, setLoading]       = useState(true)
+  const [failVisible, setFailVisible] = useState(false)
+  const [dayFailed, setDayFailed]   = useState(false)
+
+  // ── 3D floating hero animation ──
+  const tiltX = useSharedValue(0)
+  const tiltY = useSharedValue(0)
+
+  useEffect(() => {
+    tiltY.value = withRepeat(
+      withSequence(
+        withTiming(-2.2, { duration: 4200, easing: Easing.inOut(Easing.sin) }),
+        withTiming(2.2,  { duration: 4200, easing: Easing.inOut(Easing.sin) })
+      ), -1, true
+    )
+    tiltX.value = withRepeat(
+      withSequence(
+        withTiming(-1.2, { duration: 6000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1.2,  { duration: 6000, easing: Easing.inOut(Easing.sin) })
+      ), -1, true
+    )
+  }, [])
+
+  const heroAnimStyle = useAnimatedStyle(() => ({
+    transform: [
+      { perspective: 900 },
+      { rotateX: `${tiltX.value}deg` },
+      { rotateY: `${tiltY.value}deg` },
+    ],
+  }))
 
   useEffect(() => { loadDashboard() }, [])
 
-  // Refresh name + avatar silently when returning from edit-profile
   useFocusEffect(useCallback(() => {
     if (loading) return
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) return
-      getProfile(session.user.id).then(profile => {
-        if (profile?.name) setUserName(profile.name)
-        setUserAvatar(profile?.avatar_url ?? null)
+      getProfile(session.user.id).then(p => {
+        if (p?.name) setUserName(p.name)
+        setUserAvatar(p?.avatar_url ?? null)
       })
     })
   }, [loading]))
@@ -182,18 +272,21 @@ export default function DashboardScreen() {
 
   async function toggleTask(task: TaskItem) {
     const updated = !task.completed
-    setTasks((prev) =>
-      prev.map((t) => t.completionId === task.completionId ? { ...t, completed: updated } : t)
+    setTasks(prev =>
+      prev.map(t => t.completionId === task.completionId ? { ...t, completed: updated } : t)
     )
     try {
       await setTaskCompleted(task.completionId, updated)
-      const allDone = tasks.every((t) =>
+      const allDone = tasks.every(t =>
         t.completionId === task.completionId ? updated : t.completed
       )
-      if (allDone && dailyLogId) await markDayCompleted(dailyLogId)
+      if (allDone && dailyLogId) {
+        await markDayCompleted(dailyLogId)
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      }
     } catch {
-      setTasks((prev) =>
-        prev.map((t) => t.completionId === task.completionId ? { ...t, completed: task.completed } : t)
+      setTasks(prev =>
+        prev.map(t => t.completionId === task.completionId ? { ...t, completed: task.completed } : t)
       )
     }
   }
@@ -203,68 +296,108 @@ export default function DashboardScreen() {
     try {
       await markDayFailed(dailyLogId, reason)
       setDayFailed(true)
-      setFailModalVisible(false)
-    } catch {
-      // modal förblir öppen
-    }
+      setFailVisible(false)
+    } catch { /* keep modal open */ }
   }
 
-  const completedCount = tasks.filter((t) => t.completed).length
+  const completedCount = tasks.filter(t => t.completed).length
   const allDone = tasks.length > 0 && completedCount === tasks.length
+  const challengePct = Math.round((currentDay / 75) * 100)
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <View style={s.centered}>
         <ActivityIndicator color={ORANGE} size="large" />
       </View>
     )
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={s.screen}>
+
+      {/* Atmospheric background glow */}
+      <LinearGradient
+        colors={['rgba(255,143,0,0.08)', 'transparent']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 0.5 }}
+        pointerEvents="none"
+      />
+
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
+
+        {/* ── Header ── */}
+        <View style={s.header}>
           <View>
-            <Text style={styles.greeting}>Hej, {userName}</Text>
-            <Text style={styles.greetingSubtitle}>Håll i — du klarar det.</Text>
+            <Text style={s.greeting}>{getGreeting()}, {userName}</Text>
+            <Text style={s.subtitle}>{getSubtitle(completedCount, tasks.length)}</Text>
           </View>
           <TouchableOpacity
-            style={styles.avatar}
+            style={s.avatar}
             onPress={() => router.push('/(app)/settings')}
             activeOpacity={0.8}
           >
             {userAvatar?.startsWith('http') ? (
-              <Image source={{ uri: userAvatar }} style={styles.avatarPhoto} />
+              <Image source={{ uri: userAvatar }} style={s.avatarImg} />
             ) : userAvatar ? (
-              <Text style={styles.avatarEmoji}>{userAvatar}</Text>
+              <Text style={s.avatarEmoji}>{userAvatar}</Text>
             ) : (
-              <Text style={styles.avatarText}>{userName[0]?.toUpperCase()}</Text>
+              <Text style={s.avatarText}>{userName[0]?.toUpperCase()}</Text>
             )}
           </TouchableOpacity>
         </View>
 
-        {/* Hero card */}
-        <HeroCard
-          currentDay={currentDay}
-          levelName={levelName}
-          completedCount={completedCount}
-          total={tasks.length}
-          allDone={allDone}
-        />
+        {/* ── Hero Card — 3D floating ── */}
+        <Animated.View style={[s.heroOuter, heroAnimStyle]}>
+          <LinearGradient
+            colors={['#1C1915', '#0F0F11']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.heroCard}
+          >
+            <View style={s.heroLeft}>
+              {levelName ? (
+                <View style={s.levelBadge}>
+                  <Text style={s.levelBadgeText}>{levelName.toUpperCase()}</Text>
+                </View>
+              ) : null}
+              <Text style={s.dayLabel}>DAG</Text>
+              <View style={s.dayRow}>
+                <Text style={s.dayNum}>{currentDay}</Text>
+                <Text style={s.dayOf}>/75</Text>
+              </View>
+              <View style={s.heroPctRow}>
+                <Text style={s.heroPct}>{challengePct}%</Text>
+                <Text style={s.heroPctSuffix}> av utmaningen</Text>
+              </View>
+              <View style={s.heroBar}>
+                <View style={[s.heroBarFill, { width: `${challengePct}%` as any }]} />
+              </View>
+            </View>
 
-        {/* Task section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>DAGENS UPPGIFTER</Text>
-          <Text style={styles.sectionCount}>{completedCount}/{tasks.length}</Text>
+            <View style={s.heroRight}>
+              <ProgressRing completed={completedCount} total={tasks.length} />
+            </View>
+          </LinearGradient>
+        </Animated.View>
+
+        {/* ── Tasks section header ── */}
+        <View style={s.sectionRow}>
+          <Text style={s.sectionTitle}>DAGENS UPPGIFTER</Text>
+          <View style={[s.countBadge, allDone && s.countBadgeDone]}>
+            <Text style={[s.countText, allDone && s.countTextDone]}>
+              {completedCount}/{tasks.length}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.taskList}>
-          {tasks.map((task) => (
-            <TaskCard
+        {/* ── Task grid ── */}
+        <View style={s.taskGrid}>
+          {tasks.map(task => (
+            <TaskGridCard
               key={task.completionId}
               task={task}
               onToggle={() => toggleTask(task)}
@@ -272,286 +405,166 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        {/* Fail / done */}
+        {/* ── Fail / done ── */}
         {!dayFailed && !allDone && (
           <TouchableOpacity
-            style={styles.failButton}
-            onPress={() => setFailModalVisible(true)}
+            style={s.failBtn}
+            onPress={() => setFailVisible(true)}
             activeOpacity={0.7}
           >
-            <Text style={styles.failButtonText}>Rapportera dag missad</Text>
+            <Text style={s.failBtnText}>Rapportera dag missad</Text>
           </TouchableOpacity>
         )}
         {dayFailed && (
-          <Text style={styles.dayFailedText}>Dagen är rapporterad som missad.</Text>
+          <Text style={s.dayFailedText}>Dagen är rapporterad som missad.</Text>
         )}
 
       </ScrollView>
 
       <FailModal
-        visible={failModalVisible}
-        onClose={() => setFailModalVisible(false)}
+        visible={failVisible}
+        onClose={() => setFailVisible(false)}
         onConfirm={handleFail}
       />
     </SafeAreaView>
   )
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scroll: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 40,
-    gap: 20,
-  },
+const s = StyleSheet.create({
+  screen:   { flex: 1, backgroundColor: SCENE_BG },
+  centered: { flex: 1, backgroundColor: SCENE_BG, alignItems: 'center', justifyContent: 'center' },
+  scroll:   { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 56, gap: 20 },
 
   // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  greeting: {
-    color: TEXT_PRIMARY,
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  greetingSubtitle: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-    marginTop: 2,
-  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  greeting: { color: '#FFFFFF', fontSize: 23, fontWeight: '700', letterSpacing: -0.4 },
+  subtitle: { color: '#4A4A50', fontSize: 13, marginTop: 3 },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: ORANGE,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  avatarPhoto: {
-    width: 44,
-    height: 44,
+  avatarImg:   { width: 44, height: 44, borderRadius: 22 },
+  avatarText:  { color: '#000', fontSize: 18, fontWeight: '700' },
+  avatarEmoji: { fontSize: 22 },
+
+  // Hero outer wrapper (for shadow + tilt)
+  heroOuter: {
     borderRadius: 22,
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 12,
   },
-  avatarText: {
-    color: '#000',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  avatarEmoji: {
-    fontSize: 22,
+  heroCard: {
+    borderRadius: 22,
+    padding: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2A2720',
+    overflow: 'hidden',
   },
 
-  // Hero card
-  heroCard: {
-    backgroundColor: CARD,
-    borderRadius: 20,
-    padding: 20,
+  // Hero left
+  heroLeft: { flex: 1, gap: 4 },
+  levelBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: ORANGE + '1F',
+    borderRadius: 7,
     borderWidth: 1,
-    borderColor: BORDER,
-    gap: 14,
+    borderColor: ORANGE + '3C',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 6,
   },
-  heroTop: {
+  levelBadgeText: { color: ORANGE, fontSize: 9, fontWeight: '800', letterSpacing: 1.8 },
+  dayLabel: { color: '#3A3A40', fontSize: 10, fontWeight: '700', letterSpacing: 3 },
+  dayRow:   { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
+  dayNum:   { color: '#FFFFFF', fontSize: 70, fontWeight: '800', lineHeight: 72, letterSpacing: -3 },
+  dayOf:    { color: '#3A3A40', fontSize: 22, fontWeight: '600', paddingBottom: 11 },
+  heroPctRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  heroPct:      { color: ORANGE, fontSize: 13, fontWeight: '700' },
+  heroPctSuffix: { color: '#3A3A40', fontSize: 12 },
+  heroBar: {
+    height: 3, backgroundColor: '#1E1E21',
+    borderRadius: 2, overflow: 'hidden', marginTop: 6,
+  },
+  heroBarFill: { height: '100%', backgroundColor: ORANGE, borderRadius: 2 },
+
+  // Hero right
+  heroRight: { paddingLeft: 10 },
+
+  // Ring
+  ringWrap: {
+    width: R_SIZE, height: R_SIZE,
+    alignItems: 'center', justifyContent: 'center',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 18,
+  },
+  ringCenter: {
+    position: 'absolute',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ringNum:   { fontSize: 26, fontWeight: '800', lineHeight: 30 },
+  ringDenom: { color: '#3A3A40', fontSize: 12, fontWeight: '600' },
+  ringLabel: { color: '#2E2E34', fontSize: 8, fontWeight: '700', letterSpacing: 1.5, marginTop: 2 },
+
+  // Section row
+  sectionRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: -4,
+  },
+  sectionTitle: { color: '#383840', fontSize: 11, fontWeight: '700', letterSpacing: 1.8 },
+  countBadge: {
+    backgroundColor: '#131315',
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: '#1E1E21',
+  },
+  countBadgeDone: { backgroundColor: '#4CAF501A', borderColor: '#4CAF5035' },
+  countText:     { color: '#444', fontSize: 12, fontWeight: '700' },
+  countTextDone: { color: '#4CAF50' },
+
+  // Task grid
+  taskGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: TASK_GAP },
+  taskCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: CARD_BORDER,
+    overflow: 'hidden', minHeight: 108, gap: 10,
+  },
+  taskSidebar: {
+    position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+    borderTopLeftRadius: 16, borderBottomLeftRadius: 16,
+  },
+  taskCardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  heroLabel: {
-    color: TEXT_SECONDARY,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 2,
+  taskIconBox: {
+    width: 34, height: 34, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
-  heroDayRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 4,
-    marginTop: 2,
+  taskCheck: {
+    width: 21, height: 21, borderRadius: 11,
+    borderWidth: 1.5, borderColor: '#2A2A2E',
+    alignItems: 'center', justifyContent: 'center',
   },
-  heroDayNum: {
-    color: TEXT_PRIMARY,
-    fontSize: 64,
-    fontWeight: '800',
-    lineHeight: 64,
+  taskName: {
+    color: '#BBBBBB', fontSize: 13, fontWeight: '600', lineHeight: 18,
   },
-  heroDayOf: {
-    color: TEXT_SECONDARY,
-    fontSize: 22,
-    fontWeight: '600',
-    paddingBottom: 10,
-  },
-  heroRight: {
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  levelBadge: {
-    backgroundColor: ORANGE + '20',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: ORANGE + '50',
-  },
-  levelBadgeText: {
-    color: ORANGE,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  heroChallengePct: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  heroBar: {
-    height: 4,
-    backgroundColor: BORDER,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  heroBarFill: {
-    height: '100%',
-    backgroundColor: ORANGE,
-    borderRadius: 2,
-  },
-  heroFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  heroStatusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-  },
-  heroFooterText: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-    flex: 1,
-  },
-
-  // Section header
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: -8,
-  },
-  sectionTitle: {
-    color: TEXT_SECONDARY,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-  },
-  sectionCount: {
-    color: ORANGE,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  // Task list
-  taskList: {
-    gap: 8,
-  },
-  taskCard: {
-    backgroundColor: CARD,
-    borderRadius: 14,
-    padding: 14,
-    paddingLeft: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: BORDER,
-    overflow: 'hidden',
-  },
-  taskCardDone: {
-    borderColor: ORANGE + '35',
-    backgroundColor: '#1D1A14',
-  },
-  taskAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    backgroundColor: ORANGE,
-    borderTopLeftRadius: 14,
-    borderBottomLeftRadius: 14,
-  },
-  taskIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  taskIconDone: {
-    backgroundColor: ORANGE + '18',
-  },
-  taskText: {
-    flex: 1,
-    gap: 2,
-  },
-  taskLabel: {
-    color: TEXT_PRIMARY,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  taskLabelDone: {
-    color: TEXT_SECONDARY,
-  },
-  taskDescription: {
-    color: TEXT_SECONDARY,
-    fontSize: 12,
-  },
-  checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 2,
-    borderColor: BORDER,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxDone: {
-    backgroundColor: ORANGE,
-    borderColor: ORANGE,
-  },
+  taskNameDone: { color: '#3A3A40' },
 
   // Fail
-  failButton: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5393530',
-    marginTop: 4,
+  failBtn: {
+    borderRadius: 14, paddingVertical: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: '#E5393520', marginTop: 4,
   },
-  failButtonText: {
-    color: '#E53935',
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  dayFailedText: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-    textAlign: 'center',
-    paddingVertical: 8,
-  },
+  failBtnText:   { color: '#E53935', fontSize: 14, fontWeight: '600' },
+  dayFailedText: { color: '#3A3A40', fontSize: 13, textAlign: 'center', paddingVertical: 8 },
 })
