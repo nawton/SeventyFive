@@ -73,7 +73,7 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function RecommendationScreen() {
-  const params = useLocalSearchParams<{ why: string; goal: string; pressure: string }>()
+  const params = useLocalSearchParams<{ why: string; goal: string; pressure: string; startDay?: string }>()
   const recommendedLevel = getRecommendedLevel(params.pressure ?? 'normal')
   const [selectedLevel, setSelectedLevel] = useState<Level>(recommendedLevel)
   const [loading, setLoading] = useState(false)
@@ -86,11 +86,13 @@ export default function RecommendationScreen() {
       const user = session?.user
       if (!user) { router.replace('/(auth)/login'); return }
 
+      const startDay = params.startDay ? parseInt(params.startDay, 10) : 1
+
       await saveChallenge(user.id, selectedLevel, {
         why: params.why ?? '',
         goal: params.goal ?? '',
         pressure: params.pressure ?? 'normal',
-      })
+      }, startDay)
       router.replace('/(auth)/schedule')
     } catch (e: any) {
       Alert.alert('Något gick fel', e.message)
@@ -168,7 +170,9 @@ export default function RecommendationScreen() {
           }
         </TouchableOpacity>
         <Text style={styles.disclaimer}>
-          Dag 1 börjar idag. Du kan inte starta om utan att kontakta support.
+          {params.startDay
+            ? `Du startar på dag ${params.startDay}. Du kan inte starta om utan att kontakta support.`
+            : 'Dag 1 börjar idag. Du kan inte starta om utan att kontakta support.'}
         </Text>
       </View>
 

@@ -28,10 +28,15 @@ export interface QuizAnswers {
 export async function acceptChallenge(
   userId: string,
   levelSlug: string,
-  answers: QuizAnswers
+  answers: QuizAnswers,
+  startDay: number = 1
 ): Promise<void> {
   const levelId = LEVEL_IDS[levelSlug]
-  const today = new Date().toISOString().split('T')[0]
+
+  const clampedStartDay = Math.min(Math.max(startDay, 1), 75)
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - (clampedStartDay - 1))
+  const start_date = startDate.toISOString().split('T')[0]
 
   const { error: quizError } = await supabase.from('quiz_results').insert({
     user_id: userId,
@@ -45,8 +50,8 @@ export async function acceptChallenge(
   const { error: challengeError } = await supabase.from('user_challenges').insert({
     user_id: userId,
     level_id: levelId,
-    start_date: today,
-    current_day: 1,
+    start_date,
+    current_day: clampedStartDay,
     status: 'active',
   })
   if (challengeError) throw challengeError

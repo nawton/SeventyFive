@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +61,7 @@ import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/th
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function QuizScreen() {
+  const { startDay } = useLocalSearchParams<{ startDay?: string }>()
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Partial<QuizAnswers>>({})
 
@@ -77,7 +78,7 @@ export default function QuizScreen() {
     if (isLast) {
       router.push({
         pathname: '/(auth)/recommendation',
-        params: answers as Record<string, string>,
+        params: { ...(answers as Record<string, string>), ...(startDay ? { startDay } : {}) },
       })
     } else {
       setStep((s) => s + 1)

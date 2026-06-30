@@ -10,7 +10,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { signInWithGoogle } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
 import { updateProfile } from '@/services/profile'
@@ -19,6 +19,7 @@ import { ORANGE } from '@/lib/theme'
 type Mode = 'login' | 'register'
 
 export default function LoginScreen() {
+  const { startDay } = useLocalSearchParams<{ startDay?: string }>()
   const [mode, setMode] = useState<Mode>('login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -68,7 +69,12 @@ export default function LoginScreen() {
           : error.message
         Alert.alert('Inloggning misslyckades', msg)
       } else {
-        router.replace('/(app)/dashboard')
+        // For login, dashboard decides routing (challenge may already exist)
+        router.replace(
+          startDay
+            ? { pathname: '/(auth)/quiz', params: { startDay } }
+            : '/(app)/dashboard'
+        )
       }
     } else {
       const { data, error } = await supabase.auth.signUp({
@@ -84,7 +90,7 @@ export default function LoginScreen() {
         setName('')
         setPassword('')
         setMode('login')
-        Alert.alert('Konto skapat!', 'Logga in med dina uppgifter.')
+        Alert.alert('Konto skapat!', 'Logga in med dina uppgifter för att fortsätta.')
       }
     }
 
