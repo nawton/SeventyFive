@@ -17,13 +17,11 @@ import {
   DIFFICULTY_COLORS,
   type Exercise,
 } from '@/services/exercises'
-import { getMusclesForName } from '@/lib/muscles'
+import { getMusclesForName, getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { ExerciseCategory } from '@/types/database'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-type MuscleGroup = 'all' | 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'core'
 
 const CATEGORIES: Array<{ key: ExerciseCategory | 'all'; label: string }> = [
   { key: 'all',      label: 'Alla' },
@@ -43,14 +41,6 @@ const MUSCLE_GROUPS: Array<{ key: MuscleGroup; label: string; icon: React.Compon
   { key: 'core',      label: 'Mage',   icon: 'ellipse-outline' },
 ]
 
-const SLUG_TO_GROUP: Record<string, MuscleGroup> = {
-  chest: 'chest', 'upper-back': 'back', 'lower-back': 'back',
-  trapezius: 'back', quadriceps: 'legs', hamstring: 'legs',
-  gluteal: 'legs', calves: 'legs', adductors: 'legs',
-  deltoids: 'shoulders', biceps: 'arms', triceps: 'arms',
-  forearm: 'arms', abs: 'core', obliques: 'core',
-}
-
 const CATEGORY_ICONS: Record<ExerciseCategory, React.ComponentProps<typeof Ionicons>['name']> = {
   strength: 'barbell-outline',
   cardio:   'walk-outline',
@@ -64,14 +54,6 @@ const GPS_KEYWORDS = ['löpning', 'running', 'jogging', 'cykling', 'cycling', 'p
 
 function usesMap(name: string) {
   return GPS_KEYWORDS.some(kw => name.toLowerCase().includes(kw))
-}
-
-function getExerciseMuscleGroup(name: string): MuscleGroup {
-  for (const slug of getMusclesForName(name)) {
-    const g = SLUG_TO_GROUP[slug]
-    if (g) return g
-  }
-  return 'all'
 }
 
 // ─── Exercise card ────────────────────────────────────────────────────────────

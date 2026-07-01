@@ -167,7 +167,7 @@ const MAP_HTML = `<!DOCTYPE html>
 export default function CardioScreen() {
   const { name } = useLocalSearchParams<{ name?: string }>()
 
-  const webRef = useRef<WebView>(null)
+  const webRef = useRef<InstanceType<typeof WebView>>(null)
   const locationSub = useRef<Location.LocationSubscription | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 

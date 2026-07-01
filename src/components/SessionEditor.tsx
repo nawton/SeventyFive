@@ -1,0 +1,798 @@
+import { useEffect, useState } from 'react'
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ActionSheetIOS,
+} from 'react-native'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import Body from 'react-native-body-highlighter'
+import { getMusclesForName, bestSideForMuscles, SLUG_LABELS, getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import {
+  CATEGORY_LABELS,
+  DIFFICULTY_LABELS,
+  DIFFICULTY_COLORS,
+  type Exercise,
+} from '@/services/exercises'
+import {
+  createWorkoutSession,
+  updateWorkoutSession,
+  deleteWorkoutSession,
+  type WorkoutSession,
+} from '@/services/workoutSchedule'
+import type { ExerciseCategory } from '@/types/database'
+
+// ─── Shared schedule helpers (also imported by add.tsx) ───────────────────────
+
+export const WEEKDAYS = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön']
+
+export function todayIso(): number {
+  const d = new Date().getDay()
+  return d === 0 ? 7 : d
+}
+
+// ─── Internal helpers ─────────────────────────────────────────────────────────
+
+const CATEGORY_ICONS: Record<ExerciseCategory, React.ComponentProps<typeof Ionicons>['name']> = {
+  strength: 'barbell-outline',
+  cardio:   'walk-outline',
+  mobility: 'body-outline',
+  hiit:     'flash-outline',
+}
+
+const PICKER_FILTERS = [
+  { key: 'all',       label: 'Alla' },
+  { key: 'cardio',    label: 'Cardio' },
+  { key: 'legs',      label: 'Ben' },
+  { key: 'chest',     label: 'Bröst' },
+  { key: 'back',      label: 'Rygg' },
+  { key: 'shoulders', label: 'Axlar' },
+  { key: 'arms',      label: 'Armar' },
+  { key: 'core',      label: 'Mage' },
+  { key: 'mobility',  label: 'Rörlighet' },
+  { key: 'hiit',      label: 'HIIT' },
+]
+
+interface DraftExercise {
+  key: string
+  exercise_name: string
+  sets: string
+  reps: string
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export function SessionEditor({
+  visible,
+  session,
+  exercises,
+  onClose,
+  onSaved,
+  userId,
+}: {
+  visible:   boolean
+  session:   WorkoutSession | null
+  exercises: Exercise[]
+  onClose:   () => void
+  onSaved:   () => void
+  userId:    string
+}) {
+  const insets = useSafeAreaInsets()
+  const [name, setName]                 = useState('')
+  const [weekdays, setWeekdays]         = useState<number[]>([])
+  const [multiDay, setMultiDay]         = useState(false)
+  const [drafts, setDrafts]             = useState<DraftExercise[]>([])
+  const [showPicker, setShowPicker]     = useState(false)
+  const [pickerFilter, setPickerFilter] = useState('all')
+  const [pickerSearch, setPickerSearch] = useState('')
+  const [saving, setSaving]             = useState(false)
+  const [deleting, setDeleting]         = useState(false)
+  const [infoEx, setInfoEx]             = useState<Exercise | null>(null)
+  const [infoBodyView, setInfoBodyView] = useState<'front' | 'back'>('front')
+
+  useEffect(() => {
+    if (infoEx) setInfoBodyView(bestSideForMuscles(getMusclesForName(infoEx.name)))
+  }, [infoEx])
+
+  useEffect(() => {
+    if (!visible) return
+    if (session) {
+      setName(session.name)
+      setWeekdays([...session.weekdays])
+      setDrafts(session.exercises.map(e => ({
+        key: e.id,
+        exercise_name: e.exercise_name,
+        sets: e.sets != null ? String(e.sets) : '',
+        reps: e.reps ?? '',
+      })))
+    } else {
+      setName('')
+      setWeekdays([todayIso()])
+      setMultiDay(false)
+      setDrafts([])
+    }
+    setShowPicker(false)
+    setPickerFilter('all')
+    setPickerSearch('')
+  }, [visible, session])
+
+  // ── Sheet animation ──────────────────────────────────────────────────────────
+  const sheetTY      = useSharedValue(700)
+  const backdropAnim = useSharedValue(0)
+
+  useEffect(() => {
+    if (visible) {
+      sheetTY.value      = 700
+      backdropAnim.value = 0
+      sheetTY.value      = withSpring(0, { damping: 26, stiffness: 260, mass: 1 })
+      backdropAnim.value = withTiming(1, { duration: 260 })
+    }
+  }, [visible])
+
+  function dismissEditor() {
+    sheetTY.value      = withTiming(800, { duration: 300 }, () => runOnJS(onClose)())
+    backdropAnim.value = withTiming(0, { duration: 250 })
+  }
+
+  const editorHandleGesture = Gesture.Pan()
+    .activeOffsetY(8)
+    .onUpdate(e => {
+      if (e.translationY > 0) {
+        sheetTY.value      = e.translationY
+        backdropAnim.value = Math.max(0, 1 - e.translationY / 320)
+      }
+    })
+    .onEnd(e => {
+      if (e.translationY > 100 || e.velocityY > 600) {
+        sheetTY.value      = withTiming(800, { duration: 280 }, () => runOnJS(onClose)())
+        backdropAnim.value = withTiming(0, { duration: 230 })
+      } else {
+        sheetTY.value      = withSpring(0, { damping: 26, stiffness: 260, mass: 1 })
+        backdropAnim.value = withTiming(1, { duration: 200 })
+      }
+    })
+
+  const editorSheetStyle    = useAnimatedStyle(() => ({ transform: [{ translateY: sheetTY.value }] }))
+  const editorBackdropStyle = useAnimatedStyle(() => ({ opacity: backdropAnim.value }))
+
+  // ── Day selection ────────────────────────────────────────────────────────────
+  function toggleDay(d: number) {
+    if (multiDay) {
+      setWeekdays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
+    } else {
+      setWeekdays([d])
+    }
+  }
+
+  function toggleMultiDay() {
+    setMultiDay(prev => {
+      if (prev) setWeekdays(w => w.length > 0 ? [w[0]] : [])
+      return !prev
+    })
+  }
+
+  // ── Draft exercises ──────────────────────────────────────────────────────────
+  function addExercise(exName: string) {
+    setDrafts(prev => [...prev, { key: Date.now().toString(), exercise_name: exName, sets: '3', reps: '10' }])
+  }
+
+  function updateDraft(key: string, field: 'sets' | 'reps', value: string) {
+    setDrafts(prev => prev.map(d => d.key === key ? { ...d, [field]: value } : d))
+  }
+
+  function removeDraft(key: string) {
+    setDrafts(prev => prev.filter(d => d.key !== key))
+  }
+
+  // ── Save / delete ────────────────────────────────────────────────────────────
+  async function handleSave() {
+    if (!name.trim()) { Alert.alert('Ange ett namn på passet'); return }
+    setSaving(true)
+    try {
+      const exList = drafts.map(d => ({
+        exercise_name: d.exercise_name,
+        sets: d.sets ? parseInt(d.sets) : null,
+        reps: d.reps || null,
+      }))
+      if (session) {
+        await updateWorkoutSession(session.id, name.trim(), weekdays, exList)
+      } else {
+        await createWorkoutSession(userId, name.trim(), weekdays, exList)
+      }
+      onSaved()
+      dismissEditor()
+    } catch (e: any) {
+      Alert.alert('Kunde inte spara', e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!session) return
+    Alert.alert('Ta bort pass', `Ta bort "${session.name}"?`, [
+      { text: 'Avbryt', style: 'cancel' },
+      {
+        text: 'Ta bort',
+        style: 'destructive',
+        onPress: async () => {
+          setDeleting(true)
+          try {
+            await deleteWorkoutSession(session.id)
+            onSaved()
+            dismissEditor()
+          } catch (e: any) {
+            Alert.alert('Fel', e.message)
+          } finally {
+            setDeleting(false)
+          }
+        },
+      },
+    ])
+  }
+
+  // ── Picker ───────────────────────────────────────────────────────────────────
+  const uniqueExercises = [...new Map(exercises.map(e => [e.name.toLowerCase(), e])).values()]
+  const pickerExercises = uniqueExercises.filter(e => {
+    const matchesFilter = pickerFilter === 'all'
+      ? true
+      : ['cardio', 'mobility', 'hiit'].includes(pickerFilter)
+        ? e.category === pickerFilter
+        : e.category === 'strength' && getExerciseMuscleGroup(e.name) === pickerFilter
+    const matchesSearch = pickerSearch.trim() === '' || e.name.toLowerCase().includes(pickerSearch.toLowerCase())
+    return matchesFilter && matchesSearch
+  })
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+  return (
+    <Modal visible={visible} animationType="none" transparent onRequestClose={dismissEditor}>
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.55)' }, editorBackdropStyle]}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={dismissEditor} activeOpacity={1} />
+      </Animated.View>
+
+      <KeyboardAvoidingView
+        style={s.overlayKAV}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        pointerEvents="box-none"
+      >
+        <Animated.View style={[s.sheet, editorSheetStyle]}>
+          <GestureDetector gesture={editorHandleGesture}>
+            <View style={s.handleWrap}>
+              <View style={s.handleBar} />
+            </View>
+          </GestureDetector>
+
+          <View style={s.header}>
+            <TouchableOpacity onPress={dismissEditor} style={s.iconBtn} activeOpacity={0.7}>
+              <Ionicons name="close" size={22} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
+            <Text style={s.title}>{session ? 'Redigera pass' : 'Nytt pass'}</Text>
+            {session ? (
+              <TouchableOpacity onPress={handleDelete} style={s.iconBtn} activeOpacity={0.7} disabled={deleting}>
+                {deleting
+                  ? <ActivityIndicator size="small" color="#E53935" />
+                  : <Ionicons name="trash-outline" size={20} color="#E53935" />}
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 40 }} />
+            )}
+          </View>
+
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={s.scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={s.field}>
+              <Text style={s.label}>NAMN</Text>
+              <TextInput
+                style={s.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="t.ex. Push-dag, Benen…"
+                placeholderTextColor={TEXT_SECONDARY}
+                autoCorrect={false}
+                returnKeyType="done"
+              />
+            </View>
+
+            <View style={s.field}>
+              <View style={s.dayLabelRow}>
+                <Text style={s.label}>VECKODAGAR</Text>
+                <TouchableOpacity
+                  style={[s.multiBtn, multiDay && s.multiBtnActive]}
+                  onPress={toggleMultiDay}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="layers-outline" size={13} color={multiDay ? '#000' : TEXT_SECONDARY} />
+                  <Text style={[s.multiBtnText, multiDay && s.multiBtnTextActive]}>Flera dagar</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={s.dayRow}>
+                {WEEKDAYS.map((d, i) => {
+                  const num    = i + 1
+                  const active = weekdays.includes(num)
+                  return (
+                    <TouchableOpacity
+                      key={num}
+                      style={[s.dayBtn, active && s.dayBtnActive]}
+                      onPress={() => toggleDay(num)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[s.dayText, active && s.dayTextActive]}>{d}</Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+
+            <View style={s.field}>
+              <Text style={s.label}>ÖVNINGAR</Text>
+              {drafts.map(d => {
+                const exInfo   = exercises.find(e => e.name === d.exercise_name)
+                const isCardio = exInfo?.category === 'cardio'
+                return (
+                  <View key={d.key} style={s.exRow}>
+                    <Text style={s.exName} numberOfLines={1}>{d.exercise_name}</Text>
+                    {isCardio ? (
+                      <View style={s.cardioBadge}>
+                        <Ionicons name="walk-outline" size={13} color={ORANGE} />
+                        <Text style={s.cardioBadgeText}>Cardio</Text>
+                      </View>
+                    ) : (
+                      <>
+                        <TextInput
+                          style={s.exSmall}
+                          value={d.sets}
+                          onChangeText={v => updateDraft(d.key, 'sets', v)}
+                          placeholder="Set"
+                          placeholderTextColor={TEXT_SECONDARY}
+                          keyboardType="number-pad"
+                          returnKeyType="done"
+                        />
+                        <TextInput
+                          style={[s.exSmall, { width: 70 }]}
+                          value={d.reps}
+                          onChangeText={v => updateDraft(d.key, 'reps', v)}
+                          placeholder="Reps"
+                          placeholderTextColor={TEXT_SECONDARY}
+                          returnKeyType="done"
+                        />
+                      </>
+                    )}
+                    <TouchableOpacity onPress={() => removeDraft(d.key)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="close-circle" size={20} color={TEXT_SECONDARY} />
+                    </TouchableOpacity>
+                  </View>
+                )
+              })}
+              <TouchableOpacity style={s.pickerToggle} onPress={() => setShowPicker(true)} activeOpacity={0.8}>
+                <Ionicons name="add" size={17} color={ORANGE} />
+                <Text style={s.pickerToggleText}>Lägg till övning</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[s.saveBtn, saving && { opacity: 0.6 }]}
+              onPress={handleSave}
+              disabled={saving}
+              activeOpacity={0.85}
+            >
+              {saving
+                ? <ActivityIndicator color="#000" />
+                : <Text style={s.saveBtnText}>Spara pass</Text>}
+            </TouchableOpacity>
+          </ScrollView>
+
+          <View style={{ height: insets.bottom }} />
+        </Animated.View>
+      </KeyboardAvoidingView>
+
+      {/* Exercise picker */}
+      <Modal visible={showPicker} animationType="slide" onRequestClose={() => setShowPicker(false)}>
+        <View style={[s.pickerScreen, { paddingTop: insets.top }]}>
+          <View style={s.pickerHeader}>
+            <TouchableOpacity onPress={() => setShowPicker(false)} style={s.iconBtn} activeOpacity={0.7}>
+              <Ionicons name="chevron-down" size={22} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
+            <Text style={s.title}>Lägg till övning</Text>
+            <TouchableOpacity onPress={() => setShowPicker(false)} style={s.klarBtn} activeOpacity={0.8}>
+              <Text style={s.klarBtnText}>Klar{drafts.length > 0 ? ` (${drafts.length})` : ''}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={s.pickerSearchBar}>
+            <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} />
+            <TextInput
+              style={s.pickerSearchInput}
+              value={pickerSearch}
+              onChangeText={setPickerSearch}
+              placeholder="Sök övning…"
+              placeholderTextColor={TEXT_SECONDARY}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+            />
+            {pickerSearch.length > 0 && (
+              <TouchableOpacity onPress={() => setPickerSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={17} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.pickerFilterStrip}
+            contentContainerStyle={s.pickerFilters}
+          >
+            {PICKER_FILTERS.map(f => (
+              <TouchableOpacity
+                key={f.key}
+                style={[s.pickerPill, pickerFilter === f.key && s.pickerPillActive]}
+                onPress={() => setPickerFilter(f.key)}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.pickerPillText, pickerFilter === f.key && s.pickerPillTextActive]}>
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <Text style={s.pickerCount}>{pickerExercises.length} övningar</Text>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+            {pickerExercises.map(ex => {
+              const already = drafts.some(d => d.exercise_name === ex.name)
+
+              function handleLongPress() {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                if (Platform.OS === 'ios') {
+                  ActionSheetIOS.showActionSheetWithOptions(
+                    {
+                      title: ex.name,
+                      options: ['Avbryt', already ? 'Ta bort från pass' : 'Lägg till i pass', 'Mer info'],
+                      cancelButtonIndex: 0,
+                    },
+                    (i) => {
+                      if (i === 1) already
+                        ? removeDraft(drafts.find(d => d.exercise_name === ex.name)!.key)
+                        : addExercise(ex.name)
+                      if (i === 2) { setShowPicker(false); setTimeout(() => setInfoEx(ex), 350) }
+                    },
+                  )
+                } else {
+                  Alert.alert(ex.name, undefined, [
+                    { text: already ? 'Ta bort från pass' : 'Lägg till i pass', onPress: () => already ? removeDraft(drafts.find(d => d.exercise_name === ex.name)!.key) : addExercise(ex.name) },
+                    { text: 'Mer info', onPress: () => { setShowPicker(false); setTimeout(() => setInfoEx(ex), 350) } },
+                    { text: 'Avbryt', style: 'cancel' },
+                  ])
+                }
+              }
+
+              return (
+                <TouchableOpacity
+                  key={ex.id}
+                  style={[s.pickerRow, already && s.pickerRowAdded]}
+                  onPress={() => already
+                    ? removeDraft(drafts.find(d => d.exercise_name === ex.name)!.key)
+                    : addExercise(ex.name)
+                  }
+                  onLongPress={handleLongPress}
+                  delayLongPress={400}
+                  activeOpacity={0.7}
+                >
+                  <View style={[s.pickerIcon, already && { backgroundColor: ORANGE + '20' }]}>
+                    <Ionicons name={CATEGORY_ICONS[ex.category]} size={18} color={already ? ORANGE : TEXT_SECONDARY} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.pickerRowName, already && { color: ORANGE }]}>{ex.name}</Text>
+                    <Text style={s.pickerRowSub}>{CATEGORY_LABELS[ex.category]}</Text>
+                  </View>
+                  <View style={[s.pickerAddBtn, already && { backgroundColor: ORANGE, borderColor: ORANGE }]}>
+                    <Ionicons name={already ? 'checkmark' : 'add'} size={18} color={already ? '#000' : TEXT_SECONDARY} />
+                  </View>
+                </TouchableOpacity>
+              )
+            })}
+            {pickerExercises.length === 0 && (
+              <Text style={{ color: TEXT_SECONDARY, textAlign: 'center', marginTop: 40, fontSize: 15 }}>
+                Inga övningar hittades
+              </Text>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Exercise info sheet */}
+      {(() => {
+        const muscles    = infoEx ? getMusclesForName(infoEx.name) : []
+        const muscleData = muscles.map(slug => ({ slug, intensity: 1 as const }))
+        const diffColor  = infoEx ? (DIFFICULTY_COLORS[infoEx.difficulty] ?? ORANGE) : ORANGE
+        return (
+          <Modal
+            visible={infoEx !== null}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={() => { setInfoEx(null); setTimeout(() => setShowPicker(true), 350) }}
+          >
+            <SafeAreaView style={s.infoScreen} edges={['top', 'bottom']}>
+              <View style={s.infoHeader}>
+                <Text style={s.infoTitle} numberOfLines={1}>{infoEx?.name}</Text>
+                <TouchableOpacity
+                  onPress={() => { setInfoEx(null); setTimeout(() => setShowPicker(true), 350) }}
+                  activeOpacity={0.8}
+                  style={s.infoClose}
+                >
+                  <Ionicons name="close" size={22} color={TEXT_PRIMARY} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView contentContainerStyle={s.infoScroll} showsVerticalScrollIndicator={false}>
+                <View style={s.badgeRow}>
+                  <View style={s.categoryBadge}>
+                    <Text style={s.categoryBadgeText}>{infoEx ? CATEGORY_LABELS[infoEx.category] : ''}</Text>
+                  </View>
+                  <View style={[s.diffBadge, { backgroundColor: diffColor + '22', borderColor: diffColor + '55' }]}>
+                    <Text style={[s.diffBadgeText, { color: diffColor }]}>
+                      {infoEx ? DIFFICULTY_LABELS[infoEx.difficulty] : ''}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={s.infoCard}>
+                  <View style={s.infoCardTitleRow}>
+                    <Text style={s.infoCardTitle}>Muskelgrupper</Text>
+                    <View style={s.toggle}>
+                      {(['front', 'back'] as const).map(side => (
+                        <TouchableOpacity
+                          key={side}
+                          style={[s.toggleBtn, infoBodyView === side && s.toggleBtnActive]}
+                          onPress={() => setInfoBodyView(side)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[s.toggleText, infoBodyView === side && s.toggleTextActive]}>
+                            {side === 'front' ? 'Fram' : 'Bak'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={s.bodyWrap}>
+                    <Body
+                      data={muscleData}
+                      side={infoBodyView}
+                      gender="male"
+                      scale={1.6}
+                      colors={[ORANGE]}
+                      defaultFill="#2A2A2C"
+                      border="rgba(255,255,255,0.10)"
+                    />
+                  </View>
+                  {muscles.length > 0 ? (
+                    <View style={s.muscleChips}>
+                      {muscles.map(slug => (
+                        <View key={slug} style={s.muscleChip}>
+                          <Text style={s.muscleChipText}>{SLUG_LABELS[slug]}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={s.noMuscles}>Inga muskler mappade för denna övning</Text>
+                  )}
+                </View>
+
+                {infoEx?.description ? (
+                  <View style={s.infoCard}>
+                    <Text style={s.infoCardTitle}>Beskrivning</Text>
+                    <Text style={s.infoDesc}>{infoEx.description}</Text>
+                  </View>
+                ) : null}
+              </ScrollView>
+            </SafeAreaView>
+          </Modal>
+        )
+      })()}
+    </Modal>
+  )
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  overlayKAV: { flex: 1, justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: BG,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    height: '88%',
+  },
+  handleWrap: { alignItems: 'center', paddingTop: 12, paddingBottom: 6 },
+  handleBar:  { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.25)' },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  iconBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
+  },
+  title:  { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
+  scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, gap: 20 },
+
+  field: { gap: 10 },
+  label: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, paddingHorizontal: 4 },
+  input: {
+    backgroundColor: CARD, borderRadius: 12,
+    borderWidth: 1, borderColor: BORDER,
+    color: TEXT_PRIMARY, fontSize: 16,
+    paddingHorizontal: 14, paddingVertical: 14,
+  },
+
+  dayLabelRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', paddingHorizontal: 4,
+  },
+  multiBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
+  multiBtnActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
+  multiBtnText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  multiBtnTextActive: { color: '#000', fontWeight: '700' },
+
+  dayRow: { flexDirection: 'row', gap: 6 },
+  dayBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10,
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
+  dayBtnActive:  { backgroundColor: ORANGE, borderColor: ORANGE },
+  dayText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  dayTextActive: { color: '#000', fontWeight: '700' },
+
+  exRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: CARD, borderRadius: 10,
+    borderWidth: 1, borderColor: BORDER, padding: 10,
+  },
+  exName: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+  cardioBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+    backgroundColor: ORANGE + '18', borderWidth: 1, borderColor: ORANGE + '44',
+  },
+  cardioBadgeText: { color: ORANGE, fontSize: 12, fontWeight: '600' },
+  exSmall: {
+    width: 50, color: TEXT_PRIMARY, fontSize: 13,
+    backgroundColor: BG, borderRadius: 8, borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 8, paddingVertical: 6, textAlign: 'center',
+  },
+
+  pickerToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 10, paddingHorizontal: 14,
+    backgroundColor: CARD, borderRadius: 10,
+    borderWidth: 1, borderColor: ORANGE + '50', marginTop: 4,
+  },
+  pickerToggleText: { color: ORANGE, fontSize: 14, fontWeight: '600' },
+
+  pickerScreen: { flex: 1, backgroundColor: BG },
+  pickerHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  klarBtn:     { backgroundColor: ORANGE, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9 },
+  klarBtnText: { color: '#000', fontWeight: '700', fontSize: 14 },
+  pickerSearchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 16, marginVertical: 10,
+    paddingHorizontal: 14, height: 46,
+    backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  pickerSearchInput:    { flex: 1, color: TEXT_PRIMARY, fontSize: 15, padding: 0 },
+  pickerFilterStrip:    { height: 60, flexGrow: 0, marginBottom: 10 },
+  pickerFilters:        { paddingHorizontal: 16, alignItems: 'center', gap: 8 },
+  pickerPill: {
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20,
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
+  pickerPillActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
+  pickerPillText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
+  pickerPillTextActive: { color: '#000', fontWeight: '700' },
+  pickerCount: {
+    color: TEXT_SECONDARY, fontSize: 12, paddingHorizontal: 20,
+    paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  pickerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  pickerRowAdded: { backgroundColor: ORANGE + '08' },
+  pickerIcon: {
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
+  },
+  pickerRowName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  pickerRowSub:  { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+  pickerAddBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  saveBtn: {
+    backgroundColor: ORANGE, borderRadius: 14,
+    paddingVertical: 16, alignItems: 'center',
+    shadowColor: ORANGE, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 10,
+  },
+  saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+
+  infoScreen: { flex: 1, backgroundColor: BG },
+  infoHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  infoTitle:  { flex: 1, color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', marginRight: 12 },
+  infoClose:  { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  infoScroll: { padding: 20, gap: 16 },
+
+  badgeRow: { flexDirection: 'row', gap: 8 },
+  categoryBadge: {
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+    backgroundColor: ORANGE + '20', borderWidth: 1, borderColor: ORANGE + '55',
+  },
+  categoryBadgeText: { color: ORANGE, fontSize: 13, fontWeight: '600' },
+  diffBadge:         { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  diffBadgeText:     { fontSize: 13, fontWeight: '600' },
+
+  infoCard: {
+    backgroundColor: CARD, borderRadius: 16,
+    borderWidth: 1, borderColor: BORDER, padding: 16, gap: 12,
+  },
+  infoCardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  infoCardTitle:    { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
+
+  toggle: { flexDirection: 'row', backgroundColor: BG, borderRadius: 10, padding: 2 },
+  toggleBtn:        { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
+  toggleBtnActive:  { backgroundColor: ORANGE },
+  toggleText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  toggleTextActive: { color: '#000', fontWeight: '700' },
+
+  bodyWrap:       { alignItems: 'center', paddingVertical: 8 },
+  muscleChips:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  muscleChip: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
+    backgroundColor: ORANGE + '18', borderWidth: 1, borderColor: ORANGE + '44',
+  },
+  muscleChipText: { color: ORANGE, fontSize: 13, fontWeight: '600' },
+  noMuscles:      { color: TEXT_SECONDARY, fontSize: 13 },
+  infoDesc:       { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 22 },
+})
