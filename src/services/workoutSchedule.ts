@@ -78,6 +78,57 @@ export async function deleteWorkoutSession(id: string): Promise<void> {
   if (error) throw error
 }
 
+export async function deleteSessionExercise(id: string): Promise<void> {
+  const { error } = await supabase.from('session_exercises').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function updateSessionExercise(
+  id: string,
+  sets: number | null,
+  reps: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('session_exercises')
+    .update({ sets, reps })
+    .eq('id', id)
+  if (error) throw error
+}
+
+// ─── Per-exercise completions ─────────────────────────────────────────────────
+
+export async function getCompletedExerciseIds(userId: string, date: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('exercise_completions')
+    .select('exercise_id')
+    .eq('user_id', userId)
+    .eq('completed_date', date)
+  if (error) throw error
+  return (data ?? []).map(r => r.exercise_id)
+}
+
+export async function completeExercise(exerciseId: string, userId: string, date: string): Promise<void> {
+  const { error } = await supabase
+    .from('exercise_completions')
+    .insert({ exercise_id: exerciseId, user_id: userId, completed_date: date })
+  // 23505 = duplicate (already complete) — fine.
+  // All other errors: log but never throw. Local state is the source of truth.
+  // To enable Supabase persistence run: supabase/migrations/20260701000001_exercise_completions.sql
+  if (error && error.code !== '23505') {
+    console.warn('[completeExercise]', error.code, error.message)
+  }
+}
+
+export async function uncompleteExercise(exerciseId: string, userId: string, date: string): Promise<void> {
+  const { error } = await supabase
+    .from('exercise_completions')
+    .delete()
+    .eq('exercise_id', exerciseId)
+    .eq('user_id', userId)
+    .eq('completed_date', date)
+  if (error) console.warn('[uncompleteExercise]', error.code, error.message)
+}
+
 // ─── Completions ──────────────────────────────────────────────────────────────
 
 function isoDate(date: Date): string {

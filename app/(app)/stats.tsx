@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   View,
   Text,
@@ -10,6 +10,14 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import WebView from 'react-native-webview'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -24,8 +32,11 @@ import { getCardioWorkouts, deleteCardioWorkout, getStrengthWorkouts, type Cardi
 import { useFocusEffect } from 'expo-router'
 import { ORANGE, GREEN, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
-const COLUMNS      = 7
-const SCREEN_WIDTH = Dimensions.get('window').width
+const COLUMNS       = 7
+const SCREEN_WIDTH  = Dimensions.get('window').width
+const SCREEN_HEIGHT = Dimensions.get('window').height
+const SHEET_PARTIAL = SCREEN_HEIGHT * 0.44  // top offset when partial (~56 % height)
+const SHEET_SP      = { damping: 26, stiffness: 260, mass: 1 } as const
 const GRID_PADDING = 20
 const GAP          = 6
 const SQUARE_SIZE  = Math.floor((SCREEN_WIDTH - GRID_PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS)
@@ -414,54 +425,173 @@ function WorkoutRow({ workout, last, onPress }: {
 
 // ─── Day workouts modal ───────────────────────────────────────────────────────
 
-function DayWorkoutsModal({ day, startDate, workouts, onClose, onSelectWorkout }: {
-  day: DaySummary; startDate: string; workouts: CardioWorkout[]
+function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, onClose, onSelectWorkout }: {
+  day: DaySummary; startDate: string
+  workouts: CardioWorkout[]; strengthWorkouts: StrengthWorkout[]
   onClose: () => void; onSelectWorkout: (w: CardioWorkout) => void
 }) {
-  const date        = dayDate(startDate, day.dayNumber)
-  const dateStr     = date.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
-  const dayWorkouts = workouts.filter(w => sameDay(new Date(w.created_at), date))
+  const insets = useSafeAreaInsets()
+  // Min top = safe area so sheet never hides behind Dynamic Island / notch
+  const FULL_TOP = insets.top + 8
+
+  // 0 = partial, 1 = fullscreen
+  const snapState    = useSharedValue(0)
+  const sheetTop     = useSharedValue(SCREEN_HEIGHT)
+  const backdropAnim = useSharedValue(0)
+
+  useEffect(() => {
+    sheetTop.value     = withSpring(SHEET_PARTIAL, SHEET_SP)
+    backdropAnim.value = withTiming(1, { duration: 260 })
+  }, [])
+
+  function dismiss() {
+    sheetTop.value     = withTiming(SCREEN_HEIGHT, { duration: 300 }, () => runOnJS(onClose)())
+    backdropAnim.value = withTiming(0, { duration: 250 })
+  }
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetY([-8, 8])
+    .onUpdate(e => {
+      const base = snapState.value === 1 ? FULL_TOP : SHEET_PARTIAL
+      sheetTop.value = Math.max(FULL_TOP, Math.min(SCREEN_HEIGHT, base + e.translationY))
+      // Backdrop only fades when below partial (closing direction)
+      const belowPartial = Math.max(0, sheetTop.value - SHEET_PARTIAL)
+      backdropAnim.value = Math.max(0, 1 - belowPartial / (SCREEN_HEIGHT - SHEET_PARTIAL))
+    })
+    .onEnd(e => {
+      const base   = snapState.value === 1 ? FULL_TOP : SHEET_PARTIAL
+      const endPos = base + e.translationY
+
+      if (e.velocityY < -600 || endPos < SHEET_PARTIAL * 0.45) {
+        // Snap to fullscreen
+        sheetTop.value     = withSpring(FULL_TOP, SHEET_SP)
+        backdropAnim.value = withTiming(1, { duration: 200 })
+        snapState.value    = 1
+      } else if (snapState.value === 0 && (e.velocityY > 600 || endPos > SHEET_PARTIAL + 100)) {
+        // Dismiss from partial
+        sheetTop.value     = withTiming(SCREEN_HEIGHT, { duration: 280 }, () => runOnJS(onClose)())
+        backdropAnim.value = withTiming(0, { duration: 230 })
+      } else if (snapState.value === 1 && (e.velocityY > 400 || endPos > SHEET_PARTIAL * 0.55)) {
+        // Collapse from fullscreen → partial
+        sheetTop.value     = withSpring(SHEET_PARTIAL, SHEET_SP)
+        backdropAnim.value = withTiming(1, { duration: 200 })
+        snapState.value    = 0
+      } else {
+        // Snap back to current state
+        sheetTop.value     = withSpring(base, SHEET_SP)
+        backdropAnim.value = withTiming(1, { duration: 200 })
+      }
+    })
+
+  const sheetStyle    = useAnimatedStyle(() => ({ top: sheetTop.value }))
+  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropAnim.value }))
+
+  const date    = dayDate(startDate, day.dayNumber)
+  const dateIso = date.toISOString().split('T')[0]
+  const dateStr = date.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  const dayCardio   = workouts.filter(w => sameDay(new Date(w.created_at), date))
+  const dayStrength = strengthWorkouts.filter(w => {
+    const wd = w.data.workout_date
+    return wd ? wd === dateIso : sameDay(new Date(w.created_at), date)
+  })
+  const hasAny = dayCardio.length > 0 || dayStrength.length > 0
 
   return (
-    <View style={styles.dayModalOverlay}>
-      <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
-      <View style={styles.dayModalSheet}>
-        <View style={{ padding: 20, paddingBottom: 32 }}>
-          <View style={styles.dayModalHandle} />
-          <Text style={styles.dayModalTitle} numberOfLines={1}>{dateStr}</Text>
-          <Text style={styles.dayModalSub}>Dag {day.dayNumber}</Text>
-          {dayWorkouts.length === 0 ? (
+    <View style={{ flex: 1 }}>
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.55)' }, backdropStyle]}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={dismiss} activeOpacity={1} />
+      </Animated.View>
+
+      <Animated.View style={[styles.dayModalSheet, sheetStyle]}>
+        {/* Drag handle – only this area captures vertical gestures */}
+        <GestureDetector gesture={panGesture}>
+          <View style={styles.dayModalDragArea}>
+            <View style={styles.dayModalHandle} />
+            <Text style={styles.dayModalTitle} numberOfLines={1}>{dateStr}</Text>
+            <Text style={styles.dayModalSub}>Dag {day.dayNumber}</Text>
+          </View>
+        </GestureDetector>
+
+        <ScrollView
+          contentContainerStyle={styles.dayModalScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          {!hasAny ? (
             <View style={styles.dayModalEmpty}>
               <Ionicons name="fitness-outline" size={28} color="rgba(255,255,255,0.2)" />
               <Text style={styles.dayModalEmptyText}>Inga träningar sparade</Text>
             </View>
           ) : (
-            <View>
-              {dayWorkouts.map((w, i) => (
-                <TouchableOpacity
-                  key={w.id}
-                  style={[styles.dayModalItem, i < dayWorkouts.length - 1 && styles.dayModalItemBorder]}
-                  onPress={() => { onClose(); setTimeout(() => onSelectWorkout(w), 300) }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.workoutRowIcon}>
-                    <Ionicons name={EXERCISE_ICONS[w.data.type] ?? 'fitness-outline'} size={18} color={ORANGE} />
-                  </View>
-                  <View style={styles.workoutRowBody}>
-                    <Text style={styles.workoutRowName}>{w.name}</Text>
-                    <View style={styles.workoutRowMeta}>
-                      <Text style={styles.workoutRowStat}>{w.data.distance_km.toFixed(2)} km</Text>
-                      <Text style={styles.workoutRowDot}>·</Text>
-                      <Text style={styles.workoutRowStat}>{fmtTime(w.data.duration_seconds)}</Text>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.25)" style={{ alignSelf: 'center' }} />
-                </TouchableOpacity>
-              ))}
-            </View>
+            <>
+              {/* Styrka */}
+              {dayStrength.length > 0 && (
+                <>
+                  {dayCardio.length > 0 && (
+                    <Text style={styles.dayModalSection}>Styrka</Text>
+                  )}
+                  {dayStrength.map((w, i) => {
+                    const totalReps = w.data.sets.reduce((s, r) => s + r.reps, 0)
+                    const last = i === dayStrength.length - 1 && dayCardio.length === 0
+                    return (
+                      <View
+                        key={w.id}
+                        style={[styles.dayModalItem, !last && styles.dayModalItemBorder]}
+                      >
+                        <View style={styles.workoutRowIcon}>
+                          <Ionicons name="barbell-outline" size={18} color={ORANGE} />
+                        </View>
+                        <View style={styles.workoutRowBody}>
+                          <Text style={styles.workoutRowName}>{w.name}</Text>
+                          <View style={styles.workoutRowMeta}>
+                            <Text style={styles.workoutRowStat}>{w.data.sets.length} set</Text>
+                            {totalReps > 0 && (
+                              <>
+                                <Text style={styles.workoutRowDot}>·</Text>
+                                <Text style={styles.workoutRowStat}>{totalReps} reps</Text>
+                              </>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+                    )
+                  })}
+                </>
+              )}
+
+              {/* Cardio */}
+              {dayCardio.length > 0 && (
+                <>
+                  {dayStrength.length > 0 && (
+                    <Text style={[styles.dayModalSection, { marginTop: 12 }]}>Cardio</Text>
+                  )}
+                  {dayCardio.map((w, i) => (
+                    <TouchableOpacity
+                      key={w.id}
+                      style={[styles.dayModalItem, i < dayCardio.length - 1 && styles.dayModalItemBorder]}
+                      onPress={() => { dismiss(); setTimeout(() => onSelectWorkout(w), 300) }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.workoutRowIcon}>
+                        <Ionicons name={EXERCISE_ICONS[w.data.type] ?? 'fitness-outline'} size={18} color={ORANGE} />
+                      </View>
+                      <View style={styles.workoutRowBody}>
+                        <Text style={styles.workoutRowName}>{w.name}</Text>
+                        <View style={styles.workoutRowMeta}>
+                          <Text style={styles.workoutRowStat}>{w.data.distance_km.toFixed(2)} km</Text>
+                          <Text style={styles.workoutRowDot}>·</Text>
+                          <Text style={styles.workoutRowStat}>{fmtTime(w.data.duration_seconds)}</Text>
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.25)" style={{ alignSelf: 'center' }} />
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+            </>
           )}
-        </View>
-      </View>
+        </ScrollView>
+      </Animated.View>
     </View>
   )
 }
@@ -892,10 +1022,11 @@ export default function StatsScreen() {
       </ScrollView>
 
       {/* Day workouts modal */}
-      <Modal visible={!!selectedDay} animationType="slide" transparent onRequestClose={() => setSelectedDay(null)}>
+      <Modal visible={!!selectedDay} animationType="none" transparent onRequestClose={() => setSelectedDay(null)}>
         {selectedDay && startDate && (
           <DayWorkoutsModal
-            day={selectedDay} startDate={startDate} workouts={workouts}
+            day={selectedDay} startDate={startDate}
+            workouts={workouts} strengthWorkouts={strengthWorkouts}
             onClose={() => setSelectedDay(null)} onSelectWorkout={setSelectedWorkout}
           />
         )}
@@ -1055,11 +1186,19 @@ const styles = StyleSheet.create({
   emptyWorkoutsText: { color: TEXT_SECONDARY, fontSize: 14 },
 
   // Day modal
-  dayModalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  dayModalSheet:   { backgroundColor: CARD, borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, borderBottomWidth: 0, borderColor: BORDER },
-  dayModalHandle:    { width: 36, height: 4, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  dayModalSheet: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    backgroundColor: CARD,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    borderWidth: 1, borderBottomWidth: 0, borderColor: BORDER,
+    overflow: 'hidden',
+  },
+  dayModalDragArea:  { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12 },
+  dayModalHandle:    { width: 36, height: 4, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
   dayModalTitle:     { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', textTransform: 'capitalize' },
-  dayModalSub:       { color: TEXT_SECONDARY, fontSize: 13, marginBottom: 12 },
+  dayModalSub:       { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
+  dayModalScroll:    { paddingHorizontal: 20, paddingBottom: 40 },
+  dayModalSection:   { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   dayModalEmpty:     { alignItems: 'center', paddingVertical: 24, gap: 10 },
   dayModalEmptyText: { color: TEXT_SECONDARY, fontSize: 14 },
   dayModalItem:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },

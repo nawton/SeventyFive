@@ -10,6 +10,7 @@ export interface StrengthData {
   exercise_id: string
   exercise_name: string
   sets: StrengthSet[]
+  workout_date?: string  // YYYY-MM-DD stored in JSON so querying works without schema changes
 }
 
 export async function saveStrengthWorkout(params: {
@@ -18,12 +19,15 @@ export async function saveStrengthWorkout(params: {
   exerciseName: string
   category: 'strength' | 'mobility' | 'hiit'
   sets: StrengthSet[]
+  workoutDate?: string  // YYYY-MM-DD, defaults to today
 }): Promise<boolean> {
+  const today = new Date().toISOString().split('T')[0]
   const entry: StrengthData = {
     category: params.category,
     exercise_id: params.exerciseId,
     exercise_name: params.exerciseName,
     sets: params.sets,
+    workout_date: params.workoutDate ?? today,
   }
   const { error } = await supabase.from('user_workouts').insert({
     user_id: params.userId,
@@ -78,9 +82,13 @@ export async function saveCardioWorkout(params: {
   return !error
 }
 
-export async function deleteCardioWorkout(id: string): Promise<boolean> {
+export async function deleteWorkout(id: string): Promise<boolean> {
   const { error } = await supabase.from('user_workouts').delete().eq('id', id)
   return !error
+}
+
+export async function deleteCardioWorkout(id: string): Promise<boolean> {
+  return deleteWorkout(id)
 }
 
 export interface StrengthWorkout {
@@ -88,6 +96,33 @@ export interface StrengthWorkout {
   name: string
   created_at: string
   data: StrengthData
+}
+
+export async function getWorkoutsForDate(userId: string, date: string): Promise<StrengthWorkout[]> {
+  // Fetch recent workouts and filter by workout_date stored in the exercises JSON
+  const { data, error } = await supabase
+    .from('user_workouts')
+    .select('id, name, created_at, exercises')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (error || !data) return []
+
+  return data
+    .filter(w => {
+      if (!Array.isArray(w.exercises) || w.exercises[0]?.category === 'cardio') return false
+      const wd: string | undefined = w.exercises[0]?.workout_date
+      // New workouts have workout_date; old workouts fall back to created_at date
+      const wDate = wd ?? w.created_at?.split('T')[0]
+      return wDate === date
+    })
+    .map(w => ({
+      id: w.id,
+      name: w.name,
+      created_at: w.created_at,
+      data: w.exercises[0] as StrengthData,
+    }))
 }
 
 export async function getStrengthWorkouts(userId: string, limit = 50): Promise<StrengthWorkout[]> {

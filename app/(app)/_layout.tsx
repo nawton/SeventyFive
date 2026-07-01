@@ -12,10 +12,10 @@ function TabIcon({ name, color }: { name: IoniconName; color: string }) {
   return <Ionicons name={name} size={24} color={color} />
 }
 
-function AddIcon() {
+function SchemaIcon({ color }: { color: string }) {
   return (
     <View style={styles.addButton}>
-      <Ionicons name="add" size={28} color="#000000" />
+      <Ionicons name="barbell-outline" size={24} color="#000000" />
     </View>
   )
 }
@@ -42,7 +42,7 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="add"
-        options={{ tabBarIcon: () => <AddIcon /> }}
+        options={{ tabBarIcon: ({ color }) => <SchemaIcon color={color} /> }}
       />
       <Tabs.Screen
         name="stats"
