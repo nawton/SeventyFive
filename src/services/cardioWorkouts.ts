@@ -59,10 +59,20 @@ export async function getCardioWorkouts(userId: string, limit = 30): Promise<Car
 
   return data
     .filter(w => Array.isArray(w.exercises) && w.exercises[0]?.category === 'cardio')
-    .map(w => ({
-      id: w.id,
-      name: w.name,
-      created_at: w.created_at,
-      data: w.exercises[0] as CardioData,
-    }))
+    .map(w => {
+      const raw = w.exercises[0]
+      return {
+        id: w.id,
+        name: w.name,
+        created_at: w.created_at,
+        data: {
+          category:         'cardio' as const,
+          type:             raw.type             ?? 'running',
+          distance_km:      raw.distance_km      ?? 0,
+          duration_seconds: raw.duration_seconds ?? 0,
+          calories:         raw.calories         ?? 0,
+          route:            raw.route,
+        } satisfies CardioData,
+      }
+    })
 }

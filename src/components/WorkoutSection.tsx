@@ -564,6 +564,9 @@ export interface WorkoutSectionProps {
   onComplete:        () => void
   onUncomplete:      () => void
   onEdit:            () => void
+  onLongPress?:      () => void
+  onAddExercise?:    () => void
+  isQuickLog?:       boolean
 }
 
 // ─── WorkoutSection ───────────────────────────────────────────────────────────
@@ -579,7 +582,10 @@ export function WorkoutSection({
   onCardPress,
   onComplete,
   onUncomplete,
+  onLongPress,
+  onAddExercise,
   onEdit,
+  isQuickLog,
 }: WorkoutSectionProps) {
   const total     = session.exercises.length
   const doneCount = session.exercises.filter(e => checked[e.id]).length
@@ -629,7 +635,13 @@ export function WorkoutSection({
           />
         </View>
 
-        <View style={{ flex: 1 }}>
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          activeOpacity={onLongPress ? 0.7 : 1}
+          onLongPress={onLongPress}
+          delayLongPress={400}
+          disabled={!onLongPress}
+        >
           <Text style={s.sessionName}>{session.name}</Text>
           <Text style={s.sessionMeta}>
             {isCompleted
@@ -638,7 +650,7 @@ export function WorkoutSection({
                 ? 'Inga övningar tillagda'
                 : `${doneCount} av ${total} klara`}
           </Text>
-        </View>
+        </TouchableOpacity>
 
         {isCompleted ? (
           <TouchableOpacity onPress={handleUncomplete} style={s.doneBadge} activeOpacity={0.7}>
@@ -657,13 +669,15 @@ export function WorkoutSection({
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          onPress={onEdit}
-          style={s.editBtn}
-          hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-        >
-          <Ionicons name="ellipsis-horizontal" size={17} color={TEXT_SECONDARY} />
-        </TouchableOpacity>
+        {!isQuickLog && (
+          <TouchableOpacity
+            onPress={onEdit}
+            style={s.editBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+          >
+            <Ionicons name="ellipsis-horizontal" size={17} color={TEXT_SECONDARY} />
+          </TouchableOpacity>
+        )}
       </Animated.View>
 
       {/* ── Progress bar ── */}
@@ -691,11 +705,12 @@ export function WorkoutSection({
         </View>
       )}
 
-      {/* ── Add exercise ── */}
-      <TouchableOpacity style={s.addRow} onPress={onEdit} activeOpacity={0.7}>
-        <Ionicons name="add-circle-outline" size={16} color={ORANGE} />
-        <Text style={s.addRowText}>Lägg till övning</Text>
-      </TouchableOpacity>
+      {onAddExercise && (
+        <TouchableOpacity style={s.addRow} onPress={onAddExercise} activeOpacity={0.75}>
+          <Ionicons name="add" size={16} color={ORANGE} />
+          <Text style={s.addRowText}>Lägg till övning</Text>
+        </TouchableOpacity>
+      )}
 
     </View>
   )

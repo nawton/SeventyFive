@@ -56,6 +56,10 @@ export default function AppLayout() {
         name="edit-profile"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="manage-sessions"
+        options={{ href: null }}
+      />
     </Tabs>
   )
 }

@@ -88,18 +88,22 @@ export function SessionEditor({
   onClose,
   onSaved,
   userId,
+  initialDate,
+  allowDelete = true,
 }: {
-  visible:   boolean
-  session:   WorkoutSession | null
-  exercises: Exercise[]
-  onClose:   () => void
-  onSaved:   () => void
-  userId:    string
+  visible:       boolean
+  session:       WorkoutSession | null
+  exercises:     Exercise[]
+  onClose:       () => void
+  onSaved:       () => void
+  userId:        string
+  initialDate?:  Date
+  allowDelete?:  boolean
 }) {
   const insets = useSafeAreaInsets()
   const [name, setName]                 = useState('')
   const [weekdays, setWeekdays]         = useState<number[]>([])
-  const [multiDay, setMultiDay]         = useState(false)
+  const [repeat, setRepeat]             = useState(false)
   const [drafts, setDrafts]             = useState<DraftExercise[]>([])
   const [showPicker, setShowPicker]     = useState(false)
   const [pickerFilter, setPickerFilter] = useState('all')
@@ -116,7 +120,15 @@ export function SessionEditor({
   useEffect(() => {
     if (!visible) return
     if (session) {
-      setName(session.name)
+      // One-time sessions are stored as ONCE:YYYY-MM-DD:name
+      if (session.name.startsWith('ONCE:')) {
+        const parts = session.name.split(':')
+        setName(parts.slice(2).join(':'))
+        setRepeat(false)
+      } else {
+        setName(session.name)
+        setRepeat(session.weekdays.length > 0)
+      }
       setWeekdays([...session.weekdays])
       setDrafts(session.exercises.map(e => ({
         key: e.id,
@@ -125,9 +137,12 @@ export function SessionEditor({
         reps: e.reps ?? '',
       })))
     } else {
+      const wd = initialDate
+        ? (initialDate.getDay() || 7)
+        : todayIso()
       setName('')
-      setWeekdays([todayIso()])
-      setMultiDay(false)
+      setWeekdays([wd])
+      setRepeat(false)
       setDrafts([])
     }
     setShowPicker(false)
@@ -176,15 +191,15 @@ export function SessionEditor({
 
   // ── Day selection ────────────────────────────────────────────────────────────
   function toggleDay(d: number) {
-    if (multiDay) {
+    if (repeat) {
       setWeekdays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
     } else {
       setWeekdays([d])
     }
   }
 
-  function toggleMultiDay() {
-    setMultiDay(prev => {
+  function toggleRepeat() {
+    setRepeat(prev => {
       if (prev) setWeekdays(w => w.length > 0 ? [w[0]] : [])
       return !prev
     })
@@ -204,8 +219,23 @@ export function SessionEditor({
   }
 
   // ── Save / delete ────────────────────────────────────────────────────────────
+  function resolvedName(): string {
+    if (name.trim()) return name.trim()
+    if (repeat && weekdays.length > 0)
+      return weekdays.sort((a, b) => a - b).map(d => WEEKDAYS[d - 1]).join(', ')
+    return 'Träningspass'
+  }
+
   async function handleSave() {
-    if (!name.trim()) { Alert.alert('Ange ett namn på passet'); return }
+    const missing = drafts.find(d => {
+      const ex = exercises.find(e => e.name === d.exercise_name)
+      if (ex?.category === 'cardio') return false
+      return !d.sets.trim() || !d.reps.trim()
+    })
+    if (missing) {
+      Alert.alert('Ange set och reps', `"${missing.exercise_name}" saknar set eller reps.`)
+      return
+    }
     setSaving(true)
     try {
       const exList = drafts.map(d => ({
@@ -213,10 +243,17 @@ export function SessionEditor({
         sets: d.sets ? parseInt(d.sets) : null,
         reps: d.reps || null,
       }))
+      // Repeat OFF: store as one-time with ONCE:date:name convention, weekdays=[]
+      const d = initialDate ?? new Date()
+      const ds = d.toISOString().split('T')[0]
+      const base          = resolvedName()
+      const savedName     = repeat ? base : `ONCE:${ds}:${base}`
+      const savedWeekdays = repeat ? weekdays : []
+
       if (session) {
-        await updateWorkoutSession(session.id, name.trim(), weekdays, exList)
+        await updateWorkoutSession(session.id, savedName, savedWeekdays, exList)
       } else {
-        await createWorkoutSession(userId, name.trim(), weekdays, exList)
+        await createWorkoutSession(userId, savedName, savedWeekdays, exList)
       }
       onSaved()
       dismissEditor()
@@ -286,7 +323,7 @@ export function SessionEditor({
               <Ionicons name="close" size={22} color={TEXT_PRIMARY} />
             </TouchableOpacity>
             <Text style={s.title}>{session ? 'Redigera pass' : 'Nytt pass'}</Text>
-            {session ? (
+            {session && allowDelete ? (
               <TouchableOpacity onPress={handleDelete} style={s.iconBtn} activeOpacity={0.7} disabled={deleting}>
                 {deleting
                   ? <ActivityIndicator size="small" color="#E53935" />
@@ -317,17 +354,7 @@ export function SessionEditor({
             </View>
 
             <View style={s.field}>
-              <View style={s.dayLabelRow}>
-                <Text style={s.label}>VECKODAGAR</Text>
-                <TouchableOpacity
-                  style={[s.multiBtn, multiDay && s.multiBtnActive]}
-                  onPress={toggleMultiDay}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons name="layers-outline" size={13} color={multiDay ? '#000' : TEXT_SECONDARY} />
-                  <Text style={[s.multiBtnText, multiDay && s.multiBtnTextActive]}>Flera dagar</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={s.label}>DAG</Text>
               <View style={s.dayRow}>
                 {WEEKDAYS.map((d, i) => {
                   const num    = i + 1
@@ -344,6 +371,42 @@ export function SessionEditor({
                   )
                 })}
               </View>
+
+              {/* Upprepa toggle */}
+              <TouchableOpacity
+                style={[s.repeatRow, repeat && s.repeatRowActive]}
+                onPress={toggleRepeat}
+                activeOpacity={0.75}
+              >
+                <View style={[s.repeatIcon, repeat && s.repeatIconActive]}>
+                  <Ionicons name="repeat" size={15} color={repeat ? '#000' : TEXT_SECONDARY} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={s.repeatLabelRow}>
+                    <Text style={[s.repeatLabel, repeat && s.repeatLabelActive]}>Upprepa varje vecka</Text>
+                    <TouchableOpacity
+                      onPress={() => Alert.alert(
+                        'Upprepa varje vecka',
+                        'På — passet visas automatiskt varje vald veckodag och fortsätter tills du tar bort det.\n\nAv — passet visas bara en enda gång, på den dag du väljer.',
+                        [{ text: 'OK' }],
+                      )}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="information-circle-outline" size={16} color={TEXT_SECONDARY} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={s.repeatSub}>
+                    {repeat
+                      ? weekdays.length > 0
+                        ? weekdays.sort().map(d => WEEKDAYS[d - 1]).join(', ')
+                        : 'Välj dagar ovan'
+                      : 'Passet visas bara den valda dagen'}
+                  </Text>
+                </View>
+                <View style={[s.swToggle, repeat && s.swToggleActive]}>
+                  <View style={[s.swThumb, repeat && s.swThumbActive]} />
+                </View>
+              </TouchableOpacity>
             </View>
 
             <View style={s.field}>
@@ -651,18 +714,36 @@ const s = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 14,
   },
 
-  dayLabelRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', paddingHorizontal: 4,
+  repeatRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1, borderColor: BORDER,
+    padding: 14, marginTop: 4,
   },
-  multiBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  repeatRowActive: { borderColor: ORANGE + '60', backgroundColor: ORANGE + '0C' },
+  repeatIcon: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: BG, alignItems: 'center', justifyContent: 'center',
   },
-  multiBtnActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
-  multiBtnText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
-  multiBtnTextActive: { color: '#000', fontWeight: '700' },
+  repeatIconActive: { backgroundColor: ORANGE },
+  repeatLabelRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  repeatLabel:      { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+  repeatLabelActive:{ color: ORANGE },
+  repeatSub:        { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+  swToggle: {
+    width: 44, height: 26, borderRadius: 13,
+    backgroundColor: BORDER, padding: 2,
+    justifyContent: 'center',
+  },
+  swToggleActive:  { backgroundColor: ORANGE },
+  swThumb: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: TEXT_SECONDARY,
+  },
+  swThumbActive: {
+    backgroundColor: '#000',
+    transform: [{ translateX: 18 }],
+  },
 
   dayRow: { flexDirection: 'row', gap: 6 },
   dayBtn: {

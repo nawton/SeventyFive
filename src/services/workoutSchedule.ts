@@ -28,6 +28,7 @@ export async function getWorkoutSessions(userId: string): Promise<WorkoutSession
   if (error) throw error
   return (data ?? []).map(s => ({
     ...s,
+    weekdays: s.weekdays ?? [],
     exercises: [...(s.session_exercises ?? [])].sort((a, b) => a.sort_order - b.sort_order),
   }))
 }
@@ -78,6 +79,169 @@ export async function deleteWorkoutSession(id: string): Promise<void> {
   if (error) throw error
 }
 
+/** Deletes a session template and any per-day SKIP records that reference it. */
+export async function deleteSessionWithSkips(userId: string, sessionId: string): Promise<void> {
+  await supabase
+    .from('workout_sessions')
+    .delete()
+    .eq('user_id', userId)
+    .like('name', `SKIP:%:${sessionId}`)
+  const { error } = await supabase.from('workout_sessions').delete().eq('id', sessionId)
+  if (error) throw error
+}
+
+export async function deleteFutureOnceSessions(userId: string): Promise<number> {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayStr = today.toISOString().split('T')[0]
+
+  const { data, error } = await supabase
+    .from('workout_sessions')
+    .select('id, name, weekdays')
+    .eq('user_id', userId)
+  if (error) throw error
+
+  const toDelete = (data ?? [])
+    .filter(s => {
+      if (s.weekdays && s.weekdays.length > 0) return false
+      if (s.name.startsWith('ONCE:')) {
+        const datePart = s.name.split(':')[1] ?? ''
+        return datePart > todayStr
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s.name)) {
+        return s.name > todayStr
+      }
+      return false
+    })
+    .map(s => s.id)
+
+  if (toDelete.length === 0) return 0
+
+  const { error: delErr } = await supabase
+    .from('workout_sessions')
+    .delete()
+    .in('id', toDelete)
+  if (delErr) throw delErr
+  return toDelete.length
+}
+
+/**
+ * For a repeating session: creates a day-specific ONCE copy (without the skipped exercise)
+ * and adds a SKIP record so the repeating session is hidden on that date.
+ */
+export async function skipExerciseForDay(
+  userId: string,
+  session: WorkoutSession,
+  dateStr: string,
+  skipExerciseId: string,
+): Promise<void> {
+  const baseName = session.name.startsWith('ONCE:')
+    ? session.name.split(':').slice(2).join(':')
+    : session.name
+  const remaining = session.exercises
+    .filter(e => e.id !== skipExerciseId)
+    .map(e => ({ exercise_name: e.exercise_name, sets: e.sets, reps: e.reps }))
+  await createWorkoutSession(userId, `ONCE:${dateStr}:${baseName}`, [], remaining)
+  await supabase.from('workout_sessions').insert({
+    user_id: userId,
+    name: `SKIP:${dateStr}:${session.id}`,
+    weekdays: [],
+  })
+}
+
+export async function reorderWorkoutSessions(orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, i) =>
+      supabase.from('workout_sessions').update({ sort_order: i }).eq('id', id)
+    )
+  )
+}
+
+export async function addMissedExercise(
+  userId: string,
+  dateStr: string,
+  exerciseName: string,
+  sets: number | null,
+  reps: string | null,
+): Promise<SessionExercise> {
+  // Missed exercises go into a ONCE session so they appear under Träningspass
+  const sessionName = `ONCE:${dateStr}:Träningspass`
+  const { data: existing } = await supabase
+    .from('workout_sessions')
+    .select('id, session_exercises(id)')
+    .eq('user_id', userId)
+    .eq('name', sessionName)
+    .maybeSingle()
+
+  let sessionId: string
+  let sortOrder: number
+
+  if (existing) {
+    sessionId = existing.id
+    sortOrder = (existing.session_exercises as { id: string }[] ?? []).length
+  } else {
+    const { data: created, error } = await supabase
+      .from('workout_sessions')
+      .insert({ user_id: userId, name: sessionName, weekdays: [] })
+      .select()
+      .single()
+    if (error) throw error
+    sessionId = created.id
+    sortOrder = 0
+  }
+  return addSingleExerciseToSession(sessionId, exerciseName, sortOrder, sets, reps)
+}
+
+export async function addQuickExercise(
+  userId: string,
+  date: string,
+  exerciseName: string,
+  sets: number | null,
+  reps: string | null,
+): Promise<SessionExercise> {
+  // One-off "daily log" sessions use weekdays=[] and name=ISO date
+  const { data: existing } = await supabase
+    .from('workout_sessions')
+    .select('id, session_exercises(id)')
+    .eq('user_id', userId)
+    .eq('name', date)
+    .maybeSingle()
+
+  let sessionId: string
+  let sortOrder: number
+
+  if (existing) {
+    sessionId = existing.id
+    sortOrder = (existing.session_exercises as { id: string }[] ?? []).length
+  } else {
+    const { data: created, error } = await supabase
+      .from('workout_sessions')
+      .insert({ user_id: userId, name: date, weekdays: [] })
+      .select()
+      .single()
+    if (error) throw error
+    sessionId = created.id
+    sortOrder = 0
+  }
+  return addSingleExerciseToSession(sessionId, exerciseName, sortOrder, sets, reps)
+}
+
+export async function addSingleExerciseToSession(
+  sessionId: string,
+  exerciseName: string,
+  sortOrder: number,
+  sets: number | null,
+  reps: string | null,
+): Promise<SessionExercise> {
+  const { data, error } = await supabase
+    .from('session_exercises')
+    .insert({ session_id: sessionId, exercise_name: exerciseName, sets, reps, sort_order: sortOrder })
+    .select()
+    .single()
+  if (error) throw error
+  return data as SessionExercise
+}
+
 export async function deleteSessionExercise(id: string): Promise<void> {
   const { error } = await supabase.from('session_exercises').delete().eq('id', id)
   if (error) throw error
@@ -96,6 +260,26 @@ export async function updateSessionExercise(
 }
 
 // ─── Per-exercise completions ─────────────────────────────────────────────────
+
+export async function getCompletedExerciseNamesForWeek(
+  userId: string,
+  weekStart: string,
+  weekEnd: string,
+): Promise<string[]> {
+  const { data: completions } = await supabase
+    .from('exercise_completions')
+    .select('exercise_id')
+    .eq('user_id', userId)
+    .gte('completed_date', weekStart)
+    .lte('completed_date', weekEnd)
+  const ids = (completions ?? []).map(c => c.exercise_id as string)
+  if (ids.length === 0) return []
+  const { data: exRows } = await supabase
+    .from('session_exercises')
+    .select('exercise_name')
+    .in('id', ids)
+  return (exRows ?? []).map(e => e.exercise_name as string)
+}
 
 export async function getCompletedExerciseIds(userId: string, date: string): Promise<string[]> {
   const { data, error } = await supabase

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, TouchableOpacity, Modal,
@@ -12,6 +12,7 @@ import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getAllDays, type DaySummary } from '@/services/dailyLog'
 import { getMusclesForName, type Slug } from '@/lib/muscles'
 import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
+import { getCompletedExerciseNamesForWeek } from '@/services/workoutSchedule'
 import { CalendarView } from '@/components/stats/CalendarView'
 import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
 import { WorkoutDetail, WorkoutRow } from '@/components/stats/WorkoutDetail'
@@ -19,6 +20,23 @@ import { WeeklyGraph } from '@/components/stats/WeeklyGraph'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 const GRID_PADDING = 20
+
+function getWeekBounds(offset: number): { start: string; end: string; label: string } {
+  const today = new Date()
+  const dow   = today.getDay() || 7                      // 1=Mån … 7=Sön
+  const mon   = new Date(today)
+  mon.setDate(today.getDate() - dow + 1 + offset * 7)
+  mon.setHours(0, 0, 0, 0)
+  const sun = new Date(mon)
+  sun.setDate(mon.getDate() + 6)
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
+  return {
+    start: mon.toISOString().split('T')[0],
+    end:   sun.toISOString().split('T')[0],
+    label: offset === 0 ? 'Denna vecka' : `${fmt(mon)} – ${fmt(sun)}`,
+  }
+}
 
 type StatsTab = 'overview' | 'cardio' | 'styrka'
 const TABS: Array<{ key: StatsTab; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = [
@@ -69,6 +87,11 @@ export default function StatsScreen() {
   const [selectedDay, setSelectedDay]           = useState<DaySummary | null>(null)
   const [activeTab, setActiveTab]               = useState<StatsTab>('overview')
   const [loading, setLoading]                   = useState(true)
+  const [userId, setUserId]                     = useState<string | null>(null)
+  const [weekOffset, setWeekOffset]             = useState(0)
+  const [weekExNames, setWeekExNames]           = useState<string[]>([])
+  const [weekLoading, setWeekLoading]           = useState(false)
+  const [viewMode, setViewMode]                 = useState<'week' | '4weeks'>('week')
 
   useFocusEffect(useCallback(() => { loadStats() }, []))
 
@@ -76,10 +99,12 @@ export default function StatsScreen() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) return
+      const uid = session.user.id
+      setUserId(uid)
       const [challenge, cardioWorkouts, strengthWos] = await Promise.all([
-        getActiveChallenge(session.user.id),
-        getCardioWorkouts(session.user.id),
-        getStrengthWorkouts(session.user.id),
+        getActiveChallenge(uid),
+        getCardioWorkouts(uid),
+        getStrengthWorkouts(uid),
       ])
       setWorkouts(cardioWorkouts)
       setStrengthWorkouts(strengthWos)
@@ -95,16 +120,39 @@ export default function StatsScreen() {
     }
   }
 
-  // Muscle frequency map for the body highlighter
-  const muscleFreq = new Map<Slug, number>()
-  for (const w of strengthWorkouts) {
-    getMusclesForName(w.name).forEach(slug => {
-      muscleFreq.set(slug, (muscleFreq.get(slug) || 0) + 1)
+  useEffect(() => {
+    if (!userId) return
+    setWeekLoading(true)
+    let start: string, end: string
+    if (viewMode === '4weeks') {
+      const today = new Date()
+      const from  = new Date(today)
+      from.setDate(today.getDate() - 27)
+      end   = today.toISOString().split('T')[0]
+      start = from.toISOString().split('T')[0]
+    } else {
+      ;({ start, end } = getWeekBounds(weekOffset))
+    }
+    getCompletedExerciseNamesForWeek(userId, start, end)
+      .then(setWeekExNames)
+      .finally(() => setWeekLoading(false))
+  }, [userId, weekOffset, viewMode])
+
+  // Muscle frequency for selected week (based on completed scheduled exercises)
+  const weekMuscleFreq = new Map<Slug, number>()
+  weekExNames.forEach(name => {
+    getMusclesForName(name).forEach(slug => {
+      weekMuscleFreq.set(slug, (weekMuscleFreq.get(slug) || 0) + 1)
     })
-  }
-  const muscleData = Array.from(muscleFreq.entries()).map(([slug, count]) => ({
-    slug, intensity: Math.min(count, 2) as 1 | 2,
-  }))
+  })
+  const maxMuscleCount = Math.max(0, ...weekMuscleFreq.values())
+  const weekMuscleData = Array.from(weekMuscleFreq.entries()).map(([slug, count]) => {
+    const ratio = maxMuscleCount > 0 ? count / maxMuscleCount : 0
+    const intensity = (ratio >= 0.66 ? 3 : ratio >= 0.33 ? 2 : 1) as 1 | 2 | 3
+    return { slug, intensity }
+  })
+  const weekBounds = getWeekBounds(weekOffset)
+  const weekUniqueEx = Array.from(new Set(weekExNames))
 
   const completedDays = days.filter(d => d.status === 'completed').length
   const streak        = calculateStreak(days, currentDay)
@@ -224,32 +272,70 @@ export default function StatsScreen() {
         {/* ── STYRKA ── */}
         {activeTab === 'styrka' && (
           <>
+            {/* Mode selector */}
+            <View style={s.modeBar}>
+              {(['week', '4weeks'] as const).map(mode => (
+                <TouchableOpacity
+                  key={mode}
+                  style={[s.modeBtn, viewMode === mode && s.modeBtnActive]}
+                  onPress={() => { setViewMode(mode); setWeekOffset(0) }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[s.modeBtnText, viewMode === mode && s.modeBtnTextActive]}>
+                    {mode === 'week' ? 'Vecka' : '4 veckor'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Week navigator — only in 'week' mode */}
+            {viewMode === 'week' && (
+              <View style={s.weekNav}>
+                <TouchableOpacity
+                  style={s.weekNavBtn}
+                  onPress={() => setWeekOffset(o => o - 1)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="chevron-back" size={22} color={TEXT_PRIMARY} />
+                </TouchableOpacity>
+                <Text style={s.weekNavLabel}>{weekBounds.label}</Text>
+                <TouchableOpacity
+                  style={[s.weekNavBtn, weekOffset >= 0 && s.weekNavBtnDisabled]}
+                  onPress={() => setWeekOffset(o => o + 1)}
+                  disabled={weekOffset >= 0}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="chevron-forward" size={22} color={weekOffset >= 0 ? 'rgba(255,255,255,0.18)' : TEXT_PRIMARY} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Week stats */}
             <View style={s.statsRow}>
               <View style={s.statCard}>
                 <View style={[s.statIconBox, { backgroundColor: ORANGE + '22' }]}>
-                  <Ionicons name="barbell-outline" size={18} color={ORANGE} />
+                  <Ionicons name="checkmark-circle-outline" size={18} color={ORANGE} />
                 </View>
-                <Text style={[s.statValue, { color: ORANGE }]}>{strengthWorkouts.length}</Text>
-                <Text style={s.statLabel}>pass totalt</Text>
+                <Text style={[s.statValue, { color: ORANGE }]}>{weekExNames.length}</Text>
+                <Text style={s.statLabel}>avklarade</Text>
               </View>
               <View style={s.statCard}>
                 <View style={[s.statIconBox, { backgroundColor: GREEN + '22' }]}>
-                  <Ionicons name="trophy-outline" size={18} color={GREEN} />
+                  <Ionicons name="barbell-outline" size={18} color={GREEN} />
                 </View>
-                <Text style={[s.statValue, { color: GREEN }]}>
-                  {Array.from(new Set(strengthWorkouts.map(w => w.name))).length}
-                </Text>
+                <Text style={[s.statValue, { color: GREEN }]}>{weekUniqueEx.length}</Text>
                 <Text style={s.statLabel}>unika övningar</Text>
               </View>
               <View style={s.statCard}>
                 <View style={[s.statIconBox, { backgroundColor: '#7C5CBF22' }]}>
                   <Ionicons name="body-outline" size={18} color="#7C5CBF" />
                 </View>
-                <Text style={[s.statValue, { color: '#7C5CBF' }]}>{muscleFreq.size}</Text>
+                <Text style={[s.statValue, { color: '#7C5CBF' }]}>{weekMuscleFreq.size}</Text>
                 <Text style={s.statLabel}>muskelgrupper</Text>
               </View>
             </View>
 
+            {/* Muscle map */}
             <View style={s.card}>
               <View style={s.muscleHeader}>
                 <Text style={s.cardTitle}>Tränade muskler</Text>
@@ -268,50 +354,60 @@ export default function StatsScreen() {
                   ))}
                 </View>
               </View>
-              <View style={s.bodyWrap}>
-                <Body
-                  data={muscleData}
-                  side={bodyView}
-                  gender="male"
-                  scale={1.6}
-                  colors={[ORANGE + 'AA', ORANGE]}
-                  defaultFill="#2A2A2C"
-                  border="rgba(255,255,255,0.10)"
-                />
-              </View>
-              {strengthWorkouts.length === 0 && (
-                <Text style={s.muscleEmpty}>Logga styrketräning för att se vilka muskler du tränat</Text>
+
+              {weekLoading ? (
+                <View style={s.bodyWrap}>
+                  <ActivityIndicator color={ORANGE} />
+                </View>
+              ) : (
+                <>
+                  <View style={s.bodyWrap}>
+                    <Body
+                      data={weekMuscleData}
+                      side={bodyView}
+                      gender="male"
+                      scale={1.6}
+                      colors={['#4A90D9', '#F5A623', ORANGE]}
+                      defaultFill="#2A2A2C"
+                      border="rgba(255,255,255,0.10)"
+                    />
+                  </View>
+                  {weekMuscleData.length > 0 && (
+                    <View style={s.legend}>
+                      {([
+                        { color: '#4A90D9', label: 'Lite (1×)' },
+                        { color: '#F5A623', label: 'Medel (2–3×)' },
+                        { color: ORANGE,    label: 'Mycket (4×+)' },
+                      ] as const).map(({ color, label }) => (
+                        <View key={label} style={s.legendItem}>
+                          <View style={[s.legendDot, { backgroundColor: color }]} />
+                          <Text style={s.legendText}>{label}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
+
+              {!weekLoading && weekExNames.length === 0 && (
+                <Text style={s.muscleEmpty}>
+                  {viewMode === '4weeks'
+                    ? 'Inga avklarade övningar de senaste 4 veckorna'
+                    : weekOffset === 0 ? 'Inga avklarade övningar denna vecka' : 'Inga avklarade övningar vald vecka'}
+                </Text>
+              )}
+
+              {/* Exercise chips */}
+              {weekUniqueEx.length > 0 && (
+                <View style={s.exChips}>
+                  {weekUniqueEx.map(name => (
+                    <View key={name} style={s.exChip}>
+                      <Text style={s.exChipText} numberOfLines={1}>{name}</Text>
+                    </View>
+                  ))}
+                </View>
               )}
             </View>
-
-            {strengthWorkouts.length > 0 && (
-              <View style={s.card}>
-                <Text style={s.cardTitle}>Senaste pass</Text>
-                {strengthWorkouts.slice(0, 8).map((w, i) => {
-                  const totalReps = w.data.sets.reduce((sum, r) => sum + r.reps, 0)
-                  const date      = new Date(w.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
-                  const last      = i === Math.min(strengthWorkouts.length, 8) - 1
-                  return (
-                    <View key={w.id} style={[s.strengthRow, !last && s.strengthRowBorder]}>
-                      <View style={s.strengthIcon}>
-                        <Ionicons name="barbell-outline" size={18} color={ORANGE} />
-                      </View>
-                      <View style={s.strengthBody}>
-                        <View style={s.strengthTop}>
-                          <Text style={s.strengthName}>{w.name}</Text>
-                          <Text style={s.strengthDate}>{date}</Text>
-                        </View>
-                        <View style={s.strengthMeta}>
-                          <Text style={s.strengthStat}>{w.data.sets.length} set</Text>
-                          <Text style={s.strengthDot}>·</Text>
-                          <Text style={s.strengthStat}>{totalReps} reps</Text>
-                        </View>
-                      </View>
-                    </View>
-                  )
-                })}
-              </View>
-            )}
           </>
         )}
       </ScrollView>
@@ -393,14 +489,36 @@ const s = StyleSheet.create({
   bodyWrap:            { alignItems: 'center', paddingVertical: 8 },
   muscleEmpty:         { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', paddingBottom: 8 },
 
-  strengthRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
-  strengthRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
-  strengthIcon:  { width: 38, height: 38, borderRadius: 10, backgroundColor: ORANGE + '22', alignItems: 'center', justifyContent: 'center' },
-  strengthBody:  { flex: 1, gap: 4 },
-  strengthTop:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  strengthName:  { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  strengthDate:  { color: TEXT_SECONDARY, fontSize: 12 },
-  strengthMeta:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  strengthStat:  { color: TEXT_SECONDARY, fontSize: 13 },
-  strengthDot:   { color: 'rgba(255,255,255,0.15)', fontSize: 13 },
+  modeBar: {
+    flexDirection: 'row',
+    backgroundColor: CARD, borderRadius: 14, borderWidth: 1, borderColor: BORDER,
+    padding: 4, gap: 4,
+  },
+  modeBtn:         { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10 },
+  modeBtnActive:   { backgroundColor: ORANGE },
+  modeBtnText:     { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
+  modeBtnTextActive: { color: '#000', fontWeight: '700' },
+
+  weekNav: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 8, paddingVertical: 6,
+  },
+  weekNavBtn:         { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  weekNavBtnDisabled: { opacity: 0.35 },
+  weekNavLabel:       { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+
+  legend:     { flexDirection: 'row', justifyContent: 'center', gap: 18 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot:  { width: 10, height: 10, borderRadius: 5 },
+  legendText: { color: TEXT_SECONDARY, fontSize: 12 },
+
+  exChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  exChip:  {
+    backgroundColor: ORANGE + '18', borderRadius: 20,
+    borderWidth: 1, borderColor: ORANGE + '44',
+    paddingHorizontal: 10, paddingVertical: 5,
+    maxWidth: 160,
+  },
+  exChipText: { color: ORANGE, fontSize: 12, fontWeight: '600' },
 })
