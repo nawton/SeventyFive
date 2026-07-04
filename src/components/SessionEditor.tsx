@@ -102,6 +102,7 @@ export function SessionEditor({
 }) {
   const insets = useSafeAreaInsets()
   const [name, setName]                 = useState('')
+  const [notes, setNotes]               = useState('')
   const [weekdays, setWeekdays]         = useState<number[]>([])
   const [repeat, setRepeat]             = useState(false)
   const [drafts, setDrafts]             = useState<DraftExercise[]>([])
@@ -130,6 +131,7 @@ export function SessionEditor({
         setRepeat(session.weekdays.length > 0)
       }
       setWeekdays([...session.weekdays])
+      setNotes(session.notes ?? '')
       setDrafts(session.exercises.map(e => ({
         key: e.id,
         exercise_name: e.exercise_name,
@@ -141,6 +143,7 @@ export function SessionEditor({
         ? (initialDate.getDay() || 7)
         : todayIso()
       setName('')
+      setNotes('')
       setWeekdays([wd])
       setRepeat(false)
       setDrafts([])
@@ -250,10 +253,11 @@ export function SessionEditor({
       const savedName     = repeat ? base : `ONCE:${ds}:${base}`
       const savedWeekdays = repeat ? weekdays : []
 
+      const savedNotes = notes.trim() || null
       if (session) {
-        await updateWorkoutSession(session.id, savedName, savedWeekdays, exList)
+        await updateWorkoutSession(session.id, savedName, savedWeekdays, exList, savedNotes)
       } else {
-        await createWorkoutSession(userId, savedName, savedWeekdays, exList)
+        await createWorkoutSession(userId, savedName, savedWeekdays, exList, savedNotes)
       }
       onSaved()
       dismissEditor()
@@ -349,7 +353,23 @@ export function SessionEditor({
                 placeholder="t.ex. Push-dag, Benen…"
                 placeholderTextColor={TEXT_SECONDARY}
                 autoCorrect={false}
+                returnKeyType="next"
+              />
+            </View>
+
+            <View style={s.field}>
+              <Text style={s.label}>NOTAT</Text>
+              <TextInput
+                style={[s.input, s.inputMultiline]}
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Lägg till ett meddelande eller notat…"
+                placeholderTextColor={TEXT_SECONDARY}
+                autoCorrect={false}
+                multiline
+                numberOfLines={3}
                 returnKeyType="done"
+                blurOnSubmit
               />
             </View>
 
@@ -712,6 +732,9 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
     color: TEXT_PRIMARY, fontSize: 16,
     paddingHorizontal: 14, paddingVertical: 14,
+  },
+  inputMultiline: {
+    minHeight: 80, textAlignVertical: 'top',
   },
 
   repeatRow: {

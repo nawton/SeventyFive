@@ -650,6 +650,12 @@ export function WorkoutSection({
                 ? 'Inga övningar tillagda'
                 : `${doneCount} av ${total} klara`}
           </Text>
+          {!!session.notes && (
+            <View style={s.notesRow}>
+              <Ionicons name="chatbubble-outline" size={11} color="#555" />
+              <Text style={s.notesText} numberOfLines={2}>{session.notes}</Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         {isCompleted ? (
@@ -743,6 +749,8 @@ const s = StyleSheet.create({
   headerIconDone:  { backgroundColor: GREEN },
   sessionName:     { color: TEXT_PRIMARY,   fontSize: 16, fontWeight: '700' },
   sessionMeta:     { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+  notesRow:        { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  notesText:       { color: '#555', fontSize: 12, flex: 1, lineHeight: 16 },
 
   doneBadge: {
     flexDirection:     'row',

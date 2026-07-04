@@ -16,6 +16,7 @@ export interface WorkoutSession {
   weekdays: number[]   // 1=Mån … 7=Sön
   sort_order: number
   created_at: string
+  notes: string | null
   exercises: SessionExercise[]
 }
 
@@ -29,6 +30,7 @@ export async function getWorkoutSessions(userId: string): Promise<WorkoutSession
   return (data ?? []).map(s => ({
     ...s,
     weekdays: s.weekdays ?? [],
+    notes: s.notes ?? null,
     exercises: [...(s.session_exercises ?? [])].sort((a, b) => a.sort_order - b.sort_order),
   }))
 }
@@ -38,10 +40,11 @@ export async function createWorkoutSession(
   name: string,
   weekdays: number[],
   exercises: Array<{ exercise_name: string; sets: number | null; reps: string | null }>,
+  notes?: string | null,
 ): Promise<WorkoutSession> {
   const { data, error } = await supabase
     .from('workout_sessions')
-    .insert({ user_id: userId, name, weekdays })
+    .insert({ user_id: userId, name, weekdays, notes: notes ?? null })
     .select()
     .single()
   if (error) throw error
@@ -51,7 +54,7 @@ export async function createWorkoutSession(
       exercises.map((e, i) => ({ session_id: data.id, ...e, sort_order: i }))
     )
   }
-  return { ...data, exercises: [] }
+  return { ...data, notes: data.notes ?? null, exercises: [] }
 }
 
 export async function updateWorkoutSession(
@@ -59,10 +62,11 @@ export async function updateWorkoutSession(
   name: string,
   weekdays: number[],
   exercises: Array<{ exercise_name: string; sets: number | null; reps: string | null }>,
+  notes?: string | null,
 ): Promise<void> {
   const { error } = await supabase
     .from('workout_sessions')
-    .update({ name, weekdays })
+    .update({ name, weekdays, notes: notes ?? null })
     .eq('id', sessionId)
   if (error) throw error
 
