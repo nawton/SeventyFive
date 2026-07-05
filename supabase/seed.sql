@@ -50,7 +50,8 @@ INSERT INTO challenge_levels (id, slug, display_name, description, rules) VALUES
     {"rule": "10 minuters kall dusch", "icon": "snowflake"},
     {"rule": "Skriv en daglig reflektion", "icon": "pen"}
   ]'
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 
 -- =============================================================================
@@ -96,7 +97,8 @@ INSERT INTO task_templates (level_id, type, name, description, target_value, uni
   'Ta ett foto för att dokumentera din fysiska förändring.',
   NULL,
   NULL
-);
+)
+ON CONFLICT (level_id, type, name) DO NOTHING;
 
 
 -- =============================================================================
@@ -142,7 +144,8 @@ INSERT INTO task_templates (level_id, type, name, description, target_value, uni
   'Ta ett foto för att dokumentera din fysiska förändring.',
   NULL,
   NULL
-);
+)
+ON CONFLICT (level_id, type, name) DO NOTHING;
 
 
 -- =============================================================================
@@ -196,7 +199,8 @@ INSERT INTO task_templates (level_id, type, name, description, target_value, uni
   'Ta ett foto för att dokumentera din fysiska förändring.',
   NULL,
   NULL
-);
+)
+ON CONFLICT (level_id, type, name) DO NOTHING;
 
 
 -- =============================================================================
@@ -217,4 +221,5 @@ INSERT INTO exercises (name, description, category, difficulty) VALUES
 ('Hip flexor stretch', 'Öppnar höfterna efter lång tid i sittande.',      'mobility', 'beginner'),
 ('Foam rolling',   'Återhämtning och mjukvävnadsbehandling.',             'mobility', 'beginner'),
 ('Tabata',         '4 minuter som känns som 40. 20s on, 10s off.',        'hiit',     'advanced'),
-('Burpees',        'Fullkroppsövning med hög puls. Inga ursäkter.',       'hiit',     'intermediate');
+('Burpees',        'Fullkroppsövning med hög puls. Inga ursäkter.',       'hiit',     'intermediate')
+ON CONFLICT (name, category) DO NOTHING;

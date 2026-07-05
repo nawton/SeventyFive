@@ -50,6 +50,8 @@ export function FailModal({ visible, onClose, onConfirm }: Props) {
       await onConfirm(reason.trim())
       setAiResponse(getAiResponse())
       setStep('response')
+    } catch {
+      // sparningen misslyckades — stanna på input-steget så användaren kan försöka igen
     } finally {
       setLoading(false)
     }

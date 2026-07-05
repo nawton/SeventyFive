@@ -36,7 +36,15 @@
         {
           "locationWhenInUsePermission": "Vi använder din plats för att spåra din löprutt."
         }
-      ]
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Vi använder kameran för att ta dina framstegsfoton.",
+          "photosPermission": "Vi använder ditt fotobibliotek för att välja framstegsfoton och profilbild."
+        }
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

@@ -8,6 +8,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { toLocalDateString } from '@/lib/date'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 
 const GREEN   = '#4CAF50'
@@ -135,7 +136,7 @@ export function CollapsibleCalendar({
 
   function sessionInfo(date: Date) {
     const wd      = toWeekday(date)
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = toLocalDateString(date)
     const skipPfx = `SKIP:${dateStr}:`
     const skipIds = sessions
       .filter(s => s.name.startsWith(skipPfx))

@@ -8,6 +8,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ORANGE, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 
@@ -37,7 +38,7 @@ function sameDay(a: Date, b: Date): boolean {
 }
 
 function dayDate(startDate: string, dayNumber: number): Date {
-  const d = new Date(startDate)
+  const d = parseLocalDate(startDate)
   d.setDate(d.getDate() + dayNumber - 1)
   return d
 }
@@ -98,7 +99,7 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, o
   const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropAnim.value }))
 
   const date    = dayDate(startDate, day.dayNumber)
-  const dateIso = date.toISOString().split('T')[0]
+  const dateIso = toLocalDateString(date)
   const dateStr = date.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
 
   const dayCardio   = workouts.filter(w => sameDay(new Date(w.created_at), date))

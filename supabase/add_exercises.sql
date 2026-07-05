@@ -107,4 +107,5 @@ INSERT INTO exercises (name, description, category, difficulty) VALUES
 ('Devil press',            'Burpee + hantellyft ovan huvud. En av de hårdaste HIIT-övningarna.','hiit', 'advanced'),
 ('Kettlebell circuit',     'Cirkelträning med kettlebell — swing, clean, press i sekvens.',    'hiit', 'intermediate'),
 ('Sprint 100m',            '10–12 sekunder maximal ansträngning. Vila 90 sek, upprepa.',        'hiit', 'advanced'),
-('Jump rope double under', 'Hopprep med dubbel rotation per hopp. Kräver timing och kondition.','hiit', 'advanced');
+('Jump rope double under', 'Hopprep med dubbel rotation per hopp. Kräver timing och kondition.','hiit', 'advanced')
+ON CONFLICT (name, category) DO NOTHING;

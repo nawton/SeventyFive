@@ -49,8 +49,12 @@ export default function AppLayout() {
         options={{ tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} /> }}
       />
       <Tabs.Screen
-        name="settings"
+        name="profile"
         options={{ tabBarIcon: ({ color }) => <TabIcon name="person-outline" color={color} /> }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="edit-profile"

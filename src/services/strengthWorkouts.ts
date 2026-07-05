@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { toLocalDateString } from '@/lib/date'
 
 export interface StrengthSet {
   reps: number
@@ -28,7 +29,7 @@ export async function saveStrengthWorkout(params: {
   sets: StrengthSet[]
   workoutDate?: string
 }): Promise<boolean> {
-  const today = new Date().toISOString().split('T')[0]
+  const today = toLocalDateString()
   const entry: StrengthData = {
     category: params.category,
     exercise_id: params.exerciseId,

@@ -145,6 +145,7 @@ export interface ProgressPhoto {
   challenge_id: string
   day_number: number
   photo_url: string
+  caption: string | null
   is_public: boolean
   created_at: string
 }

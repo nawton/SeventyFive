@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -26,18 +27,34 @@ import Svg, { Circle } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
-import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
+import {
+  getActiveChallenge,
+  calculateCurrentDay,
+  calculateDaysSinceStart,
+  restartChallenge,
+  completeChallenge,
+} from '@/services/challenge'
 import { getProfile } from '@/services/profile'
 import {
   getOrCreateTodayLog,
   getOrCreateTaskCompletions,
+  setTaskProgress,
   setTaskCompleted,
   markDayCompleted,
+  markDayPending,
   markDayFailed,
+  getMissedDayNumbers,
+  acknowledgeMissedDays,
+  countCompletedDays,
   type TaskItem,
+  type TaskDetails,
 } from '@/services/dailyLog'
+import { hasPhotoForDay } from '@/services/progressPhotos'
 import { FailModal } from '@/components/FailModal'
-import type { TaskType } from '@/types/database'
+import { ReadingLogModal } from '@/components/ReadingLogModal'
+import { RestartPromptModal } from '@/components/RestartPromptModal'
+import { VictoryModal } from '@/components/VictoryModal'
+import type { TaskType, UserChallengeWithLevel } from '@/types/database'
 
 const { width: SW } = Dimensions.get('window')
 
@@ -137,7 +154,14 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
 }
 
 // ── Task Grid Card ─────────────────────────────────────────────────────────────
-function TaskGridCard({ task, onToggle }: { task: TaskItem; onToggle: () => void }) {
+function TaskGridCard({ task, onPress, counter, metaLabel }: {
+  task: TaskItem
+  onPress: () => void
+  /** Glas-räknare med synliga −/+ knappar och progress-bar */
+  counter?: { value: number; goal: number; unit: string; onPlus: () => void; onMinus: () => void }
+  /** Liten metatext under namnet, t.ex. "12 sidor · Atomic Habits" */
+  metaLabel?: string
+}) {
   const color = TASK_COLORS[task.type] ?? ORANGE
   const icon  = TASK_ICONS[task.type]  ?? 'checkmark-outline'
   const scale = useSharedValue(1)
@@ -152,7 +176,7 @@ function TaskGridCard({ task, onToggle }: { task: TaskItem; onToggle: () => void
       withSpring(1, { damping: 12, stiffness: 200 })
     )
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    onToggle()
+    onPress()
   }
 
   return (
@@ -179,12 +203,50 @@ function TaskGridCard({ task, onToggle }: { task: TaskItem; onToggle: () => void
             {task.completed && <Ionicons name="checkmark" size={10} color="#000" />}
           </View>
         </View>
-        <Text
-          style={[s.taskName, task.completed && s.taskNameDone]}
-          numberOfLines={2}
-        >
-          {task.name}
-        </Text>
+        <View style={s.taskBody}>
+          <Text
+            style={[s.taskName, task.completed && s.taskNameDone]}
+            numberOfLines={metaLabel || counter ? 1 : 2}
+          >
+            {task.name}
+          </Text>
+          {counter && (
+            <>
+              <View style={s.taskBar}>
+                <View style={[
+                  s.taskBarFill,
+                  {
+                    width: `${Math.round(Math.min(1, counter.value / counter.goal) * 100)}%` as any,
+                    backgroundColor: color,
+                  },
+                ]} />
+              </View>
+              <View style={s.counterRow}>
+                <TouchableOpacity
+                  style={[s.counterBtn, counter.value === 0 && s.counterBtnDim]}
+                  onPress={counter.onMinus}
+                  disabled={counter.value === 0}
+                  hitSlop={8}
+                >
+                  <Ionicons name="remove" size={15} color={counter.value === 0 ? '#2A2A2E' : color} />
+                </TouchableOpacity>
+                <Text style={[s.counterLabel, task.completed && { color }]}>
+                  {counter.value}/{counter.goal} {counter.unit}
+                </Text>
+                <TouchableOpacity
+                  style={[s.counterBtn, { backgroundColor: color }]}
+                  onPress={counter.onPlus}
+                  hitSlop={8}
+                >
+                  <Ionicons name="add" size={15} color="#000" />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+          {metaLabel && (
+            <Text style={s.taskMeta} numberOfLines={1}>{metaLabel}</Text>
+          )}
+        </View>
       </TouchableOpacity>
     </Animated.View>
   )
@@ -201,6 +263,14 @@ export default function DashboardScreen() {
   const [loading, setLoading]       = useState(true)
   const [failVisible, setFailVisible] = useState(false)
   const [dayFailed, setDayFailed]   = useState(false)
+  const [challenge, setChallenge]   = useState<UserChallengeWithLevel | null>(null)
+  const [missedDays, setMissedDays] = useState<number[]>([])
+  const [restartVisible, setRestartVisible] = useState(false)
+  const [restartVariant, setRestartVariant] = useState<'missed' | 'today'>('missed')
+  const [victoryVisible, setVictoryVisible] = useState(false)
+  const [completedDaysCount, setCompletedDaysCount] = useState(0)
+  const [readingTask, setReadingTask] = useState<TaskItem | null>(null)
+  const [loadError, setLoadError]   = useState(false)
 
   // ── 3D floating hero animation ──
   const tiltX = useSharedValue(0)
@@ -231,19 +301,16 @@ export default function DashboardScreen() {
 
   useEffect(() => { loadDashboard() }, [])
 
+  // Tyst omhämtning när fliken får fokus — plockar upp ändringar gjorda på
+  // andra skärmar (nytt/borttaget foto, redigerad profil) utan laddsnurra
   useFocusEffect(useCallback(() => {
     if (loading) return
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) return
-      getProfile(session.user.id).then(p => {
-        if (p?.name) setUserName(p.name)
-        setUserAvatar(p?.avatar_url ?? null)
-      })
-    })
+    loadDashboard()
   }, [loading]))
 
   async function loadDashboard() {
     try {
+      setLoadError(false)
       const { data: { session } } = await supabase.auth.getSession()
       const user = session?.user
       if (!user) { router.replace('/(auth)/welcome'); return }
@@ -252,52 +319,165 @@ export default function DashboardScreen() {
       setUserName(profile?.name || user.email?.split('@')[0] || 'Nawton')
       if (profile?.avatar_url) setUserAvatar(profile.avatar_url)
 
-      const challenge = await getActiveChallenge(user.id)
-      if (!challenge) { router.replace('/(auth)/quiz'); return }
+      const active = await getActiveChallenge(user.id)
+      if (!active) { router.replace('/(auth)/quiz'); return }
+      setChallenge(active)
+      setLevelName(active.challenge_levels?.display_name ?? '')
 
-      const day = calculateCurrentDay(challenge.start_date)
+      // Utmaningen är slut — markera som klarad och fira
+      if (calculateDaysSinceStart(active.start_date) > 75) {
+        await completeChallenge(active.id)
+        setCompletedDaysCount(await countCompletedDays(active.id))
+        setVictoryVisible(true)
+        return
+      }
+
+      const day = calculateCurrentDay(active.start_date)
       setCurrentDay(day)
-      setLevelName(challenge.challenge_levels?.display_name ?? '')
 
-      const log = await getOrCreateTodayLog(challenge.id, user.id, day)
+      const log = await getOrCreateTodayLog(active.id, user.id, day)
       setDailyLogId(log.id)
       if (log.status === 'failed') setDayFailed(true)
 
-      const completions = await getOrCreateTaskCompletions(log.id, challenge.level_id)
+      let completions = await getOrCreateTaskCompletions(log.id, active.level_id)
+
+      // Fotouppgiften kräver ett faktiskt foto — är den ibockad utan bild
+      // (t.ex. borttagen från profilen) bockas den ur igen
+      const photoTask = completions.find(t => t.type === 'photo' && t.completed)
+      if (photoTask) {
+        try {
+          if (!(await hasPhotoForDay(user.id, active.id, day))) {
+            await setTaskCompleted(photoTask.completionId, false)
+            if (log.status === 'completed') await markDayPending(log.id)
+            completions = completions.map(t =>
+              t.completionId === photoTask.completionId ? { ...t, completed: false } : t
+            )
+          }
+        } catch { /* verifieringen är bäst-effort */ }
+      }
+
       setTasks(completions)
+
+      // Rollover-check: tidigare dagar som varken är klara eller kvitterade
+      const missed = await getMissedDayNumbers(active, day)
+      if (missed.length > 0) {
+        setMissedDays(missed)
+        setRestartVariant('missed')
+        setRestartVisible(true)
+      }
+    } catch {
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
   }
 
-  async function toggleTask(task: TaskItem) {
-    const updated = !task.completed
+  async function applyTaskUpdate(task: TaskItem, completed: boolean, details: TaskDetails | null) {
     setTasks(prev =>
-      prev.map(t => t.completionId === task.completionId ? { ...t, completed: updated } : t)
+      prev.map(t => t.completionId === task.completionId ? { ...t, completed, details } : t)
     )
     try {
-      await setTaskCompleted(task.completionId, updated)
+      await setTaskProgress(task.completionId, details, completed)
       const allDone = tasks.every(t =>
-        t.completionId === task.completionId ? updated : t.completed
+        t.completionId === task.completionId ? completed : t.completed
       )
-      if (allDone && dailyLogId) {
+      if (allDone && completed && dailyLogId) {
         await markDayCompleted(dailyLogId)
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+
+        // Sista dagen klar — hela utmaningen är i mål
+        if (currentDay >= 75 && challenge) {
+          await completeChallenge(challenge.id)
+          setCompletedDaysCount(await countCompletedDays(challenge.id))
+          setVictoryVisible(true)
+        }
+      } else if (!completed && task.completed && dailyLogId && !dayFailed) {
+        // Uppgiften gick från klar till ej klar — dagen är inte längre klar
+        await markDayPending(dailyLogId)
       }
     } catch {
       setTasks(prev =>
-        prev.map(t => t.completionId === task.completionId ? { ...t, completed: task.completed } : t)
+        prev.map(t => t.completionId === task.completionId
+          ? { ...t, completed: task.completed, details: task.details }
+          : t)
       )
     }
   }
 
+  function toggleTask(task: TaskItem) {
+    applyTaskUpdate(task, !task.completed, task.details)
+  }
+
+  // ── Vatten: glas à 250 ml mot nivåns litermål ──
+  function waterGoal(task: TaskItem): number {
+    return task.unit === 'liter' && task.targetValue
+      ? Math.round(task.targetValue * 4)
+      : 8
+  }
+
+  function handleWater(task: TaskItem, delta: number) {
+    const glasses = Math.max(0, (task.details?.glasses ?? 0) + delta)
+    applyTaskUpdate(task, glasses >= waterGoal(task), { ...task.details, glasses })
+  }
+
+  // ── Läsning: logga bok + sidor innan uppgiften bockas i ──
+  function handleReadingPress(task: TaskItem) {
+    if (task.completed) {
+      Alert.alert('Ta bort läsloggen?', 'Uppgiften markeras som ej klar.', [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Ta bort', style: 'destructive', onPress: () => applyTaskUpdate(task, false, null) },
+      ])
+    } else {
+      setReadingTask(task)
+    }
+  }
+
+  async function handleReadingSave(book: string, pages: number) {
+    if (!readingTask) return
+    await applyTaskUpdate(readingTask, true, { book: book || undefined, pages })
+    setReadingTask(null)
+  }
+
   async function handleFail(reason: string) {
     if (!dailyLogId) return
+    // Kastar vidare vid fel — FailModal stannar då på input-steget.
+    // Modalen stängs av användaren efter coach-svaret (onClose).
+    await markDayFailed(dailyLogId, reason)
+    setDayFailed(true)
+  }
+
+  function handleFailModalClose() {
+    setFailVisible(false)
+    // Dagen rapporterades missad — fråga vad användaren vill göra med utmaningen
+    if (dayFailed) {
+      setRestartVariant('today')
+      setRestartVisible(true)
+    }
+  }
+
+  async function handleRestart() {
+    if (!challenge) return
     try {
-      await markDayFailed(dailyLogId, reason)
-      setDayFailed(true)
-      setFailVisible(false)
-    } catch { /* keep modal open */ }
+      await restartChallenge(challenge)
+      setRestartVisible(false)
+      setDayFailed(false)
+      setLoading(true)
+      await loadDashboard()
+    } catch { /* behåll modalen så användaren kan försöka igen */ }
+  }
+
+  async function handleContinueAnyway() {
+    try {
+      if (challenge && restartVariant === 'missed') {
+        await acknowledgeMissedDays(challenge, missedDays)
+      }
+      setRestartVisible(false)
+    } catch { /* behåll modalen så användaren kan försöka igen */ }
+  }
+
+  function handleNewChallenge() {
+    setVictoryVisible(false)
+    router.replace('/(auth)/quiz')
   }
 
   const completedCount = tasks.filter(t => t.completed).length
@@ -308,6 +488,22 @@ export default function DashboardScreen() {
     return (
       <View style={s.centered}>
         <ActivityIndicator color={ORANGE} size="large" />
+      </View>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <View style={s.centered}>
+        <Ionicons name="cloud-offline-outline" size={36} color="#4A4A50" />
+        <Text style={s.errorText}>Kunde inte ladda dagens uppgifter</Text>
+        <TouchableOpacity
+          style={s.retryBtn}
+          onPress={() => { setLoading(true); loadDashboard() }}
+          activeOpacity={0.8}
+        >
+          <Text style={s.retryBtnText}>Försök igen</Text>
+        </TouchableOpacity>
       </View>
     )
   }
@@ -337,7 +533,7 @@ export default function DashboardScreen() {
           </View>
           <TouchableOpacity
             style={s.avatar}
-            onPress={() => router.push('/(app)/settings')}
+            onPress={() => router.push('/(app)/profile')}
             activeOpacity={0.8}
           >
             {userAvatar?.startsWith('http') ? (
@@ -396,13 +592,58 @@ export default function DashboardScreen() {
 
         {/* ── Task grid ── */}
         <View style={s.taskGrid}>
-          {tasks.map(task => (
-            <TaskGridCard
-              key={task.completionId}
-              task={task}
-              onToggle={() => toggleTask(task)}
-            />
-          ))}
+          {tasks.map(task => {
+            if (task.type === 'water') {
+              const goal = waterGoal(task)
+              const glasses = task.details?.glasses ?? 0
+              return (
+                <TaskGridCard
+                  key={task.completionId}
+                  task={task}
+                  onPress={() => handleWater(task, +1)}
+                  counter={{
+                    value: glasses,
+                    goal,
+                    unit: 'glas',
+                    onPlus: () => handleWater(task, +1),
+                    onMinus: () => handleWater(task, -1),
+                  }}
+                />
+              )
+            }
+            if (task.type === 'reading') {
+              const d = task.details
+              return (
+                <TaskGridCard
+                  key={task.completionId}
+                  task={task}
+                  onPress={() => handleReadingPress(task)}
+                  metaLabel={
+                    task.completed && d?.pages
+                      ? `${d.pages} sidor${d.book ? ` · ${d.book}` : ''}`
+                      : undefined
+                  }
+                />
+              )
+            }
+            if (task.type === 'photo') {
+              return (
+                <TaskGridCard
+                  key={task.completionId}
+                  task={task}
+                  onPress={() => router.push('/(app)/profile')}
+                  metaLabel={task.completed ? undefined : 'Läggs till i profilen'}
+                />
+              )
+            }
+            return (
+              <TaskGridCard
+                key={task.completionId}
+                task={task}
+                onPress={() => toggleTask(task)}
+              />
+            )
+          })}
         </View>
 
         {/* ── Fail / done ── */}
@@ -423,8 +664,27 @@ export default function DashboardScreen() {
 
       <FailModal
         visible={failVisible}
-        onClose={() => setFailVisible(false)}
+        onClose={handleFailModalClose}
         onConfirm={handleFail}
+      />
+      <RestartPromptModal
+        visible={restartVisible}
+        variant={restartVariant}
+        missedDays={missedDays}
+        onRestart={handleRestart}
+        onContinue={handleContinueAnyway}
+      />
+      <VictoryModal
+        visible={victoryVisible}
+        completedDays={completedDaysCount}
+        levelName={levelName}
+        onNewChallenge={handleNewChallenge}
+      />
+      <ReadingLogModal
+        visible={readingTask !== null}
+        targetPages={readingTask?.targetValue ?? null}
+        onClose={() => setReadingTask(null)}
+        onSave={handleReadingSave}
       />
     </SafeAreaView>
   )
@@ -434,7 +694,16 @@ export default function DashboardScreen() {
 
 const s = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: SCENE_BG },
-  centered: { flex: 1, backgroundColor: SCENE_BG, alignItems: 'center', justifyContent: 'center' },
+  centered: { flex: 1, backgroundColor: SCENE_BG, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  errorText: { color: '#4A4A50', fontSize: 14 },
+  retryBtn: {
+    backgroundColor: ORANGE,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  retryBtnText: { color: '#000', fontSize: 14, fontWeight: '700' },
   scroll:   { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 56, gap: 20 },
 
   // Header
@@ -535,7 +804,9 @@ const s = StyleSheet.create({
     backgroundColor: CARD_BG,
     borderRadius: 16, padding: 14,
     borderWidth: 1, borderColor: CARD_BORDER,
-    overflow: 'hidden', minHeight: 108, gap: 10,
+    // Fast höjd så alla kort i rutnätet är lika stora oavsett innehåll
+    // (vattenkortet har räknare + progress-bar, övriga bara namn)
+    overflow: 'hidden', height: 134, gap: 10,
   },
   taskSidebar: {
     position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
@@ -546,6 +817,26 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  taskBody: { gap: 6, flex: 1, justifyContent: 'flex-start' },
+  counterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  counterBtn: {
+    width: 26, height: 26, borderRadius: 13,
+    borderWidth: 1.5, borderColor: '#2A2A2E',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  counterBtnDim: { opacity: 0.4 },
+  counterLabel: { color: '#8A8A90', fontSize: 12, fontWeight: '700' },
+  taskBar: {
+    height: 3, backgroundColor: '#1E1E21',
+    borderRadius: 2, overflow: 'hidden',
+  },
+  taskBarFill: { height: '100%', borderRadius: 2 },
+  taskMeta: { color: '#4A4A50', fontSize: 11, fontWeight: '600' },
   taskIconBox: {
     width: 34, height: 34, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',

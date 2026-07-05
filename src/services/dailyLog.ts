@@ -1,7 +1,14 @@
 import { supabase } from '@/lib/supabase'
-import type { TaskType } from '@/types/database'
+import { toLocalDateString, parseLocalDate } from '@/lib/date'
+import type { TaskType, UserChallenge } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface TaskDetails {
+  glasses?: number
+  book?: string
+  pages?: number
+}
 
 export interface TaskItem {
   completionId: string
@@ -10,6 +17,9 @@ export interface TaskItem {
   description: string | null
   type: TaskType
   completed: boolean
+  targetValue: number | null
+  unit: string | null
+  details: TaskDetails | null
 }
 
 // ─── Functions ────────────────────────────────────────────────────────────────
@@ -19,7 +29,7 @@ export async function getOrCreateTodayLog(
   userId: string,
   dayNumber: number
 ) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = toLocalDateString()
 
   const { data: existing } = await supabase
     .from('daily_logs')
@@ -50,10 +60,15 @@ export async function getOrCreateTaskCompletions(
   dailyLogId: string,
   levelId: string
 ): Promise<TaskItem[]> {
-  const { data: existing } = await supabase
+  const SELECT = 'id, completed, task_template_id, details, task_templates(name, description, type, target_value, unit)'
+
+  // Ett select-fel får ALDRIG tolkas som "första besöket" — då försöker vi
+  // skapa dubbletter av completions som redan finns
+  const { data: existing, error: selectError } = await supabase
     .from('task_completions')
-    .select('id, completed, task_template_id, task_templates(name, description, type)')
+    .select(SELECT)
     .eq('daily_log_id', dailyLogId)
+  if (selectError) throw selectError
 
   if (existing && existing.length > 0) {
     return existing.map(toTaskItem)
@@ -67,14 +82,25 @@ export async function getOrCreateTaskCompletions(
 
   if (!templates || templates.length === 0) return []
 
-  const { data: created } = await supabase
+  const { data: created, error: insertError } = await supabase
     .from('task_completions')
     .insert(templates.map((t) => ({
       daily_log_id: dailyLogId,
       task_template_id: t.id,
       completed: false,
     })))
-    .select('id, completed, task_template_id, task_templates(name, description, type)')
+    .select(SELECT)
+
+  // Unik-krock = raderna skapades redan (race eller tidigare misslyckad läsning)
+  // — hämta dem istället för att returnera tomt
+  if (insertError) {
+    const { data: retry, error: retryError } = await supabase
+      .from('task_completions')
+      .select(SELECT)
+      .eq('daily_log_id', dailyLogId)
+    if (retryError) throw retryError
+    return (retry ?? []).map(toTaskItem)
+  }
 
   return (created ?? []).map(toTaskItem)
 }
@@ -94,21 +120,50 @@ export async function setTaskCompleted(
   if (error) throw error
 }
 
+/** Uppdaterar kvantitativ progress (glas, sidor, bok) tillsammans med klarstatus. */
+export async function setTaskProgress(
+  completionId: string,
+  details: TaskDetails | null,
+  completed: boolean
+): Promise<void> {
+  const { error } = await supabase
+    .from('task_completions')
+    .update({
+      details,
+      completed,
+      completed_at: completed ? new Date().toISOString() : null,
+    })
+    .eq('id', completionId)
+
+  if (error) throw error
+}
+
 export async function markDayCompleted(dailyLogId: string): Promise<void> {
-  await supabase
+  const { error } = await supabase
     .from('daily_logs')
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('id', dailyLogId)
+  if (error) throw error
+}
+
+/** Återställer dagen till pending, t.ex. när en uppgift bockas ur efter att dagen markerats klar. */
+export async function markDayPending(dailyLogId: string): Promise<void> {
+  const { error } = await supabase
+    .from('daily_logs')
+    .update({ status: 'pending', completed_at: null })
+    .eq('id', dailyLogId)
+  if (error) throw error
 }
 
 export async function markDayFailed(
   dailyLogId: string,
   reason: string
 ): Promise<void> {
-  await supabase
+  const { error } = await supabase
     .from('daily_logs')
     .update({ status: 'failed' })
     .eq('id', dailyLogId)
+  if (error) throw error
 
   // Spara ursäkten på alla oavklarade tasks för dagen
   await supabase
@@ -116,6 +171,73 @@ export async function markDayFailed(
     .update({ failed_reason: reason })
     .eq('daily_log_id', dailyLogId)
     .eq('completed', false)
+}
+
+/**
+ * Dagar före idag som varken är klara eller redan kvitterade som missade.
+ * Räknar bara dagar från och med den dag utmaningen skapades i appen —
+ * bakdaterade startdagar (onboarding "jag är på dag X") ska inte flaggas.
+ */
+export async function getMissedDayNumbers(
+  challenge: UserChallenge,
+  currentDay: number
+): Promise<number[]> {
+  const { data: logs } = await supabase
+    .from('daily_logs')
+    .select('day_number, status')
+    .eq('challenge_id', challenge.id)
+
+  const logMap = new Map((logs ?? []).map((l) => [l.day_number, l.status]))
+
+  const start = parseLocalDate(challenge.start_date)
+  const created = new Date(challenge.created_at)
+  const createdMidnight = new Date(created.getFullYear(), created.getMonth(), created.getDate())
+  const createdDay = Math.max(
+    1,
+    Math.round((createdMidnight.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  )
+
+  const missed: number[] = []
+  for (let day = createdDay; day < currentDay; day++) {
+    const status = logMap.get(day)
+    if (status !== 'completed' && status !== 'failed') missed.push(day)
+  }
+  return missed
+}
+
+/** "Fortsätt ändå": kvitterar missade dagar som failed så de inte flaggas igen. */
+export async function acknowledgeMissedDays(
+  challenge: UserChallenge,
+  dayNumbers: number[]
+): Promise<void> {
+  if (dayNumbers.length === 0) return
+
+  const start = parseLocalDate(challenge.start_date)
+  const rows = dayNumbers.map((day) => {
+    const d = new Date(start)
+    d.setDate(start.getDate() + day - 1)
+    return {
+      challenge_id: challenge.id,
+      user_id: challenge.user_id,
+      day_number: day,
+      date: toLocalDateString(d),
+      status: 'failed' as const,
+    }
+  })
+
+  const { error } = await supabase
+    .from('daily_logs')
+    .upsert(rows, { onConflict: 'challenge_id,day_number' })
+  if (error) throw error
+}
+
+export async function countCompletedDays(challengeId: string): Promise<number> {
+  const { count } = await supabase
+    .from('daily_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('challenge_id', challengeId)
+    .eq('status', 'completed')
+  return count ?? 0
 }
 
 export interface DaySummary {
@@ -156,5 +278,8 @@ function toTaskItem(row: any): TaskItem {
     description: row.task_templates?.description ?? null,
     type: row.task_templates?.type ?? 'workout',
     completed: row.completed,
+    targetValue: row.task_templates?.target_value ?? null,
+    unit: row.task_templates?.unit ?? null,
+    details: row.details ?? null,
   }
 }

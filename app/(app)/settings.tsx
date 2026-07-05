@@ -174,7 +174,12 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Inställningar</Text>
+        <View style={styles.titleRow}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={26} color={TEXT_PRIMARY} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Inställningar</Text>
+        </View>
 
         {/* Profile */}
         <Section title="Profil">
@@ -285,6 +290,11 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 40,
     gap: 24,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   title: {
     color: TEXT_PRIMARY,

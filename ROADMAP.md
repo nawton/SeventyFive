@@ -18,6 +18,9 @@
 - [x] Dagliga uppgifter: Träning, Kost, Vatten, Läsning, Foto (checkbox)
 - [x] Markera dag som klar / misslyckad (FailModal)
 - [x] Dag-räknare (X/75)
+- [x] Omstartsmekanik: rollover-check vid app-öppning flaggar missade dagar med val "Starta om från dag 1" / "Fortsätt ändå" (RestartPromptModal)
+- [x] Samma val visas efter att dagen rapporterats missad via FailModal
+- [x] Målgång: challengen markeras `completed` efter dag 75 med segerscreen (VictoryModal) och "Starta ny utmaning"
 
 ### Schema (Träningsplan)
 - [x] Rullningsbar kalenderremsa med månadsöversikt
@@ -34,7 +37,7 @@
 - [x] GPS cardio-tracking med Leaflet-karta och live-statistik
 - [x] Hantera schemalagda pass (manage-sessions, endast upprepande)
 - [x] SessionEditor med valfritt namn, info-knapp för upprepning
-- [x] ScheduleWizard — UI klar (mål → avstånd/muskelplan → fokus → sammanfattning), ej kopplad till backend
+- [x] ScheduleWizard — UI klar (mål → avstånd/muskelplan → fokus → sammanfattning), kopplad till backend via `scheduleGenerator.ts`
 
 ### Framsteg (Stats)
 - [x] Översiktsfliken: kalenderöversikt, streak, completion-rate
@@ -44,7 +47,15 @@
 - [x] 4-veckorsläge för muskelkartan
 - [x] 3-nivå intensitetsfärger: blå (lite), gul (medel), orange (mycket)
 
+### Profil
+- [x] Profilsida som egen flik: avatar, namn, nivå + dag-räknare
+- [x] Strava-likt foto-flöde: kort per dag med bild, dagnummer, datum och egen text (caption)
+- [x] Lägg till foto via kamera eller bibliotek, uppladdning till privat storage-bucket med signerade URL:er
+- [x] Dagens fotouppgift på dashboarden bockas i automatiskt vid uppladdning
+- [x] Ta bort foto (raderar även filen i storage)
+
 ### Inställningar
+- [x] Nås via kugghjul på profilsidan (egen dold screen med tillbaka-knapp)
 - [x] Redigera profil (namn, avatar/emoji)
 - [x] Hantera schemalagda pass
 
@@ -53,14 +64,15 @@
 ## Fas 1 — Snabba vinster (1–2 veckor)
 
 ### Schema
-- [ ] **ScheduleWizard → backend**: generera faktiska träningspass baserat på wizard-svar (löppass, helkropps-styrka eller valda fokusgrupper)
+- [x] **ScheduleWizard → backend**: generera faktiska träningspass baserat på wizard-svar (löppass, helkropps-styrka eller valda fokusgrupper)
 - [ ] **Övningsdetalj-screen** (`app/exercise/[id].tsx` finns men är tom): visa beskrivning, instruktioner och muskelgrupper som body-SVG
 - [ ] **Global sök**: sökruta på schema-sidan som söker bland alla övningar oavsett kategori
 
 ### Dashboard
-- [ ] **Fotouppgift**: ta/välj bild direkt från uppgiftskortet och spara till `progress_photos`-tabellen (schemat finns i databasen)
-- [ ] **Vatten-tracker**: ersätt checkbox med glas-räknare (t.ex. 8 glas à 250 ml) och visa progress-bar
-- [ ] **Läsningslogg**: lägg till boktitel + sidantal vid markering av läsuppgiften
+- [x] **Fotouppgift**: löst via profilsidans foto-flöde — uppladdning sparar till `progress_photos` och bockar i dagens uppgift
+- [x] **Vatten-tracker**: glas-räknare mot nivåns litermål (8/12/16 glas à 250 ml) med progress-bar direkt på kortet, minus-knapp för att ångra
+- [x] **Läsningslogg**: boktitel + sidantal loggas i modal innan uppgiften bockas i, visas som metatext på kortet
+- [x] **Fotokortet** leder till profilens foto-flöde istället för manuell checkbox — bockas i via faktisk uppladdning
 
 ### Framsteg
 - [ ] **Veckostaplar i Översikt**: stapeldiagram som visar antal klara dagar per vecka
@@ -145,8 +157,8 @@
 
 ## Teknisk skuld & Infrastruktur
 
-- [ ] Anslut `ScheduleWizard` till Supabase och skapa verkliga sessions baserat på wizard-svar
-- [ ] `activity.tsx` är tom — bygg ut eller ta bort fliken
+- [x] Anslut `ScheduleWizard` till Supabase och skapa verkliga sessions baserat på wizard-svar
+- [ ] `activity.tsx` är tom — fliken är dold (`href: null`) tills aktivitetsflödet byggs
 - [ ] Migrationsfiler för `exercise_completions`-tabellen
 - [ ] End-to-end-tester för kritiska flöden (inloggning, markera dag klar, schema-skapande)
 - [ ] Error Boundaries i alla huvud-screens (idag kraschar hela sidan vid API-fel)

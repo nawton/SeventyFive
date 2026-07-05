@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { toLocalDateString } from '@/lib/date'
 
 export interface SessionExercise {
   id: string
@@ -95,9 +96,7 @@ export async function deleteSessionWithSkips(userId: string, sessionId: string):
 }
 
 export async function deleteFutureOnceSessions(userId: string): Promise<number> {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const todayStr = today.toISOString().split('T')[0]
+  const todayStr = toLocalDateString()
 
   const { data, error } = await supabase
     .from('workout_sessions')
@@ -320,7 +319,7 @@ export async function uncompleteExercise(exerciseId: string, userId: string, dat
 // ─── Completions ──────────────────────────────────────────────────────────────
 
 function isoDate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return toLocalDateString(date)
 }
 
 /** Returns the calendar date (YYYY-MM-DD) for a given weekday (1=Mon…7=Sun) in the current week. */

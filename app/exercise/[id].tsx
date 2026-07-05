@@ -21,6 +21,7 @@ import { getMusclesForName, bestSideForMuscles, SLUG_LABELS } from '@/lib/muscle
 import { saveStrengthWorkout, deleteWorkout } from '@/services/workouts'
 import { dateForWeekday } from '@/services/workoutSchedule'
 import { supabase } from '@/lib/supabase'
+import { toLocalDateString } from '@/lib/date'
 import {
   CATEGORY_LABELS,
   DIFFICULTY_LABELS,
@@ -167,7 +168,7 @@ export default function ExerciseDetailScreen() {
   const DAY_OPTIONS = Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - i)
-    const iso   = d.toISOString().split('T')[0]
+    const iso   = toLocalDateString(d)
     const label = i === 0 ? 'Idag' : i === 1 ? 'Igår' : d.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'short' })
     return { iso, label }
   })

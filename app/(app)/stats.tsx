@@ -18,6 +18,7 @@ import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
 import { WorkoutDetail, WorkoutRow } from '@/components/stats/WorkoutDetail'
 import { WeeklyGraph } from '@/components/stats/WeeklyGraph'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { toLocalDateString } from '@/lib/date'
 
 const GRID_PADDING = 20
 
@@ -32,8 +33,8 @@ function getWeekBounds(offset: number): { start: string; end: string; label: str
   const fmt = (d: Date) =>
     d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
   return {
-    start: mon.toISOString().split('T')[0],
-    end:   sun.toISOString().split('T')[0],
+    start: toLocalDateString(mon),
+    end:   toLocalDateString(sun),
     label: offset === 0 ? 'Denna vecka' : `${fmt(mon)} – ${fmt(sun)}`,
   }
 }
@@ -128,8 +129,8 @@ export default function StatsScreen() {
       const today = new Date()
       const from  = new Date(today)
       from.setDate(today.getDate() - 27)
-      end   = today.toISOString().split('T')[0]
-      start = from.toISOString().split('T')[0]
+      end   = toLocalDateString(today)
+      start = toLocalDateString(from)
     } else {
       ;({ start, end } = getWeekBounds(weekOffset))
     }

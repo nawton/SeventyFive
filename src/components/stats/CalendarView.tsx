@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { parseLocalDate } from '@/lib/date'
 import type { DaySummary } from '@/services/dailyLog'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
@@ -26,7 +27,7 @@ export function sameDay(a: Date, b: Date): boolean {
 }
 
 function getChallengeDay(date: Date, startDate: string): number | null {
-  const start = new Date(startDate); start.setHours(0, 0, 0, 0)
+  const start = parseLocalDate(startDate)
   const d     = new Date(date);      d.setHours(0, 0, 0, 0)
   const diff  = Math.round((d.getTime() - start.getTime()) / 86400000)
   return diff >= 0 && diff < 75 ? diff + 1 : null
@@ -70,7 +71,7 @@ export function CalendarView({ days, startDate, currentDay, onPressDay }: {
   currentDay: number
   onPressDay: (d: DaySummary) => void
 }) {
-  const init  = startDate ? new Date(startDate) : new Date()
+  const init  = startDate ? parseLocalDate(startDate) : new Date()
   const [view, setView] = useState(new Date(init.getFullYear(), init.getMonth(), 1))
   const yr    = view.getFullYear()
   const mo    = view.getMonth()

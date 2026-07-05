@@ -27,6 +27,7 @@ import * as Haptics from 'expo-haptics'
 import Body from 'react-native-body-highlighter'
 import { getMusclesForName, bestSideForMuscles, SLUG_LABELS, getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { toLocalDateString } from '@/lib/date'
 import {
   CATEGORY_LABELS,
   DIFFICULTY_LABELS,
@@ -248,7 +249,7 @@ export function SessionEditor({
       }))
       // Repeat OFF: store as one-time with ONCE:date:name convention, weekdays=[]
       const d = initialDate ?? new Date()
-      const ds = d.toISOString().split('T')[0]
+      const ds = toLocalDateString(d)
       const base          = resolvedName()
       const savedName     = repeat ? base : `ONCE:${ds}:${base}`
       const savedWeekdays = repeat ? weekdays : []
