@@ -1,0 +1,508 @@
+import { useState } from 'react'
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  ScrollView, Modal, Dimensions,
+} from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Body from 'react-native-body-highlighter'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import type { Slug } from '@/lib/muscles'
+
+const SCREEN_W = Dimensions.get('window').width
+const BODY_SCALE = 0.46
+
+// ─── Data ────────────────────────────────────────────────────────────────────
+
+const GROUP_SLUGS: Record<string, Slug[]> = {
+  chest:     ['chest'],
+  back:      ['upper-back', 'lower-back', 'trapezius'],
+  legs:      ['quadriceps', 'hamstring', 'gluteal', 'calves'],
+  shoulders: ['deltoids'],
+  arms:      ['biceps', 'triceps'],
+  core:      ['abs', 'obliques'],
+}
+
+const ALL_SLUGS: Slug[] = Object.values(GROUP_SLUGS).flat()
+
+const MUSCLE_GROUPS = [
+  { key: 'chest',     label: 'Bröst',   color: '#FF6B6B' },
+  { key: 'back',      label: 'Rygg',    color: '#4ECDC4' },
+  { key: 'legs',      label: 'Ben',     color: '#45B7D1' },
+  { key: 'shoulders', label: 'Axlar',   color: '#F7DC6F' },
+  { key: 'arms',      label: 'Armar',   color: '#A29BFE' },
+  { key: 'core',      label: 'Mage',    color: '#FD79A8' },
+]
+
+const RUN_OPTIONS = [
+  { key: '5k',       label: '5K',          sub: 'Perfekt startpunkt',      icon: 'walk-outline'     },
+  { key: '10k',      label: '10K',          sub: 'Nästa nivå',              icon: 'fitness-outline'  },
+  { key: 'half',     label: 'Halvmarathon', sub: '21.1 km',                icon: 'flag-outline'     },
+  { key: 'marathon', label: 'Marathon',     sub: '42.2 km — den ultimata', icon: 'trophy-outline'   },
+] as const
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Goal        = 'running' | 'muscle' | null
+type RunDistance = '5k' | '10k' | 'half' | 'marathon' | null
+type MusclePlan  = 'everything' | 'focus' | null
+type Step        = 'goal' | 'running-distance' | 'muscle-plan' | 'muscle-focus' | 'summary'
+
+export type WizardResult = {
+  goal:        Goal
+  runDistance: RunDistance
+  musclePlan:  MusclePlan
+  focusGroups: string[]
+}
+
+const STEP_PROGRESS: Record<Step, number> = {
+  'goal':              0,
+  'running-distance':  0.5,
+  'muscle-plan':       0.5,
+  'muscle-focus':      0.75,
+  'summary':           1,
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+export function ScheduleWizard({
+  visible,
+  onClose,
+  onFinish,
+}: {
+  visible:  boolean
+  onClose:  () => void
+  onFinish: (result: WizardResult) => void
+}) {
+  const insets = useSafeAreaInsets()
+
+  const [step, setStep]               = useState<Step>('goal')
+  const [goal, setGoal]               = useState<Goal>(null)
+  const [runDistance, setRunDistance] = useState<RunDistance>(null)
+  const [musclePlan, setMusclePlan]   = useState<MusclePlan>(null)
+  const [focusGroups, setFocusGroups] = useState<string[]>([])
+
+  function reset() {
+    setStep('goal'); setGoal(null); setRunDistance(null)
+    setMusclePlan(null); setFocusGroups([])
+  }
+
+  function handleClose() { reset(); onClose() }
+
+  function goBack() {
+    if (step === 'goal')              { handleClose(); return }
+    if (step === 'running-distance')  { setStep('goal'); return }
+    if (step === 'muscle-plan')       { setStep('goal'); return }
+    if (step === 'muscle-focus')      { setStep('muscle-plan'); return }
+    if (step === 'summary') {
+      if (goal === 'running')             setStep('running-distance')
+      else if (musclePlan === 'focus')    setStep('muscle-focus')
+      else                                setStep('muscle-plan')
+    }
+  }
+
+  function toggleFocusGroup(key: string) {
+    setFocusGroups(prev =>
+      prev.includes(key)
+        ? prev.filter(k => k !== key)
+        : prev.length < 2 ? [...prev, key] : prev
+    )
+  }
+
+  const focusSlugs = focusGroups.flatMap(g => GROUP_SLUGS[g] ?? [])
+  const progress   = STEP_PROGRESS[step]
+
+  const bodyData = (slugs: Slug[]) => slugs.map(sl => ({ slug: sl, intensity: 1 as const }))
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
+      <View style={[s.screen, { paddingTop: insets.top }]}>
+
+        {/* Header */}
+        <View style={s.header}>
+          <TouchableOpacity onPress={goBack} style={s.iconBtn} activeOpacity={0.7}>
+            <Ionicons
+              name={step === 'goal' ? 'close' : 'chevron-back'}
+              size={step === 'goal' ? 22 : 26}
+              color={TEXT_PRIMARY}
+            />
+          </TouchableOpacity>
+          <Text style={s.headerTitle}>Skapa ditt schema</Text>
+          <View style={{ width: 36 }} />
+        </View>
+
+        {/* Progress bar */}
+        <View style={s.progressTrack}>
+          <View style={[s.progressFill, { width: `${Math.round(progress * 100)}%` as any }]} />
+        </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 40 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+
+          {/* ── STEP: MÅL ──────────────────────────────────────────────── */}
+          {step === 'goal' && (
+            <>
+              <Text style={s.stepTitle}>Vad är ditt mål?</Text>
+              <Text style={s.stepSub}>Välj det mål som passar dig bäst just nu.</Text>
+
+              <TouchableOpacity
+                style={[s.bigCard, goal === 'running' && s.bigCardActive]}
+                onPress={() => setGoal('running')}
+                activeOpacity={0.8}
+              >
+                <View style={[s.bigCardIcon, { backgroundColor: 'rgba(255,149,0,0.15)' }]}>
+                  <Ionicons name="walk" size={34} color={ORANGE} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.bigCardTitle, goal === 'running' && { color: ORANGE }]}>
+                    Springa ett avstånd
+                  </Text>
+                  <Text style={s.bigCardSub}>Träna mot ett specifikt löpmål</Text>
+                </View>
+                {goal === 'running' && <Ionicons name="checkmark-circle" size={24} color={ORANGE} />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[s.bigCard, goal === 'muscle' && s.bigCardActive]}
+                onPress={() => setGoal('muscle')}
+                activeOpacity={0.8}
+              >
+                <View style={[s.bigCardIcon, { backgroundColor: 'rgba(162,155,254,0.15)' }]}>
+                  <Ionicons name="barbell" size={34} color="#A29BFE" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.bigCardTitle, goal === 'muscle' && { color: ORANGE }]}>
+                    Bygga muskler
+                  </Text>
+                  <Text style={s.bigCardSub}>Styrketräning anpassat efter dig</Text>
+                </View>
+                {goal === 'muscle' && <Ionicons name="checkmark-circle" size={24} color={ORANGE} />}
+              </TouchableOpacity>
+
+              <NextButton disabled={!goal} onPress={() => {
+                if (!goal) return
+                setStep(goal === 'running' ? 'running-distance' : 'muscle-plan')
+              }} />
+            </>
+          )}
+
+          {/* ── STEP: LÖPAVSTÅND ─────────────────────────────────────── */}
+          {step === 'running-distance' && (
+            <>
+              <Text style={s.stepTitle}>Vilket avstånd siktar du på?</Text>
+              <Text style={s.stepSub}>Vi anpassar programmet efter ditt mål.</Text>
+
+              {RUN_OPTIONS.map(opt => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[s.optCard, runDistance === opt.key && s.optCardActive]}
+                  onPress={() => setRunDistance(opt.key)}
+                  activeOpacity={0.8}
+                >
+                  <View style={[s.optIcon, runDistance === opt.key && s.optIconActive]}>
+                    <Ionicons
+                      name={opt.icon as React.ComponentProps<typeof Ionicons>['name']}
+                      size={26}
+                      color={runDistance === opt.key ? ORANGE : TEXT_SECONDARY}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.optTitle, runDistance === opt.key && { color: ORANGE }]}>{opt.label}</Text>
+                    <Text style={s.optSub}>{opt.sub}</Text>
+                  </View>
+                  {runDistance === opt.key && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
+                </TouchableOpacity>
+              ))}
+
+              <NextButton disabled={!runDistance} onPress={() => runDistance && setStep('summary')} />
+            </>
+          )}
+
+          {/* ── STEP: MUSKELPLAN ─────────────────────────────────────── */}
+          {step === 'muscle-plan' && (
+            <>
+              <Text style={s.stepTitle}>Hur vill du träna?</Text>
+              <Text style={s.stepSub}>Välj ett upplägg som passar dina mål.</Text>
+
+              {/* Body SVG — front + back side by side */}
+              <View style={s.bodyRow}>
+                <Body
+                  data={bodyData(ALL_SLUGS)}
+                  side="front" gender="male"
+                  scale={BODY_SCALE}
+                  colors={['#F5A623']}
+                  defaultFill="#3A3A3C"
+                />
+                <Body
+                  data={bodyData(ALL_SLUGS)}
+                  side="back" gender="male"
+                  scale={BODY_SCALE}
+                  colors={['#F5A623']}
+                  defaultFill="#3A3A3C"
+                />
+              </View>
+
+              {/* Plan cards */}
+              <TouchableOpacity
+                style={[s.planCard, musclePlan === 'everything' && s.planCardActive]}
+                onPress={() => setMusclePlan('everything')}
+                activeOpacity={0.8}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={s.planRecommended}>Rekommenderat</Text>
+                  <Text style={[s.planTitle, musclePlan === 'everything' && { color: ORANGE }]}>
+                    Träna allt
+                  </Text>
+                  <Text style={s.planSub}>Balanserat program för hela kroppen</Text>
+                </View>
+                {musclePlan === 'everything' && <Ionicons name="checkmark-circle" size={24} color={ORANGE} />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[s.planCard, musclePlan === 'focus' && s.planCardActive]}
+                onPress={() => setMusclePlan('focus')}
+                activeOpacity={0.8}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.planTitle, musclePlan === 'focus' && { color: ORANGE }]}>
+                    Fokusera
+                  </Text>
+                  <Text style={s.planSub}>Välj 1–2 muskelgrupper att prioritera</Text>
+                </View>
+                {musclePlan === 'focus' && <Ionicons name="checkmark-circle" size={24} color={ORANGE} />}
+              </TouchableOpacity>
+
+              <NextButton disabled={!musclePlan} onPress={() => {
+                if (!musclePlan) return
+                setStep(musclePlan === 'focus' ? 'muscle-focus' : 'summary')
+              }} />
+            </>
+          )}
+
+          {/* ── STEP: VÄLJ MUSKELFOKUS ───────────────────────────────── */}
+          {step === 'muscle-focus' && (
+            <>
+              <Text style={s.stepTitle}>Välj fokusområden</Text>
+              <Text style={s.stepSub}>
+                Välj upp till 2 muskelgrupper att prioritera.
+              </Text>
+
+              {/* Dynamic body SVG */}
+              <View style={s.bodyRow}>
+                <Body
+                  data={bodyData(focusSlugs.length > 0 ? focusSlugs : [])}
+                  side="front" gender="male"
+                  scale={BODY_SCALE}
+                  colors={[ORANGE]}
+                  defaultFill="#3A3A3C"
+                />
+                <Body
+                  data={bodyData(focusSlugs.length > 0 ? focusSlugs : [])}
+                  side="back" gender="male"
+                  scale={BODY_SCALE}
+                  colors={[ORANGE]}
+                  defaultFill="#3A3A3C"
+                />
+              </View>
+
+              {/* Muscle group selection chips */}
+              <View style={s.muscleGrid}>
+                {MUSCLE_GROUPS.map(mg => {
+                  const selected = focusGroups.includes(mg.key)
+                  const maxed    = !selected && focusGroups.length >= 2
+                  return (
+                    <TouchableOpacity
+                      key={mg.key}
+                      style={[
+                        s.muscleChip,
+                        selected && { borderColor: mg.color, backgroundColor: mg.color + '22' },
+                        maxed && { opacity: 0.4 },
+                      ]}
+                      onPress={() => !maxed && toggleFocusGroup(mg.key)}
+                      activeOpacity={0.75}
+                    >
+                      <View style={[s.muscleDot, { backgroundColor: mg.color }]} />
+                      <Text style={[s.muscleChipText, selected && { color: mg.color }]}>
+                        {mg.label}
+                      </Text>
+                      {selected && <Ionicons name="checkmark" size={14} color={mg.color} />}
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+
+              <NextButton disabled={focusGroups.length === 0} onPress={() => focusGroups.length > 0 && setStep('summary')} />
+            </>
+          )}
+
+          {/* ── STEP: SAMMANFATTNING ─────────────────────────────────── */}
+          {step === 'summary' && (
+            <>
+              <View style={s.summaryCheckmark}>
+                <View style={s.summaryIconCircle}>
+                  <Ionicons name="checkmark" size={48} color="#000" />
+                </View>
+              </View>
+
+              <Text style={s.summaryTitle}>Ditt schema är klart!</Text>
+              <Text style={s.summarySub}>
+                {goal === 'running'
+                  ? `Vi skapar ett löpprogram anpassat för ${RUN_OPTIONS.find(o => o.key === runDistance)?.label ?? ''}.`
+                  : musclePlan === 'everything'
+                  ? 'Vi skapar ett balanserat styrkeprogram som tränar hela kroppen.'
+                  : `Vi skapar ett program med fokus på ${focusGroups
+                      .map(k => MUSCLE_GROUPS.find(m => m.key === k)?.label ?? '')
+                      .join(' och ')}.`}
+              </Text>
+
+              {/* Preview row */}
+              <View style={s.summaryCards}>
+                <View style={s.summaryCard}>
+                  <Ionicons name="calendar-outline" size={24} color={ORANGE} />
+                  <Text style={s.summaryCardTitle}>Veckoschema</Text>
+                  <Text style={s.summaryCardSub}>Anpassat för dina mål</Text>
+                </View>
+                <View style={s.summaryCard}>
+                  <Ionicons name="bar-chart-outline" size={24} color={ORANGE} />
+                  <Text style={s.summaryCardTitle}>Progressat</Text>
+                  <Text style={s.summaryCardSub}>Ökar gradvis varje vecka</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={s.nextBtn}
+                onPress={() => { reset(); onFinish({ goal, runDistance, musclePlan, focusGroups }) }}
+                activeOpacity={0.85}
+              >
+                <Text style={s.nextBtnText}>Starta träning</Text>
+                <Ionicons name="arrow-forward" size={18} color="#000" />
+              </TouchableOpacity>
+            </>
+          )}
+
+        </ScrollView>
+      </View>
+    </Modal>
+  )
+}
+
+// ─── Next button helper ───────────────────────────────────────────────────────
+
+function NextButton({ disabled, onPress }: { disabled: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      style={[s.nextBtn, disabled && s.nextBtnDisabled]}
+      onPress={onPress}
+      activeOpacity={0.85}
+      disabled={disabled}
+    >
+      <Text style={s.nextBtnText}>Fortsätt</Text>
+      <Ionicons name="arrow-forward" size={18} color="#000" />
+    </TouchableOpacity>
+  )
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  screen:  { flex: 1, backgroundColor: BG },
+
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10,
+  },
+  iconBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+
+  progressTrack: {
+    height: 3, backgroundColor: CARD,
+    marginHorizontal: 16, borderRadius: 2, marginBottom: 4,
+  },
+  progressFill: { height: 3, backgroundColor: ORANGE, borderRadius: 2 },
+
+  content: { paddingHorizontal: 20, paddingTop: 28, gap: 14 },
+
+  stepTitle: { color: TEXT_PRIMARY, fontSize: 30, fontWeight: '800', lineHeight: 36 },
+  stepSub:   { color: TEXT_SECONDARY, fontSize: 15, marginBottom: 4 },
+
+  // Big goal cards
+  bigCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: CARD, borderRadius: 20,
+    borderWidth: 1.5, borderColor: BORDER, padding: 20,
+  },
+  bigCardActive: { borderColor: ORANGE, backgroundColor: 'rgba(255,149,0,0.07)' },
+  bigCardIcon:   { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  bigCardTitle:  { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginBottom: 3 },
+  bigCardSub:    { color: TEXT_SECONDARY, fontSize: 13 },
+
+  // Option cards (run distance)
+  optCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: CARD, borderRadius: 16,
+    borderWidth: 1.5, borderColor: BORDER, padding: 16,
+  },
+  optCardActive: { borderColor: ORANGE, backgroundColor: 'rgba(255,149,0,0.07)' },
+  optIcon:       { width: 52, height: 52, borderRadius: 14, backgroundColor: BORDER, alignItems: 'center', justifyContent: 'center' },
+  optIconActive: { backgroundColor: 'rgba(255,149,0,0.15)' },
+  optTitle:      { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  optSub:        { color: TEXT_SECONDARY, fontSize: 13 },
+
+  // Body SVG row
+  bodyRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginVertical: 4 },
+
+  // Plan cards (muscle plan)
+  planCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: CARD, borderRadius: 18,
+    borderWidth: 1.5, borderColor: BORDER, padding: 20,
+  },
+  planCardActive:  { borderColor: ORANGE, backgroundColor: 'rgba(255,149,0,0.07)' },
+  planRecommended: { color: ORANGE, fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 3 },
+  planTitle:       { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', marginBottom: 2 },
+  planSub:         { color: TEXT_SECONDARY, fontSize: 13 },
+
+  // Muscle chips
+  muscleGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  muscleChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 16, paddingVertical: 11,
+    backgroundColor: CARD, borderRadius: 30,
+    borderWidth: 1.5, borderColor: BORDER,
+  },
+  muscleDot:     { width: 9, height: 9, borderRadius: 5 },
+  muscleChipText:{ color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+
+  // Summary
+  summaryCheckmark: { alignItems: 'center', marginVertical: 12 },
+  summaryIconCircle: {
+    width: 96, height: 96, borderRadius: 48,
+    backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center',
+  },
+  summaryTitle: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', textAlign: 'center' },
+  summarySub: {
+    color: TEXT_SECONDARY, fontSize: 15, textAlign: 'center',
+    lineHeight: 22, marginTop: 4,
+  },
+  summaryCards: { flexDirection: 'row', gap: 12 },
+  summaryCard: {
+    flex: 1, backgroundColor: CARD, borderRadius: 16,
+    borderWidth: 1, borderColor: BORDER,
+    padding: 18, alignItems: 'center', gap: 6,
+  },
+  summaryCardTitle: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
+  summaryCardSub:   { color: TEXT_SECONDARY, fontSize: 12, textAlign: 'center' },
+
+  // CTA button
+  nextBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: ORANGE, borderRadius: 16, paddingVertical: 18,
+    shadowColor: ORANGE, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28, shadowRadius: 12,
+  },
+  nextBtnDisabled: { opacity: 0.35 },
+  nextBtnText:     { color: '#000', fontSize: 17, fontWeight: '800' },
+})

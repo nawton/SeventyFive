@@ -145,10 +145,11 @@ export default function StatsScreen() {
       weekMuscleFreq.set(slug, (weekMuscleFreq.get(slug) || 0) + 1)
     })
   })
-  const maxMuscleCount = Math.max(0, ...weekMuscleFreq.values())
   const weekMuscleData = Array.from(weekMuscleFreq.entries()).map(([slug, count]) => {
-    const ratio = maxMuscleCount > 0 ? count / maxMuscleCount : 0
-    const intensity = (ratio >= 0.66 ? 3 : ratio >= 0.33 ? 2 : 1) as 1 | 2 | 3
+    // Absolute thresholds — scales with time range so 1 session is always "lite" (blå)
+    const hi = viewMode === '4weeks' ? 13 : 4
+    const mid = viewMode === '4weeks' ? 5 : 2
+    const intensity = (count >= hi ? 3 : count >= mid ? 2 : 1) as 1 | 2 | 3
     return { slug, intensity }
   })
   const weekBounds = getWeekBounds(weekOffset)

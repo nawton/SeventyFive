@@ -1,34 +1,41 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ScrollView, Modal, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Body from 'react-native-body-highlighter'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { CATEGORY_LABELS, type Exercise } from '@/services/exercises'
-import { getExerciseMuscleGroup } from '@/lib/muscles'
+import { getExerciseMuscleGroup, type Slug } from '@/lib/muscles'
 import type { ExerciseCategory } from '@/types/database'
 
-const CATEGORY_ICONS: Record<ExerciseCategory, React.ComponentProps<typeof Ionicons>['name']> = {
-  strength: 'barbell-outline',
-  cardio:   'walk-outline',
-  mobility: 'body-outline',
-  hiit:     'flash-outline',
-}
+type Page = 'landing' | 'gym' | 'cardio' | 'exercises'
 
-const PICKER_FILTERS = [
-  { key: 'all',       label: 'Alla' },
-  { key: 'cardio',    label: 'Cardio' },
-  { key: 'legs',      label: 'Ben' },
-  { key: 'chest',     label: 'Bröst' },
-  { key: 'back',      label: 'Rygg' },
-  { key: 'shoulders', label: 'Axlar' },
-  { key: 'arms',      label: 'Armar' },
-  { key: 'core',      label: 'Mage' },
-  { key: 'mobility',  label: 'Rörlighet' },
-  { key: 'hiit',      label: 'HIIT' },
+type GymGroup = { key: string; label: string; side: 'front' | 'back'; slugs: Slug[]; color: string }
+
+const GYM_GROUPS: GymGroup[] = [
+  { key: 'chest',     label: 'Bröst',   side: 'front', slugs: ['chest'],                                      color: '#FF6B6B' },
+  { key: 'back',      label: 'Rygg',    side: 'back',  slugs: ['upper-back', 'lower-back', 'trapezius'],       color: '#4ECDC4' },
+  { key: 'legs',      label: 'Ben',     side: 'front', slugs: ['quadriceps', 'hamstring', 'gluteal', 'calves'], color: '#45B7D1' },
+  { key: 'shoulders', label: 'Axlar',   side: 'front', slugs: ['deltoids'],                                    color: '#F7DC6F' },
+  { key: 'arms',      label: 'Armar',   side: 'front', slugs: ['biceps', 'triceps'],                           color: '#A29BFE' },
+  { key: 'core',      label: 'Mage',    side: 'front', slugs: ['abs', 'obliques'],                             color: '#FD79A8' },
 ]
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name']
+
+function cardioExIcon(ex: Exercise): IoniconName {
+  const n = ex.name.toLowerCase()
+  if (n.includes('cykel') || n.includes('cycl') || n.includes('bike')) return 'bicycle-outline'
+  if (n.includes('simm') || n.includes('swim'))                         return 'water-outline'
+  if (n.includes('yoga') || n.includes('stretching'))                   return 'leaf-outline'
+  if (n.includes('rodd') || n.includes('row'))                          return 'git-compare-outline'
+  if (ex.category === 'hiit')                                           return 'flash-outline'
+  if (ex.category === 'mobility')                                       return 'accessibility-outline'
+  return 'walk-outline'
+}
 
 export function ExercisePickerSheet({
   visible,
@@ -42,33 +49,41 @@ export function ExercisePickerSheet({
   onClose:   () => void
 }) {
   const insets = useSafeAreaInsets()
-  const [search, setSearch]       = useState('')
-  const [filter, setFilter]       = useState('all')
-  const [pendingEx, setPendingEx] = useState<Exercise | null>(null)
-  const [sets, setSets]           = useState('3')
-  const [reps, setReps]           = useState('10')
+  const [page, setPage]                   = useState<Page>('landing')
+  const [selectedGroup, setSelectedGroup] = useState('')
+  const [search, setSearch]               = useState('')
+  const [pendingEx, setPendingEx]         = useState<Exercise | null>(null)
+  const [sets, setSets]                   = useState('3')
+  const [reps, setReps]                   = useState('10')
 
-  const unique = [...new Map(exercises.map(e => [e.name.toLowerCase(), e])).values()]
+  useEffect(() => {
+    if (!visible) {
+      setPage('landing')
+      setSelectedGroup('')
+      setSearch('')
+      setPendingEx(null)
+    }
+  }, [visible])
 
-  const filtered = unique.filter(ex => {
-    const matchesCat = filter === 'all'
-      || ex.category === filter
-      || getExerciseMuscleGroup(ex.name) === filter
-    const matchesSearch = !search.trim() || ex.name.toLowerCase().includes(search.toLowerCase())
-    return matchesCat && matchesSearch
-  })
+  const unique       = [...new Map(exercises.map(e => [e.name.toLowerCase(), e])).values()]
+  const strengthExes = unique.filter(e => e.category === 'strength')
+  const otherExes    = unique.filter(e => e.category !== 'strength')
 
   function handleClose() {
+    setPage('landing')
+    setSelectedGroup('')
     setSearch('')
-    setFilter('all')
     setPendingEx(null)
     onClose()
   }
 
+  function handleBack() {
+    if (page === 'exercises') { setPage('gym'); setSearch('') }
+    else if (page === 'gym' || page === 'cardio') setPage('landing')
+  }
+
   function handleTap(ex: Exercise) {
     if (ex.category === 'cardio') {
-      setSearch('')
-      setFilter('all')
       onSelect(ex, null, null)
     } else {
       setSets('3')
@@ -81,11 +96,28 @@ export function ExercisePickerSheet({
     if (!pendingEx) return
     const s = sets.trim() ? parseInt(sets) : null
     const r = reps.trim() || null
+    const ex = pendingEx
     setPendingEx(null)
-    setSearch('')
-    setFilter('all')
-    onSelect(pendingEx, s, r)
+    onSelect(ex, s, r)
   }
+
+  function gymGroupCount(groupKey: string) {
+    return strengthExes.filter(e => getExerciseMuscleGroup(e.name) === groupKey).length
+  }
+
+  const groupExercises = selectedGroup === 'all'
+    ? strengthExes
+    : strengthExes.filter(e => getExerciseMuscleGroup(e.name) === selectedGroup)
+  const filteredExercises = search.trim()
+    ? groupExercises.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
+    : groupExercises
+
+  const gymGroupLabel = GYM_GROUPS.find(g => g.key === selectedGroup)?.label ?? ''
+  const showBack      = page !== 'landing'
+  const headerTitle   = page === 'gym' ? 'Gym'
+    : page === 'cardio'    ? 'Cardio'
+    : page === 'exercises' ? gymGroupLabel
+    : 'Lägg till övning'
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
@@ -93,85 +125,143 @@ export function ExercisePickerSheet({
 
         {/* Header */}
         <View style={s.header}>
-          <TouchableOpacity onPress={handleClose} style={s.iconBtn} activeOpacity={0.7}>
-            <Ionicons name="chevron-down" size={22} color={TEXT_PRIMARY} />
-          </TouchableOpacity>
-          <Text style={s.title}>Lägg till övning</Text>
-          <TouchableOpacity onPress={handleClose} style={s.klarBtn} activeOpacity={0.8}>
-            <Text style={s.klarBtnText}>Stäng</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Search */}
-        <View style={s.searchBar}>
-          <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} />
-          <TextInput
-            style={s.searchInput}
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Sök övning…"
-            placeholderTextColor={TEXT_SECONDARY}
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="search"
-            clearButtonMode="while-editing"
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close-circle" size={17} color={TEXT_SECONDARY} />
+          {showBack ? (
+            <TouchableOpacity onPress={handleBack} style={s.iconBtn} activeOpacity={0.7}>
+              <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={handleClose} style={s.iconBtn} activeOpacity={0.7}>
+              <Ionicons name="chevron-down" size={22} color={TEXT_PRIMARY} />
             </TouchableOpacity>
           )}
+          <Text style={s.title}>{headerTitle}</Text>
+          <TouchableOpacity onPress={handleClose} style={s.closeBtn} activeOpacity={0.8}>
+            <Text style={s.closeBtnText}>Stäng</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Filter pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.filterStrip}
-          contentContainerStyle={s.filterContent}
-        >
-          {PICKER_FILTERS.map(f => (
-            <TouchableOpacity
-              key={f.key}
-              style={[s.pill, filter === f.key && s.pillActive]}
-              onPress={() => setFilter(f.key)}
-              activeOpacity={0.7}
+        {/* ── LANDING ─────────────────────────────────────────────── */}
+        {page === 'landing' && (
+          <View style={s.landingContainer}>
+            <Text style={s.landingSub}>Välj typ av övning</Text>
+            <View style={s.landingCards}>
+              <TouchableOpacity style={s.landingCard} onPress={() => setPage('gym')} activeOpacity={0.8}>
+                <View style={[s.landingIcon, { backgroundColor: 'rgba(255,149,0,0.18)' }]}>
+                  <Ionicons name="barbell" size={44} color={ORANGE} />
+                </View>
+                <Text style={s.landingCardTitle}>Gym</Text>
+                <Text style={s.landingCardSub}>Styrketräning</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.landingCard} onPress={() => setPage('cardio')} activeOpacity={0.8}>
+                <View style={[s.landingIcon, { backgroundColor: 'rgba(52,199,89,0.18)' }]}>
+                  <Ionicons name="heart" size={44} color="#34C759" />
+                </View>
+                <Text style={s.landingCardTitle}>Cardio</Text>
+                <Text style={s.landingCardSub}>Kondition & rörlighet</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* ── GYM — muscle groups ──────────────────────────────────── */}
+        {page === 'gym' && (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
+            {GYM_GROUPS.map(group => (
+              <TouchableOpacity
+                key={group.key}
+                style={s.groupRow}
+                onPress={() => { setSelectedGroup(group.key); setPage('exercises') }}
+                activeOpacity={0.7}
+              >
+                <View style={[s.thumbWrap, { borderColor: group.color + '50' }]}>
+                  <Body
+                    data={group.slugs.map(sl => ({ slug: sl, intensity: 1 as const }))}
+                    side={group.side}
+                    gender="male"
+                    scale={0.33}
+                    colors={[group.color]}
+                    defaultFill="#3A3A3C"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.groupLabel}>{group.label}</Text>
+                  <Text style={s.groupCount}>{gymGroupCount(group.key)} övningar</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* ── CARDIO — flat list grouped by category ───────────────── */}
+        {page === 'cardio' && (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
+            {(['cardio', 'hiit', 'mobility'] as ExerciseCategory[]).map(cat => {
+              const catExes = otherExes.filter(e => e.category === cat)
+              if (catExes.length === 0) return null
+              return (
+                <View key={cat}>
+                  <Text style={s.sectionHeader}>{CATEGORY_LABELS[cat].toUpperCase()}</Text>
+                  {catExes.map(ex => (
+                    <TouchableOpacity key={ex.id} style={s.row} onPress={() => handleTap(ex)} activeOpacity={0.7}>
+                      <View style={s.cardioIconBox}>
+                        <Ionicons name={cardioExIcon(ex)} size={22} color="#34C759" />
+                      </View>
+                      <Text style={[s.rowName, { flex: 1 }]}>{ex.name}</Text>
+                      <View style={s.addBtn}>
+                        <Ionicons name="add" size={20} color={ORANGE} />
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )
+            })}
+          </ScrollView>
+        )}
+
+        {/* ── EXERCISES — strength in selected muscle group ─────────── */}
+        {page === 'exercises' && (
+          <>
+            <View style={s.searchBar}>
+              <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} />
+              <TextInput
+                style={s.searchInput}
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Sök övning…"
+                placeholderTextColor={TEXT_SECONDARY}
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="search"
+                clearButtonMode="while-editing"
+              />
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text style={[s.pillText, filter === f.key && s.pillTextActive]}>{f.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              {filteredExercises.map(ex => (
+                <TouchableOpacity key={ex.id} style={s.row} onPress={() => handleTap(ex)} activeOpacity={0.7}>
+                  <View style={s.exIconBox}>
+                    <Ionicons name="barbell-outline" size={18} color={TEXT_SECONDARY} />
+                  </View>
+                  <Text style={[s.rowName, { flex: 1 }]}>{ex.name}</Text>
+                  <View style={s.addBtn}>
+                    <Ionicons name="add" size={20} color={ORANGE} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+              {filteredExercises.length === 0 && (
+                <Text style={s.emptyText}>Inga övningar hittades</Text>
+              )}
+            </ScrollView>
+          </>
+        )}
 
-        <Text style={s.count}>{filtered.length} övningar</Text>
-
-        {/* Exercise list */}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {filtered.map(ex => (
-            <TouchableOpacity
-              key={ex.id}
-              style={s.row}
-              onPress={() => handleTap(ex)}
-              activeOpacity={0.7}
-            >
-              <View style={s.icon}>
-                <Ionicons name={CATEGORY_ICONS[ex.category]} size={18} color={TEXT_SECONDARY} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.rowName}>{ex.name}</Text>
-                <Text style={s.rowSub}>{CATEGORY_LABELS[ex.category]}</Text>
-              </View>
-              <View style={s.addBtn}>
-                <Ionicons name="add" size={18} color={TEXT_SECONDARY} />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Sets/reps prompt — overlay inside same Modal to avoid nested-Modal black screen */}
+        {/* ── SETS / REPS PROMPT ───────────────────────────────────── */}
         {pendingEx !== null && (
           <KeyboardAvoidingView
             style={s.promptOverlay}
@@ -187,7 +277,6 @@ export function ExercisePickerSheet({
               <View style={s.promptHandle} />
               <Text style={s.promptTitle} numberOfLines={1}>{pendingEx.name}</Text>
               <Text style={s.promptSub}>Ange set och reps för passet</Text>
-
               <View style={s.promptFields}>
                 <View style={s.promptField}>
                   <Text style={s.promptLabel}>SET</Text>
@@ -215,7 +304,6 @@ export function ExercisePickerSheet({
                   />
                 </View>
               </View>
-
               <TouchableOpacity style={s.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
                 <Text style={s.confirmBtnText}>Lägg till i pass</Text>
               </TouchableOpacity>
@@ -230,16 +318,74 @@ export function ExercisePickerSheet({
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
+
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
     borderBottomWidth: 1, borderBottomColor: BORDER,
   },
-  iconBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title:       { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
-  klarBtn:     { backgroundColor: ORANGE, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9 },
-  klarBtnText: { color: '#000', fontWeight: '700', fontSize: 14 },
+  iconBtn:      { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  title:        { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
+  closeBtn:     { backgroundColor: ORANGE, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9 },
+  closeBtnText: { color: '#000', fontWeight: '700', fontSize: 14 },
 
+  // Landing
+  landingContainer: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
+  landingSub:       { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', marginBottom: 28 },
+  landingCards:     { flexDirection: 'row', gap: 16 },
+  landingCard: {
+    flex: 1, backgroundColor: CARD, borderRadius: 20,
+    borderWidth: 1, borderColor: BORDER,
+    paddingVertical: 32, paddingHorizontal: 16, alignItems: 'center', gap: 12,
+  },
+  landingIcon:      { width: 80, height: 80, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  landingCardTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800' },
+  landingCardSub:   { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center' },
+
+  // Gym group list
+  groupRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: BORDER, minHeight: 112,
+  },
+  thumbWrap: {
+    width: 64, height: 110, overflow: 'hidden',
+    alignItems: 'center', justifyContent: 'flex-start',
+    backgroundColor: CARD, borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  groupLabel: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
+  groupCount: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
+
+  // Section header
+  sectionHeader: {
+    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5,
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8,
+  },
+
+  // Exercise rows
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  cardioIconBox: {
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: 'rgba(52,199,89,0.12)', alignItems: 'center', justifyContent: 'center',
+  },
+  exIconBox: {
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
+  },
+  rowName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  addBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,149,0,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  emptyText: { color: TEXT_SECONDARY, textAlign: 'center', marginTop: 48, fontSize: 15 },
+
+  // Search bar
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginVertical: 10,
@@ -248,38 +394,6 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
   },
   searchInput: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, padding: 0 },
-
-  filterStrip:   { height: 60, flexGrow: 0, marginBottom: 10 },
-  filterContent: { paddingHorizontal: 16, alignItems: 'center', gap: 8 },
-
-  pill: {
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20,
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
-  },
-  pillActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
-  pillText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
-  pillTextActive: { color: '#000', fontWeight: '700' },
-
-  count: {
-    color: TEXT_SECONDARY, fontSize: 12, paddingHorizontal: 20,
-    paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: BORDER,
-  },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
-  },
-  icon: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
-  },
-  rowName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  rowSub:  { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
-  addBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
-    alignItems: 'center', justifyContent: 'center',
-  },
 
   // Sets/reps prompt
   promptOverlay: {
@@ -300,7 +414,7 @@ const s = StyleSheet.create({
   promptTitle:  { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800' },
   promptSub:    { color: TEXT_SECONDARY, fontSize: 14, marginBottom: 20 },
   promptFields: {
-    flexDirection: 'row', gap: 0,
+    flexDirection: 'row',
     backgroundColor: CARD, borderRadius: 16,
     borderWidth: 1, borderColor: BORDER,
     overflow: 'hidden', marginBottom: 16,

@@ -1,186 +1,177 @@
-# SeventyFive — Roadmap & Framtida Funktioner
-**Nawton AB** | Senast uppdaterad: 2026-07-01
+# SeventyFive — Produktroadmap
+
+> Senast uppdaterad: 2026-07-02
 
 ---
 
-## Prioritering
+## Nuläge — Vad som är byggt
 
-| Symbol | Betydelse |
-|---|---|
-| 🔴 | Hög prioritet — bygga snart |
-| 🟡 | Medel prioritet — planerad |
-| 🟢 | Låg prioritet / framtid |
-| ✅ | Klar |
+### Autentisering & Onboarding
+- [x] Login med Google OAuth
+- [x] Welcome-screen
+- [x] Quiz (varför / mål / trycknivå)
+- [x] Rekommendationsscreen baserat på quizsvar
+- [x] Schema-setup vid onboarding
 
----
+### Dashboard (Hem)
+- [x] 75-dagars ringdiagram med animerat progress
+- [x] Dagliga uppgifter: Träning, Kost, Vatten, Läsning, Foto (checkbox)
+- [x] Markera dag som klar / misslyckad (FailModal)
+- [x] Dag-räknare (X/75)
 
-## 1. Kärna — 75 Hard-specifikt
+### Schema (Träningsplan)
+- [x] Rullningsbar kalenderremsa med månadsöversikt
+- [x] Horisontell dagsväxlare (swipebar, en sida per dag)
+- [x] Schemalagda pass med upprepning per veckodag
+- [x] ONCE-pass (engångspass för specifikt datum)
+- [x] Logga missad övning (lägger till under Träningspass)
+- [x] Lägg till övning i befintligt pass
+- [x] Markera övning som utförd (checkboxes per övning)
+- [x] Markera hela pass som klarat
+- [x] Long-press: ta bort engångspass / gå till inställningar för upprepande
+- [x] "Lägg till övning" alltid synlig under övningslistan
+- [x] ExercisePickerSheet: Gym/Cardio-landning, muskelgruppslista med Body SVG-thumbnails, kardio med sport-ikoner
+- [x] GPS cardio-tracking med Leaflet-karta och live-statistik
+- [x] Hantera schemalagda pass (manage-sessions, endast upprepande)
+- [x] SessionEditor med valfritt namn, info-knapp för upprepning
+- [x] ScheduleWizard — UI klar (mål → avstånd/muskelplan → fokus → sammanfattning), ej kopplad till backend
 
-Dessa funktioner gör appen autentisk mot originalkonceptet.
+### Framsteg (Stats)
+- [x] Översiktsfliken: kalenderöversikt, streak, completion-rate
+- [x] Cardio-fliken: lista med cardio-pass, detaljvy per pass
+- [x] Styrka-fliken: kropp-SVG med muskelkarta (heatmap)
+- [x] Veckoselektor (navigera bakåt i veckor)
+- [x] 4-veckorsläge för muskelkartan
+- [x] 3-nivå intensitetsfärger: blå (lite), gul (medel), orange (mycket)
 
-### 🔴 Progressfoto per dag
-- Användaren tar ett foto varje dag som en del av foto-uppgiften
-- Foton lagras i Supabase Storage kopplat till `daily_logs`
-- Gallerivy där man kan scrolla dag 1 → dag 75 och se sin transformation
-- Kräver: Supabase Storage bucket (`progress-photos`), kamera-permissions
-- **Varför:** En av 75 Hards starkaste funktioner — transformation synlig dag 1 vs dag 75
-
-### 🔴 Streak-räknare (riktig)
-- Räknar faktiska konsekutiva klarade dagar via queries på `daily_logs`
-- Visas på hemskärmen med flamikon (🔥 X dagar i rad)
-- Nollställs automatiskt om en dag missas
-- **Varför:** Viktigaste motivationsverktyget i hela appen
-
-### 🟡 Vattenspårning (avancerad)
-- Istället för en enkel bock — en visuell widget för att logga deciliter under dagen
-- Tryck "+" för varje glas/flaska, se en "fyll på"-animation
-- Mål baserat på nivå (3L / 4L / 4.5L)
-- Lagras per timme i `daily_logs` som JSONB
-
-### 🟡 Läsningslogg
-- Logga antal sidor lästa (inte bara klar/inte klar)
-- Lägg till bok (titel + författare) som man läser
-- Progressbar mot dagmålet (10 eller 20 sidor)
-- Bokhistorik — vilka böcker klarades under utmaningen
-
-### 🟡 Dag 75-firande
-- Animerad "celebration screen" när användaren klarar hela utmaningen
-- Sammanfattning: antal klarade dagar, foton, böcker lästa
-- Konfetti-animation (via `react-native-confetti-cannon` eller Reanimated)
-- Delningsbart resultat-kort
+### Inställningar
+- [x] Redigera profil (namn, avatar/emoji)
+- [x] Hantera schemalagda pass
 
 ---
 
-## 2. Motivation & Retention
+## Fas 1 — Snabba vinster (1–2 veckor)
 
-### 🔴 Push-notiser med schema
-- Personliga påminnelser baserade på användarens dagschema
-- Morgonpåminnelse: "God morgon! Dags att starta dag X"
-- Kväll: "2 timmar kvar — X uppgifter inte klara"
-- Kräver: `expo-dev-client` (fungerar ej i Expo Go)
-- Kräver: `expo-notifications` + schemalagda triggers
+### Schema
+- [ ] **ScheduleWizard → backend**: generera faktiska träningspass baserat på wizard-svar (löppass, helkropps-styrka eller valda fokusgrupper)
+- [ ] **Övningsdetalj-screen** (`app/exercise/[id].tsx` finns men är tom): visa beskrivning, instruktioner och muskelgrupper som body-SVG
+- [ ] **Global sök**: sökruta på schema-sidan som söker bland alla övningar oavsett kategori
 
-### 🟡 Veckosammanfattning
-- Skickas varje söndag som push-notis eller visas in-app
-- "Vecka X: 5/7 dagar klarade — bra jobbat!"
-- Motiverande text baserat på resultat
+### Dashboard
+- [ ] **Fotouppgift**: ta/välj bild direkt från uppgiftskortet och spara till `progress_photos`-tabellen (schemat finns i databasen)
+- [ ] **Vatten-tracker**: ersätt checkbox med glas-räknare (t.ex. 8 glas à 250 ml) och visa progress-bar
+- [ ] **Läsningslogg**: lägg till boktitel + sidantal vid markering av läsuppgiften
 
-### 🟡 Daglig motivationscitat
-- Roterande citat på hemskärmen (eller som notis)
-- Kopplas till användarens "Varför" från onboarding-quizet
-- Kan vara AI-genererat (Anton) eller ett statiskt bibliotek
-
-### 🟢 Comeback-funktion
-- När användaren startar om efter ett misslyckande
-- Visa uppmuntrande skärm: "Du kom till dag X förra gången — slå det!"
-- Historik över tidigare försök
+### Framsteg
+- [ ] **Veckostaplar i Översikt**: stapeldiagram som visar antal klara dagar per vecka
+- [ ] **Cardio-statistik**: total distans, total tid och genomsnittlig pace summerat högst upp i Cardio-fliken
 
 ---
 
-## 3. Betalmodell & Monetisering
+## Fas 2 — Kort sikt (1–2 månader)
 
-Schema finns redan i databasen (`subscription_status: trial/active/expired`).
+### Träning & Hälsa
+- [ ] **Personliga rekord (PR)**: spåra bästa set/reps per övning, visa PR-badge när nytt rekord sätts
+- [ ] **Viloimer**: countdown-timer mellan set direkt i passvyn
+- [ ] **Volymspårning**: total lyft-vikt per session och per vecka (sets × reps × vikt)
+- [ ] **Kroppsmått**: logga vikt och måttband (midja, arm, etc.) och visa trendgraf
+- [ ] **Hjärtrytmzoner**: integrera med HealthKit/Google Fit för puls under cardio
 
-### 🔴 RevenueCat-integration
-- Enklast för in-app köp på iOS + Android
-- Hantera prenumerationer, trials, återköp
-- Webhook till Supabase för att uppdatera `subscription_status`
+### Schema & UX
+- [ ] **Drag-och-släpp i manage-sessions**: ändra ordning på pass via dra
+- [ ] **Duplicera pass**: kopiera ett befintligt pass som utgångspunkt för ett nytt
+- [ ] **Dela schemamallar**: exportera/importera ett veckoschema via deep link
+- [ ] **Snabblogg-widget**: logga dagens pass från hemskärmswidget utan att öppna appen
 
-### 🔴 Paywall-skärm
-- Visas efter 14 dagars gratis provperiod
-- Tydlig värdepropå: vad användaren får med premium
-- Pris: bestäms av Nawton (t.ex. 99 kr/mån eller 499 kr/år)
-
-### 🟡 Gratis vs Premium — definiera tiers
-- **Gratis:** Starta utmaning, daglig checklista, grundläggande stats
-- **Premium:** Progressfoton, vattenspårning avancerad, notiser, historik, AI-coach
-
-### 🟢 Referral-program
-- Bjud in en vän → båda får 1 extra vecka gratis
-
----
-
-## 4. Socialt & Viral Growth
-
-### 🟡 Dela dag-kort
-- Generera ett delningsbart bildkort: "Dag 23/75 ✅ — SeventyFive by Nawton"
-- Innehåller dagens stats + avatar
-- Dela direkt till Instagram Stories, WhatsApp etc.
-- Kräver: `react-native-view-shot` för att rendera vy till bild
-
-### 🟢 Vän-utmaningar
-- Bjud in en kompis att starta samma dag
-- Se varandras framsteg (utan att se varandras foton)
-- Push-notis när en vän klarar en dag
-
-### 🟢 Completion Certificate
-- Digitalt intyg i PDF/bild-format: "Nawid klarade 75 Hard den 2026-09-01"
-- Delningsbart på LinkedIn/sociala medier
-
-### 🟢 Leaderboard
-- Anonym ranking baserat på antal klarade dagar
-- "Top 100 användare den här månaden"
+### Framsteg
+- [ ] **Framstegsfoto-galleri**: rutnät med alla tagna bilder, jämför dag X mot dag Y sida vid sida
+- [ ] **Löpanalys**: GPS-rutt med färgkodad hastighet/zonkarta
+- [ ] **Activity-screen**: aktivitetsflöde med allt man gjort (träning, foton, streaks) — `activity.tsx` är tom idag
 
 ---
 
-## 5. Plattform & Teknik
+## Fas 3 — Medellång sikt (2–4 månader)
 
-### 🟡 Offline-stöd
-- Buffra uppgiftsavklarningar lokalt (AsyncStorage) om ingen uppkoppling
-- Synka när uppkoppling återkommer
-- Viktigt för gym-miljöer utan WiFi
+### Push-notifikationer
+- [ ] **Dagliga påminnelser**: konfigurerbar tid per uppgiftstyp (träning, vatten, läsning, foto)
+- [ ] **Streak-varningar**: push om du inte loggat något vid t.ex. kl 20:00
+- [ ] **Motivationsmeddelanden**: slumpmässiga citat/pushes under dagen
+- [ ] **Pass-påminnelser**: "Ditt pass börjar om 30 min" baserat på schema
 
-### 🟢 iOS Widget
-- Dag-nummer + progress-ring direkt på iPhone-hemskärmen
-- Kräver: `expo-widgets` eller native Swift-extension
+### Achievements & Gamification
+- [ ] **Badge-system**: milstenar (Dag 1, 7, 10, 25, 50, 75), "Första löprundan", "3-dagars streak" etc.
+- [ ] **Utmaningsfirande**: animerad segerscreen på dag 75 med konfetti och statistiköversikt
+- [ ] **Before/after-jämförelse**: välj två datum och se bilderna sida vid sida med slider
+- [ ] **Veckouppsummering**: automatisk push varje söndag med veckans stats
 
-### 🟢 Apple Health / Google Fit-integration
-- Synka träningspass automatiskt från Health-appen
-- Autoavklara träning-uppgiften om 45+ min registreras
-
-### 🟢 iPad-stöd
-- Anpassa layout för större skärmar
-- Sidebar-navigation istället för tab-bar
-
----
-
-## 6. Anton's Ansvarsområden
-
-*(Dokumenterat här för helhetsbild — Anton driver dessa)*
-
-### 🔴 AI-coach
-- Personlig coach som refererar till användarens "Varför" från quizet
-- Svarar på ursäkter med skräddarsydda motargument
-- Pushar notiser baserat på beteendemönster
-
-### 🔴 Google OAuth (fullt fungerande)
-- Färdigställa Google-inloggning i production-build
-
-### 🟡 Avancerat träningsbibliotek
-- Fler övningar, muskelgruppsfilter
-- Träningspass-byggare med AI-rekommendationer
-- Progressionsspårning (vikt, reps, sets per övning)
-
-### 🟡 Cardio-förbättringar
-- Karta med rutt-visualisering
-- Pace, hjärtfrekvens (Apple Watch)
-- Segmentanalys
-
-### 🟢 Betalning & backend-infrastruktur
-- Stripe/RevenueCat server-side webhooks
-- Backend-funktioner via Supabase Edge Functions
+### Social
+- [ ] **Kompis-utmaningar**: bjud in en vän via länk och jämför progress dag för dag
+- [ ] **Community-flöde**: valfritt publikt flöde med framstegsfoton (`is_public`-flaggan finns i databasen)
+- [ ] **Leaderboard**: veckoranking bland vänner baserat på klara dagar och träningsvolym
 
 ---
 
-## Närmaste Sprint (rekommendation)
+## Fas 4 — Lång sikt (4–6 månader)
 
-Baserat på nuvarande appstatus är dessa tre saker näst mest värdefulla:
+### AI-coach
+- [ ] **AI-coachchat**: `ai_coach_response` finns redan i `task_completions`-tabellen — bygg chattgränssnitt med Claude som coachar baserat på dagens prestation
+- [ ] **Smarta träningsrekommendationer**: föreslå övningar baserat på vilka muskler som undertränas (muskelkartan + historik)
+- [ ] **Återhämtningsanalys**: varnar om du övertränar specifika muskelgrupper vecka efter vecka
+- [ ] **Anpassat löpprogram**: AI justerar distans och tempo dynamiskt varje vecka baserat på framsteg
 
-1. **🔴 Progressfoto** — autentiskt 75 Hard, stark retention-funktion
-2. **🔴 Streak-räknare** — enklaste att bygga, stor motivationspåverkan
-3. **🔴 RevenueCat + Paywall** — börja tjäna pengar
+### Plattform & Integrationer
+- [ ] **Apple Health / Google Fit**: läs in steg, puls och sömn; synka avklarade träningspass
+- [ ] **Apple Watch-app**: markera uppgifter och starta cardio-tracking direkt från klockan
+- [ ] **Nutrition-API**: sök livsmedel och logga kalorier/makros mot kostuppgiften
+- [ ] **Spotify/Apple Music**: spela en träningsspellista direkt inifrån appen
+
+### Prenumeration & Affär
+- [ ] **Betalvägg**: `subscription_status` och `payment_completed_at` finns i profilen — bygg RevenueCat-integration
+- [ ] **Gratisnivå vs. Premium**: begränsa muskelkarta, AI-coach och avancerad statistik till betalande användare
+- [ ] **Coach-läge**: tränare kan följa och kommentera sina klienters framsteg i realtid
 
 ---
 
-*Uppdatera denna fil när funktioner påbörjas eller slutförs.*
-*Flytta till ✅ när en funktion är live i production.*
+## Fas 5 — Vision (6+ månader)
+
+- [ ] **Video-formkontroll**: ladda upp ett set-klipp och få AI-feedback på tekniken
+- [ ] **Genetiskt anpassade program**: kombinera quiz + historik + AI för hyper-personliga program
+- [ ] **Offline-läge**: full offline-support med synk när anslutning återupptas
+- [ ] **Tablet/iPad-layout**: sidopanel-gränssnitt optimerat för större skärmar
+- [ ] **Web-dashboard**: statistikportal för tränare och power-users
+- [ ] **Marketplace för scheman**: köp och sälj expertprogram från kända coacher och atleter
+
+---
+
+## Teknisk skuld & Infrastruktur
+
+- [ ] Anslut `ScheduleWizard` till Supabase och skapa verkliga sessions baserat på wizard-svar
+- [ ] `activity.tsx` är tom — bygg ut eller ta bort fliken
+- [ ] Migrationsfiler för `exercise_completions`-tabellen
+- [ ] End-to-end-tester för kritiska flöden (inloggning, markera dag klar, schema-skapande)
+- [ ] Error Boundaries i alla huvud-screens (idag kraschar hela sidan vid API-fel)
+- [ ] Bildkomprimering innan uppladdning av profilfoton och framstegsfoton
+- [ ] Rate limiting / debounce på Supabase-anrop i schema-sidan vid snabb swipe
+
+---
+
+## Prioriteringsmatris
+
+| Feature | Användarvärde | Effort | Prioritet |
+|---|---|---|---|
+| Fotouppgift (ta bild direkt) | Hög | Låg | 🔴 Nu |
+| Vatten-tracker med glas-räknare | Hög | Låg | 🔴 Nu |
+| ScheduleWizard → backend | Hög | Medel | 🔴 Nu |
+| Veckostaplar i Översikt | Medel | Låg | 🔴 Nu |
+| PR-tracking per övning | Hög | Medel | 🟠 Snart |
+| Push-notifikationer | Hög | Medel | 🟠 Snart |
+| Badge/achievement-system | Medel | Låg | 🟠 Snart |
+| Framstegsfoto-galleri | Hög | Medel | 🟠 Snart |
+| Viloimer mellan set | Medel | Låg | 🟠 Snart |
+| Activity-screen | Medel | Medel | 🟠 Snart |
+| AI-coach | Hög | Hög | 🟡 Senare |
+| Social / leaderboard | Medel | Hög | 🟡 Senare |
+| Apple Watch-app | Medel | Hög | 🟡 Senare |
+| Betalvägg (RevenueCat) | Hög | Hög | 🟡 Senare |
+| Video-formkontroll | Medel | Mycket hög | 🔵 Vision |
+| Marketplace för scheman | Medel | Mycket hög | 🔵 Vision |

@@ -44,6 +44,7 @@ import { WorkoutSection } from '@/components/WorkoutSection'
 import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
+import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 const GPS_KEYWORDS = ['löpning', 'running', 'jogging', 'cykling', 'cycling', 'promenad', 'walking', 'spring', 'intervallspring', 'gång']
@@ -77,6 +78,7 @@ export default function SchemaScreen() {
   const [checkedByDate, setCheckedByDate]       = useState<Record<string, Record<string, boolean>>>({})
   const [completedByDate, setCompletedByDate]   = useState<Record<string, Set<string>>>({})
   const [pickerSession, setPickerSession]   = useState<WorkoutSession | null>(null)
+  const [wizardVisible, setWizardVisible]   = useState(false)
   const [avatarUrl, setAvatarUrl]           = useState<string | null>(null)
   const [profileName, setProfileName]       = useState('')
   const [challengeDay, setChallengeDay]     = useState<number | null>(null)
@@ -333,6 +335,22 @@ export default function SchemaScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* "Skapa ditt schema" banner */}
+      <TouchableOpacity
+        style={styles.wizardBanner}
+        onPress={() => setWizardVisible(true)}
+        activeOpacity={0.85}
+      >
+        <View style={styles.wizardBannerIcon}>
+          <Ionicons name="calendar" size={22} color="#000" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.wizardBannerTitle}>Skapa ditt schema</Text>
+          <Text style={styles.wizardBannerSub}>Kom igång med ett anpassat träningsprogram</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#000" />
+      </TouchableOpacity>
+
       {/* Collapsible calendar */}
       <CollapsibleCalendar
         sessions={sessions}
@@ -571,6 +589,12 @@ export default function SchemaScreen() {
         }}
       />
 
+      <ScheduleWizard
+        visible={wizardVisible}
+        onClose={() => setWizardVisible(false)}
+        onFinish={() => setWizardVisible(false)}
+      />
+
     </SafeAreaView>
   )
 }
@@ -579,6 +603,19 @@ const styles = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: BG },
   centered: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' },
   scroll:   { paddingBottom: 80 },
+
+  wizardBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: 16, marginBottom: 10,
+    backgroundColor: ORANGE, borderRadius: 16, padding: 14,
+  },
+  wizardBannerIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  wizardBannerTitle: { color: '#000', fontSize: 15, fontWeight: '800' },
+  wizardBannerSub:   { color: 'rgba(0,0,0,0.6)', fontSize: 12, marginTop: 1 },
 
   topHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
