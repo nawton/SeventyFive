@@ -546,7 +546,7 @@ export default function SchemaScreen() {
                   {isPast && (
                     <TouchableOpacity
                       style={styles.quickAddBtn}
-                      onPress={() => setPickerSession({ id: dateStr, user_id: userId ?? '', name: dateStr, weekdays: [], sort_order: 0, created_at: '', exercises: [] })}
+                      onPress={() => setPickerSession({ id: dateStr, user_id: userId ?? '', name: dateStr, weekdays: [], sort_order: 0, created_at: '', notes: null, exercises: [] })}
                       activeOpacity={0.8}
                     >
                       <Ionicons name="add-circle-outline" size={18} color={ORANGE} />
