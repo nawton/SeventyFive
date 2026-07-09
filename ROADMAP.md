@@ -37,7 +37,7 @@
 - [x] GPS cardio-tracking med Leaflet-karta och live-statistik
 - [x] Hantera schemalagda pass (manage-sessions, endast upprepande)
 - [x] SessionEditor med valfritt namn, info-knapp för upprepning
-- [x] ScheduleWizard — UI klar (mål → avstånd/muskelplan → fokus → sammanfattning), kopplad till backend via `scheduleGenerator.ts`
+- [x] ScheduleWizard — UI klar (mål → avstånd/muskelplan → fokus → sammanfattning), kopplad till backend via `scheduleGenerator.ts`, med ersätt/behåll-val vid befintligt schema
 
 ### Framsteg (Stats)
 - [x] Översiktsfliken: kalenderöversikt, streak, completion-rate
@@ -65,7 +65,7 @@
 
 ### Schema
 - [x] **ScheduleWizard → backend**: generera faktiska träningspass baserat på wizard-svar (löppass, helkropps-styrka eller valda fokusgrupper)
-- [ ] **Övningsdetalj-screen** (`app/exercise/[id].tsx` finns men är tom): visa beskrivning, instruktioner och muskelgrupper som body-SVG
+- [x] **Övningsdetalj-screen** (`app/exercise/[id].tsx`): beskrivning, muskelgrupper som body-SVG och loggning
 - [ ] **Global sök**: sökruta på schema-sidan som söker bland alla övningar oavsett kategori
 
 ### Dashboard
@@ -76,7 +76,7 @@
 
 ### Framsteg
 - [ ] **Veckostaplar i Översikt**: stapeldiagram som visar antal klara dagar per vecka
-- [ ] **Cardio-statistik**: total distans, total tid och genomsnittlig pace summerat högst upp i Cardio-fliken
+- [x] **Cardio-statistik**: total distans, total tid, antal pass, snittempo, bästa tempo och kcal summerat högst upp i Cardio-fliken
 
 ---
 

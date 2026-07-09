@@ -38,6 +38,7 @@ import {
   uncompleteSession,
   completeExercise,
   uncompleteExercise,
+  deleteRepeatingSessions,
   type WorkoutSession,
 } from '@/services/workoutSchedule'
 import { WorkoutSection } from '@/components/WorkoutSection'
@@ -597,12 +598,29 @@ export default function SchemaScreen() {
         onFinish={async (result) => {
           setWizardVisible(false)
           if (!userId) return
-          try {
-            const count = await generateScheduleFromWizard(userId, result)
-            await loadData(userId)
-            Alert.alert('Schema skapat', `${count} pass har lagts till i ditt veckoschema.`)
-          } catch (e: any) {
-            Alert.alert('Kunde inte skapa schemat', e.message)
+          const generate = async (replaceExisting: boolean) => {
+            try {
+              if (replaceExisting) await deleteRepeatingSessions(userId)
+              const count = await generateScheduleFromWizard(userId, result)
+              await loadData(userId)
+              Alert.alert('Schema skapat', `${count} pass har lagts till i ditt veckoschema.`)
+            } catch (e: any) {
+              Alert.alert('Kunde inte skapa schemat', e.message)
+            }
+          }
+          const hasRepeating = sessions.some(s => s.weekdays.length > 0 && !s.name.startsWith('SKIP:'))
+          if (hasRepeating) {
+            Alert.alert(
+              'Du har redan ett schema',
+              'Vill du ersätta dina nuvarande upprepande pass med det nya schemat, eller behålla båda?',
+              [
+                { text: 'Avbryt', style: 'cancel' },
+                { text: 'Behåll båda', onPress: () => generate(false) },
+                { text: 'Ersätt', style: 'destructive', onPress: () => generate(true) },
+              ]
+            )
+          } else {
+            generate(false)
           }
         }}
       />

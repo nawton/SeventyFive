@@ -52,6 +52,12 @@ function fmtPace(secsPerKm: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+function fmtDuration(totalSecs: number): string {
+  const h = Math.floor(totalSecs / 3600)
+  const m = Math.round((totalSecs % 3600) / 60)
+  return h > 0 ? `${h}h ${m}m` : `${m} min`
+}
+
 function calculateStreak(days: DaySummary[], currentDay: number): number {
   let streak = 0
   for (let i = currentDay - 1; i >= 1; i--) {
@@ -159,12 +165,17 @@ export default function StatsScreen() {
   const completedDays = days.filter(d => d.status === 'completed').length
   const streak        = calculateStreak(days, currentDay)
   const totalKm       = workouts.reduce((sum, w) => sum + w.data.distance_km, 0)
+  const totalSecs     = workouts.reduce((sum, w) => sum + w.data.duration_seconds, 0)
   const totalCals     = workouts.reduce((sum, w) => sum + w.data.calories, 0)
-  const bestPaceSec   = workouts
-    .filter(w => w.data.distance_km > 0.1)
+  const pacedWorkouts = workouts.filter(w => w.data.distance_km > 0.1)
+  const bestPaceSec   = pacedWorkouts
     .map(w => w.data.duration_seconds / w.data.distance_km)
     .reduce((best, p) => (p < best ? p : best), Infinity)
   const bestPace = bestPaceSec === Infinity ? '--:--' : fmtPace(bestPaceSec)
+  // Genomsnittstempo viktat på distans: total tid / total distans för pass med distans
+  const pacedKm   = pacedWorkouts.reduce((sum, w) => sum + w.data.distance_km, 0)
+  const pacedSecs = pacedWorkouts.reduce((sum, w) => sum + w.data.duration_seconds, 0)
+  const avgPace   = pacedKm > 0 ? fmtPace(pacedSecs / pacedKm) : '--:--'
 
   if (loading) {
     return (
@@ -231,20 +242,17 @@ export default function StatsScreen() {
         {/* ── CARDIO ── */}
         {activeTab === 'cardio' && (
           <>
-            <View style={s.statsRow}>
-              {[
-                { icon: 'map-outline' as const,      value: totalKm.toFixed(1),               label: 'km totalt',   color: ORANGE },
-                { icon: 'flash-outline' as const,     value: totalCals.toLocaleString('sv-SE'), label: 'kcal',        color: '#7C5CBF' },
-                { icon: 'stopwatch-outline' as const, value: bestPace,                          label: 'bästa tempo', color: GREEN },
-              ].map(stat => (
-                <View key={stat.label} style={s.statCard}>
-                  <View style={[s.statIconBox, { backgroundColor: stat.color + '22' }]}>
-                    <Ionicons name={stat.icon} size={18} color={stat.color} />
-                  </View>
-                  <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
-                  <Text style={s.statLabel}>{stat.label}</Text>
-                </View>
-              ))}
+            <View style={s.statsGrid}>
+              <View style={s.statsRow}>
+                <StatCard label="km totalt" value={totalKm.toFixed(1)}          icon="map-outline"  color={ORANGE} />
+                <StatCard label="total tid" value={fmtDuration(totalSecs)}      icon="time-outline" color="#4A90D9" />
+                <StatCard label="pass"      value={workouts.length}             icon="walk-outline" color={GREEN} />
+              </View>
+              <View style={s.statsRow}>
+                <StatCard label="snittempo"   value={avgPace}                            icon="speedometer-outline" color="#F5A623" />
+                <StatCard label="bästa tempo" value={bestPace}                           icon="stopwatch-outline"   color="#FF6B35" />
+                <StatCard label="kcal"        value={totalCals.toLocaleString('sv-SE')}  icon="flash-outline"       color="#7C5CBF" />
+              </View>
             </View>
 
             {workouts.length > 0 ? (
@@ -464,6 +472,7 @@ const s = StyleSheet.create({
   tabText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   tabTextActive: { color: '#000', fontWeight: '700' },
 
+  statsGrid: { gap: 10 },
   statsRow:  { flexDirection: 'row', gap: 10 },
   statCard:  { flex: 1, backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 14, alignItems: 'center', gap: 6 },
   statIconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

@@ -95,6 +95,30 @@ export async function deleteSessionWithSkips(userId: string, sessionId: string):
   if (error) throw error
 }
 
+/** Tar bort alla upprepande pass och deras SKIP-poster. Returnerar antal borttagna pass. */
+export async function deleteRepeatingSessions(userId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('workout_sessions')
+    .select('id, name, weekdays')
+    .eq('user_id', userId)
+  if (error) throw error
+
+  const repeating = (data ?? []).filter(s => (s.weekdays ?? []).length > 0)
+  if (repeating.length === 0) return 0
+
+  const repeatingIds = repeating.map(s => s.id)
+  const skipIds = (data ?? [])
+    .filter(s => s.name.startsWith('SKIP:') && repeatingIds.some(id => s.name.endsWith(`:${id}`)))
+    .map(s => s.id)
+
+  const { error: delError } = await supabase
+    .from('workout_sessions')
+    .delete()
+    .in('id', [...repeatingIds, ...skipIds])
+  if (delError) throw delError
+  return repeating.length
+}
+
 export async function deleteFutureOnceSessions(userId: string): Promise<number> {
   const todayStr = toLocalDateString()
 
