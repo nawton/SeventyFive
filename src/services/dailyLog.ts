@@ -268,6 +268,40 @@ export async function getAllDays(
   })
 }
 
+/**
+ * Counts consecutive days with status='completed', ending at today or yesterday
+ * (if today is still pending). Returns 0 if no streak.
+ */
+export async function getStreak(challengeId: string): Promise<number> {
+  const { data } = await supabase
+    .from('daily_logs')
+    .select('date, status')
+    .eq('challenge_id', challengeId)
+    .order('date', { ascending: false })
+    .limit(75)
+
+  if (!data || data.length === 0) return 0
+
+  const today = toLocalDateString()
+  const checkDate = new Date()
+
+  // If today is not yet completed, start the streak check from yesterday
+  const todayEntry = data.find(d => d.date === today)
+  if (!todayEntry || todayEntry.status !== 'completed') {
+    checkDate.setDate(checkDate.getDate() - 1)
+  }
+
+  let streak = 0
+  for (let i = 0; i < 75; i++) {
+    const dateStr = toLocalDateString(checkDate)
+    const entry = data.find(d => d.date === dateStr)
+    if (!entry || entry.status !== 'completed') break
+    streak++
+    checkDate.setDate(checkDate.getDate() - 1)
+  }
+  return streak
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function toTaskItem(row: any): TaskItem {
