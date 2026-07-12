@@ -9,6 +9,11 @@ import {
   ActivityIndicator,
   Dimensions,
   Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -50,6 +55,7 @@ import {
   type TaskDetails,
 } from '@/services/dailyLog'
 import { hasPhotoForDay } from '@/services/progressPhotos'
+import { createCustomRule } from '@/services/rules'
 import { FailModal } from '@/components/FailModal'
 import { ReadingLogModal } from '@/components/ReadingLogModal'
 import { RestartPromptModal } from '@/components/RestartPromptModal'
@@ -80,6 +86,7 @@ const TASK_COLORS: Record<TaskType, string> = {
   diet:    '#66BB6A',
   reading: '#AB47BC',
   photo:   '#EC407A',
+  custom:  '#9B6DFF',
 }
 
 const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']> = {
@@ -88,6 +95,60 @@ const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']
   water:   'water-outline',
   reading: 'book-outline',
   photo:   'camera-outline',
+  custom:  'checkmark-circle-outline',
+}
+
+const ICON_OPTIONS: Array<{ icon: React.ComponentProps<typeof Ionicons>['name']; label: string }> = [
+  { icon: 'checkmark-circle-outline', label: 'Klar'       },
+  { icon: 'sunny-outline',            label: 'Morgon'     },
+  { icon: 'moon-outline',             label: 'Kväll'      },
+  { icon: 'bed-outline',              label: 'Sömn'       },
+  { icon: 'water-outline',            label: 'Vatten'     },
+  { icon: 'nutrition-outline',        label: 'Kost'       },
+  { icon: 'book-outline',             label: 'Läsning'    },
+  { icon: 'pencil-outline',           label: 'Journaling' },
+  { icon: 'heart-outline',            label: 'Meditation' },
+  { icon: 'walk-outline',             label: 'Promenad'   },
+  { icon: 'bicycle-outline',          label: 'Cykling'    },
+  { icon: 'snow-outline',             label: 'Kall dusch' },
+  { icon: 'phone-portrait-outline',   label: 'Ingen skärm'},
+  { icon: 'musical-notes-outline',    label: 'Musik'      },
+  { icon: 'flash-outline',            label: 'Energi'     },
+  { icon: 'barbell-outline',          label: 'Träning'    },
+]
+
+const ICON_ALIAS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  dumbbell:  'barbell-outline',
+  droplet:   'water-outline',
+  snowflake: 'snow-outline',
+  flame:     'flame-outline',
+  book:      'book-outline',
+  camera:    'camera-outline',
+  utensils:  'restaurant-outline',
+  run:       'walk-outline',
+  bike:      'bicycle-outline',
+  heart:     'heart-outline',
+  star:      'star-outline',
+  moon:      'moon-outline',
+  sun:       'sunny-outline',
+  check:     'checkmark-circle-outline',
+  clock:     'time-outline',
+  lightning: 'flash-outline',
+}
+
+function safeIcon(raw: string): React.ComponentProps<typeof Ionicons>['name'] {
+  return ICON_ALIAS[raw] ?? (raw as React.ComponentProps<typeof Ionicons>['name'])
+}
+
+function levelRuleIcon(rule: string): React.ComponentProps<typeof Ionicons>['name'] {
+  const r = rule.toLowerCase()
+  if (r.includes('träning') || r.includes('workout') || r.includes('pass')) return 'barbell-outline'
+  if (r.includes('vatten') || r.includes('water'))                           return 'water-outline'
+  if (r.includes('kost') || r.includes('diet') || r.includes('mat'))        return 'nutrition-outline'
+  if (r.includes('läs') || r.includes('sidor'))                             return 'book-outline'
+  if (r.includes('foto') || r.includes('photo'))                            return 'camera-outline'
+  if (r.includes('dusch') || r.includes('shower'))                          return 'snow-outline'
+  return 'checkmark-circle-outline'
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -271,6 +332,13 @@ export default function DashboardScreen() {
   const [completedDaysCount, setCompletedDaysCount] = useState(0)
   const [readingTask, setReadingTask] = useState<TaskItem | null>(null)
   const [loadError, setLoadError]   = useState(false)
+  const [userId, setUserId]         = useState<string | null>(null)
+
+  // Add-rule sheet
+  const [addRuleOpen, setAddRuleOpen]   = useState(false)
+  const [newRuleName, setNewRuleName]   = useState('')
+  const [newRuleIcon, setNewRuleIcon]   = useState<React.ComponentProps<typeof Ionicons>['name']>('checkmark-circle-outline')
+  const [ruleSaving, setRuleSaving]     = useState(false)
 
   // ── 3D floating hero animation ──
   const tiltX = useSharedValue(0)
@@ -315,6 +383,8 @@ export default function DashboardScreen() {
       const user = session?.user
       if (!user) { router.replace('/(auth)/welcome'); return }
 
+      setUserId(user.id)
+
       const profile = await getProfile(user.id)
       setUserName(profile?.name || user.email?.split('@')[0] || 'Nawton')
       if (profile?.avatar_url) setUserAvatar(profile.avatar_url)
@@ -339,7 +409,7 @@ export default function DashboardScreen() {
       setDailyLogId(log.id)
       if (log.status === 'failed') setDayFailed(true)
 
-      let completions = await getOrCreateTaskCompletions(log.id, active.level_id)
+      let completions = await getOrCreateTaskCompletions(log.id, active.level_id, user.id, active.id)
 
       // Fotouppgiften kräver ett faktiskt foto — är den ibockad utan bild
       // (t.ex. borttagen från profilen) bockas den ur igen
@@ -480,6 +550,32 @@ export default function DashboardScreen() {
     router.replace('/(auth)/quiz')
   }
 
+  function openAddRule() {
+    setNewRuleName('')
+    setNewRuleIcon('checkmark-circle-outline')
+    setAddRuleOpen(true)
+  }
+
+  async function handleCreateRule() {
+    if (!newRuleName.trim() || !userId || !challenge || !dailyLogId) return
+    setRuleSaving(true)
+    try {
+      await createCustomRule(userId, challenge.id, challenge.level_id, newRuleName.trim(), newRuleIcon)
+      const updated = await getOrCreateTaskCompletions(dailyLogId, challenge.level_id, userId, challenge.id)
+      setTasks(updated)
+      setAddRuleOpen(false)
+      setNewRuleName('')
+    } catch {
+      Alert.alert('Fel', 'Kunde inte spara regeln.')
+    } finally {
+      setRuleSaving(false)
+    }
+  }
+
+  const standardTasks = tasks.filter(t => t.type !== 'custom')
+  const customTasks   = tasks.filter(t => t.type === 'custom')
+  const levelRules    = (challenge?.challenge_levels?.rules ?? []) as any[]
+
   const completedCount = tasks.filter(t => t.completed).length
   const allDone = tasks.length > 0 && completedCount === tasks.length
   const challengePct = Math.round((currentDay / 75) * 100)
@@ -592,7 +688,7 @@ export default function DashboardScreen() {
 
         {/* ── Task grid ── */}
         <View style={s.taskGrid}>
-          {tasks.map(task => {
+          {standardTasks.map(task => {
             if (task.type === 'water') {
               const goal = waterGoal(task)
               const glasses = task.details?.glasses ?? 0
@@ -646,6 +742,63 @@ export default function DashboardScreen() {
           })}
         </View>
 
+        {/* ── Regler ── */}
+        <View style={s.sectionRow}>
+          <Text style={s.sectionTitle}>REGLER</Text>
+          <TouchableOpacity style={s.addRuleChip} onPress={openAddRule} activeOpacity={0.8}>
+            <Ionicons name="add" size={13} color={ORANGE} />
+            <Text style={s.addRuleChipText}>Lägg till</Text>
+          </TouchableOpacity>
+        </View>
+
+        {(levelRules.length > 0 || customTasks.length > 0) && (
+          <View style={s.rulesCard}>
+            {levelRules.map((r: any, i: number) => {
+              const ruleText: string = typeof r === 'string' ? r : (r.rule ?? '')
+              const icon = typeof r === 'object' && r.icon ? safeIcon(r.icon) : levelRuleIcon(ruleText)
+              const isLast = i === levelRules.length - 1 && customTasks.length === 0
+              return (
+                <View key={i} style={[s.ruleItem, !isLast && s.ruleItemBorder]}>
+                  <View style={[s.ruleIconBox, { backgroundColor: ORANGE + '18' }]}>
+                    <Ionicons name={icon} size={15} color={ORANGE} />
+                  </View>
+                  <Text style={s.ruleItemText}>{ruleText}</Text>
+                  <Ionicons name="lock-closed-outline" size={12} color="#2A2A30" />
+                </View>
+              )
+            })}
+            {customTasks.map((task, i) => {
+              const CUSTOM_COLOR = '#9B6DFF'
+              const isLast = i === customTasks.length - 1
+              return (
+                <TouchableOpacity
+                  key={task.completionId}
+                  style={[s.ruleItem, !isLast && s.ruleItemBorder]}
+                  onPress={() => toggleTask(task)}
+                  activeOpacity={0.8}
+                >
+                  <View style={[s.ruleIconBox, { backgroundColor: CUSTOM_COLOR + '18' }]}>
+                    <Ionicons name="checkmark-circle-outline" size={15} color={CUSTOM_COLOR} />
+                  </View>
+                  <Text style={[s.ruleItemText, task.completed && s.ruleItemTextDone]}>
+                    {task.name}
+                  </Text>
+                  <View style={[s.ruleCheckBox, task.completed && { backgroundColor: '#4CAF50', borderColor: '#4CAF50' }]}>
+                    {task.completed && <Ionicons name="checkmark" size={10} color="#000" />}
+                  </View>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        )}
+
+        {levelRules.length === 0 && customTasks.length === 0 && (
+          <TouchableOpacity style={s.rulesEmptyCard} onPress={openAddRule} activeOpacity={0.8}>
+            <Ionicons name="add-circle-outline" size={20} color="#3A3A40" />
+            <Text style={s.rulesEmptyText}>Lägg till en egen daglig regel</Text>
+          </TouchableOpacity>
+        )}
+
         {/* ── Fail / done ── */}
         {!dayFailed && !allDone && (
           <TouchableOpacity
@@ -686,6 +839,76 @@ export default function DashboardScreen() {
         onClose={() => setReadingTask(null)}
         onSave={handleReadingSave}
       />
+
+      {/* ── Add rule sheet ── */}
+      <Modal
+        visible={addRuleOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setAddRuleOpen(false)}
+      >
+        <KeyboardAvoidingView
+          style={s.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setAddRuleOpen(false)} />
+          <View style={s.sheet}>
+            <View style={s.sheetHandle} />
+            <View style={s.sheetHeader}>
+              <Text style={s.sheetTitle}>Ny regel</Text>
+              <TouchableOpacity onPress={() => setAddRuleOpen(false)} style={s.sheetClose}>
+                <Ionicons name="close" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={s.sheetFieldLabel}>NAMN</Text>
+            <TextInput
+              style={s.sheetInput}
+              value={newRuleName}
+              onChangeText={setNewRuleName}
+              placeholder="t.ex. Kall dusch varje morgon"
+              placeholderTextColor="#4A4A50"
+              maxLength={60}
+              returnKeyType="done"
+              onSubmitEditing={handleCreateRule}
+              autoFocus
+            />
+
+            <Text style={[s.sheetFieldLabel, { marginTop: 18 }]}>IKON</Text>
+            <View style={s.iconGrid}>
+              {ICON_OPTIONS.map(opt => (
+                <TouchableOpacity
+                  key={opt.icon}
+                  style={[s.iconBtn, newRuleIcon === opt.icon && s.iconBtnActive]}
+                  onPress={() => setNewRuleIcon(opt.icon)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons
+                    name={opt.icon}
+                    size={20}
+                    color={newRuleIcon === opt.icon ? '#000' : '#4A4A50'}
+                  />
+                  <Text style={[s.iconBtnLabel, newRuleIcon === opt.icon && s.iconBtnLabelActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[s.sheetSaveBtn, !newRuleName.trim() && s.sheetSaveBtnDisabled]}
+              onPress={handleCreateRule}
+              disabled={!newRuleName.trim() || ruleSaving}
+              activeOpacity={0.85}
+            >
+              {ruleSaving
+                ? <ActivityIndicator color="#000" size="small" />
+                : <Text style={s.sheetSaveBtnText}>Spara regel</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -850,6 +1073,96 @@ const s = StyleSheet.create({
     color: '#BBBBBB', fontSize: 13, fontWeight: '600', lineHeight: 18,
   },
   taskNameDone: { color: '#3A3A40' },
+
+  // Rules section
+  addRuleChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: CARD_BG,
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5,
+    borderWidth: 1, borderColor: ORANGE + '44',
+  },
+  addRuleChipText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
+
+  rulesCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 18,
+    borderWidth: 1, borderColor: CARD_BORDER,
+    overflow: 'hidden',
+  },
+  ruleItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 14, paddingVertical: 13,
+  },
+  ruleItemBorder: {
+    borderBottomWidth: 1, borderBottomColor: CARD_BORDER,
+  },
+  ruleIconBox: {
+    width: 32, height: 32, borderRadius: 9,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  ruleItemText: {
+    flex: 1, color: '#BBBBBB', fontSize: 13, fontWeight: '500', lineHeight: 18,
+  },
+  ruleItemTextDone: { color: '#3A3A40', textDecorationLine: 'line-through' },
+  ruleCheckBox: {
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 1.5, borderColor: '#2A2A2E',
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+
+  rulesEmptyCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: CARD_BG,
+    borderRadius: 16, paddingVertical: 14, paddingHorizontal: 14,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: '#2A2A2E',
+  },
+  rulesEmptyText: { color: '#3A3A40', fontSize: 13, fontWeight: '500' },
+
+  // Add-rule modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: CARD_BG, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    paddingHorizontal: 20, paddingBottom: 44, paddingTop: 12,
+  },
+  sheetHandle: {
+    width: 40, height: 4, backgroundColor: CARD_BORDER, borderRadius: 2,
+    alignSelf: 'center', marginBottom: 18,
+  },
+  sheetHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22,
+  },
+  sheetTitle:  { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
+  sheetClose: {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: '#1E1E21', alignItems: 'center', justifyContent: 'center',
+  },
+  sheetFieldLabel: {
+    color: '#3A3A40', fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginBottom: 8,
+  },
+  sheetInput: {
+    backgroundColor: '#0F0F11', borderRadius: 14,
+    borderWidth: 1, borderColor: CARD_BORDER,
+    color: '#FFFFFF', fontSize: 16,
+    paddingHorizontal: 16, paddingVertical: 14,
+  },
+  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  iconBtn: {
+    flexDirection: 'column', alignItems: 'center', gap: 4,
+    backgroundColor: '#0F0F11', borderRadius: 12,
+    borderWidth: 1, borderColor: CARD_BORDER,
+    paddingHorizontal: 10, paddingVertical: 10, minWidth: 60,
+  },
+  iconBtnActive: { backgroundColor: ORANGE, borderColor: ORANGE },
+  iconBtnLabel:       { color: '#4A4A50', fontSize: 10, fontWeight: '500' },
+  iconBtnLabelActive: { color: '#000' },
+  sheetSaveBtn: {
+    backgroundColor: ORANGE, borderRadius: 16,
+    paddingVertical: 16, alignItems: 'center', marginTop: 24,
+  },
+  sheetSaveBtnDisabled: { opacity: 0.4 },
+  sheetSaveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 
   // Fail
   failBtn: {

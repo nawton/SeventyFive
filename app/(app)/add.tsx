@@ -480,6 +480,9 @@ export default function SchemaScreen() {
                       onLongPress={() => handleSessionLongPress(s, sessionDisplayName(s))}
                       onAddExercise={!isPast ? () => setPickerSession(s) : undefined}
                       onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
+                      onStartCardioSession={s.session_type === 'cardio'
+                        ? () => router.push({ pathname: '/cardio', params: { name: s.cardio_type ?? 'running', sessionId: s.id, sessionDate: dateStr } })
+                        : undefined}
                       onCardPress={(sessionEx) => {
                         const name   = sessionEx.exercise_name
                         const exInfo = exercises.find(e => e.name === name)
@@ -549,7 +552,7 @@ export default function SchemaScreen() {
                   {isPast && (
                     <TouchableOpacity
                       style={styles.quickAddBtn}
-                      onPress={() => setPickerSession({ id: dateStr, user_id: userId ?? '', name: dateStr, weekdays: [], sort_order: 0, created_at: '', notes: null, exercises: [] })}
+                      onPress={() => setPickerSession({ id: dateStr, user_id: userId ?? '', name: dateStr, weekdays: [], sort_order: 0, created_at: '', notes: null, session_type: 'gym', cardio_type: null, exercises: [] })}
                       activeOpacity={0.8}
                     >
                       <Ionicons name="add-circle-outline" size={18} color={ORANGE} />

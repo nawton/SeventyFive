@@ -7,7 +7,7 @@
 export type SubscriptionStatus = 'trial' | 'active' | 'expired'
 export type ChallengeStatus = 'active' | 'failed' | 'completed'
 export type DailyLogStatus = 'pending' | 'completed' | 'failed'
-export type TaskType = 'workout' | 'diet' | 'water' | 'reading' | 'photo'
+export type TaskType = 'workout' | 'diet' | 'water' | 'reading' | 'photo' | 'custom'
 export type ExerciseCategory = 'strength' | 'cardio' | 'mobility' | 'hiit'
 export type ExerciseDifficulty = 'beginner' | 'intermediate' | 'advanced'
 export type ChallengeSlug = 'normal' | 'hard' | 'extreme'
@@ -64,6 +64,8 @@ export interface UserChallenge {
 export interface TaskTemplate {
   id: string
   level_id: string
+  user_id: string | null
+  challenge_id: string | null
   type: TaskType
   name: string
   description: string | null

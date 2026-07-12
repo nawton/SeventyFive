@@ -58,12 +58,13 @@ export async function getOrCreateTodayLog(
 
 export async function getOrCreateTaskCompletions(
   dailyLogId: string,
-  levelId: string
+  levelId: string,
+  userId?: string,
+  challengeId?: string,
 ): Promise<TaskItem[]> {
   const SELECT = 'id, completed, task_template_id, details, task_templates(name, description, type, target_value, unit)'
 
-  // Ett select-fel får ALDRIG tolkas som "första besöket" — då försöker vi
-  // skapa dubbletter av completions som redan finns
+  // A select error must never be treated as "first visit" — that would create duplicates
   const { data: existing, error: selectError } = await supabase
     .from('task_completions')
     .select(SELECT)
@@ -74,25 +75,31 @@ export async function getOrCreateTaskCompletions(
     return existing.map(toTaskItem)
   }
 
-  // First visit of the day — seed completions from templates
-  const { data: templates } = await supabase
-    .from('task_templates')
-    .select('id')
-    .eq('level_id', levelId)
+  // First visit of the day — seed completions from level templates + user custom templates
+  let query = supabase.from('task_templates').select('id').eq('level_id', levelId)
 
-  if (!templates || templates.length === 0) return []
+  const { data: levelTemplates } = await query
+  const { data: customTemplates } = userId && challengeId
+    ? await supabase
+        .from('task_templates')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('challenge_id', challengeId)
+    : { data: [] }
+
+  const allTemplates = [...(levelTemplates ?? []), ...(customTemplates ?? [])]
+  if (allTemplates.length === 0) return []
 
   const { data: created, error: insertError } = await supabase
     .from('task_completions')
-    .insert(templates.map((t) => ({
+    .insert(allTemplates.map((t) => ({
       daily_log_id: dailyLogId,
       task_template_id: t.id,
       completed: false,
     })))
     .select(SELECT)
 
-  // Unik-krock = raderna skapades redan (race eller tidigare misslyckad läsning)
-  // — hämta dem istället för att returnera tomt
+  // Unique violation = rows already exist (race or earlier failed read) — re-fetch
   if (insertError) {
     const { data: retry, error: retryError } = await supabase
       .from('task_completions')

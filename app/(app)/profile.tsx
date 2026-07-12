@@ -165,7 +165,7 @@ export default function ProfileScreen() {
     if (!userId || !challenge) return
     try {
       const log = await getOrCreateTodayLog(challenge.id, userId, currentDay)
-      const tasks = await getOrCreateTaskCompletions(log.id, challenge.level_id)
+      const tasks = await getOrCreateTaskCompletions(log.id, challenge.level_id, userId, challenge.id)
       const photoTask = tasks.find(t => t.type === 'photo' && !t.completed)
       if (photoTask) await setTaskCompleted(photoTask.completionId, true)
     } catch {
@@ -179,7 +179,7 @@ export default function ProfileScreen() {
     if (remaining.some(p => p.dayNumber === currentDay)) return
     try {
       const log = await getOrCreateTodayLog(challenge.id, userId, currentDay)
-      const tasks = await getOrCreateTaskCompletions(log.id, challenge.level_id)
+      const tasks = await getOrCreateTaskCompletions(log.id, challenge.level_id, userId, challenge.id)
       const photoTask = tasks.find(t => t.type === 'photo' && t.completed)
       if (photoTask) {
         await setTaskCompleted(photoTask.completionId, false)

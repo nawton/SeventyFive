@@ -28,6 +28,24 @@ function isGPS(name: string) {
   return GPS_KEYWORDS.some(kw => name.toLowerCase().includes(kw))
 }
 
+function cardioIcon(type: string | null): React.ComponentProps<typeof Ionicons>['name'] {
+  switch (type) {
+    case 'cycling':  return 'bicycle-outline'
+    case 'interval': return 'flash-outline'
+    case 'walking':  return 'walk-outline'
+    default:         return 'fitness-outline'
+  }
+}
+
+function cardioLabel(type: string | null): string {
+  switch (type) {
+    case 'cycling':  return 'Cykling'
+    case 'interval': return 'Intervall'
+    case 'walking':  return 'Promenad'
+    default:         return 'Löpning'
+  }
+}
+
 // ── Two-stage swipe constants ─────────────────────────────────────────────────
 //
 // Stage 1: card snaps to SNAP_OPEN — action button appears as a circle.
@@ -559,14 +577,15 @@ export interface WorkoutSectionProps {
   onToggleExercise:  (exId: string) => void
   onDeleteExercise:  (exId: string) => void
   onEditExercise:    (exId: string, sets: number | null, reps: string | null) => void
-  onStartCardio:     (name: string) => void
-  onCardPress:       (ex: SessionExercise) => void
-  onComplete:        () => void
-  onUncomplete:      () => void
-  onEdit:            () => void
-  onLongPress?:      () => void
-  onAddExercise?:    () => void
-  isQuickLog?:       boolean
+  onStartCardio:         (name: string) => void
+  onStartCardioSession?: () => void
+  onCardPress:           (ex: SessionExercise) => void
+  onComplete:            () => void
+  onUncomplete:          () => void
+  onEdit:                () => void
+  onLongPress?:          () => void
+  onAddExercise?:        () => void
+  isQuickLog?:           boolean
 }
 
 // ─── WorkoutSection ───────────────────────────────────────────────────────────
@@ -579,6 +598,7 @@ export function WorkoutSection({
   onDeleteExercise,
   onEditExercise,
   onStartCardio,
+  onStartCardioSession,
   onCardPress,
   onComplete,
   onUncomplete,
@@ -587,8 +607,9 @@ export function WorkoutSection({
   onEdit,
   isQuickLog,
 }: WorkoutSectionProps) {
-  const total     = session.exercises.length
-  const doneCount = session.exercises.filter(e => checked[e.id]).length
+  const isCardio  = session.session_type === 'cardio'
+  const total     = isCardio ? 0 : session.exercises.length
+  const doneCount = isCardio ? 0 : session.exercises.filter(e => checked[e.id]).length
   const pct       = total > 0 ? doneCount / total : 0
 
   const completedV = useSharedValue(isCompleted ? 1 : 0)
@@ -629,7 +650,7 @@ export function WorkoutSection({
 
         <View style={[s.headerIcon, isCompleted && s.headerIconDone]}>
           <Ionicons
-            name={isCompleted ? 'checkmark' : 'barbell-outline'}
+            name={isCompleted ? 'checkmark' : isCardio ? cardioIcon(session.cardio_type) : 'barbell-outline'}
             size={16}
             color={isCompleted ? '#fff' : ORANGE}
           />
@@ -645,10 +666,12 @@ export function WorkoutSection({
           <Text style={s.sessionName}>{session.name}</Text>
           <Text style={s.sessionMeta}>
             {isCompleted
-              ? 'Alla övningar klara'
-              : total === 0
-                ? 'Inga övningar tillagda'
-                : `${doneCount} av ${total} klara`}
+              ? (isCardio ? 'Pass avklarat' : 'Alla övningar klara')
+              : isCardio
+                ? cardioLabel(session.cardio_type)
+                : total === 0
+                  ? 'Inga övningar tillagda'
+                  : `${doneCount} av ${total} klara`}
           </Text>
           {!!session.notes && (
             <View style={s.notesRow}>
@@ -693,8 +716,21 @@ export function WorkoutSection({
         </View>
       )}
 
+      {/* ── Cardio start row ── */}
+      {isCardio && !isCompleted && (
+        <TouchableOpacity
+          style={s.cardioStartRow}
+          onPress={onStartCardioSession}
+          activeOpacity={0.8}
+        >
+          <Ionicons name={cardioIcon(session.cardio_type)} size={18} color={ORANGE} />
+          <Text style={s.cardioStartText}>STARTA {cardioLabel(session.cardio_type).toUpperCase()}</Text>
+          <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+        </TouchableOpacity>
+      )}
+
       {/* ── Exercise rows (flat, NOT nested inside session card) ── */}
-      {total > 0 && (
+      {!isCardio && total > 0 && (
         <View style={s.exList}>
           {session.exercises.map(ex => (
             <ExerciseRow
@@ -711,7 +747,7 @@ export function WorkoutSection({
         </View>
       )}
 
-      {onAddExercise && (
+      {!isCardio && onAddExercise && (
         <TouchableOpacity style={s.addRow} onPress={onAddExercise} activeOpacity={0.75}>
           <Ionicons name="add" size={16} color={ORANGE} />
           <Text style={s.addRowText}>Lägg till övning</Text>
@@ -810,4 +846,24 @@ const s = StyleSheet.create({
     paddingVertical:   14,
   },
   addRowText: { color: ORANGE, fontSize: 14, fontWeight: '500' },
+
+  cardioStartRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               10,
+    backgroundColor:   CARD,
+    borderRadius:      14,
+    borderWidth:       1,
+    borderColor:       ORANGE + '40',
+    paddingHorizontal: 16,
+    paddingVertical:   14,
+    marginBottom:      6,
+  },
+  cardioStartText: {
+    flex:        1,
+    color:       ORANGE,
+    fontSize:    14,
+    fontWeight:  '700',
+    letterSpacing: 1,
+  },
 })

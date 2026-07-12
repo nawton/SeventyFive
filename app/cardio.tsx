@@ -16,6 +16,8 @@ import WebView from 'react-native-webview'
 import { ORANGE } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { saveCardioWorkout } from '@/services/workouts'
+import { completeCardioSession } from '@/services/workoutSchedule'
+import { toLocalDateString } from '@/lib/date'
 
 type Coord = { latitude: number; longitude: number }
 type Status = 'idle' | 'running' | 'paused'
@@ -165,7 +167,7 @@ const MAP_HTML = `<!DOCTYPE html>
 </html>`
 
 export default function CardioScreen() {
-  const { name } = useLocalSearchParams<{ name?: string }>()
+  const { name, sessionId, sessionDate } = useLocalSearchParams<{ name?: string; sessionId?: string; sessionDate?: string }>()
 
   const webRef = useRef<InstanceType<typeof WebView>>(null)
   const locationSub = useRef<Location.LocationSubscription | null>(null)
@@ -374,6 +376,10 @@ export default function CardioScreen() {
           calories: summary.calories,
           route: summary.route,
         })
+        if (sessionId) {
+          const date = sessionDate ?? toLocalDateString()
+          await completeCardioSession(sessionId, session.user.id, date, summary.distanceKm, summary.elapsed)
+        }
       }
     } finally {
       setSaving(false)

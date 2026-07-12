@@ -53,6 +53,17 @@ export function todayIso(): number {
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
+const CARDIO_TYPES: Array<{
+  key: string
+  label: string
+  icon: React.ComponentProps<typeof Ionicons>['name']
+}> = [
+  { key: 'running',  label: 'Löpning',  icon: 'fitness-outline' },
+  { key: 'cycling',  label: 'Cykling',  icon: 'bicycle-outline' },
+  { key: 'interval', label: 'Intervall', icon: 'flash-outline' },
+  { key: 'walking',  label: 'Promenad', icon: 'walk-outline' },
+]
+
 const CATEGORY_ICONS: Record<ExerciseCategory, React.ComponentProps<typeof Ionicons>['name']> = {
   strength: 'barbell-outline',
   cardio:   'walk-outline',
@@ -107,6 +118,8 @@ export function SessionEditor({
   const [weekdays, setWeekdays]         = useState<number[]>([])
   const [repeat, setRepeat]             = useState(false)
   const [drafts, setDrafts]             = useState<DraftExercise[]>([])
+  const [sessionType, setSessionType]   = useState<'gym' | 'cardio'>('gym')
+  const [cardioType, setCardioType]     = useState('running')
   const [showPicker, setShowPicker]     = useState(false)
   const [pickerFilter, setPickerFilter] = useState('all')
   const [pickerSearch, setPickerSearch] = useState('')
@@ -133,6 +146,8 @@ export function SessionEditor({
       }
       setWeekdays([...session.weekdays])
       setNotes(session.notes ?? '')
+      setSessionType(session.session_type ?? 'gym')
+      setCardioType(session.cardio_type ?? 'running')
       setDrafts(session.exercises.map(e => ({
         key: e.id,
         exercise_name: e.exercise_name,
@@ -148,6 +163,8 @@ export function SessionEditor({
       setWeekdays([wd])
       setRepeat(false)
       setDrafts([])
+      setSessionType('gym')
+      setCardioType('running')
     }
     setShowPicker(false)
     setPickerFilter('all')
@@ -256,9 +273,9 @@ export function SessionEditor({
 
       const savedNotes = notes.trim() || null
       if (session) {
-        await updateWorkoutSession(session.id, savedName, savedWeekdays, exList, savedNotes)
+        await updateWorkoutSession(session.id, savedName, savedWeekdays, exList, savedNotes, sessionType, cardioType || null)
       } else {
-        await createWorkoutSession(userId, savedName, savedWeekdays, exList, savedNotes)
+        await createWorkoutSession(userId, savedName, savedWeekdays, exList, savedNotes, sessionType, cardioType || null)
       }
       onSaved()
       dismissEditor()
@@ -345,6 +362,30 @@ export function SessionEditor({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            {/* ── Session type toggle ── */}
+            <View style={s.field}>
+              <Text style={s.label}>TYP AV PASS</Text>
+              <View style={s.typeToggle}>
+                {(['gym', 'cardio'] as const).map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[s.typeBtn, sessionType === t && s.typeBtnActive]}
+                    onPress={() => setSessionType(t)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={t === 'gym' ? 'barbell-outline' : 'fitness-outline'}
+                      size={14}
+                      color={sessionType === t ? '#000' : TEXT_SECONDARY}
+                    />
+                    <Text style={[s.typeBtnText, sessionType === t && s.typeBtnTextActive]}>
+                      {t === 'gym' ? 'Gympass' : 'Cardio'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
             <View style={s.field}>
               <Text style={s.label}>NAMN</Text>
               <TextInput
@@ -430,6 +471,34 @@ export function SessionEditor({
               </TouchableOpacity>
             </View>
 
+            {/* ── Cardio type picker ── */}
+            {sessionType === 'cardio' && (
+              <View style={s.field}>
+                <Text style={s.label}>AKTIVITET</Text>
+                <View style={s.cardioTypeGrid}>
+                  {CARDIO_TYPES.map(ct => (
+                    <TouchableOpacity
+                      key={ct.key}
+                      style={[s.cardioTypeBtn, cardioType === ct.key && s.cardioTypeBtnActive]}
+                      onPress={() => setCardioType(ct.key)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={ct.icon}
+                        size={20}
+                        color={cardioType === ct.key ? '#000' : TEXT_SECONDARY}
+                      />
+                      <Text style={[s.cardioTypeTxt, cardioType === ct.key && s.cardioTypeTxtActive]}>
+                        {ct.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* ── Gym exercises ── */}
+            {sessionType === 'gym' && (
             <View style={s.field}>
               <Text style={s.label}>ÖVNINGAR</Text>
               {drafts.map(d => {
@@ -475,6 +544,7 @@ export function SessionEditor({
                 <Text style={s.pickerToggleText}>Lägg till övning</Text>
               </TouchableOpacity>
             </View>
+            )}
 
             <TouchableOpacity
               style={[s.saveBtn, saving && { opacity: 0.6 }]}
@@ -858,6 +928,31 @@ const s = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 10,
   },
   saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+
+  typeToggle: {
+    flexDirection: 'row', gap: 8,
+  },
+  typeBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 7, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
+  typeBtnActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
+  typeBtnText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
+  typeBtnTextActive: { color: '#000', fontWeight: '700' },
+
+  cardioTypeGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+  },
+  cardioTypeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingVertical: 11, paddingHorizontal: 14,
+    borderRadius: 12, backgroundColor: CARD,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  cardioTypeBtnActive:  { backgroundColor: ORANGE, borderColor: ORANGE },
+  cardioTypeTxt:        { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
+  cardioTypeTxtActive:  { color: '#000', fontWeight: '700' },
 
   infoScreen: { flex: 1, backgroundColor: BG },
   infoHeader: {

@@ -95,9 +95,22 @@ function DayCard({
             {displayName(daySessions[0])}
           </Text>
           <View style={s.cardBottom}>
-            <Text style={s.metaText}>
-              {exerciseCount} övn{multiPass ? ` · ${daySessions.length} pass` : ''}
-            </Text>
+            {daySessions[0].session_type === 'cardio' ? (
+              <Ionicons
+                name={
+                  daySessions[0].cardio_type === 'cycling'  ? 'bicycle-outline' :
+                  daySessions[0].cardio_type === 'walking'  ? 'walk-outline'    :
+                  daySessions[0].cardio_type === 'interval' ? 'flash-outline'   :
+                  'fitness-outline'
+                }
+                size={13}
+                color={ORANGE}
+              />
+            ) : (
+              <Text style={s.metaText}>
+                {exerciseCount} övn{multiPass ? ` · ${daySessions.length} pass` : ''}
+              </Text>
+            )}
             <View style={[s.activeDot, multiPass && s.activeDotMulti]} />
           </View>
         </>

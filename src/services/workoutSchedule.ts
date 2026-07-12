@@ -18,6 +18,8 @@ export interface WorkoutSession {
   sort_order: number
   created_at: string
   notes: string | null
+  session_type: 'gym' | 'cardio'
+  cardio_type: string | null   // 'running' | 'cycling' | 'interval' | 'walking'
   exercises: SessionExercise[]
 }
 
@@ -30,9 +32,11 @@ export async function getWorkoutSessions(userId: string): Promise<WorkoutSession
   if (error) throw error
   return (data ?? []).map(s => ({
     ...s,
-    weekdays: s.weekdays ?? [],
-    notes: s.notes ?? null,
-    exercises: [...(s.session_exercises ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+    weekdays:     s.weekdays ?? [],
+    notes:        s.notes ?? null,
+    session_type: (s.session_type ?? 'gym') as 'gym' | 'cardio',
+    cardio_type:  s.cardio_type ?? null,
+    exercises:    [...(s.session_exercises ?? [])].sort((a, b) => a.sort_order - b.sort_order),
   }))
 }
 
@@ -42,20 +46,33 @@ export async function createWorkoutSession(
   weekdays: number[],
   exercises: Array<{ exercise_name: string; sets: number | null; reps: string | null }>,
   notes?: string | null,
+  sessionType: 'gym' | 'cardio' = 'gym',
+  cardioType?: string | null,
 ): Promise<WorkoutSession> {
   const { data, error } = await supabase
     .from('workout_sessions')
-    .insert({ user_id: userId, name, weekdays, notes: notes ?? null })
+    .insert({
+      user_id: userId, name, weekdays,
+      notes: notes ?? null,
+      session_type: sessionType,
+      cardio_type: cardioType ?? null,
+    })
     .select()
     .single()
   if (error) throw error
 
-  if (exercises.length > 0) {
+  if (sessionType === 'gym' && exercises.length > 0) {
     await supabase.from('session_exercises').insert(
       exercises.map((e, i) => ({ session_id: data.id, ...e, sort_order: i }))
     )
   }
-  return { ...data, notes: data.notes ?? null, exercises: [] }
+  return {
+    ...data,
+    notes:        data.notes ?? null,
+    session_type: (data.session_type ?? 'gym') as 'gym' | 'cardio',
+    cardio_type:  data.cardio_type ?? null,
+    exercises:    [],
+  }
 }
 
 export async function updateWorkoutSession(
@@ -64,19 +81,42 @@ export async function updateWorkoutSession(
   weekdays: number[],
   exercises: Array<{ exercise_name: string; sets: number | null; reps: string | null }>,
   notes?: string | null,
+  sessionType: 'gym' | 'cardio' = 'gym',
+  cardioType?: string | null,
 ): Promise<void> {
   const { error } = await supabase
     .from('workout_sessions')
-    .update({ name, weekdays, notes: notes ?? null })
+    .update({
+      name, weekdays,
+      notes: notes ?? null,
+      session_type: sessionType,
+      cardio_type: cardioType ?? null,
+    })
     .eq('id', sessionId)
   if (error) throw error
 
   await supabase.from('session_exercises').delete().eq('session_id', sessionId)
-  if (exercises.length > 0) {
+  if (sessionType === 'gym' && exercises.length > 0) {
     await supabase.from('session_exercises').insert(
       exercises.map((e, i) => ({ session_id: sessionId, ...e, sort_order: i }))
     )
   }
+}
+
+export async function completeCardioSession(
+  sessionId: string,
+  userId: string,
+  date: string,
+  distanceKm: number,
+  durationSeconds: number,
+): Promise<void> {
+  const { error } = await supabase
+    .from('workout_completions')
+    .upsert(
+      { session_id: sessionId, user_id: userId, completed_date: date, distance_km: distanceKm, duration_seconds: durationSeconds },
+      { onConflict: 'session_id,completed_date' },
+    )
+  if (error && error.code !== '23505') console.warn('[completeCardioSession]', error.message)
 }
 
 export async function deleteWorkoutSession(id: string): Promise<void> {
