@@ -17,33 +17,36 @@ interface PlannedSession {
   name: string
   weekdays: number[]
   exercises: PlannedExercise[]
+  cardioType?: 'running' | 'interval' | 'cycling' | 'walking'
+  notes?: string
 }
 
 // ─── Löpprogram ───────────────────────────────────────────────────────────────
-// Tis intervaller, Tor lugnt pass, Lör långpass — halvmara/mara får även tempopass
+// Tis intervaller, Tor lugnt pass, Lör långpass — halvmara/mara får även tempopass.
+// Skapas som riktiga cardio-pass (session_type 'cardio') med passbeskrivningen i notes.
 
 const RUN_PLANS: Record<string, PlannedSession[]> = {
   '5k': [
-    { name: 'Intervaller',  weekdays: [2], exercises: [{ exercise_name: 'Intervallspring', sets: null, reps: '6×400 m' }] },
-    { name: 'Lugn löpning', weekdays: [4], exercises: [{ exercise_name: 'Löpning',         sets: null, reps: '20–25 min' }] },
-    { name: 'Långpass',     weekdays: [6], exercises: [{ exercise_name: 'Löpning',         sets: null, reps: '4–5 km' }] },
+    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: '6×400 m' },
+    { name: 'Lugn löpning', weekdays: [4], exercises: [], cardioType: 'running',  notes: '20–25 min' },
+    { name: 'Långpass',     weekdays: [6], exercises: [], cardioType: 'running',  notes: '4–5 km' },
   ],
   '10k': [
-    { name: 'Intervaller',  weekdays: [2], exercises: [{ exercise_name: 'Intervallspring', sets: null, reps: '5×800 m' }] },
-    { name: 'Lugn löpning', weekdays: [4], exercises: [{ exercise_name: 'Löpning',         sets: null, reps: '30–40 min' }] },
-    { name: 'Långpass',     weekdays: [6], exercises: [{ exercise_name: 'Löpning',         sets: null, reps: '7–9 km' }] },
+    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: '5×800 m' },
+    { name: 'Lugn löpning', weekdays: [4], exercises: [], cardioType: 'running',  notes: '30–40 min' },
+    { name: 'Långpass',     weekdays: [6], exercises: [], cardioType: 'running',  notes: '7–9 km' },
   ],
   half: [
-    { name: 'Intervaller',  weekdays: [2], exercises: [{ exercise_name: 'Intervallspring', sets: null, reps: '6×1000 m' }] },
-    { name: 'Tempopass',    weekdays: [4], exercises: [{ exercise_name: 'Löpning',         sets: null, reps: '8 km i tempofart' }] },
-    { name: 'Lugn löpning', weekdays: [5], exercises: [{ exercise_name: 'Löpning',         sets: null, reps: '40 min' }] },
-    { name: 'Långpass',     weekdays: [7], exercises: [{ exercise_name: 'Löpning',         sets: null, reps: '12–16 km' }] },
+    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: '6×1000 m' },
+    { name: 'Tempopass',    weekdays: [4], exercises: [], cardioType: 'running',  notes: '8 km i tempofart' },
+    { name: 'Lugn löpning', weekdays: [5], exercises: [], cardioType: 'running',  notes: '40 min' },
+    { name: 'Långpass',     weekdays: [7], exercises: [], cardioType: 'running',  notes: '12–16 km' },
   ],
   marathon: [
-    { name: 'Intervaller',  weekdays: [2], exercises: [{ exercise_name: 'Intervallspring', sets: null, reps: '8×1000 m' }] },
-    { name: 'Tempopass',    weekdays: [4], exercises: [{ exercise_name: 'Löpning',         sets: null, reps: '10–12 km i tempofart' }] },
-    { name: 'Lugn löpning', weekdays: [5], exercises: [{ exercise_name: 'Löpning',         sets: null, reps: '45–60 min' }] },
-    { name: 'Långpass',     weekdays: [7], exercises: [{ exercise_name: 'Löpning',         sets: null, reps: '20–30 km' }] },
+    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: '8×1000 m' },
+    { name: 'Tempopass',    weekdays: [4], exercises: [], cardioType: 'running',  notes: '10–12 km i tempofart' },
+    { name: 'Lugn löpning', weekdays: [5], exercises: [], cardioType: 'running',  notes: '45–60 min' },
+    { name: 'Långpass',     weekdays: [7], exercises: [], cardioType: 'running',  notes: '20–30 km' },
   ],
 }
 
@@ -182,7 +185,15 @@ export async function generateScheduleFromWizard(
 ): Promise<number> {
   const plan = buildPlan(result)
   for (const session of plan) {
-    await createWorkoutSession(userId, session.name, session.weekdays, session.exercises)
+    await createWorkoutSession(
+      userId,
+      session.name,
+      session.weekdays,
+      session.exercises,
+      session.notes ?? null,
+      session.cardioType ? 'cardio' : 'gym',
+      session.cardioType ?? null,
+    )
   }
   return plan.length
 }
