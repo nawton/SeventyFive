@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Notifications from 'expo-notifications'
+import { scheduleDailyReminders, cancelDailyReminders, areRemindersActive } from '@/services/notifications'
 import Constants from 'expo-constants'
 import { supabase } from '@/lib/supabase'
 
@@ -106,8 +107,7 @@ export default function SettingsScreen() {
       // expo-notifications fungerar inte i Expo Go (SDK 53+)
       if (!IS_EXPO_GO) {
         try {
-          const { status } = await Notifications.getPermissionsAsync()
-          setNotificationsEnabled(status === 'granted')
+          setNotificationsEnabled(await areRemindersActive())
         } catch { /* ignore in unsupported envs */ }
       }
     } finally {
@@ -130,14 +130,20 @@ export default function SettingsScreen() {
     try {
       if (value) {
         const { status } = await Notifications.requestPermissionsAsync()
-        setNotificationsEnabled(status === 'granted')
         if (status !== 'granted') {
+          setNotificationsEnabled(false)
           Alert.alert('Notiser blockerade', 'Gå till Inställningar → SeventyFive och aktivera notiser manuellt.')
+          return
         }
+        await scheduleDailyReminders()
+        setNotificationsEnabled(true)
       } else {
-        Alert.alert('Stäng av notiser', 'Gå till Inställningar → SeventyFive → Notiser för att stänga av.')
+        await cancelDailyReminders()
+        setNotificationsEnabled(false)
       }
-    } catch { /* ignore */ }
+    } catch {
+      Alert.alert('Något gick fel', 'Kunde inte ändra notisinställningen.')
+    }
   }
 
   async function handleLogout() {
