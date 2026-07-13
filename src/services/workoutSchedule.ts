@@ -363,12 +363,9 @@ export async function completeExercise(exerciseId: string, userId: string, date:
   const { error } = await supabase
     .from('exercise_completions')
     .insert({ exercise_id: exerciseId, user_id: userId, completed_date: date })
-  // 23505 = duplicate (already complete) — fine.
-  // All other errors: log but never throw. Local state is the source of truth.
-  // To enable Supabase persistence run: supabase/migrations/20260701000001_exercise_completions.sql
-  if (error && error.code !== '23505') {
-    console.warn('[completeExercise]', error.code, error.message)
-  }
+  // 23505 = duplicate (already complete) — fine. Other errors throw so the
+  // optimistic checkbox in add.tsx rolls back instead of silently losing the check.
+  if (error && error.code !== '23505') throw error
 }
 
 export async function uncompleteExercise(exerciseId: string, userId: string, date: string): Promise<void> {
@@ -378,7 +375,7 @@ export async function uncompleteExercise(exerciseId: string, userId: string, dat
     .eq('exercise_id', exerciseId)
     .eq('user_id', userId)
     .eq('completed_date', date)
-  if (error) console.warn('[uncompleteExercise]', error.code, error.message)
+  if (error) throw error
 }
 
 // ─── Completions ──────────────────────────────────────────────────────────────

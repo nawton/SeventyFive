@@ -14,14 +14,16 @@ Deno.serve(async (req: Request) => {
     return new Response('Method Not Allowed', { status: 405 })
   }
 
+  // Kräv att anroparen faktiskt har service-role-nyckeln — verify_jwt släpper
+  // igenom vilken giltig JWT som helst (även anon-nyckeln)
   const authHeader = req.headers.get('Authorization') ?? ''
   const token = authHeader.replace('Bearer ', '')
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  if (token !== serviceKey) {
+    return new Response('Unauthorized', { status: 401 })
+  }
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  )
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey)
 
   const { data, error } = await supabase.rpc('advance_challenge_days')
 
