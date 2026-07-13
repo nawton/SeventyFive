@@ -30,7 +30,7 @@ import Animated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated'
-import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import Svg, { Circle } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
@@ -362,6 +362,12 @@ export default function DashboardScreen() {
     setAddRuleOpen(false)
   }
 
+  // Egen JS-funktion — Keyboard.dismiss får inte refereras direkt i en worklet,
+  // då försöker Reanimated serialisera hela Keyboard-modulen till UI-tråden (krasch)
+  function hideKeyboard() {
+    Keyboard.dismiss()
+  }
+
   function dismissRuleSheet() {
     Keyboard.dismiss()
     ruleSheetTY.value  = withTiming(800, { duration: 300 }, () => runOnJS(setAddRuleOpen)(false))
@@ -370,7 +376,7 @@ export default function DashboardScreen() {
 
   const ruleHandleGesture = Gesture.Pan()
     .activeOffsetY(8)
-    .onStart(() => { runOnJS(Keyboard.dismiss)() })
+    .onStart(() => { runOnJS(hideKeyboard)() })
     .onUpdate(e => {
       if (e.translationY > 0) {
         ruleSheetTY.value  = e.translationY
@@ -920,6 +926,7 @@ export default function DashboardScreen() {
         transparent
         onRequestClose={dismissRuleSheet}
       >
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <Animated.View style={[StyleSheet.absoluteFill, s.modalBackdrop, ruleBackdropStyle]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={dismissRuleSheet} />
         </Animated.View>
@@ -993,6 +1000,7 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </Animated.View>
         </KeyboardAvoidingView>
+        </GestureHandlerRootView>
       </Modal>
     </SafeAreaView>
   )
