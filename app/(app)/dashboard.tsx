@@ -730,7 +730,8 @@ export default function DashboardScreen() {
         visible={addRuleOpen}
         onClose={() => setAddRuleOpen(false)}
         onCreate={handleCreateRule}
-      />    </SafeAreaView>
+      />
+    </SafeAreaView>
   )
 }
 
