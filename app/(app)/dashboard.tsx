@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Pressable,
 } from 'react-native'
@@ -27,7 +28,9 @@ import Animated, {
   withSequence,
   withSpring,
   Easing,
+  runOnJS,
 } from 'react-native-reanimated'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Svg, { Circle } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
@@ -341,6 +344,52 @@ export default function DashboardScreen() {
   const [newRuleIcon, setNewRuleIcon]   = useState<React.ComponentProps<typeof Ionicons>['name']>('checkmark-circle-outline')
   const [ruleSaving, setRuleSaving]     = useState(false)
 
+  // ── Add-rule sheet animation (samma känsla som SessionEditor) ──
+  const ruleSheetTY  = useSharedValue(700)
+  const ruleBackdrop = useSharedValue(0)
+
+  useEffect(() => {
+    if (addRuleOpen) {
+      ruleSheetTY.value  = 700
+      ruleBackdrop.value = 0
+      ruleSheetTY.value  = withSpring(0, { damping: 26, stiffness: 260, mass: 1 })
+      ruleBackdrop.value = withTiming(1, { duration: 260 })
+    }
+  }, [addRuleOpen])
+
+  function closeRuleSheet() {
+    Keyboard.dismiss()
+    setAddRuleOpen(false)
+  }
+
+  function dismissRuleSheet() {
+    Keyboard.dismiss()
+    ruleSheetTY.value  = withTiming(800, { duration: 300 }, () => runOnJS(setAddRuleOpen)(false))
+    ruleBackdrop.value = withTiming(0, { duration: 250 })
+  }
+
+  const ruleHandleGesture = Gesture.Pan()
+    .activeOffsetY(8)
+    .onStart(() => { runOnJS(Keyboard.dismiss)() })
+    .onUpdate(e => {
+      if (e.translationY > 0) {
+        ruleSheetTY.value  = e.translationY
+        ruleBackdrop.value = Math.max(0, 1 - e.translationY / 320)
+      }
+    })
+    .onEnd(e => {
+      if (e.translationY > 100 || e.velocityY > 600) {
+        ruleSheetTY.value  = withTiming(800, { duration: 280 }, () => runOnJS(closeRuleSheet)())
+        ruleBackdrop.value = withTiming(0, { duration: 230 })
+      } else {
+        ruleSheetTY.value  = withSpring(0, { damping: 26, stiffness: 260, mass: 1 })
+        ruleBackdrop.value = withTiming(1, { duration: 200 })
+      }
+    })
+
+  const ruleSheetStyle    = useAnimatedStyle(() => ({ transform: [{ translateY: ruleSheetTY.value }] }))
+  const ruleBackdropStyle = useAnimatedStyle(() => ({ opacity: ruleBackdrop.value }))
+
   // ── 3D floating hero animation ──
   const tiltX = useSharedValue(0)
   const tiltY = useSharedValue(0)
@@ -564,7 +613,7 @@ export default function DashboardScreen() {
       await createCustomRule(userId, challenge.id, challenge.level_id, newRuleName.trim(), newRuleIcon, dailyLogId)
       const updated = await getOrCreateTaskCompletions(dailyLogId, challenge.level_id, userId, challenge.id)
       setTasks(updated)
-      setAddRuleOpen(false)
+      dismissRuleSheet()
       setNewRuleName('')
     } catch {
       Alert.alert('Fel', 'Kunde inte spara regeln.')
@@ -867,20 +916,27 @@ export default function DashboardScreen() {
       {/* ── Add rule sheet ── */}
       <Modal
         visible={addRuleOpen}
-        animationType="slide"
+        animationType="none"
         transparent
-        onRequestClose={() => setAddRuleOpen(false)}
+        onRequestClose={dismissRuleSheet}
       >
+        <Animated.View style={[StyleSheet.absoluteFill, s.modalBackdrop, ruleBackdropStyle]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={dismissRuleSheet} />
+        </Animated.View>
         <KeyboardAvoidingView
           style={[s.modalOverlay, { paddingTop: insets.top + 8 }]}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          pointerEvents="box-none"
         >
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setAddRuleOpen(false)} />
-          <View style={s.sheet}>
-            <View style={s.sheetHandle} />
+          <Animated.View style={[s.sheet, ruleSheetStyle]}>
+            <GestureDetector gesture={ruleHandleGesture}>
+              <View style={s.sheetHandleWrap}>
+                <View style={s.sheetHandle} />
+              </View>
+            </GestureDetector>
             <View style={s.sheetHeader}>
               <Text style={s.sheetTitle}>Ny regel</Text>
-              <TouchableOpacity onPress={() => setAddRuleOpen(false)} style={s.sheetClose}>
+              <TouchableOpacity onPress={dismissRuleSheet} style={s.sheetClose}>
                 <Ionicons name="close" size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
@@ -895,7 +951,6 @@ export default function DashboardScreen() {
               maxLength={60}
               returnKeyType="done"
               onSubmitEditing={handleCreateRule}
-              autoFocus
             />
 
             <Text style={[s.sheetFieldLabel, { marginTop: 18 }]}>IKON</Text>
@@ -936,7 +991,7 @@ export default function DashboardScreen() {
                 : <Text style={s.sheetSaveBtnText}>Spara regel</Text>
               }
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
@@ -1151,13 +1206,15 @@ const s = StyleSheet.create({
   rulesEmptyText: { color: '#3A3A40', fontSize: 13, fontWeight: '500' },
 
   // Add-rule modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+  modalOverlay:  { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.65)' },
   sheet: {
     backgroundColor: CARD_BG, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingHorizontal: 20, paddingBottom: 44, paddingTop: 12,
     // Krymp hellre än att tryckas upp bakom Dynamic Island när tangentbordet öppnas
     flexShrink: 1,
   },
+  sheetHandleWrap: { alignSelf: 'stretch', alignItems: 'center', paddingVertical: 6, marginTop: -6 },
   iconScroll: { flexGrow: 0, flexShrink: 1 },
   sheetHandle: {
     width: 40, height: 4, backgroundColor: CARD_BORDER, borderRadius: 2,
