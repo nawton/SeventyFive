@@ -10,7 +10,7 @@ import { useFocusEffect } from 'expo-router'
 import Body from 'react-native-body-highlighter'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
-import { getAllDays, type DaySummary } from '@/services/dailyLog'
+import { getAllDays, getStreak, type DaySummary } from '@/services/dailyLog'
 import { getMusclesForName, type Slug } from '@/lib/muscles'
 import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
 import { getCompletedExerciseNamesForWeek } from '@/services/workoutSchedule'
@@ -226,6 +226,7 @@ export default function StatsScreen() {
   const [activeTab, setActiveTab]               = useState<StatsTab>('overview')
   const [loading, setLoading]                   = useState(true)
   const [loadError, setLoadError]               = useState(false)
+  const [streak, setStreak]                     = useState(0)
   const [userId, setUserId]                     = useState<string | null>(null)
   const [weekOffset, setWeekOffset]             = useState(0)
   const [weekExNames, setWeekExNames]           = useState<string[]>([])
@@ -253,8 +254,12 @@ export default function StatsScreen() {
       const day = calculateCurrentDay(challenge.start_date)
       setCurrentDay(day)
       setLevelName(challenge.challenge_levels?.display_name ?? '')
-      const allDays = await getAllDays(challenge.id, day)
+      const [allDays, streakVal] = await Promise.all([
+        getAllDays(challenge.id, day),
+        getStreak(challenge.id),
+      ])
       setDays(allDays)
+      setStreak(streakVal)
     } catch {
       setLoadError(true)
     } finally {
@@ -313,13 +318,6 @@ export default function StatsScreen() {
 
   const completedDays = days.filter(d => d.status === 'completed').length
   const missedDays    = days.filter(d => d.status === 'failed').length
-  const streak = (() => {
-    let n = 0
-    for (let i = currentDay - 1; i >= 1; i--) {
-      if (days[i - 1]?.status === 'completed') n++; else break
-    }
-    return n
-  })()
 
   const totalKm    = workouts.reduce((sum, w) => sum + w.data.distance_km, 0)
   const totalSecs  = workouts.reduce((sum, w) => sum + w.data.duration_seconds, 0)
