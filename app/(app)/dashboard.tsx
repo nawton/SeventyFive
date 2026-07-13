@@ -7,14 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Dimensions,
   Alert,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Keyboard,
-  Platform,
-  Pressable,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -28,9 +21,7 @@ import Animated, {
   withSequence,
   withSpring,
   Easing,
-  runOnJS,
 } from 'react-native-reanimated'
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import Svg, { Circle } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
@@ -63,16 +54,14 @@ import { FailModal } from '@/components/FailModal'
 import { ReadingLogModal } from '@/components/ReadingLogModal'
 import { RestartPromptModal } from '@/components/RestartPromptModal'
 import { VictoryModal } from '@/components/VictoryModal'
-import type { TaskType, UserChallengeWithLevel } from '@/types/database'
-
-const { width: SW } = Dimensions.get('window')
+import { TaskGridCard, TASK_COLORS, TASK_GAP } from '@/components/TaskGridCard'
+import { AddRuleSheet } from '@/components/AddRuleSheet'
+import type { UserChallengeWithLevel } from '@/types/database'
 
 const ORANGE    = '#FF8F00'
 const SCENE_BG  = '#0A0A0B'
 const CARD_BG   = '#131315'
 const CARD_BORDER = '#1E1E21'
-const TASK_GAP  = 10
-const TASK_W    = (SW - 40 - TASK_GAP) / 2
 
 // ── Ring constants ─────────────────────────────────────────────────────────────
 const R_SIZE   = 118
@@ -81,44 +70,6 @@ const R_RADIUS = (R_SIZE - R_STROKE) / 2
 const R_CIRCUM = 2 * Math.PI * R_RADIUS
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
-
-// ── Per-type config ────────────────────────────────────────────────────────────
-const TASK_COLORS: Record<TaskType, string> = {
-  workout: '#FF8F00',
-  water:   '#00BCD4',
-  diet:    '#66BB6A',
-  reading: '#AB47BC',
-  photo:   '#EC407A',
-  custom:  '#9B6DFF',
-}
-
-const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']> = {
-  workout: 'barbell-outline',
-  diet:    'restaurant-outline',
-  water:   'water-outline',
-  reading: 'book-outline',
-  photo:   'camera-outline',
-  custom:  'checkmark-circle-outline',
-}
-
-const ICON_OPTIONS: Array<{ icon: React.ComponentProps<typeof Ionicons>['name']; label: string }> = [
-  { icon: 'checkmark-circle-outline', label: 'Klar'       },
-  { icon: 'sunny-outline',            label: 'Morgon'     },
-  { icon: 'moon-outline',             label: 'Kväll'      },
-  { icon: 'bed-outline',              label: 'Sömn'       },
-  { icon: 'water-outline',            label: 'Vatten'     },
-  { icon: 'nutrition-outline',        label: 'Kost'       },
-  { icon: 'book-outline',             label: 'Läsning'    },
-  { icon: 'pencil-outline',           label: 'Journaling' },
-  { icon: 'heart-outline',            label: 'Meditation' },
-  { icon: 'walk-outline',             label: 'Promenad'   },
-  { icon: 'bicycle-outline',          label: 'Cykling'    },
-  { icon: 'snow-outline',             label: 'Kall dusch' },
-  { icon: 'phone-portrait-outline',   label: 'Ingen skärm'},
-  { icon: 'musical-notes-outline',    label: 'Musik'      },
-  { icon: 'flash-outline',            label: 'Energi'     },
-  { icon: 'barbell-outline',          label: 'Träning'    },
-]
 
 const ICON_ALIAS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   dumbbell:  'barbell-outline',
@@ -217,105 +168,6 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
   )
 }
 
-// ── Task Grid Card ─────────────────────────────────────────────────────────────
-function TaskGridCard({ task, onPress, counter, metaLabel }: {
-  task: TaskItem
-  onPress: () => void
-  /** Glas-räknare med synliga −/+ knappar och progress-bar */
-  counter?: { value: number; goal: number; unit: string; onPlus: () => void; onMinus: () => void }
-  /** Liten metatext under namnet, t.ex. "12 sidor · Atomic Habits" */
-  metaLabel?: string
-}) {
-  const color = TASK_COLORS[task.type] ?? ORANGE
-  const icon  = TASK_ICONS[task.type]  ?? 'checkmark-outline'
-  const scale = useSharedValue(1)
-
-  const aStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }))
-
-  function handlePress() {
-    scale.value = withSequence(
-      withTiming(0.92, { duration: 80 }),
-      withSpring(1, { damping: 12, stiffness: 200 })
-    )
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    onPress()
-  }
-
-  return (
-    <Animated.View style={[aStyle, { width: TASK_W }]}>
-      <TouchableOpacity
-        style={[
-          s.taskCard,
-          task.completed && {
-            borderColor: color + '45',
-            backgroundColor: color + '0E',
-          },
-        ]}
-        onPress={handlePress}
-        activeOpacity={0.85}
-      >
-        {task.completed && (
-          <View style={[s.taskSidebar, { backgroundColor: color }]} />
-        )}
-        <View style={s.taskCardTop}>
-          <View style={[s.taskIconBox, { backgroundColor: color + '1C' }]}>
-            <Ionicons name={icon} size={17} color={color} />
-          </View>
-          <View style={[s.taskCheck, task.completed && { backgroundColor: color, borderColor: color }]}>
-            {task.completed && <Ionicons name="checkmark" size={10} color="#000" />}
-          </View>
-        </View>
-        <View style={s.taskBody}>
-          <Text
-            style={[s.taskName, task.completed && s.taskNameDone]}
-            numberOfLines={metaLabel || counter ? 1 : 2}
-          >
-            {task.name}
-          </Text>
-          {counter && (
-            <>
-              <View style={s.taskBar}>
-                <View style={[
-                  s.taskBarFill,
-                  {
-                    width: `${Math.round(Math.min(1, counter.value / counter.goal) * 100)}%` as any,
-                    backgroundColor: color,
-                  },
-                ]} />
-              </View>
-              <View style={s.counterRow}>
-                <TouchableOpacity
-                  style={[s.counterBtn, counter.value === 0 && s.counterBtnDim]}
-                  onPress={counter.onMinus}
-                  disabled={counter.value === 0}
-                  hitSlop={8}
-                >
-                  <Ionicons name="remove" size={15} color={counter.value === 0 ? '#2A2A2E' : color} />
-                </TouchableOpacity>
-                <Text style={[s.counterLabel, task.completed && { color }]}>
-                  {counter.value}/{counter.goal} {counter.unit}
-                </Text>
-                <TouchableOpacity
-                  style={[s.counterBtn, { backgroundColor: color }]}
-                  onPress={counter.onPlus}
-                  hitSlop={8}
-                >
-                  <Ionicons name="add" size={15} color="#000" />
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-          {metaLabel && (
-            <Text style={s.taskMeta} numberOfLines={1}>{metaLabel}</Text>
-          )}
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
-  )
-}
-
 // ── Dashboard Screen ───────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets()
@@ -338,63 +190,8 @@ export default function DashboardScreen() {
   const [loadError, setLoadError]   = useState(false)
   const [userId, setUserId]         = useState<string | null>(null)
 
-  // Add-rule sheet
+  // Add-rule sheet (UI, animation och gest bor i AddRuleSheet-komponenten)
   const [addRuleOpen, setAddRuleOpen]   = useState(false)
-  const [newRuleName, setNewRuleName]   = useState('')
-  const [newRuleIcon, setNewRuleIcon]   = useState<React.ComponentProps<typeof Ionicons>['name']>('checkmark-circle-outline')
-  const [ruleSaving, setRuleSaving]     = useState(false)
-
-  // ── Add-rule sheet animation (samma känsla som SessionEditor) ──
-  const ruleSheetTY  = useSharedValue(700)
-  const ruleBackdrop = useSharedValue(0)
-
-  useEffect(() => {
-    if (addRuleOpen) {
-      ruleSheetTY.value  = 700
-      ruleBackdrop.value = 0
-      ruleSheetTY.value  = withSpring(0, { damping: 26, stiffness: 260, mass: 1 })
-      ruleBackdrop.value = withTiming(1, { duration: 260 })
-    }
-  }, [addRuleOpen])
-
-  function closeRuleSheet() {
-    Keyboard.dismiss()
-    setAddRuleOpen(false)
-  }
-
-  // Egen JS-funktion — Keyboard.dismiss får inte refereras direkt i en worklet,
-  // då försöker Reanimated serialisera hela Keyboard-modulen till UI-tråden (krasch)
-  function hideKeyboard() {
-    Keyboard.dismiss()
-  }
-
-  function dismissRuleSheet() {
-    Keyboard.dismiss()
-    ruleSheetTY.value  = withTiming(800, { duration: 300 }, () => runOnJS(setAddRuleOpen)(false))
-    ruleBackdrop.value = withTiming(0, { duration: 250 })
-  }
-
-  const ruleHandleGesture = Gesture.Pan()
-    .activeOffsetY(8)
-    .onStart(() => { runOnJS(hideKeyboard)() })
-    .onUpdate(e => {
-      if (e.translationY > 0) {
-        ruleSheetTY.value  = e.translationY
-        ruleBackdrop.value = Math.max(0, 1 - e.translationY / 320)
-      }
-    })
-    .onEnd(e => {
-      if (e.translationY > 100 || e.velocityY > 600) {
-        ruleSheetTY.value  = withTiming(800, { duration: 280 }, () => runOnJS(closeRuleSheet)())
-        ruleBackdrop.value = withTiming(0, { duration: 230 })
-      } else {
-        ruleSheetTY.value  = withSpring(0, { damping: 26, stiffness: 260, mass: 1 })
-        ruleBackdrop.value = withTiming(1, { duration: 200 })
-      }
-    })
-
-  const ruleSheetStyle    = useAnimatedStyle(() => ({ transform: [{ translateY: ruleSheetTY.value }] }))
-  const ruleBackdropStyle = useAnimatedStyle(() => ({ opacity: ruleBackdrop.value }))
 
   // ── 3D floating hero animation ──
   const tiltX = useSharedValue(0)
@@ -609,24 +406,18 @@ export default function DashboardScreen() {
   }
 
   function openAddRule() {
-    setNewRuleName('')
-    setNewRuleIcon('checkmark-circle-outline')
     setAddRuleOpen(true)
   }
 
-  async function handleCreateRule() {
-    if (!newRuleName.trim() || !userId || !challenge || !dailyLogId) return
-    setRuleSaving(true)
+  async function handleCreateRule(ruleName: string, ruleIcon: string) {
+    if (!userId || !challenge || !dailyLogId) return
     try {
-      await createCustomRule(userId, challenge.id, challenge.level_id, newRuleName.trim(), newRuleIcon, dailyLogId)
+      await createCustomRule(userId, challenge.id, challenge.level_id, ruleName, ruleIcon, dailyLogId)
       const updated = await getOrCreateTaskCompletions(dailyLogId, challenge.level_id, userId, challenge.id)
       setTasks(updated)
-      dismissRuleSheet()
-      setNewRuleName('')
-    } catch {
+    } catch (e) {
       Alert.alert('Fel', 'Kunde inte spara regeln.')
-    } finally {
-      setRuleSaving(false)
+      throw e // håll sheeten öppen så användaren kan försöka igen
     }
   }
 
@@ -935,92 +726,11 @@ export default function DashboardScreen() {
       />
 
       {/* ── Add rule sheet ── */}
-      <Modal
+      <AddRuleSheet
         visible={addRuleOpen}
-        animationType="none"
-        transparent
-        onRequestClose={dismissRuleSheet}
-      >
-        <GestureHandlerRootView style={{ flex: 1 }}>
-        <Animated.View style={[StyleSheet.absoluteFill, s.modalBackdrop, ruleBackdropStyle]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={dismissRuleSheet} />
-        </Animated.View>
-        <KeyboardAvoidingView
-          style={[s.modalOverlay, { paddingTop: insets.top + 8 }]}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          pointerEvents="box-none"
-        >
-          <Animated.View style={[s.sheet, ruleSheetStyle]}>
-            <GestureDetector gesture={ruleHandleGesture}>
-              <View style={s.sheetHandleWrap}>
-                <View style={s.sheetHandle} />
-              </View>
-            </GestureDetector>
-            <View style={s.sheetHeader}>
-              <Text style={s.sheetTitle}>Ny regel</Text>
-              <TouchableOpacity onPress={dismissRuleSheet} style={s.sheetClose}>
-                <Ionicons name="close" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={s.sheetFieldLabel}>NAMN</Text>
-            <TextInput
-              style={s.sheetInput}
-              value={newRuleName}
-              onChangeText={setNewRuleName}
-              placeholder="t.ex. Kall dusch varje morgon"
-              placeholderTextColor="#4A4A50"
-              maxLength={60}
-              returnKeyType="done"
-              onSubmitEditing={handleCreateRule}
-            />
-
-            <Text style={[s.sheetFieldLabel, { marginTop: 18 }]}>IKON</Text>
-            <ScrollView
-              style={s.iconScroll}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={s.iconGrid}>
-                {ICON_OPTIONS.map(opt => (
-                  <TouchableOpacity
-                    key={opt.icon}
-                    style={[s.iconBtn, newRuleIcon === opt.icon && s.iconBtnActive]}
-                    onPress={() => {
-                      Haptics.selectionAsync()
-                      setNewRuleIcon(opt.icon)
-                    }}
-                    activeOpacity={0.75}
-                  >
-                    <Ionicons
-                      name={opt.icon}
-                      size={20}
-                      color={newRuleIcon === opt.icon ? TASK_COLORS.custom : '#4A4A50'}
-                    />
-                    <Text style={[s.iconBtnLabel, newRuleIcon === opt.icon && s.iconBtnLabelActive]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-
-            <TouchableOpacity
-              style={[s.sheetSaveBtn, !newRuleName.trim() && s.sheetSaveBtnDisabled]}
-              onPress={handleCreateRule}
-              disabled={!newRuleName.trim() || ruleSaving}
-              activeOpacity={0.85}
-            >
-              {ruleSaving
-                ? <ActivityIndicator color="#000" size="small" />
-                : <Text style={s.sheetSaveBtnText}>Spara regel</Text>
-              }
-            </TouchableOpacity>
-          </Animated.View>
-        </KeyboardAvoidingView>
-        </GestureHandlerRootView>
-      </Modal>
-    </SafeAreaView>
+        onClose={() => setAddRuleOpen(false)}
+        onCreate={handleCreateRule}
+      />    </SafeAreaView>
   )
 }
 
@@ -1134,56 +844,6 @@ const s = StyleSheet.create({
 
   // Task grid
   taskGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: TASK_GAP },
-  taskCard: {
-    backgroundColor: CARD_BG,
-    borderRadius: 16, padding: 14,
-    borderWidth: 1, borderColor: CARD_BORDER,
-    // Fast höjd så alla kort i rutnätet är lika stora oavsett innehåll
-    // (vattenkortet har räknare + progress-bar, övriga bara namn)
-    overflow: 'hidden', height: 134, gap: 10,
-  },
-  taskSidebar: {
-    position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-    borderTopLeftRadius: 16, borderBottomLeftRadius: 16,
-  },
-  taskCardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  taskBody: { gap: 6, flex: 1, justifyContent: 'flex-start' },
-  counterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 2,
-  },
-  counterBtn: {
-    width: 26, height: 26, borderRadius: 13,
-    borderWidth: 1.5, borderColor: '#2A2A2E',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  counterBtnDim: { opacity: 0.4 },
-  counterLabel: { color: '#8A8A90', fontSize: 12, fontWeight: '700' },
-  taskBar: {
-    height: 3, backgroundColor: '#1E1E21',
-    borderRadius: 2, overflow: 'hidden',
-  },
-  taskBarFill: { height: '100%', borderRadius: 2 },
-  taskMeta: { color: '#4A4A50', fontSize: 11, fontWeight: '600' },
-  taskIconBox: {
-    width: 34, height: 34, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  taskCheck: {
-    width: 21, height: 21, borderRadius: 11,
-    borderWidth: 1.5, borderColor: '#2A2A2E',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  taskName: {
-    color: '#BBBBBB', fontSize: 13, fontWeight: '600', lineHeight: 18,
-  },
-  taskNameDone: { color: '#3A3A40' },
 
   // Rules section
   addRuleChip: {
@@ -1234,56 +894,6 @@ const s = StyleSheet.create({
     borderWidth: 1, borderStyle: 'dashed', borderColor: '#2A2A2E',
   },
   rulesEmptyText: { color: '#3A3A40', fontSize: 13, fontWeight: '500' },
-
-  // Add-rule modal
-  modalOverlay:  { flex: 1, justifyContent: 'flex-end' },
-  modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.65)' },
-  sheet: {
-    backgroundColor: CARD_BG, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingHorizontal: 20, paddingBottom: 44, paddingTop: 12,
-    // Krymp hellre än att tryckas upp bakom Dynamic Island när tangentbordet öppnas
-    flexShrink: 1,
-  },
-  sheetHandleWrap: { alignSelf: 'stretch', alignItems: 'center', paddingVertical: 6, marginTop: -6 },
-  iconScroll: { flexGrow: 0, flexShrink: 1 },
-  sheetHandle: {
-    width: 40, height: 4, backgroundColor: CARD_BORDER, borderRadius: 2,
-    alignSelf: 'center', marginBottom: 18,
-  },
-  sheetHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22,
-  },
-  sheetTitle:  { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
-  sheetClose: {
-    width: 32, height: 32, borderRadius: 10,
-    backgroundColor: '#1E1E21', alignItems: 'center', justifyContent: 'center',
-  },
-  sheetFieldLabel: {
-    color: '#3A3A40', fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginBottom: 8,
-  },
-  sheetInput: {
-    backgroundColor: '#0F0F11', borderRadius: 14,
-    borderWidth: 1, borderColor: CARD_BORDER,
-    color: '#FFFFFF', fontSize: 16,
-    paddingHorizontal: 16, paddingVertical: 14,
-  },
-  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  iconBtn: {
-    flexDirection: 'column', alignItems: 'center', gap: 4,
-    backgroundColor: '#0F0F11', borderRadius: 12,
-    borderWidth: 1, borderColor: CARD_BORDER,
-    paddingHorizontal: 10, paddingVertical: 10, minWidth: 60,
-  },
-  // Tintad markering i regelfärgen — samma stil som ikonboxarna på korten
-  iconBtnActive: { backgroundColor: '#9B6DFF1C', borderColor: '#9B6DFF' },
-  iconBtnLabel:       { color: '#4A4A50', fontSize: 10, fontWeight: '500' },
-  iconBtnLabelActive: { color: '#9B6DFF', fontWeight: '700' },
-  sheetSaveBtn: {
-    backgroundColor: ORANGE, borderRadius: 16,
-    paddingVertical: 16, alignItems: 'center', marginTop: 24,
-  },
-  sheetSaveBtnDisabled: { opacity: 0.4 },
-  sheetSaveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 
   // Fail
   failBtn: {
