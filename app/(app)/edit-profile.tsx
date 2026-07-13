@@ -1,21 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   Image,
   StyleSheet,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Modal,
   TouchableWithoutFeedback,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '@/lib/supabase'
@@ -39,30 +36,34 @@ export default function EditProfileScreen() {
   const [emoji, setEmoji]     = useState<string | null>(null)
   const [photoUri, setPhotoUri] = useState<string | null>(null)
 
-  const nameRef = useRef<TextInput>(null)
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) return
-        setUserId(session.user.id)
-        setEmail(session.user.email ?? '')
-        const profile = await getProfile(session.user.id)
-        if (profile?.name) setName(profile.name)
-        if (profile?.avatar_url) {
-          if (profile.avatar_url.startsWith('http')) {
-            setPhotoUri(profile.avatar_url)
-          } else {
-            setEmoji(profile.avatar_url)
-          }
+  async function load() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      setUserId(session.user.id)
+      setEmail(session.user.email ?? '')
+      const profile = await getProfile(session.user.id)
+      setName(profile?.name ?? '')
+      if (profile?.avatar_url) {
+        if (profile.avatar_url.startsWith('http')) {
+          setPhotoUri(profile.avatar_url)
+        } else {
+          setEmoji(profile.avatar_url)
         }
-      } finally {
-        setLoading(false)
       }
+    } finally {
+      setLoading(false)
     }
-    load()
-  }, [])
+  }
+
+  useEffect(() => { load() }, [])
+
+  // Namnet redigeras på egen sida — hämta om när man kommer tillbaka
+  useFocusEffect(useCallback(() => {
+    if (userId) {
+      getProfile(userId).then(p => setName(p?.name ?? '')).catch(() => {})
+    }
+  }, [userId]))
 
   async function pickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -84,8 +85,6 @@ export default function EditProfileScreen() {
   }
 
   async function handleSave() {
-    const trimmed = name.trim()
-    if (!trimmed) { Alert.alert('Ange ett namn'); return }
     if (!userId) return
     setSaving(true)
     try {
@@ -95,7 +94,7 @@ export default function EditProfileScreen() {
       } else if (emoji) {
         avatarUrl = emoji
       }
-      await updateProfile(userId, { name: trimmed, avatar_url: avatarUrl })
+      await updateProfile(userId, { avatar_url: avatarUrl })
       router.back()
     } catch (e: any) {
       Alert.alert('Något gick fel', e.message)
@@ -136,12 +135,10 @@ export default function EditProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
           {/* ── Avatar with pencil ── */}
           <View style={styles.previewSection}>
             <View style={styles.avatarWrapper}>
@@ -160,54 +157,37 @@ export default function EditProfileScreen() {
             <Text style={styles.previewEmail}>{email}</Text>
           </View>
 
-          {/* ── Name ── */}
+          {/* ── Konto-rader ── */}
           <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>VISNINGSNAMN</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="person-outline" size={18} color={TEXT_SECONDARY} />
-              <TextInput
-                ref={nameRef}
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Ditt namn"
-                placeholderTextColor={TEXT_SECONDARY}
-                returnKeyType="done"
-                onSubmitEditing={() => nameRef.current?.blur()}
-                autoCapitalize="words"
-                autoCorrect={false}
-              />
+            <Text style={styles.fieldLabel}>KONTO</Text>
+            <View style={styles.rowsCard}>
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => router.push('/edit-name')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowIconBox}>
+                  <Ionicons name="person-outline" size={17} color={ORANGE} />
+                </View>
+                <Text style={styles.rowLabel}>Visningsnamn</Text>
+                <Text style={styles.rowValue} numberOfLines={1}>{name || 'Lägg till'}</Text>
+                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+
+              <View style={styles.rowDivider} />
+
+              <View style={[styles.row, { opacity: 0.55 }]}>
+                <View style={[styles.rowIconBox, { backgroundColor: BORDER }]}>
+                  <Ionicons name="mail-outline" size={17} color={TEXT_SECONDARY} />
+                </View>
+                <Text style={styles.rowLabel}>E-post</Text>
+                <Text style={styles.rowValue} numberOfLines={1}>{email}</Text>
+                <Ionicons name="lock-closed-outline" size={14} color={TEXT_SECONDARY} />
+              </View>
             </View>
           </View>
-
-          {/* ── Email (locked) ── */}
-          <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>E-POST</Text>
-            <View style={[styles.inputWrapper, { opacity: 0.5 }]}>
-              <Ionicons name="mail-outline" size={18} color={TEXT_SECONDARY} />
-              <TextInput
-                style={[styles.input, { color: TEXT_SECONDARY }]}
-                value={email}
-                editable={false}
-              />
-              <Ionicons name="lock-closed-outline" size={15} color={TEXT_SECONDARY} />
-            </View>
-          </View>
-
-          {/* ── Save button ── */}
-          <TouchableOpacity
-            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-            onPress={handleSave}
-            disabled={saving}
-            activeOpacity={0.85}
-          >
-            {saving
-              ? <ActivityIndicator color="#000" />
-              : <Text style={styles.saveBtnText}>Spara ändringar</Text>}
-          </TouchableOpacity>
 
         </ScrollView>
-      </KeyboardAvoidingView>
 
       {/* ── Avatar picker bottom sheet ── */}
       <Modal
@@ -343,21 +323,25 @@ const styles = StyleSheet.create({
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
     letterSpacing: 1.5, paddingHorizontal: 4,
   },
-  inputWrapper: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER, paddingHorizontal: 14,
-  },
-  input: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, paddingVertical: 14 },
 
-  // Save
-  saveBtn: {
-    marginHorizontal: 20, backgroundColor: ORANGE,
-    borderRadius: 14, paddingVertical: 16, alignItems: 'center',
-    shadowColor: ORANGE, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35, shadowRadius: 12,
+  // Navigerbara rader
+  rowsCard: {
+    backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1, borderColor: BORDER,
+    overflow: 'hidden',
   },
-  saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 14, paddingVertical: 13,
+  },
+  rowDivider: { height: 1, backgroundColor: BORDER, marginLeft: 60 },
+  rowIconBox: {
+    width: 32, height: 32, borderRadius: 9,
+    backgroundColor: ORANGE + '18',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  rowLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  rowValue: { flex: 1, color: TEXT_SECONDARY, fontSize: 14, textAlign: 'right' },
 
   // Modal / bottom sheet
   modalContainer: {

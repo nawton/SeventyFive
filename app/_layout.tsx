@@ -9,6 +9,7 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="exercise/[id]" options={{ presentation: 'transparentModal', animation: 'none' }} />
+        <Stack.Screen name="edit-name" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
       </Stack>
     </GestureHandlerRootView>
   )
