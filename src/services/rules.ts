@@ -54,6 +54,14 @@ export async function createCustomRule(
 }
 
 export async function deleteCustomRule(id: string): Promise<void> {
+  // task_completions saknar ON DELETE CASCADE mot task_templates —
+  // radera dagens/historikens avbockningar först, annars stoppar FK:n raderingen
+  const { error: compError } = await supabase
+    .from('task_completions')
+    .delete()
+    .eq('task_template_id', id)
+  if (compError) throw compError
+
   const { error } = await supabase.from('task_templates').delete().eq('id', id)
   if (error) throw error
 }

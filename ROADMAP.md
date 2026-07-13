@@ -75,7 +75,7 @@
 - [x] **Fotokortet** leder till profilens foto-flöde istället för manuell checkbox — bockas i via faktisk uppladdning
 
 ### Framsteg
-- [ ] **Veckostaplar i Översikt**: stapeldiagram som visar antal klara dagar per vecka
+- [x] **Veckostaplar**: stapeldiagram per vecka i Cardio-fliken (löpning/cykling/promenad), ringdiagram för dag-progress i Översikt
 - [x] **Cardio-statistik**: total distans, total tid, antal pass, snittempo, bästa tempo och kcal summerat högst upp i Cardio-fliken
 
 ---

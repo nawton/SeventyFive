@@ -55,7 +55,7 @@ import {
   type TaskDetails,
 } from '@/services/dailyLog'
 import { hasPhotoForDay } from '@/services/progressPhotos'
-import { createCustomRule } from '@/services/rules'
+import { createCustomRule, deleteCustomRule } from '@/services/rules'
 import { FailModal } from '@/components/FailModal'
 import { ReadingLogModal } from '@/components/ReadingLogModal'
 import { RestartPromptModal } from '@/components/RestartPromptModal'
@@ -572,6 +572,28 @@ export default function DashboardScreen() {
     }
   }
 
+  function handleDeleteRule(task: TaskItem) {
+    Alert.alert(
+      'Ta bort regel',
+      `Vill du ta bort "${task.name}"? Regeln och dess historik försvinner.`,
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Ta bort',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteCustomRule(task.templateId)
+              setTasks(prev => prev.filter(t => t.completionId !== task.completionId))
+            } catch {
+              Alert.alert('Fel', 'Kunde inte ta bort regeln.')
+            }
+          },
+        },
+      ]
+    )
+  }
+
   const standardTasks = tasks.filter(t => t.type !== 'custom')
   const customTasks   = tasks.filter(t => t.type === 'custom')
   const levelRules    = (challenge?.challenge_levels?.rules ?? []) as any[]
@@ -775,6 +797,7 @@ export default function DashboardScreen() {
                   key={task.completionId}
                   style={[s.ruleItem, !isLast && s.ruleItemBorder]}
                   onPress={() => toggleTask(task)}
+                  onLongPress={() => handleDeleteRule(task)}
                   activeOpacity={0.8}
                 >
                   <View style={[s.ruleIconBox, { backgroundColor: CUSTOM_COLOR + '18' }]}>
