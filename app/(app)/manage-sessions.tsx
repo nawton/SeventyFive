@@ -228,7 +228,7 @@ export default function ManageSessionsScreen() {
           const sess = daySessions[i - 1]
           if (userId) {
             deleteSessionWithSkips(userId, sess.id)
-              .catch(() => {})
+              .catch(() => Alert.alert('Kunde inte ta bort passet', 'Kontrollera din anslutning och försök igen.'))
               .finally(() => loadData(userId!))
           }
         },
@@ -239,7 +239,11 @@ export default function ManageSessionsScreen() {
           text: `Ta bort "${displayName(sess)}"`,
           style: 'destructive' as const,
           onPress: () => {
-            if (userId) deleteSessionWithSkips(userId, sess.id).finally(() => loadData(userId!))
+            if (userId) {
+              deleteSessionWithSkips(userId, sess.id)
+                .catch(() => Alert.alert('Kunde inte ta bort passet', 'Kontrollera din anslutning och försök igen.'))
+                .finally(() => loadData(userId!))
+            }
           },
         })),
         { text: '+ Nytt pass', onPress: () => openCreate(dayNum) },
