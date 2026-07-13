@@ -27,7 +27,7 @@ import * as Haptics from 'expo-haptics'
 import Body from 'react-native-body-highlighter'
 import { getMusclesForName, bestSideForMuscles, SLUG_LABELS, getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
-import { toLocalDateString } from '@/lib/date'
+import { toLocalDateString, weekdayOf } from '@/lib/date'
 import {
   CATEGORY_LABELS,
   DIFFICULTY_LABELS,
@@ -47,8 +47,7 @@ import type { ExerciseCategory } from '@/types/database'
 export const WEEKDAYS = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön']
 
 export function todayIso(): number {
-  const d = new Date().getDay()
-  return d === 0 ? 7 : d
+  return weekdayOf()
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -155,9 +154,7 @@ export function SessionEditor({
         reps: e.reps ?? '',
       })))
     } else {
-      const wd = initialDate
-        ? (initialDate.getDay() || 7)
-        : todayIso()
+      const wd = initialDate ? weekdayOf(initialDate) : weekdayOf()
       setName('')
       setNotes('')
       setWeekdays([wd])

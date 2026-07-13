@@ -48,7 +48,7 @@ import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
-import { toLocalDateString } from '@/lib/date'
+import { toLocalDateString, weekdayOf } from '@/lib/date'
 
 const GPS_KEYWORDS = ['löpning', 'running', 'jogging', 'cykling', 'cycling', 'promenad', 'walking', 'spring', 'intervallspring', 'gång']
 const DAY_SHORT  = ['MÅN','TIS','ONS','TOR','FRE','LÖR','SÖN']
@@ -59,7 +59,6 @@ const CENTER_IDX = 182
 const PAGER_DATA = Array.from({ length: TOTAL_DAYS }, (_, i) => i)
 
 function isoDate(d: Date): string { return toLocalDateString(d) }
-function weekdayOf(d: Date): number { const w = d.getDay(); return w === 0 ? 7 : w }
 function todayMidnight(): Date { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
 function indexToDate(i: number): Date {
   const d = todayMidnight(); d.setDate(d.getDate() + i - CENTER_IDX); return d

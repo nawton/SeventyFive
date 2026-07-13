@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { toLocalDateString } from '@/lib/date'
+import { toLocalDateString, weekdayOf } from '@/lib/date'
 
 export interface SessionExercise {
   id: string
@@ -387,8 +387,7 @@ function isoDate(date: Date): string {
 /** Returns the calendar date (YYYY-MM-DD) for a given weekday (1=Mon…7=Sun) in the current week. */
 export function dateForWeekday(weekdayNum: number): string {
   const today = new Date()
-  const todayWd = today.getDay() || 7
-  const diff = weekdayNum - todayWd
+  const diff = weekdayNum - weekdayOf(today)
   const target = new Date(today)
   target.setDate(today.getDate() + diff)
   return isoDate(target)

@@ -18,7 +18,7 @@ import { CalendarView } from '@/components/stats/CalendarView'
 import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
 import { WorkoutDetail, WorkoutRow } from '@/components/stats/WorkoutDetail'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
-import { toLocalDateString } from '@/lib/date'
+import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
 
 const GRID_PADDING = 20
 const BLUE   = '#4A90D9'
@@ -29,11 +29,8 @@ const PURPLE = '#9B6DFF'
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function getWeekBounds(offset: number): { start: string; end: string; label: string } {
-  const today = new Date()
-  const dow   = today.getDay() || 7
-  const mon   = new Date(today)
-  mon.setDate(today.getDate() - dow + 1 + offset * 7)
-  mon.setHours(0, 0, 0, 0)
+  const mon = startOfWeek()
+  mon.setDate(mon.getDate() + offset * 7)
   const sun = new Date(mon)
   sun.setDate(mon.getDate() + 6)
   const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
@@ -80,30 +77,19 @@ interface WeekBar {
 }
 
 function buildWeeklyBars(workouts: CardioWorkout[]): WeekBar[] {
-  const todayMon = (() => {
-    const t = new Date()
-    const d = t.getDay() || 7
-    const m = new Date(t)
-    m.setDate(t.getDate() - d + 1)
-    m.setHours(0, 0, 0, 0)
-    return toLocalDateString(m)
-  })()
+  const todayMon = toLocalDateString(startOfWeek())
 
   const byWeek = new Map<string, WeekBar>()
 
   for (const w of workouts) {
-    const d = new Date(w.created_at)
-    const dow = d.getDay() || 7
-    const mon = new Date(d)
-    mon.setDate(d.getDate() - dow + 1)
-    mon.setHours(0, 0, 0, 0)
+    const mon = startOfWeek(new Date(w.created_at))
     const key = toLocalDateString(mon)
 
     if (!byWeek.has(key)) {
       // ISO week number
       const jan4 = new Date(mon.getFullYear(), 0, 4)
       const wn = Math.ceil(
-        (((mon.getTime() - jan4.getTime()) / 86400000) + (jan4.getDay() || 7) - 1) / 7,
+        (((mon.getTime() - jan4.getTime()) / 86400000) + weekdayOf(jan4) - 1) / 7,
       )
       byWeek.set(key, {
         label: `V${wn}`,

@@ -20,3 +20,16 @@ export function parseLocalDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number)
   return new Date(y, m - 1, d)
 }
+
+/** ISO-veckodag: 1=Mån … 7=Sön (Date.getDay() ger 0=Sön). */
+export function weekdayOf(d: Date = new Date()): number {
+  return d.getDay() || 7
+}
+
+/** Måndagen i veckan som innehåller d, som lokal midnatt. */
+export function startOfWeek(d: Date = new Date()): Date {
+  const mon = new Date(d)
+  mon.setDate(d.getDate() - weekdayOf(d) + 1)
+  mon.setHours(0, 0, 0, 0)
+  return mon
+}
