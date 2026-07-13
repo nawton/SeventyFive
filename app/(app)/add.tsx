@@ -135,15 +135,20 @@ export default function SchemaScreen() {
   useEffect(() => {
     if (!userId) return
     const date = isoDate(selectedDate)
-    Promise.all([
-      getCompletedSessionIds(userId, date).catch(() => [] as string[]),
-      getCompletedExerciseIds(userId, date).catch(() => [] as string[]),
-    ]).then(([sessionIds, exerciseIds]) => {
-      const exChecked: Record<string, boolean> = {}
-      exerciseIds.forEach(id => { exChecked[id] = true })
-      setCompletedByDate(prev => ({ ...prev, [date]: new Set(sessionIds) }))
-      setCheckedByDate(prev => ({ ...prev, [date]: exChecked }))
-    })
+    // Debounce: vid snabb swipe genom flera dagar hämtar vi bara den dag
+    // användaren landar på, inte varje dag som passerar
+    const timer = setTimeout(() => {
+      Promise.all([
+        getCompletedSessionIds(userId, date).catch(() => [] as string[]),
+        getCompletedExerciseIds(userId, date).catch(() => [] as string[]),
+      ]).then(([sessionIds, exerciseIds]) => {
+        const exChecked: Record<string, boolean> = {}
+        exerciseIds.forEach(id => { exChecked[id] = true })
+        setCompletedByDate(prev => ({ ...prev, [date]: new Set(sessionIds) }))
+        setCheckedByDate(prev => ({ ...prev, [date]: exChecked }))
+      })
+    }, 250)
+    return () => clearTimeout(timer)
   }, [selectedDate, userId])
 
   function openEditor(session: WorkoutSession | null) {
