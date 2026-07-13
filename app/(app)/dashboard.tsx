@@ -504,9 +504,11 @@ export default function DashboardScreen() {
     )
     try {
       await setTaskProgress(task.completionId, details, completed)
-      const allDone = tasks.every(t =>
-        t.completionId === task.completionId ? completed : t.completed
-      )
+      // Bara nivåreglerna avgör om utmaningsdagen är klar — egna regler är
+      // personliga extramål och ska inte kunna blockera (eller fälla) en dag
+      const allDone = tasks
+        .filter(t => t.type !== 'custom')
+        .every(t => (t.completionId === task.completionId ? completed : t.completed))
       if (allDone && completed && dailyLogId) {
         await markDayCompleted(dailyLogId)
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -517,8 +519,8 @@ export default function DashboardScreen() {
           setCompletedDaysCount(await countCompletedDays(challenge.id))
           setVictoryVisible(true)
         }
-      } else if (!completed && task.completed && dailyLogId && !dayFailed) {
-        // Uppgiften gick från klar till ej klar — dagen är inte längre klar
+      } else if (!completed && task.completed && task.type !== 'custom' && dailyLogId && !dayFailed) {
+        // En nivåuppgift gick från klar till ej klar — dagen är inte längre klar
         await markDayPending(dailyLogId)
       }
     } catch {
@@ -654,8 +656,9 @@ export default function DashboardScreen() {
   const customTasks   = tasks.filter(t => t.type === 'custom')
   const levelRules    = (challenge?.challenge_levels?.rules ?? []) as any[]
 
-  const completedCount = tasks.filter(t => t.completed).length
-  const allDone = tasks.length > 0 && completedCount === tasks.length
+  // Ringen och "dagen klar" räknar bara nivåuppgifterna — egna regler är extramål
+  const completedCount = standardTasks.filter(t => t.completed).length
+  const allDone = standardTasks.length > 0 && completedCount === standardTasks.length
   const challengePct = Math.round((currentDay / 75) * 100)
 
   if (loading) {
@@ -703,7 +706,7 @@ export default function DashboardScreen() {
         <View style={s.header}>
           <View>
             <Text style={s.greeting}>{getGreeting()}, {userName}</Text>
-            <Text style={s.subtitle}>{getSubtitle(completedCount, tasks.length)}</Text>
+            <Text style={s.subtitle}>{getSubtitle(completedCount, standardTasks.length)}</Text>
           </View>
           <TouchableOpacity
             style={s.avatar}
@@ -749,7 +752,7 @@ export default function DashboardScreen() {
             </View>
 
             <View style={s.heroRight}>
-              <ProgressRing completed={completedCount} total={tasks.length} />
+              <ProgressRing completed={completedCount} total={standardTasks.length} />
             </View>
           </LinearGradient>
         </Animated.View>
@@ -759,7 +762,7 @@ export default function DashboardScreen() {
           <Text style={s.sectionTitle}>DAGENS UPPGIFTER</Text>
           <View style={[s.countBadge, allDone && s.countBadgeDone]}>
             <Text style={[s.countText, allDone && s.countTextDone]}>
-              {completedCount}/{tasks.length}
+              {completedCount}/{standardTasks.length}
             </Text>
           </View>
         </View>
