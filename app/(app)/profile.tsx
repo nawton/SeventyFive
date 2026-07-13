@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
 
 import { supabase } from '@/lib/supabase'
+import { compressImage } from '@/lib/image'
 import { getProfile } from '@/services/profile'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import {
@@ -126,7 +127,10 @@ export default function ProfileScreen() {
         return
       }
       const result = await ImagePicker.launchCameraAsync({ quality: 0.8 })
-      if (!result.canceled && result.assets[0]) setComposerUri(result.assets[0].uri)
+      if (!result.canceled && result.assets[0]) {
+        const a = result.assets[0]
+        setComposerUri(await compressImage(a.uri, a.width))
+      }
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
       if (status !== 'granted') {
@@ -137,7 +141,10 @@ export default function ProfileScreen() {
         mediaTypes: ['images'],
         quality: 0.8,
       })
-      if (!result.canceled && result.assets[0]) setComposerUri(result.assets[0].uri)
+      if (!result.canceled && result.assets[0]) {
+        const a = result.assets[0]
+        setComposerUri(await compressImage(a.uri, a.width))
+      }
     }
   }
 

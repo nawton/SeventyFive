@@ -16,6 +16,7 @@ import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '@/lib/supabase'
+import { compressImage } from '@/lib/image'
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
@@ -78,7 +79,9 @@ export default function EditProfileScreen() {
       quality: 0.85,
     })
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri)
+      const a = result.assets[0]
+      // Avatarer visas max ~110 px — 512 px räcker gott även för retina
+      setPhotoUri(await compressImage(a.uri, a.width, 512))
       setEmoji(null)
       setModalVisible(false)
     }
