@@ -20,6 +20,8 @@ export interface TaskItem {
   targetValue: number | null
   unit: string | null
   details: TaskDetails | null
+  /** Ionicons-namn — bara satt för egna regler (valdes i regel-sheeten) */
+  icon: string | null
 }
 
 // ─── Functions ────────────────────────────────────────────────────────────────
@@ -62,7 +64,7 @@ export async function getOrCreateTaskCompletions(
   userId?: string,
   challengeId?: string,
 ): Promise<TaskItem[]> {
-  const SELECT = 'id, completed, task_template_id, details, task_templates(name, description, type, target_value, unit)'
+  const SELECT = 'id, completed, task_template_id, details, task_templates(name, description, type, target_value, unit, icon)'
 
   // A select error must never be treated as "first visit" — that would create duplicates
   const { data: existing, error: selectError } = await supabase
@@ -332,5 +334,6 @@ function toTaskItem(row: any): TaskItem {
     targetValue: row.task_templates?.target_value ?? null,
     unit: row.task_templates?.unit ?? null,
     details: row.details ?? null,
+    icon: row.task_templates?.icon ?? null,
   }
 }

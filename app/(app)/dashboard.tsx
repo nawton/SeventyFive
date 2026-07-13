@@ -837,8 +837,8 @@ export default function DashboardScreen() {
               const isLast = i === levelRules.length - 1 && customTasks.length === 0
               return (
                 <View key={i} style={[s.ruleItem, !isLast && s.ruleItemBorder]}>
-                  <View style={[s.ruleIconBox, { backgroundColor: ORANGE + '18' }]}>
-                    <Ionicons name={icon} size={15} color={ORANGE} />
+                  <View style={[s.ruleIconBox, { backgroundColor: ORANGE + '1C' }]}>
+                    <Ionicons name={icon} size={16} color={ORANGE} />
                   </View>
                   <Text style={s.ruleItemText}>{ruleText}</Text>
                   <Ionicons name="lock-closed-outline" size={12} color="#2A2A30" />
@@ -846,24 +846,36 @@ export default function DashboardScreen() {
               )
             })}
             {customTasks.map((task, i) => {
-              const CUSTOM_COLOR = '#9B6DFF'
+              const color  = TASK_COLORS.custom
               const isLast = i === customTasks.length - 1
               return (
                 <TouchableOpacity
                   key={task.completionId}
-                  style={[s.ruleItem, !isLast && s.ruleItemBorder]}
-                  onPress={() => toggleTask(task)}
+                  style={[
+                    s.ruleItem,
+                    !isLast && s.ruleItemBorder,
+                    task.completed && { backgroundColor: color + '0E' },
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    toggleTask(task)
+                  }}
                   onLongPress={() => handleDeleteRule(task)}
                   activeOpacity={0.8}
                 >
-                  <View style={[s.ruleIconBox, { backgroundColor: CUSTOM_COLOR + '18' }]}>
-                    <Ionicons name="checkmark-circle-outline" size={15} color={CUSTOM_COLOR} />
+                  {task.completed && <View style={[s.ruleSidebar, { backgroundColor: color }]} />}
+                  <View style={[s.ruleIconBox, { backgroundColor: color + '1C' }]}>
+                    <Ionicons
+                      name={task.icon ? safeIcon(task.icon) : 'checkmark-circle-outline'}
+                      size={16}
+                      color={color}
+                    />
                   </View>
                   <Text style={[s.ruleItemText, task.completed && s.ruleItemTextDone]}>
                     {task.name}
                   </Text>
-                  <View style={[s.ruleCheckBox, task.completed && { backgroundColor: '#4CAF50', borderColor: '#4CAF50' }]}>
-                    {task.completed && <Ionicons name="checkmark" size={10} color="#000" />}
+                  <View style={[s.ruleCheckBox, task.completed && { backgroundColor: color, borderColor: color }]}>
+                    {task.completed && <Ionicons name="checkmark" size={12} color="#000" />}
                   </View>
                 </TouchableOpacity>
               )
@@ -971,13 +983,16 @@ export default function DashboardScreen() {
                   <TouchableOpacity
                     key={opt.icon}
                     style={[s.iconBtn, newRuleIcon === opt.icon && s.iconBtnActive]}
-                    onPress={() => setNewRuleIcon(opt.icon)}
+                    onPress={() => {
+                      Haptics.selectionAsync()
+                      setNewRuleIcon(opt.icon)
+                    }}
                     activeOpacity={0.75}
                   >
                     <Ionicons
                       name={opt.icon}
                       size={20}
-                      color={newRuleIcon === opt.icon ? '#000' : '#4A4A50'}
+                      color={newRuleIcon === opt.icon ? TASK_COLORS.custom : '#4A4A50'}
                     />
                     <Text style={[s.iconBtnLabel, newRuleIcon === opt.icon && s.iconBtnLabelActive]}>
                       {opt.label}
@@ -1189,17 +1204,21 @@ const s = StyleSheet.create({
   ruleItemBorder: {
     borderBottomWidth: 1, borderBottomColor: CARD_BORDER,
   },
+  // Samma markering som taskSidebar på uppgiftskorten
+  ruleSidebar: {
+    position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+  },
   ruleIconBox: {
-    width: 32, height: 32, borderRadius: 9,
+    width: 34, height: 34, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
   ruleItemText: {
-    flex: 1, color: '#BBBBBB', fontSize: 13, fontWeight: '500', lineHeight: 18,
+    flex: 1, color: '#BBBBBB', fontSize: 13, fontWeight: '600', lineHeight: 18,
   },
   ruleItemTextDone: { color: '#3A3A40', textDecorationLine: 'line-through' },
   ruleCheckBox: {
-    width: 22, height: 22, borderRadius: 11,
+    width: 21, height: 21, borderRadius: 11,
     borderWidth: 1.5, borderColor: '#2A2A2E',
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
@@ -1252,9 +1271,10 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: CARD_BORDER,
     paddingHorizontal: 10, paddingVertical: 10, minWidth: 60,
   },
-  iconBtnActive: { backgroundColor: ORANGE, borderColor: ORANGE },
+  // Tintad markering i regelfärgen — samma stil som ikonboxarna på korten
+  iconBtnActive: { backgroundColor: '#9B6DFF1C', borderColor: '#9B6DFF' },
   iconBtnLabel:       { color: '#4A4A50', fontSize: 10, fontWeight: '500' },
-  iconBtnLabelActive: { color: '#000' },
+  iconBtnLabelActive: { color: '#9B6DFF', fontWeight: '700' },
   sheetSaveBtn: {
     backgroundColor: ORANGE, borderRadius: 16,
     paddingVertical: 16, alignItems: 'center', marginTop: 24,
