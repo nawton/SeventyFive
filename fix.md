@@ -52,6 +52,7 @@ Ringen i hero-cardet räknar `tasks.length` inklusive custom rules. Om en använ
 
 | Fil | Status | SQL att köra |
 |-----|--------|-------------|
-| `20260703000001_session_notes.sql` | ❓ Okänd | `ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS notes TEXT;` |
+| `20260703000001_session_notes.sql` | ✅ Körd 2026-07-13 (via fix_custom_rules-queryn) | — |
 | `20260706000002_session_type_cardio.sql` | ✅ Körd | — |
 | `20260712000001_custom_task_templates.sql` | ✅ Körd | — |
+| `20260713000001_fix_custom_rules.sql` | ✅ Körd 2026-07-13 (inkl. notes-kolumnen) | — |
