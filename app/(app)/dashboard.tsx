@@ -15,7 +15,7 @@ import {
   Platform,
   Pressable,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
@@ -315,6 +315,7 @@ function TaskGridCard({ task, onPress, counter, metaLabel }: {
 
 // ── Dashboard Screen ───────────────────────────────────────────────────────────
 export default function DashboardScreen() {
+  const insets = useSafeAreaInsets()
   const [userName, setUserName]     = useState('')
   const [userAvatar, setUserAvatar] = useState<string | null>(null)
   const [currentDay, setCurrentDay] = useState(1)
@@ -871,7 +872,7 @@ export default function DashboardScreen() {
         onRequestClose={() => setAddRuleOpen(false)}
       >
         <KeyboardAvoidingView
-          style={s.modalOverlay}
+          style={[s.modalOverlay, { paddingTop: insets.top + 8 }]}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setAddRuleOpen(false)} />
@@ -898,25 +899,31 @@ export default function DashboardScreen() {
             />
 
             <Text style={[s.sheetFieldLabel, { marginTop: 18 }]}>IKON</Text>
-            <View style={s.iconGrid}>
-              {ICON_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.icon}
-                  style={[s.iconBtn, newRuleIcon === opt.icon && s.iconBtnActive]}
-                  onPress={() => setNewRuleIcon(opt.icon)}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons
-                    name={opt.icon}
-                    size={20}
-                    color={newRuleIcon === opt.icon ? '#000' : '#4A4A50'}
-                  />
-                  <Text style={[s.iconBtnLabel, newRuleIcon === opt.icon && s.iconBtnLabelActive]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ScrollView
+              style={s.iconScroll}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={s.iconGrid}>
+                {ICON_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.icon}
+                    style={[s.iconBtn, newRuleIcon === opt.icon && s.iconBtnActive]}
+                    onPress={() => setNewRuleIcon(opt.icon)}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons
+                      name={opt.icon}
+                      size={20}
+                      color={newRuleIcon === opt.icon ? '#000' : '#4A4A50'}
+                    />
+                    <Text style={[s.iconBtnLabel, newRuleIcon === opt.icon && s.iconBtnLabelActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
 
             <TouchableOpacity
               style={[s.sheetSaveBtn, !newRuleName.trim() && s.sheetSaveBtnDisabled]}
@@ -1148,7 +1155,10 @@ const s = StyleSheet.create({
   sheet: {
     backgroundColor: CARD_BG, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingHorizontal: 20, paddingBottom: 44, paddingTop: 12,
+    // Krymp hellre än att tryckas upp bakom Dynamic Island när tangentbordet öppnas
+    flexShrink: 1,
   },
+  iconScroll: { flexGrow: 0, flexShrink: 1 },
   sheetHandle: {
     width: 40, height: 4, backgroundColor: CARD_BORDER, borderRadius: 2,
     alignSelf: 'center', marginBottom: 18,
