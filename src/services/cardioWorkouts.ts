@@ -25,7 +25,7 @@ export async function saveCardioWorkout(params: {
   durationSeconds: number
   calories: number
   route?: Array<[number, number]>
-}): Promise<boolean> {
+}): Promise<void> {
   const entry: CardioData = {
     category: 'cardio',
     type: params.type,
@@ -40,7 +40,7 @@ export async function saveCardioWorkout(params: {
     is_favorite: false,
     exercises: [entry],
   })
-  return !error
+  if (error) throw error
 }
 
 export async function deleteCardioWorkout(id: string): Promise<boolean> {

@@ -116,7 +116,8 @@ export async function completeCardioSession(
       { session_id: sessionId, user_id: userId, completed_date: date, distance_km: distanceKm, duration_seconds: durationSeconds },
       { onConflict: 'session_id,completed_date' },
     )
-  if (error && error.code !== '23505') console.warn('[completeCardioSession]', error.message)
+  // 23505 = redan markerad som klar — ofarligt
+  if (error && error.code !== '23505') throw error
 }
 
 export async function deleteWorkoutSession(id: string): Promise<void> {

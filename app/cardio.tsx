@@ -381,10 +381,13 @@ export default function CardioScreen() {
           await completeCardioSession(sessionId, session.user.id, date, summary.distanceKm, summary.elapsed)
         }
       }
-    } finally {
-      setSaving(false)
       setSummary(null)
       router.back()
+    } catch {
+      // Behåll sammanfattningen så passet inte går förlorat — användaren kan spara igen
+      Alert.alert('Kunde inte spara passet', 'Kontrollera din anslutning och försök igen.')
+    } finally {
+      setSaving(false)
     }
   }
 
