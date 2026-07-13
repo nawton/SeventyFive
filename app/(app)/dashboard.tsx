@@ -560,7 +560,7 @@ export default function DashboardScreen() {
     if (!newRuleName.trim() || !userId || !challenge || !dailyLogId) return
     setRuleSaving(true)
     try {
-      await createCustomRule(userId, challenge.id, challenge.level_id, newRuleName.trim(), newRuleIcon)
+      await createCustomRule(userId, challenge.id, challenge.level_id, newRuleName.trim(), newRuleIcon, dailyLogId)
       const updated = await getOrCreateTaskCompletions(dailyLogId, challenge.level_id, userId, challenge.id)
       setTasks(updated)
       setAddRuleOpen(false)

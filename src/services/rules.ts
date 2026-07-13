@@ -24,6 +24,7 @@ export async function createCustomRule(
   levelId: string,
   name: string,
   icon: string,
+  dailyLogId?: string,
 ): Promise<CustomRule> {
   const { data: existing } = await supabase
     .from('task_templates')
@@ -50,6 +51,15 @@ export async function createCustomRule(
     .select('id, name, icon, sort_order')
     .single()
   if (error) throw error
+
+  // getOrCreateTaskCompletions seedar bara vid dagens första besök — utan den
+  // här raden dyker en regel skapad mitt på dagen inte upp förrän imorgon
+  if (dailyLogId) {
+    const { error: compError } = await supabase
+      .from('task_completions')
+      .insert({ daily_log_id: dailyLogId, task_template_id: data.id, completed: false })
+    if (compError) throw compError
+  }
   return data as CustomRule
 }
 
