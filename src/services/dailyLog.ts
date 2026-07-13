@@ -75,10 +75,16 @@ export async function getOrCreateTaskCompletions(
     return existing.map(toTaskItem)
   }
 
-  // First visit of the day — seed completions from level templates + user custom templates
-  let query = supabase.from('task_templates').select('id').eq('level_id', levelId)
+  // First visit of the day — seed completions from level templates + user custom templates.
+  // is('user_id', null) är kritiskt: utan det kommer egna custom-mallar med här OCKSÅ
+  // (de har level_id satt) → dubbletter i insert-batchen → hela seedningen misslyckas,
+  // och andra användares regler läcker in (mallar är publikt läsbara via RLS).
+  const { data: levelTemplates } = await supabase
+    .from('task_templates')
+    .select('id')
+    .eq('level_id', levelId)
+    .is('user_id', null)
 
-  const { data: levelTemplates } = await query
   const { data: customTemplates } = userId && challengeId
     ? await supabase
         .from('task_templates')
@@ -87,14 +93,18 @@ export async function getOrCreateTaskCompletions(
         .eq('challenge_id', challengeId)
     : { data: [] }
 
-  const allTemplates = [...(levelTemplates ?? []), ...(customTemplates ?? [])]
-  if (allTemplates.length === 0) return []
+  // Dedupe på id — en dubblett i batchen fäller annars hela inserten
+  // mot UNIQUE (daily_log_id, task_template_id) och dagen blir tom
+  const templateIds = Array.from(
+    new Set([...(levelTemplates ?? []), ...(customTemplates ?? [])].map(t => t.id))
+  )
+  if (templateIds.length === 0) return []
 
   const { data: created, error: insertError } = await supabase
     .from('task_completions')
-    .insert(allTemplates.map((t) => ({
+    .insert(templateIds.map((id) => ({
       daily_log_id: dailyLogId,
-      task_template_id: t.id,
+      task_template_id: id,
       completed: false,
     })))
     .select(SELECT)
