@@ -225,6 +225,7 @@ export default function StatsScreen() {
   const [selectedDay, setSelectedDay]           = useState<DaySummary | null>(null)
   const [activeTab, setActiveTab]               = useState<StatsTab>('overview')
   const [loading, setLoading]                   = useState(true)
+  const [loadError, setLoadError]               = useState(false)
   const [userId, setUserId]                     = useState<string | null>(null)
   const [weekOffset, setWeekOffset]             = useState(0)
   const [weekExNames, setWeekExNames]           = useState<string[]>([])
@@ -246,6 +247,7 @@ export default function StatsScreen() {
       ])
       setWorkouts(cardioWos)
       setStrengthWorkouts(strengthWos)
+      setLoadError(false)
       if (!challenge) return
       setStartDate(challenge.start_date)
       const day = calculateCurrentDay(challenge.start_date)
@@ -253,6 +255,8 @@ export default function StatsScreen() {
       setLevelName(challenge.challenge_levels?.display_name ?? '')
       const allDays = await getAllDays(challenge.id, day)
       setDays(allDays)
+    } catch {
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -337,6 +341,22 @@ export default function StatsScreen() {
     return (
       <View style={[s.centered, { backgroundColor: BG }]}>
         <ActivityIndicator color={ORANGE} size="large" />
+      </View>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <View style={[s.centered, { backgroundColor: BG }]}>
+        <Ionicons name="cloud-offline-outline" size={36} color="#4A4A50" />
+        <Text style={s.errorText}>Kunde inte ladda din statistik</Text>
+        <TouchableOpacity
+          style={s.retryBtn}
+          onPress={() => { setLoading(true); loadStats() }}
+          activeOpacity={0.8}
+        >
+          <Text style={s.retryBtnText}>Försök igen</Text>
+        </TouchableOpacity>
       </View>
     )
   }
@@ -681,7 +701,16 @@ export default function StatsScreen() {
 
 const s = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: BG },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  errorText: { color: '#4A4A50', fontSize: 14 },
+  retryBtn: {
+    backgroundColor: ORANGE,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  retryBtnText: { color: '#000', fontSize: 14, fontWeight: '700' },
   scroll:   { paddingHorizontal: GRID_PADDING, paddingTop: 16, paddingBottom: 40, gap: 16 },
   header:   { paddingHorizontal: GRID_PADDING, paddingTop: 16, paddingBottom: 12 },
   title:    { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '700' },
