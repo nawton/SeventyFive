@@ -20,9 +20,12 @@ import { getExercises, type Exercise } from '@/services/exercises'
 import {
   getWorkoutSessions,
   deleteSessionWithSkips,
+  deleteRepeatingSessions,
   dateForWeekday,
   type WorkoutSession,
 } from '@/services/workoutSchedule'
+import { ScheduleWizard } from '@/components/ScheduleWizard'
+import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
@@ -135,6 +138,8 @@ export default function ManageSessionsScreen() {
   const [editorVisible, setEditorVisible] = useState(false)
   const [editingSession, setEditingSession] = useState<WorkoutSession | null>(null)
   const [editorInitialDate, setEditorInitialDate] = useState<Date | undefined>()
+  const [wizardVisible, setWizardVisible] = useState(false)
+  const [loaded, setLoaded]               = useState(false)
 
   const todayDay = todayWeekday()
 
@@ -148,6 +153,8 @@ export default function ManageSessionsScreen() {
       setExercises(exs)
     } catch {
       setSessions([])
+    } finally {
+      setLoaded(true)
     }
   }
 
@@ -289,6 +296,26 @@ export default function ManageSessionsScreen() {
           </Animated.View>
         )}
 
+        {/* CTA när inget schema finns */}
+        {loaded && sessions.length === 0 && (
+          <Animated.View entering={FadeInDown.duration(350)}>
+            <TouchableOpacity
+              style={s.ctaBanner}
+              onPress={() => setWizardVisible(true)}
+              activeOpacity={0.85}
+            >
+              <View style={s.ctaIcon}>
+                <Ionicons name="calendar" size={22} color="#000" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.ctaTitle}>Inget schema ännu</Text>
+                <Text style={s.ctaSub}>Tryck för att skapa ett anpassat träningsschema</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#000" />
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
         {/* Week grid */}
         <View style={s.grid}>
           {[1, 2, 3, 4, 5, 6, 7].map((dayNum, i) => (
@@ -323,6 +350,23 @@ export default function ManageSessionsScreen() {
           onSaved={() => { if (userId) loadData(userId) }}
         />
       )}
+
+      <ScheduleWizard
+        visible={wizardVisible}
+        onClose={() => setWizardVisible(false)}
+        onFinish={async (result) => {
+          setWizardVisible(false)
+          if (!userId) return
+          try {
+            await deleteRepeatingSessions(userId)
+            const count = await generateScheduleFromWizard(userId, result)
+            await loadData(userId)
+            Alert.alert('Schema skapat', `${count} pass har lagts till i ditt veckoschema.`)
+          } catch (e: any) {
+            Alert.alert('Kunde inte skapa schemat', e.message)
+          }
+        }}
+      />
     </SafeAreaView>
   )
 }
@@ -429,4 +473,17 @@ const s = StyleSheet.create({
     color: '#2A2A2C', fontSize: 11,
     textAlign: 'center', marginTop: 20,
   },
+
+  ctaBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: ORANGE, borderRadius: 16, padding: 14,
+    marginBottom: 16,
+  },
+  ctaIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ctaTitle: { color: '#000', fontSize: 15, fontWeight: '800' },
+  ctaSub:   { color: 'rgba(0,0,0,0.6)', fontSize: 12, marginTop: 1 },
 })

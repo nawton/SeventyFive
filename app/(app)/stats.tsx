@@ -121,7 +121,6 @@ interface GymSession {
   exercises:     string[]
 }
 
-const DAY_SHORT = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
 
 // ─── RingChart ─────────────────────────────────────────────────────────────────
 
@@ -276,14 +275,20 @@ export default function StatsScreen() {
 
     const sessions: GymSession[] = (data ?? [])
       .filter((c: any) => (c.workout_sessions as any)?.session_type !== 'cardio')
-      .map((c: any) => ({
-        id:            c.id as string,
-        completedDate: c.completed_date as string,
-        sessionName:   (c.workout_sessions as any)?.name ?? 'Pass',
-        exercises:     [...((c.workout_sessions as any)?.session_exercises ?? [])]
-          .sort((a: any, b: any) => a.sort_order - b.sort_order)
-          .map((e: any) => e.exercise_name as string),
-      }))
+      .map((c: any) => {
+        const rawName: string = (c.workout_sessions as any)?.name ?? 'Pass'
+        const sessionName = rawName.startsWith('ONCE:')
+          ? rawName.split(':').slice(2).join(':')
+          : rawName
+        return {
+          id:            c.id as string,
+          completedDate: c.completed_date as string,
+          sessionName,
+          exercises:     [...((c.workout_sessions as any)?.session_exercises ?? [])]
+            .sort((a: any, b: any) => a.sort_order - b.sort_order)
+            .map((e: any) => e.exercise_name as string),
+        }
+      })
     setWeekGymSessions(sessions)
   }
 
@@ -317,8 +322,9 @@ export default function StatsScreen() {
   const avgPace    = pacedKm > 0 ? fmtPace(pacedSecs / pacedKm) : '--:--'
   const bestPace   = bestPaceSec === Infinity ? '--:--' : fmtPace(bestPaceSec)
 
-  const milestone  = nextMilestone(currentDay)
-  const weeklyBars = buildWeeklyBars(workouts)
+  const milestone   = nextMilestone(currentDay)
+  const isEarlyDays = currentDay <= 7
+  const weeklyBars  = buildWeeklyBars(workouts)
   const maxBarKm   = Math.max(...weeklyBars.map(b => b.total), 0.1)
 
   if (loading) {
@@ -387,30 +393,49 @@ export default function StatsScreen() {
                       <Text style={s.ringRowLabel}>Klarade dagar</Text>
                       <Text style={[s.ringRowVal, { color: GREEN }]}>{completedDays} ✓</Text>
                     </View>
-                    <View style={s.ringRow}>
-                      <Text style={s.ringRowLabel}>Missade dagar</Text>
-                      <Text style={[s.ringRowVal, { color: RED }]}>{missedDays}</Text>
-                    </View>
-                    <View style={s.ringRow}>
-                      <Text style={s.ringRowLabel}>Framgång</Text>
-                      <Text style={[s.ringRowVal, { color: ORANGE }]}>
-                        {currentDay > 1 ? Math.round((completedDays / (currentDay - 1)) * 100) : 0}%
-                      </Text>
-                    </View>
+                    {!isEarlyDays && (
+                      <>
+                        <View style={s.ringRow}>
+                          <Text style={s.ringRowLabel}>Missade dagar</Text>
+                          <Text style={[s.ringRowVal, { color: RED }]}>{missedDays}</Text>
+                        </View>
+                        <View style={s.ringRow}>
+                          <Text style={s.ringRowLabel}>Framgång</Text>
+                          <Text style={[s.ringRowVal, { color: ORANGE }]}>
+                            {currentDay > 1 ? Math.round((completedDays / (currentDay - 1)) * 100) : 0}%
+                          </Text>
+                        </View>
+                      </>
+                    )}
                   </View>
                 </View>
               </View>
             </View>
 
+            {/* Milestone — framträdande dag 1–7 */}
+            {isEarlyDays && milestone && (
+              <View style={s.milestone}>
+                <View style={s.msIcon}><Text style={s.msEmoji}>🏔</Text></View>
+                <View style={s.msBody}>
+                  <Text style={s.msEyebrow}>NÄSTA MILSTOLPE</Text>
+                  <Text style={s.msTitle}>Dag {milestone.day} — {milestone.label}</Text>
+                  <Text style={s.msSub}>{milestone.daysLeft} dagar kvar · Du är på väg!</Text>
+                </View>
+              </View>
+            )}
+
             {/* Stat row */}
             <View style={s.statsRow}>
-              <StatCard label="dagar streak"  value={streak}                        icon="flame-outline"            color={ORANGE} />
-              <StatCard label="klarade"        value={completedDays}                  icon="checkmark-circle-outline" color={GREEN} />
-              <StatCard label="kvar till mål"  value={Math.max(0, 75 - currentDay)}  icon="flag-outline"             color={PURPLE} />
+              <StatCard label="dagar streak" value={streak}       icon="flame-outline"            color={ORANGE} />
+              <StatCard label="klarade"      value={completedDays} icon="checkmark-circle-outline" color={GREEN} />
+              {isEarlyDays
+                ? <StatCard label="till dag 10"  value={Math.max(0, 10 - currentDay)} icon="flag-outline" color={PURPLE} />
+                : <StatCard label="kvar till mål" value={Math.max(0, 75 - currentDay)} icon="flag-outline" color={PURPLE} />
+              }
             </View>
 
-            {/* Milestone */}
-            {milestone && (
+            {/* Milestone — normal position dag 8+ */}
+            {!isEarlyDays && milestone && (
               <View style={s.milestone}>
                 <View style={s.msIcon}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
@@ -554,7 +579,7 @@ export default function StatsScreen() {
                 <Text style={s.cardTitle}>Genomförda pass</Text>
                 <View style={s.gymList}>
                   {weekGymSessions.map(gs => {
-                    const dayLabel  = DAY_SHORT[new Date(gs.completedDate + 'T12:00:00').getDay()]
+                    const gymDay    = new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
                     const exPreview = gs.exercises.slice(0, 3).join(' · ')
                       + (gs.exercises.length > 3 ? ` · +${gs.exercises.length - 3}` : '')
                     return (
@@ -566,7 +591,7 @@ export default function StatsScreen() {
                           <Text style={s.gymName}>{gs.sessionName}</Text>
                           {!!exPreview && <Text style={s.gymExs}>{exPreview}</Text>}
                         </View>
-                        <Text style={s.gymDay}>{dayLabel}</Text>
+                        <Text style={s.gymDay}>{gymDay}</Text>
                       </View>
                     )
                   })}

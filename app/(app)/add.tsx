@@ -464,7 +464,7 @@ export default function SchemaScreen() {
                     <View style={styles.restState}>
                       <Ionicons name="moon-outline" size={40} color={BORDER} />
                       <Text style={styles.restTitle}>Vildag</Text>
-                      <Text style={styles.restText}>Inget pass schemalagt {WEEKDAYS[weekday - 1].toLowerCase()}</Text>
+                      <Text style={styles.restText}>Inget pass schemalagt {isToday ? 'idag' : WEEKDAYS[weekday - 1].toLowerCase()}</Text>
                       <TouchableOpacity style={styles.restAddBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
                         <Ionicons name="add" size={14} color={ORANGE} />
                         <Text style={styles.restAddText}>Lägg till pass</Text>

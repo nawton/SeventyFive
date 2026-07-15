@@ -57,6 +57,7 @@ import { VictoryModal } from '@/components/VictoryModal'
 import { TaskGridCard, TASK_COLORS, TASK_GAP } from '@/components/TaskGridCard'
 import { AddRuleSheet } from '@/components/AddRuleSheet'
 import type { UserChallengeWithLevel } from '@/types/database'
+import { getGreetingSubtitle } from '@/lib/getGreetingSubtitle'
 
 const ORANGE    = '#FF8F00'
 const SCENE_BG  = '#0A0A0B'
@@ -115,13 +116,6 @@ function getGreeting(): string {
   return 'God natt'
 }
 
-function getSubtitle(completed: number, total: number): string {
-  if (total > 0 && completed === total) return 'Alla uppgifter klara — grym prestation!'
-  const h = new Date().getHours()
-  if (h >= 21) return 'Sista chansen idag — kör hårt.'
-  if (h < 12)  return 'Dags att sätta igång.'
-  return 'Håll i — du klarar det.'
-}
 
 // ── Progress Ring ──────────────────────────────────────────────────────────────
 function ProgressRing({ completed, total }: { completed: number; total: number }) {
@@ -497,7 +491,7 @@ export default function DashboardScreen() {
         <View style={s.header}>
           <View>
             <Text style={s.greeting}>{getGreeting()}, {userName}</Text>
-            <Text style={s.subtitle}>{getSubtitle(completedCount, standardTasks.length)}</Text>
+            <Text style={s.subtitle}>{getGreetingSubtitle(new Date().getHours(), completedCount, tasks.length, currentDay)}</Text>
           </View>
           <TouchableOpacity
             style={s.avatar}
@@ -558,9 +552,9 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* ── Task grid ── */}
+        {/* ── Task grid (2-kolumner, ej foto) ── */}
         <View style={s.taskGrid}>
-          {standardTasks.map(task => {
+          {standardTasks.filter(t => t.type !== 'photo').map(task => {
             if (task.type === 'water') {
               const goal = waterGoal(task)
               const glasses = task.details?.glasses ?? 0
@@ -594,16 +588,6 @@ export default function DashboardScreen() {
                 />
               )
             }
-            if (task.type === 'photo') {
-              return (
-                <TaskGridCard
-                  key={task.completionId}
-                  task={task}
-                  onPress={() => router.push('/(app)/profile')}
-                  metaLabel={task.completed ? undefined : 'Läggs till i profilen'}
-                />
-              )
-            }
             return (
               <TaskGridCard
                 key={task.completionId}
@@ -613,6 +597,17 @@ export default function DashboardScreen() {
             )
           })}
         </View>
+
+        {/* ── Foto — full bredd under griden ── */}
+        {standardTasks.filter(t => t.type === 'photo').map(task => (
+          <TaskGridCard
+            key={task.completionId}
+            task={task}
+            onPress={() => router.push('/(app)/profile')}
+            metaLabel={task.completed ? undefined : 'Läggs till i profilen'}
+            fullWidth
+          />
+        ))}
 
         {/* ── Regler ── */}
         <View style={s.sectionRow}>

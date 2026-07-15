@@ -34,13 +34,15 @@ export const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>[
   custom:  'checkmark-circle-outline',
 }
 
-export function TaskGridCard({ task, onPress, counter, metaLabel }: {
+export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
   task: TaskItem
   onPress: () => void
   /** Glas-räknare med synliga −/+ knappar och progress-bar */
   counter?: { value: number; goal: number; unit: string; onPlus: () => void; onMinus: () => void }
   /** Liten metatext under namnet, t.ex. "12 sidor · Atomic Habits" */
   metaLabel?: string
+  /** Sträcker kortet till full rad-bredd (foto-uppgiften under griden) */
+  fullWidth?: boolean
 }) {
   const color = TASK_COLORS[task.type] ?? ORANGE
   const icon  = TASK_ICONS[task.type]  ?? 'checkmark-outline'
@@ -60,7 +62,7 @@ export function TaskGridCard({ task, onPress, counter, metaLabel }: {
   }
 
   return (
-    <Animated.View style={[aStyle, { width: TASK_W }]}>
+    <Animated.View style={[aStyle, { width: fullWidth ? SW - 40 : TASK_W }]}>
       <TouchableOpacity
         style={[
           s.taskCard,

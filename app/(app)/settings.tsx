@@ -164,6 +164,49 @@ export default function SettingsScreen() {
     )
   }
 
+  async function handleDeleteAccount() {
+    Alert.alert(
+      'Radera konto',
+      'All din data — utmaningar, träningspass, foton och profil — raderas permanent. Det går inte att ångra.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Radera mitt konto',
+          style: 'destructive',
+          onPress: confirmDeleteAccount,
+        },
+      ]
+    )
+  }
+
+  async function confirmDeleteAccount() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const uid = session?.user?.id
+      if (uid) {
+        // Radera storage-filer best-effort
+        await Promise.allSettled([
+          supabase.storage.from('progress-photos').list(uid).then(({ data }) =>
+            data?.length
+              ? supabase.storage.from('progress-photos').remove(data.map(f => `${uid}/${f.name}`))
+              : null
+          ),
+          supabase.storage.from('avatars').list(uid).then(({ data }) =>
+            data?.length
+              ? supabase.storage.from('avatars').remove(data.map(f => `${uid}/${f.name}`))
+              : null
+          ),
+        ])
+      }
+      const { error } = await supabase.rpc('delete_user_account')
+      if (error) throw error
+      await supabase.auth.signOut()
+      router.replace('/(auth)/welcome')
+    } catch (e: any) {
+      Alert.alert('Kunde inte radera kontot', e.message ?? 'Kontrollera anslutningen och försök igen.')
+    }
+  }
+
   const initials = (displayName || email.split('@')[0] || '?')[0].toUpperCase()
 
   if (loading) {
@@ -268,6 +311,12 @@ export default function SettingsScreen() {
             icon="log-out-outline"
             label="Logga ut"
             onPress={handleLogout}
+            danger
+          />
+          <SettingRow
+            icon="trash-outline"
+            label="Radera konto"
+            onPress={handleDeleteAccount}
             danger
             last
           />

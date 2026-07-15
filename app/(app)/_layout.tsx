@@ -38,7 +38,7 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="activity"
-        options={{ tabBarIcon: ({ color }) => <TabIcon name="body" color={color} /> }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="add"
