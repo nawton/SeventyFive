@@ -102,6 +102,7 @@ export function CollapsibleCalendar({
 
   const pan = Gesture.Pan()
     .activeOffsetY([-8, 8])
+    .failOffsetX([-15, 15])
     .onBegin(() => { startProg.value = progress.value })
     .onUpdate(e => {
       const delta = e.translationY / (MONTH_CONTENT_H - WEEK_CONTENT_H)
@@ -254,6 +255,7 @@ export function CollapsibleCalendar({
   }
 
   return (
+    <GestureDetector gesture={pan}>
     <Animated.View style={[s.wrapper, containerStyle]}>
 
       {/* Month header */}
@@ -286,14 +288,13 @@ export function CollapsibleCalendar({
         ))}
       </Animated.View>
 
-      {/* Drag handle */}
-      <GestureDetector gesture={pan}>
-        <View style={s.handleArea}>
-          <View style={s.handle} />
-        </View>
-      </GestureDetector>
+      {/* Drag handle — visuell indikator; gesten gäller hela kalendern */}
+      <View style={s.handleArea}>
+        <View style={s.handle} />
+      </View>
 
     </Animated.View>
+    </GestureDetector>
   )
 }
 
