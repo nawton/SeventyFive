@@ -14,6 +14,7 @@ import {
   ActionSheetIOS,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
@@ -81,6 +82,8 @@ export default function SchemaScreen() {
   const [completedByDate, setCompletedByDate]   = useState<Record<string, Set<string>>>({})
   const [pickerSession, setPickerSession]   = useState<WorkoutSession | null>(null)
   const [wizardVisible, setWizardVisible]   = useState(false)
+  // null = inte inläst än (rendera inte bannern förrän vi vet, undviker blink)
+  const [wizardBannerDismissed, setWizardBannerDismissed] = useState<boolean | null>(null)
   const [avatarUrl, setAvatarUrl]           = useState<string | null>(null)
   const [profileName, setProfileName]       = useState('')
   const [challengeDay, setChallengeDay]     = useState<number | null>(null)
@@ -91,6 +94,12 @@ export default function SchemaScreen() {
   useEffect(() => { selectedDateRef.current = selectedDate }, [selectedDate])
   const userIdRef = useRef(userId)
   useEffect(() => { userIdRef.current = userId }, [userId])
+
+  useEffect(() => {
+    AsyncStorage.getItem('wizardBannerDismissed')
+      .then(v => setWizardBannerDismissed(v === '1'))
+      .catch(() => setWizardBannerDismissed(false))
+  }, [])
 
   async function loadData(uid: string) {
     const date = isoDate(selectedDateRef.current)
@@ -342,21 +351,28 @@ export default function SchemaScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* "Skapa ditt schema" banner */}
-      <TouchableOpacity
-        style={styles.wizardBanner}
-        onPress={() => setWizardVisible(true)}
-        activeOpacity={0.85}
-      >
-        <View style={styles.wizardBannerIcon}>
-          <Ionicons name="calendar" size={22} color="#000" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.wizardBannerTitle}>Skapa ditt schema</Text>
-          <Text style={styles.wizardBannerSub}>Kom igång med ett anpassat träningsprogram</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color="#000" />
-      </TouchableOpacity>
+      {/* "Skapa ditt schema" banner — försvinner permanent efter första klicket
+          (wizarden nås fortfarande via manage-sessions när schemat är tomt) */}
+      {wizardBannerDismissed === false && (
+        <TouchableOpacity
+          style={styles.wizardBanner}
+          onPress={() => {
+            setWizardBannerDismissed(true)
+            AsyncStorage.setItem('wizardBannerDismissed', '1').catch(() => {})
+            setWizardVisible(true)
+          }}
+          activeOpacity={0.85}
+        >
+          <View style={styles.wizardBannerIcon}>
+            <Ionicons name="calendar" size={22} color="#000" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.wizardBannerTitle}>Skapa ditt schema</Text>
+            <Text style={styles.wizardBannerSub}>Kom igång med ett anpassat träningsprogram</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#000" />
+        </TouchableOpacity>
+      )}
 
       {/* Collapsible calendar */}
       <CollapsibleCalendar
