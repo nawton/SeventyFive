@@ -73,5 +73,5 @@ Filen `activity.tsx` är en platshållare. Tabben är nu dold (se punkt 1 ovan).
 | `20260706000002_session_type_cardio.sql` | ✅ Körd | — |
 | `20260712000001_custom_task_templates.sql` | ✅ Körd | — |
 | `20260713000001_fix_custom_rules.sql` | ✅ Körd 2026-07-13 (inkl. notes-kolumnen) | — |
-| `20260713000002_harden_advance_days_and_exercise_completions.sql` | ⏳ EJ KÖRD — kör i SQL Editor | Hela filens innehåll |
+| `20260713000002_harden_advance_days_and_exercise_completions.sql` | ✅ Körd 2026-07-13 (manuellt, inkl. funktionsskapande + pg_cron-schemaläggning) | — |
 | `20260715000001_delete_user_rpc.sql` | ⏳ EJ KÖRD — kör i SQL Editor (krävs för kontoborttagning) | Hela filens innehåll |
