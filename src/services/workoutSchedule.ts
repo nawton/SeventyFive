@@ -62,9 +62,11 @@ export async function createWorkoutSession(
   if (error) throw error
 
   if (sessionType === 'gym' && exercises.length > 0) {
-    await supabase.from('session_exercises').insert(
+    // Misslyckas inserten får passet inte bli tyst tomt — kasta så anroparen ser felet
+    const { error: exError } = await supabase.from('session_exercises').insert(
       exercises.map((e, i) => ({ session_id: data.id, ...e, sort_order: i }))
     )
+    if (exError) throw exError
   }
   return {
     ...data,
@@ -95,11 +97,13 @@ export async function updateWorkoutSession(
     .eq('id', sessionId)
   if (error) throw error
 
-  await supabase.from('session_exercises').delete().eq('session_id', sessionId)
+  const { error: delError } = await supabase.from('session_exercises').delete().eq('session_id', sessionId)
+  if (delError) throw delError
   if (sessionType === 'gym' && exercises.length > 0) {
-    await supabase.from('session_exercises').insert(
+    const { error: exError } = await supabase.from('session_exercises').insert(
       exercises.map((e, i) => ({ session_id: sessionId, ...e, sort_order: i }))
     )
+    if (exError) throw exError
   }
 }
 
