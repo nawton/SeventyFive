@@ -54,15 +54,19 @@ export type WizardResult = {
   runDistance: RunDistance
   musclePlan:  MusclePlan
   focusGroups: string[]
-  daysPerWeek: number
+  /** Valda träningsdagar, 1=Mån … 7=Sön */
+  weekdays:    number[]
   limitations: Limitation[]
 }
 
-const DAY_OPTIONS = [
-  { value: 2, label: '2 dagar', sub: 'Perfekt för att komma igång' },
-  { value: 3, label: '3 dagar', sub: 'Bra balans mellan träning och vila' },
-  { value: 4, label: '4 dagar', sub: 'För dig som har en rutin' },
-  { value: 5, label: '5 dagar', sub: 'Maximal utveckling' },
+const WEEKDAY_OPTIONS = [
+  { value: 1, label: 'Måndag'  },
+  { value: 2, label: 'Tisdag'  },
+  { value: 3, label: 'Onsdag'  },
+  { value: 4, label: 'Torsdag' },
+  { value: 5, label: 'Fredag'  },
+  { value: 6, label: 'Lördag'  },
+  { value: 7, label: 'Söndag'  },
 ] as const
 
 const LIMITATION_OPTIONS: Array<{ key: Limitation; label: string; icon: string }> = [
@@ -99,13 +103,19 @@ export function ScheduleWizard({
   const [runDistance, setRunDistance] = useState<RunDistance>(null)
   const [musclePlan, setMusclePlan]   = useState<MusclePlan>(null)
   const [focusGroups, setFocusGroups] = useState<string[]>([])
-  const [daysPerWeek, setDaysPerWeek] = useState<number | null>(null)
+  const [weekdays, setWeekdays]       = useState<number[]>([])
   const [limitations, setLimitations] = useState<Limitation[]>([])
 
   function reset() {
     setStep('goal'); setGoal(null); setRunDistance(null)
     setMusclePlan(null); setFocusGroups([])
-    setDaysPerWeek(null); setLimitations([])
+    setWeekdays([]); setLimitations([])
+  }
+
+  function toggleWeekday(day: number) {
+    setWeekdays(prev =>
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort((a, b) => a - b)
+    )
   }
 
   function handleClose() { reset(); onClose() }
@@ -368,33 +378,38 @@ export function ScheduleWizard({
             </>
           )}
 
-          {/* ── STEP: DAGAR PER VECKA ────────────────────────────────── */}
+          {/* ── STEP: VÄLJ TRÄNINGSDAGAR ─────────────────────────────── */}
           {step === 'days' && (
             <>
-              <Text style={s.stepTitle}>Hur många dagar vill du träna?</Text>
-              <Text style={s.stepSub}>Vi fördelar passen jämnt över veckan.</Text>
+              <Text style={s.stepTitle}>Vilka dagar vill du träna?</Text>
+              <Text style={s.stepSub}>
+                Välj de dagar som passar din vecka — passen läggs på dagarna du bockar i.
+              </Text>
 
-              {DAY_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[s.optCard, daysPerWeek === opt.value && s.optCardActive]}
-                  onPress={() => setDaysPerWeek(opt.value)}
-                  activeOpacity={0.8}
-                >
-                  <View style={[s.optIcon, daysPerWeek === opt.value && s.optIconActive]}>
-                    <Text style={[s.dayCount, daysPerWeek === opt.value && { color: ORANGE }]}>
-                      {opt.value}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.optTitle, daysPerWeek === opt.value && { color: ORANGE }]}>{opt.label}</Text>
-                    <Text style={s.optSub}>{opt.sub}</Text>
-                  </View>
-                  {daysPerWeek === opt.value && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
-                </TouchableOpacity>
-              ))}
+              {WEEKDAY_OPTIONS.map(opt => {
+                const selected = weekdays.includes(opt.value)
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[s.dayRow, selected && s.dayRowActive]}
+                    onPress={() => toggleWeekday(opt.value)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[s.dayRowLabel, selected && { color: ORANGE }]}>{opt.label}</Text>
+                    <View style={[s.dayCheck, selected && s.dayCheckActive]}>
+                      {selected && <Ionicons name="checkmark" size={13} color="#000" />}
+                    </View>
+                  </TouchableOpacity>
+                )
+              })}
 
-              <NextButton disabled={!daysPerWeek} onPress={() => daysPerWeek && setStep('limitations')} />
+              <Text style={s.daysHint}>
+                {weekdays.length === 0
+                  ? 'Välj minst en dag'
+                  : `${weekdays.length} pass per vecka`}
+              </Text>
+
+              <NextButton disabled={weekdays.length === 0} onPress={() => weekdays.length > 0 && setStep('limitations')} />
             </>
           )}
 
@@ -471,7 +486,7 @@ export function ScheduleWizard({
                 <View style={s.summaryCard}>
                   <Ionicons name="calendar-outline" size={24} color={ORANGE} />
                   <Text style={s.summaryCardTitle}>Veckoschema</Text>
-                  <Text style={s.summaryCardSub}>{daysPerWeek ?? 3} pass per vecka</Text>
+                  <Text style={s.summaryCardSub}>{Math.max(weekdays.length, 1)} pass per vecka</Text>
                 </View>
                 <View style={s.summaryCard}>
                   <Ionicons name="bar-chart-outline" size={24} color={ORANGE} />
@@ -485,7 +500,7 @@ export function ScheduleWizard({
                 onPress={() => {
                   const result: WizardResult = {
                     goal, runDistance, musclePlan, focusGroups,
-                    daysPerWeek: daysPerWeek ?? 3,
+                    weekdays: weekdays.length > 0 ? weekdays : [1, 3, 5],
                     limitations,
                   }
                   reset()
@@ -566,7 +581,23 @@ const s = StyleSheet.create({
   optIconActive: { backgroundColor: 'rgba(255,149,0,0.15)' },
   optTitle:      { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginBottom: 2 },
   optSub:        { color: TEXT_SECONDARY, fontSize: 13 },
-  dayCount:      { color: TEXT_SECONDARY, fontSize: 20, fontWeight: '800' },
+
+  // Veckodagsval
+  dayRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1.5, borderColor: BORDER,
+    paddingHorizontal: 18, paddingVertical: 14,
+  },
+  dayRowActive:  { borderColor: ORANGE, backgroundColor: 'rgba(255,149,0,0.07)' },
+  dayRowLabel:   { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
+  dayCheck: {
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 1.5, borderColor: BORDER,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  dayCheckActive: { backgroundColor: ORANGE, borderColor: ORANGE },
+  daysHint: { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center' },
 
   // Body SVG row
   bodyRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginVertical: 4 },

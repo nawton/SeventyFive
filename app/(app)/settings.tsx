@@ -254,7 +254,14 @@ export default function SettingsScreen() {
               const count = await deleteRepeatingSessions(userId)
               // Visa "Skapa ditt schema"-bannern på schemasidan igen
               await AsyncStorage.removeItem('wizardBannerDismissed').catch(() => {})
-              Alert.alert('Schema nollställt', `${count} pass togs bort. Skapa ett nytt via schemaguiden när du är redo.`)
+              Alert.alert(
+                'Schema nollställt',
+                `${count} pass togs bort. Vill du skapa ett nytt schema direkt?`,
+                [
+                  { text: 'Inte nu', style: 'cancel' },
+                  { text: 'Skapa nytt schema', onPress: () => setWizardVisible(true) },
+                ]
+              )
             } catch {
               Alert.alert('Kunde inte nollställa', 'Kontrollera din anslutning och försök igen.')
             }

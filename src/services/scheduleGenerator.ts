@@ -153,16 +153,6 @@ const FOCUS_SESSIONS: Record<string, { label: string; exercises: PlannedExercise
   },
 }
 
-// ─── Dagar per vecka ─────────────────────────────────────────────────────────
-// Jämn fördelning över veckan med vilodagar emellan
-
-const DAYS_TO_WEEKDAYS: Record<number, number[]> = {
-  2: [1, 4],
-  3: [1, 3, 5],
-  4: [1, 3, 5, 6],
-  5: [1, 2, 4, 5, 6],
-}
-
 // ─── Besvär: övningsbyten ────────────────────────────────────────────────────
 // Byter belastande övningar mot snällare alternativ ur samma övningsbibliotek
 
@@ -210,8 +200,9 @@ function applyLimitations(exercises: PlannedExercise[], limitations: string[]): 
 // ─── Generator ────────────────────────────────────────────────────────────────
 
 function buildPlan(result: WizardResult): PlannedSession[] {
-  const days     = DAYS_TO_WEEKDAYS[result.daysPerWeek] ?? DAYS_TO_WEEKDAYS[3]
-  const numDays  = days.length
+  // Användarens egna valda dagar (1=Mån … 7=Sön), i veckoordning
+  const days    = [...(result.weekdays?.length ? result.weekdays : [1, 3, 5])].sort((a, b) => a - b)
+  const numDays = days.length
 
   if (result.goal === 'running') {
     const base = RUN_PLANS[result.runDistance ?? '5k'] ?? RUN_PLANS['5k']
