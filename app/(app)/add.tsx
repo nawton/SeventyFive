@@ -351,9 +351,9 @@ export default function SchemaScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* "Skapa ditt schema" banner — försvinner permanent efter första klicket
-          (wizarden nås fortfarande via manage-sessions när schemat är tomt) */}
-      {wizardBannerDismissed === false && (
+      {/* "Skapa ditt schema" banner — visas bara om man varken har ett schema
+          eller klickat bort den (wizarden nås alltid via inställningarna) */}
+      {wizardBannerDismissed === false && !sessions.some(s => s.weekdays.length > 0 && !s.name.startsWith('SKIP:')) && (
         <TouchableOpacity
           style={styles.wizardBanner}
           onPress={() => {
@@ -370,7 +370,16 @@ export default function SchemaScreen() {
             <Text style={styles.wizardBannerTitle}>Skapa ditt schema</Text>
             <Text style={styles.wizardBannerSub}>Kom igång med ett anpassat träningsprogram</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#000" />
+          <TouchableOpacity
+            style={styles.wizardBannerClose}
+            onPress={() => {
+              setWizardBannerDismissed(true)
+              AsyncStorage.setItem('wizardBannerDismissed', '1').catch(() => {})
+            }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close" size={16} color="#000" />
+          </TouchableOpacity>
         </TouchableOpacity>
       )}
 
@@ -661,6 +670,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     marginHorizontal: 16, marginBottom: 10,
     backgroundColor: ORANGE, borderRadius: 16, padding: 14,
+  },
+  wizardBannerClose: {
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center', justifyContent: 'center',
   },
   wizardBannerIcon: {
     width: 40, height: 40, borderRadius: 12,
