@@ -21,6 +21,10 @@ import { supabase } from '@/lib/supabase'
 const IS_EXPO_GO = Constants.appOwnership === 'expo'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getProfile } from '@/services/profile'
+import { deleteRepeatingSessions } from '@/services/workoutSchedule'
+import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
+import { ScheduleWizard } from '@/components/ScheduleWizard'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -84,6 +88,8 @@ export default function SettingsScreen() {
   const [startDate, setStartDate]   = useState('')
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [loading, setLoading]       = useState(true)
+  const [userId, setUserId]         = useState<string | null>(null)
+  const [wizardVisible, setWizardVisible] = useState(false)
 
   async function loadSettings() {
     try {
@@ -92,6 +98,7 @@ export default function SettingsScreen() {
 
       const userEmail = session.user.email ?? ''
       setEmail(userEmail)
+      setUserId(session.user.id)
 
       const profile = await getProfile(session.user.id)
       setDisplayName(profile?.name ?? userEmail.split('@')[0] ?? '')
@@ -207,6 +214,56 @@ export default function SettingsScreen() {
     }
   }
 
+  function handleWizardFinish(result: Parameters<typeof generateScheduleFromWizard>[1]) {
+    setWizardVisible(false)
+    if (!userId) return
+    Alert.alert(
+      'Ersätt ditt schema?',
+      'Vill du ersätta dina nuvarande upprepande pass med det nya schemat, eller behålla båda?',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Behåll båda', onPress: () => applyNewSchedule(result, false) },
+        { text: 'Ersätt', style: 'destructive', onPress: () => applyNewSchedule(result, true) },
+      ]
+    )
+  }
+
+  async function applyNewSchedule(result: Parameters<typeof generateScheduleFromWizard>[1], replace: boolean) {
+    if (!userId) return
+    try {
+      if (replace) await deleteRepeatingSessions(userId)
+      const count = await generateScheduleFromWizard(userId, result)
+      Alert.alert('Schema uppdaterat', `${count} pass har lagts in i ditt veckoschema.`)
+    } catch (e: any) {
+      Alert.alert('Kunde inte skapa schemat', e.message)
+    }
+  }
+
+  function handleResetSchedule() {
+    if (!userId) return
+    Alert.alert(
+      'Nollställ träningsschema',
+      'Alla upprepande pass tas bort och du kan börja om från början med schemaguiden. Loggade pass och historik påverkas inte.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Nollställ',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const count = await deleteRepeatingSessions(userId)
+              // Visa "Skapa ditt schema"-bannern på schemasidan igen
+              await AsyncStorage.removeItem('wizardBannerDismissed').catch(() => {})
+              Alert.alert('Schema nollställt', `${count} pass togs bort. Skapa ett nytt via schemaguiden när du är redo.`)
+            } catch {
+              Alert.alert('Kunde inte nollställa', 'Kontrollera din anslutning och försök igen.')
+            }
+          },
+        },
+      ]
+    )
+  }
+
   const initials = (displayName || email.split('@')[0] || '?')[0].toUpperCase()
 
   if (loading) {
@@ -274,6 +331,16 @@ export default function SettingsScreen() {
             icon="time-outline"
             label="Ditt dagsschema"
             onPress={() => router.push('/(auth)/schedule?from=settings' as any)}
+          />
+          <SettingRow
+            icon="create-outline"
+            label="Ändra träningsschema"
+            onPress={() => setWizardVisible(true)}
+          />
+          <SettingRow
+            icon="refresh-outline"
+            label="Nollställ träningsschema"
+            onPress={handleResetSchedule}
             last
           />
         </Section>
@@ -323,6 +390,12 @@ export default function SettingsScreen() {
         </Section>
 
       </ScrollView>
+
+      <ScheduleWizard
+        visible={wizardVisible}
+        onClose={() => setWizardVisible(false)}
+        onFinish={handleWizardFinish}
+      />
     </SafeAreaView>
   )
 }
