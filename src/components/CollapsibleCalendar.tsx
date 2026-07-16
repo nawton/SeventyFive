@@ -12,10 +12,11 @@ import { toLocalDateString } from '@/lib/date'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 
 const GREEN   = '#4CAF50'
-const ROW_H   = 54    // height of one week row
-const HEADER_H = 44   // month title + nav
-const LABELS_H = 28   // day-of-week labels
-const HANDLE_H = 30   // drag handle area
+// Kompakta höjder — kalendern ska ta så lite plats som möjligt från passlistan
+const ROW_H   = 46    // height of one week row
+const HEADER_H = 38   // month title + nav
+const LABELS_H = 22   // day-of-week labels
+const HANDLE_H = 22   // drag handle area
 const WEEK_CONTENT_H  = ROW_H                  // 1 row
 const MONTH_CONTENT_H = ROW_H * 6              // max 6 rows
 const COLLAPSED_H = HEADER_H + LABELS_H + WEEK_CONTENT_H + HANDLE_H
