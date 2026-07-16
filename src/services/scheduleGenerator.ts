@@ -153,29 +153,116 @@ const FOCUS_SESSIONS: Record<string, { label: string; exercises: PlannedExercise
   },
 }
 
+// ─── Dagar per vecka ─────────────────────────────────────────────────────────
+// Jämn fördelning över veckan med vilodagar emellan
+
+const DAYS_TO_WEEKDAYS: Record<number, number[]> = {
+  2: [1, 4],
+  3: [1, 3, 5],
+  4: [1, 3, 5, 6],
+  5: [1, 2, 4, 5, 6],
+}
+
+// ─── Besvär: övningsbyten ────────────────────────────────────────────────────
+// Byter belastande övningar mot snällare alternativ ur samma övningsbibliotek
+
+const LIMITATION_SUBS: Record<string, Record<string, string>> = {
+  knee: {
+    'Knäböj':  'Rumänsk marklyft',
+    'Utfall':  'Hyperextensions',
+  },
+  back: {
+    'Marklyft':           'Benpress',
+    'Rumänsk marklyft':   'Benpress',
+    'Rodd med skivstång': 'Kabelrodd sittande',
+    'Knäböj':             'Benpress',
+    'Hyperextensions':    'Plankan',
+  },
+  shoulder: {
+    'Militärpress':      'Hantelpress axlar',
+    'Bänkpress':         'Hantelpress liggande',
+    'Lutande bänkpress': 'Hantelpress liggande',
+    'Sidolyft':          'Face pulls',
+    'Arnold press':      'Face pulls',
+    'Frontlyft':         'Face pulls',
+    'Dips':              'Kabelkorsning',
+    'Push-ups':          'Kabelkorsning',
+  },
+}
+
+/** Byter ut övningar enligt valda besvär och tar bort dubbletter som uppstår. */
+function applyLimitations(exercises: PlannedExercise[], limitations: string[]): PlannedExercise[] {
+  if (limitations.length === 0) return exercises
+  const seen = new Set<string>()
+  const out: PlannedExercise[] = []
+  for (const ex of exercises) {
+    let name = ex.exercise_name
+    for (const lim of limitations) {
+      name = LIMITATION_SUBS[lim]?.[name] ?? name
+    }
+    if (seen.has(name)) continue
+    seen.add(name)
+    out.push({ ...ex, exercise_name: name })
+  }
+  return out
+}
+
 // ─── Generator ────────────────────────────────────────────────────────────────
 
 function buildPlan(result: WizardResult): PlannedSession[] {
+  const days     = DAYS_TO_WEEKDAYS[result.daysPerWeek] ?? DAYS_TO_WEEKDAYS[3]
+  const numDays  = days.length
+
   if (result.goal === 'running') {
-    return RUN_PLANS[result.runDistance ?? '5k'] ?? RUN_PLANS['5k']
+    const base = RUN_PLANS[result.runDistance ?? '5k'] ?? RUN_PLANS['5k']
+    // Prioritera långpass + intervaller vid få dagar; fyll ut med lugn löpning vid många
+    const priority = [...base].sort((a, b) => {
+      const rank = (s: PlannedSession) =>
+        s.name === 'Långpass' ? 0 : s.name === 'Intervaller' ? 1 : s.name === 'Tempopass' ? 2 : 3
+      return rank(a) - rank(b)
+    })
+    const picked = priority.slice(0, numDays)
+    while (picked.length < numDays) {
+      picked.push({
+        name: `Lugn löpning ${picked.length}`, weekdays: [], exercises: [],
+        cardioType: 'running', notes: '20–30 min i lugnt tempo',
+      })
+    }
+    return picked.map((s, i) => ({ ...s, weekdays: [days[i]] }))
   }
 
+  let plan: PlannedSession[]
   if (result.musclePlan === 'focus' && result.focusGroups.length > 0) {
     const [first, second] = result.focusGroups
     const focusA = FOCUS_SESSIONS[first]
     const focusB = second ? FOCUS_SESSIONS[second] : null
-
-    // Mån = fokus 1, Ons = helkropp som bas, Fre = fokus 2 (eller fokus 1 igen)
-    return [
-      { name: `Fokus: ${focusA.label}`, weekdays: [1], exercises: focusA.exercises },
-      { ...FULL_BODY_PLAN[1], name: 'Helkropp', weekdays: [3] },
+    // Mönster: fokus 1 → helkropp som bas → fokus 2 (eller fokus 1 igen) → upprepa
+    const pattern: PlannedSession[] = [
+      { name: `Fokus: ${focusA.label}`, weekdays: [], exercises: focusA.exercises },
+      { ...FULL_BODY_PLAN[1], name: 'Helkropp', weekdays: [] },
       focusB
-        ? { name: `Fokus: ${focusB.label}`, weekdays: [5], exercises: focusB.exercises }
-        : { name: `Fokus: ${focusA.label} 2`, weekdays: [5], exercises: focusA.exercises },
+        ? { name: `Fokus: ${focusB.label}`, weekdays: [], exercises: focusB.exercises }
+        : { name: `Fokus: ${focusA.label} 2`, weekdays: [], exercises: focusA.exercises },
     ]
+    plan = Array.from({ length: numDays }, (_, i) => {
+      const p = pattern[i % pattern.length]
+      const round = Math.floor(i / pattern.length)
+      return { ...p, name: round > 0 ? `${p.name} · ${round + 1}` : p.name }
+    })
+  } else {
+    // Helkropp A/B/C cyklas över valda dagar
+    plan = Array.from({ length: numDays }, (_, i) => {
+      const p = FULL_BODY_PLAN[i % FULL_BODY_PLAN.length]
+      const round = Math.floor(i / FULL_BODY_PLAN.length)
+      return { ...p, name: round > 0 ? `${p.name} · ${round + 1}` : p.name }
+    })
   }
 
-  return FULL_BODY_PLAN
+  return plan.map((s, i) => ({
+    ...s,
+    weekdays: [days[i]],
+    exercises: applyLimitations(s.exercises, result.limitations ?? []),
+  }))
 }
 
 /** Skapar veckoscheman utifrån wizard-svaren. Returnerar antal skapade pass. */

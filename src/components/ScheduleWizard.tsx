@@ -46,20 +46,38 @@ const RUN_OPTIONS = [
 type Goal        = 'running' | 'muscle' | null
 type RunDistance = '5k' | '10k' | 'half' | 'marathon' | null
 type MusclePlan  = 'everything' | 'focus' | null
-type Step        = 'goal' | 'running-distance' | 'muscle-plan' | 'muscle-focus' | 'summary'
+type Limitation  = 'knee' | 'back' | 'shoulder'
+type Step        = 'goal' | 'running-distance' | 'muscle-plan' | 'muscle-focus' | 'days' | 'limitations' | 'summary'
 
 export type WizardResult = {
   goal:        Goal
   runDistance: RunDistance
   musclePlan:  MusclePlan
   focusGroups: string[]
+  daysPerWeek: number
+  limitations: Limitation[]
 }
+
+const DAY_OPTIONS = [
+  { value: 2, label: '2 dagar', sub: 'Perfekt för att komma igång' },
+  { value: 3, label: '3 dagar', sub: 'Bra balans mellan träning och vila' },
+  { value: 4, label: '4 dagar', sub: 'För dig som har en rutin' },
+  { value: 5, label: '5 dagar', sub: 'Maximal utveckling' },
+] as const
+
+const LIMITATION_OPTIONS: Array<{ key: Limitation; label: string; icon: string }> = [
+  { key: 'knee',     label: 'Knäproblem',   icon: 'walk-outline' },
+  { key: 'back',     label: 'Ryggproblem',  icon: 'body-outline' },
+  { key: 'shoulder', label: 'Axelproblem',  icon: 'barbell-outline' },
+]
 
 const STEP_PROGRESS: Record<Step, number> = {
   'goal':              0,
-  'running-distance':  0.5,
-  'muscle-plan':       0.5,
-  'muscle-focus':      0.75,
+  'running-distance':  0.3,
+  'muscle-plan':       0.3,
+  'muscle-focus':      0.45,
+  'days':              0.6,
+  'limitations':       0.8,
   'summary':           1,
 }
 
@@ -81,10 +99,13 @@ export function ScheduleWizard({
   const [runDistance, setRunDistance] = useState<RunDistance>(null)
   const [musclePlan, setMusclePlan]   = useState<MusclePlan>(null)
   const [focusGroups, setFocusGroups] = useState<string[]>([])
+  const [daysPerWeek, setDaysPerWeek] = useState<number | null>(null)
+  const [limitations, setLimitations] = useState<Limitation[]>([])
 
   function reset() {
     setStep('goal'); setGoal(null); setRunDistance(null)
     setMusclePlan(null); setFocusGroups([])
+    setDaysPerWeek(null); setLimitations([])
   }
 
   function handleClose() { reset(); onClose() }
@@ -94,11 +115,20 @@ export function ScheduleWizard({
     if (step === 'running-distance')  { setStep('goal'); return }
     if (step === 'muscle-plan')       { setStep('goal'); return }
     if (step === 'muscle-focus')      { setStep('muscle-plan'); return }
-    if (step === 'summary') {
+    if (step === 'days') {
       if (goal === 'running')             setStep('running-distance')
       else if (musclePlan === 'focus')    setStep('muscle-focus')
       else                                setStep('muscle-plan')
+      return
     }
+    if (step === 'limitations')       { setStep('days'); return }
+    if (step === 'summary')           { setStep('limitations') }
+  }
+
+  function toggleLimitation(key: Limitation) {
+    setLimitations(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    )
   }
 
   function toggleFocusGroup(key: string) {
@@ -217,7 +247,7 @@ export function ScheduleWizard({
                 </TouchableOpacity>
               ))}
 
-              <NextButton disabled={!runDistance} onPress={() => runDistance && setStep('summary')} />
+              <NextButton disabled={!runDistance} onPress={() => runDistance && setStep('days')} />
             </>
           )}
 
@@ -277,7 +307,7 @@ export function ScheduleWizard({
 
               <NextButton disabled={!musclePlan} onPress={() => {
                 if (!musclePlan) return
-                setStep(musclePlan === 'focus' ? 'muscle-focus' : 'summary')
+                setStep(musclePlan === 'focus' ? 'muscle-focus' : 'days')
               }} />
             </>
           )}
@@ -334,7 +364,85 @@ export function ScheduleWizard({
                 })}
               </View>
 
-              <NextButton disabled={focusGroups.length === 0} onPress={() => focusGroups.length > 0 && setStep('summary')} />
+              <NextButton disabled={focusGroups.length === 0} onPress={() => focusGroups.length > 0 && setStep('days')} />
+            </>
+          )}
+
+          {/* ── STEP: DAGAR PER VECKA ────────────────────────────────── */}
+          {step === 'days' && (
+            <>
+              <Text style={s.stepTitle}>Hur många dagar vill du träna?</Text>
+              <Text style={s.stepSub}>Vi fördelar passen jämnt över veckan.</Text>
+
+              {DAY_OPTIONS.map(opt => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[s.optCard, daysPerWeek === opt.value && s.optCardActive]}
+                  onPress={() => setDaysPerWeek(opt.value)}
+                  activeOpacity={0.8}
+                >
+                  <View style={[s.optIcon, daysPerWeek === opt.value && s.optIconActive]}>
+                    <Text style={[s.dayCount, daysPerWeek === opt.value && { color: ORANGE }]}>
+                      {opt.value}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.optTitle, daysPerWeek === opt.value && { color: ORANGE }]}>{opt.label}</Text>
+                    <Text style={s.optSub}>{opt.sub}</Text>
+                  </View>
+                  {daysPerWeek === opt.value && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
+                </TouchableOpacity>
+              ))}
+
+              <NextButton disabled={!daysPerWeek} onPress={() => daysPerWeek && setStep('limitations')} />
+            </>
+          )}
+
+          {/* ── STEP: BESVÄR/SKADOR ──────────────────────────────────── */}
+          {step === 'limitations' && (
+            <>
+              <Text style={s.stepTitle}>Har du några besvär?</Text>
+              <Text style={s.stepSub}>
+                Vi byter ut övningar som belastar känsliga områden. Hoppa över om inget stämmer.
+              </Text>
+
+              {LIMITATION_OPTIONS.map(opt => {
+                const selected = limitations.includes(opt.key)
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[s.optCard, selected && s.optCardActive]}
+                    onPress={() => toggleLimitation(opt.key)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[s.optIcon, selected && s.optIconActive]}>
+                      <Ionicons
+                        name={opt.icon as React.ComponentProps<typeof Ionicons>['name']}
+                        size={24}
+                        color={selected ? ORANGE : TEXT_SECONDARY}
+                      />
+                    </View>
+                    <Text style={[s.optTitle, { flex: 1 }, selected && { color: ORANGE }]}>{opt.label}</Text>
+                    {selected && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
+                  </TouchableOpacity>
+                )
+              })}
+
+              <TouchableOpacity
+                style={[s.optCard, limitations.length === 0 && s.optCardActive]}
+                onPress={() => setLimitations([])}
+                activeOpacity={0.8}
+              >
+                <View style={[s.optIcon, limitations.length === 0 && s.optIconActive]}>
+                  <Ionicons name="checkmark-done-outline" size={24} color={limitations.length === 0 ? ORANGE : TEXT_SECONDARY} />
+                </View>
+                <Text style={[s.optTitle, { flex: 1 }, limitations.length === 0 && { color: ORANGE }]}>
+                  Inga besvär
+                </Text>
+                {limitations.length === 0 && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
+              </TouchableOpacity>
+
+              <NextButton disabled={false} onPress={() => setStep('summary')} />
             </>
           )}
 
@@ -363,7 +471,7 @@ export function ScheduleWizard({
                 <View style={s.summaryCard}>
                   <Ionicons name="calendar-outline" size={24} color={ORANGE} />
                   <Text style={s.summaryCardTitle}>Veckoschema</Text>
-                  <Text style={s.summaryCardSub}>Anpassat för dina mål</Text>
+                  <Text style={s.summaryCardSub}>{daysPerWeek ?? 3} pass per vecka</Text>
                 </View>
                 <View style={s.summaryCard}>
                   <Ionicons name="bar-chart-outline" size={24} color={ORANGE} />
@@ -374,7 +482,15 @@ export function ScheduleWizard({
 
               <TouchableOpacity
                 style={s.nextBtn}
-                onPress={() => { reset(); onFinish({ goal, runDistance, musclePlan, focusGroups }) }}
+                onPress={() => {
+                  const result: WizardResult = {
+                    goal, runDistance, musclePlan, focusGroups,
+                    daysPerWeek: daysPerWeek ?? 3,
+                    limitations,
+                  }
+                  reset()
+                  onFinish(result)
+                }}
                 activeOpacity={0.85}
               >
                 <Text style={s.nextBtnText}>Starta träning</Text>
@@ -450,6 +566,7 @@ const s = StyleSheet.create({
   optIconActive: { backgroundColor: 'rgba(255,149,0,0.15)' },
   optTitle:      { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginBottom: 2 },
   optSub:        { color: TEXT_SECONDARY, fontSize: 13 },
+  dayCount:      { color: TEXT_SECONDARY, fontSize: 20, fontWeight: '800' },
 
   // Body SVG row
   bodyRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginVertical: 4 },
