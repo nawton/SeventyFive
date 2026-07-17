@@ -409,6 +409,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', flexWrap: 'wrap',
     rowGap: 20,
     paddingHorizontal: 4,
+    marginTop: 14,
   },
   statCell: { width: '50%', gap: 3, alignItems: 'center' },
   statValue: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
