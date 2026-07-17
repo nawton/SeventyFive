@@ -246,6 +246,50 @@ export default function CardioScreen() {
   const goalKmSaid = useRef(false)
   const goalMinSaid = useRef(false)
 
+  // Nedräkning 3-2-1 innan spårningen startar
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const countdownTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  const countRef = useRef(0)
+  const pulseV = useSharedValue(1)
+
+  function countdownFeedback(n: number) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    speak(n === 3 ? 'Tre' : n === 2 ? 'Två' : 'Ett')
+    pulseV.value = 0.3
+    pulseV.value = withTiming(1, { duration: 500 })
+  }
+
+  function beginCountdown() {
+    if (countdownTimer.current) return
+    countRef.current = 3
+    setCountdown(3)
+    countdownFeedback(3)
+    countdownTimer.current = setInterval(() => {
+      countRef.current -= 1
+      if (countRef.current <= 0) {
+        cancelCountdown(false)
+        startTracking()
+      } else {
+        setCountdown(countRef.current)
+        countdownFeedback(countRef.current)
+      }
+    }, 1000)
+  }
+
+  function cancelCountdown(stopVoice = true) {
+    if (countdownTimer.current) {
+      clearInterval(countdownTimer.current)
+      countdownTimer.current = null
+    }
+    setCountdown(null)
+    if (stopVoice) Speech.stop()
+  }
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(pulseV.value, [0.3, 1], [0.55, 1]) }],
+    opacity: interpolate(pulseV.value, [0.3, 1], [0.3, 1]),
+  }))
+
   const webRef = useRef<InstanceType<typeof WebView>>(null)
   const locationSub = useRef<Location.LocationSubscription | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -593,6 +637,7 @@ export default function CardioScreen() {
     headingSub.current?.remove()
     if (timerRef.current) clearInterval(timerRef.current)
     if (splitToastTimer.current) clearTimeout(splitToastTimer.current)
+    if (countdownTimer.current) clearInterval(countdownTimer.current)
   }
 
   function handleFinish() {
@@ -646,6 +691,14 @@ export default function CardioScreen() {
         originWhitelist={['*']}
         onLoadEnd={() => { mapReady.current = true }}
       />
+
+      {/* ── Nedräkning 3-2-1 innan start ── */}
+      {countdown !== null && (
+        <Pressable style={styles.countdownOverlay} onPress={() => cancelCountdown()}>
+          <Animated.Text style={[styles.countdownNum, pulseStyle]}>{countdown}</Animated.Text>
+          <Text style={styles.countdownHint}>Tryck för att avbryta</Text>
+        </Pressable>
+      )}
 
       {/* ── Fullskärmskompass — kolsvart med vita symboler ── */}
       <Modal visible={compassOpen} animationType="fade" onRequestClose={closeCompass}>
@@ -1121,7 +1174,7 @@ export default function CardioScreen() {
                 <Text style={styles.idleColLabel}>{selectedExercise.label}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.idleCol} onPress={startTracking} activeOpacity={0.85}>
+              <TouchableOpacity style={styles.idleCol} onPress={beginCountdown} activeOpacity={0.85}>
                 <View style={styles.startCircle}>
                   <Ionicons name="play" size={36} color="#fff" style={{ marginLeft: 4 }} />
                 </View>
@@ -1347,6 +1400,27 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
+  },
+
+  // ── Nedräkning ──
+  countdownOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.88)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 60,
+  },
+  countdownNum: {
+    color: ORANGE,
+    fontSize: 170,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
+  },
+  countdownHint: {
+    color: '#888',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 16,
   },
 
   // ── Kompass ──
