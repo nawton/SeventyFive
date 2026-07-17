@@ -460,6 +460,34 @@ export async function getCompletedSessionIds(userId: string, date: string): Prom
   return (data ?? []).map(r => r.session_id)
 }
 
+export interface CardioCompletion {
+  distanceKm: number
+  durationSeconds: number
+}
+
+/** Distans och tid för avklarade cardio-pass en viss dag, per session-id. */
+export async function getCardioCompletions(
+  userId: string,
+  date: string,
+): Promise<Record<string, CardioCompletion>> {
+  const { data, error } = await supabase
+    .from('workout_completions')
+    .select('session_id, distance_km, duration_seconds')
+    .eq('user_id', userId)
+    .eq('completed_date', date)
+  if (error || !data) return {}
+  const out: Record<string, CardioCompletion> = {}
+  for (const r of data) {
+    if (r.distance_km != null || r.duration_seconds != null) {
+      out[r.session_id] = {
+        distanceKm: r.distance_km ?? 0,
+        durationSeconds: r.duration_seconds ?? 0,
+      }
+    }
+  }
+  return out
+}
+
 export async function completeSession(sessionId: string, userId: string, date: string): Promise<void> {
   const { error } = await supabase
     .from('workout_completions')

@@ -48,6 +48,22 @@ function cardioLabel(type: string | null): string {
   }
 }
 
+function fmtDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${m}:${String(s).padStart(2, '0')}`
+}
+
+/** Snittempo min/km i "m:ss"-form */
+function fmtPace(distanceKm: number, seconds: number): string {
+  if (distanceKm < 0.01) return '--:--'
+  const p = seconds / distanceKm
+  return `${Math.floor(p / 60)}:${String(Math.floor(p % 60)).padStart(2, '0')}`
+}
+
 // ── Two-stage swipe constants ─────────────────────────────────────────────────
 //
 // Stage 1: card snaps to SNAP_OPEN — action button appears as a circle.
@@ -456,6 +472,7 @@ export interface WorkoutSectionProps {
   onDeleteExercise:  (exId: string) => void
   onStartCardio:         (name: string) => void
   onStartCardioSession?: () => void
+  onViewCardioSummary?:  () => void
   onCardPress:           (ex: SessionExercise) => void
   onComplete:            () => void
   onUncomplete:          () => void
@@ -463,6 +480,8 @@ export interface WorkoutSectionProps {
   onLongPress?:          () => void
   onAddExercise?:        () => void
   isQuickLog?:           boolean
+  /** Distans/tid för ett avklarat cardio-pass — visas i kroppen när klart */
+  cardioStats?:          { distanceKm: number; durationSeconds: number }
   /** Övnings-id:n vars reps skalats upp av progressionen — visar ↑-indikator */
   progressedIds?:        Set<string>
 }
@@ -477,6 +496,7 @@ export function WorkoutSection({
   onDeleteExercise,
   onStartCardio,
   onStartCardioSession,
+  onViewCardioSummary,
   onCardPress,
   onComplete,
   onUncomplete,
@@ -484,6 +504,7 @@ export function WorkoutSection({
   onAddExercise,
   onEdit,
   isQuickLog,
+  cardioStats,
   progressedIds,
 }: WorkoutSectionProps) {
   const isCardio  = session.session_type === 'cardio'
@@ -494,7 +515,7 @@ export function WorkoutSection({
   // ── Collapse: tryck på rubriken fäller ihop kortet till rubrik + progress ──
   const hasBody =
     (!isCardio && (total > 0 || !!onAddExercise)) ||
-    (isCardio && !isCompleted)
+    (isCardio && (!isCompleted || !!onViewCardioSummary))
   const [collapsed, setCollapsed] = useState(false)
   const [bodyH, setBodyH]         = useState(0)
   const collapseV = useSharedValue(1)   // 1 = utfälld
@@ -668,6 +689,39 @@ export function WorkoutSection({
         </TouchableOpacity>
       )}
 
+      {/* ── Cardio summary (avklarat pass — klicka för detaljer) ── */}
+      {isCardio && isCompleted && onViewCardioSummary && (
+        <TouchableOpacity style={s.cardioSummary} onPress={onViewCardioSummary} activeOpacity={0.8}>
+          <View style={s.cardioSummaryStats}>
+            <View style={s.cardioSummaryStat}>
+              <Text style={s.cardioSummaryValue}>
+                {cardioStats ? cardioStats.distanceKm.toFixed(2) : '–'}
+              </Text>
+              <Text style={s.cardioSummaryLabel}>km</Text>
+            </View>
+            <View style={s.cardioSummaryDivider} />
+            <View style={s.cardioSummaryStat}>
+              <Text style={s.cardioSummaryValue}>
+                {cardioStats ? fmtDuration(cardioStats.durationSeconds) : '–'}
+              </Text>
+              <Text style={s.cardioSummaryLabel}>tid</Text>
+            </View>
+            <View style={s.cardioSummaryDivider} />
+            <View style={s.cardioSummaryStat}>
+              <Text style={s.cardioSummaryValue}>
+                {cardioStats ? fmtPace(cardioStats.distanceKm, cardioStats.durationSeconds) : '–'}
+              </Text>
+              <Text style={s.cardioSummaryLabel}>/km</Text>
+            </View>
+          </View>
+          <View style={s.cardioSummaryLink}>
+            <Ionicons name="map-outline" size={15} color={CARDIO_BLUE} />
+            <Text style={s.cardioSummaryLinkText}>Visa pass</Text>
+            <Ionicons name="chevron-forward" size={15} color={CARDIO_BLUE} />
+          </View>
+        </TouchableOpacity>
+      )}
+
       {/* ── Exercise rows — inbäddade i passkortet ── */}
       {!isCardio && total > 0 && (
         <View style={s.exList}>
@@ -807,4 +861,32 @@ const s = StyleSheet.create({
     fontWeight:  '700',
     letterSpacing: 1,
   },
+
+  cardioSummary: {
+    borderTopWidth: 1,
+    borderTopColor: GREEN + '30',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
+    gap: 12,
+  },
+  cardioSummaryStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardioSummaryStat: { flex: 1, alignItems: 'center', gap: 2 },
+  cardioSummaryValue: {
+    color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
+  cardioSummaryLabel: {
+    color: TEXT_SECONDARY, fontSize: 10, fontWeight: '600',
+    textTransform: 'uppercase', letterSpacing: 0.5,
+  },
+  cardioSummaryDivider: { width: 1, height: 26, backgroundColor: BORDER },
+  cardioSummaryLink: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    backgroundColor: CARDIO_BLUE + '18', borderRadius: 12, paddingVertical: 9,
+  },
+  cardioSummaryLinkText: { color: CARDIO_BLUE, fontSize: 13, fontWeight: '700' },
 })

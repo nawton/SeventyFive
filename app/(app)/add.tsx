@@ -35,6 +35,7 @@ import {
   addMissedExercise,
   addSingleExerciseToSession,
   getCompletedSessionIds,
+  getCardioCompletions,
   getCompletedExerciseIds,
   getExerciseCompletionCounts,
   completeSession,
@@ -88,6 +89,7 @@ function dateToIndex(d: Date): number {
 
 const EMPTY_CHECKED: Record<string, boolean> = {}
 const EMPTY_COMPLETED = new Set<string>()
+const EMPTY_CARDIO_STATS: Record<string, { distanceKm: number; durationSeconds: number }> = {}
 
 interface DayPageApi {
   toggleCheck:      (exId: string, date: string) => void
@@ -100,7 +102,7 @@ interface DayPageApi {
 }
 
 const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, progress, userId, dayAnimStyle, api,
+  idx, sessions, exercises, checked, completed, cardioStats, progress, userId, dayAnimStyle, api,
 }: {
   idx: number
   sessions: WorkoutSession[]
@@ -108,6 +110,7 @@ const DayPage = React.memo(function DayPage({
   checked: Record<string, boolean>
   progress: Record<string, number>
   completed: Set<string>
+  cardioStats: Record<string, { distanceKm: number; durationSeconds: number }>
   userId: string | null
   dayAnimStyle: AnimatedStyle<ViewStyle>
   api: DayPageApi
@@ -210,6 +213,14 @@ const DayPage = React.memo(function DayPage({
                             date: dateStr,
                           } })
                         : undefined}
+                      cardioStats={s.session_type === 'cardio' ? cardioStats[s.id] : undefined}
+                      onViewCardioSummary={s.session_type === 'cardio' && isCompleted && cardioStats[s.id]
+                        ? () => router.push({ pathname: '/cardio-summary', params: {
+                            name: sessionDisplayName(s),
+                            cardioType: s.cardio_type ?? 'running',
+                            date: dateStr,
+                          } })
+                        : undefined}
                       onCardPress={(sessionEx) => {
                         const name   = sessionEx.exercise_name
                         const exInfo = exercises.find(e => e.name === name)
@@ -308,6 +319,8 @@ export default function SchemaScreen() {
   // Keyed by ISO date string so each day's completion state is isolated
   const [checkedByDate, setCheckedByDate]       = useState<Record<string, Record<string, boolean>>>({})
   const [completedByDate, setCompletedByDate]   = useState<Record<string, Set<string>>>({})
+  // Distans/tid per avklarat cardio-pass, nycklat på datum → session-id
+  const [cardioStatsByDate, setCardioStatsByDate] = useState<Record<string, Record<string, { distanceKm: number; durationSeconds: number }>>>({})
   const [pickerSession, setPickerSession]   = useState<WorkoutSession | null>(null)
   const [wizardVisible, setWizardVisible]   = useState(false)
   // null = inte inläst än (rendera inte bannern förrän vi vet, undviker blink)
@@ -347,10 +360,11 @@ export default function SchemaScreen() {
 
   async function loadData(uid: string) {
     const date = isoDate(selectedDateRef.current)
-    const [exs, sess, sessionIds, exerciseIds, progressCounts] = await Promise.all([
+    const [exs, sess, sessionIds, cardioStats, exerciseIds, progressCounts] = await Promise.all([
       getExercises().catch(() => [] as Exercise[]),
       getWorkoutSessions(uid).catch(() => [] as WorkoutSession[]),
       getCompletedSessionIds(uid, date).catch(() => [] as string[]),
+      getCardioCompletions(uid, date).catch(() => ({})),
       getCompletedExerciseIds(uid, date).catch(() => [] as string[]),
       getExerciseCompletionCounts(uid).catch(() => ({} as Record<string, number>)),
     ])
@@ -360,6 +374,7 @@ export default function SchemaScreen() {
     const exChecked: Record<string, boolean> = {}
     exerciseIds.forEach(id => { exChecked[id] = true })
     setCompletedByDate(prev => ({ ...prev, [date]: new Set(sessionIds) }))
+    setCardioStatsByDate(prev => ({ ...prev, [date]: cardioStats }))
     setCheckedByDate(prev => ({ ...prev, [date]: exChecked }))
   }
 
@@ -395,11 +410,13 @@ export default function SchemaScreen() {
     const timer = setTimeout(() => {
       Promise.all([
         getCompletedSessionIds(userId, date).catch(() => [] as string[]),
+        getCardioCompletions(userId, date).catch(() => ({})),
         getCompletedExerciseIds(userId, date).catch(() => [] as string[]),
-      ]).then(([sessionIds, exerciseIds]) => {
+      ]).then(([sessionIds, cardioStats, exerciseIds]) => {
         const exChecked: Record<string, boolean> = {}
         exerciseIds.forEach(id => { exChecked[id] = true })
         setCompletedByDate(prev => ({ ...prev, [date]: new Set(sessionIds) }))
+        setCardioStatsByDate(prev => ({ ...prev, [date]: cardioStats }))
         setCheckedByDate(prev => ({ ...prev, [date]: exChecked }))
       })
     }, 250)
@@ -707,6 +724,7 @@ export default function SchemaScreen() {
               checked={checkedByDate[dateStr] ?? EMPTY_CHECKED}
               progress={exerciseProgress}
               completed={completedByDate[dateStr] ?? EMPTY_COMPLETED}
+              cardioStats={cardioStatsByDate[dateStr] ?? EMPTY_CARDIO_STATS}
               userId={userId}
               dayAnimStyle={dayAnimStyle}
               api={api}

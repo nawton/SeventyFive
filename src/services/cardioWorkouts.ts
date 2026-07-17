@@ -47,6 +47,24 @@ export async function deleteCardioWorkout(id: string): Promise<boolean> {
   return deleteWorkout(id)
 }
 
+/**
+ * Hittar det sparade cardio-passet av en viss typ som loggades ett visst datum.
+ * Passen saknar direkt koppling till schemat, så vi matchar på typ + dag och tar
+ * det senaste (om man loggat flera samma dag).
+ */
+export async function getCardioWorkoutByDate(
+  userId: string,
+  type: string,
+  date: string,
+): Promise<CardioWorkout | null> {
+  const workouts = await getCardioWorkouts(userId, 100)
+  const match = workouts.find(
+    w => w.data.type === type && w.created_at.slice(0, 10) === date,
+  )
+  // Reservlösning: samma typ även om datumet inte råkar matcha (senaste passet)
+  return match ?? workouts.find(w => w.data.type === type) ?? null
+}
+
 export async function getCardioWorkouts(userId: string, limit = 30): Promise<CardioWorkout[]> {
   const { data, error } = await supabase
     .from('user_workouts')

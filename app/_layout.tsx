@@ -15,6 +15,7 @@ export default function RootLayout() {
         <Stack.Screen name="records" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="change-password" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="cardio-session" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+        <Stack.Screen name="cardio-summary" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         </Stack>
       </ErrorBoundary>
     </GestureHandlerRootView>
