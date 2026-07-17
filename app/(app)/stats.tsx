@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
-  ActivityIndicator, TouchableOpacity, Modal,
+  ActivityIndicator, TouchableOpacity, Modal, Dimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -21,6 +21,7 @@ import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@
 import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
 
 const GRID_PADDING = 20
+const STATS_SCREEN_W = Dimensions.get('window').width
 const BLUE   = '#4A90D9'
 const RED    = '#FF453A'
 const YELLOW = '#F5A623'
@@ -209,6 +210,13 @@ export default function StatsScreen() {
   const [selectedWorkout, setSelectedWorkout]   = useState<CardioWorkout | null>(null)
   const [selectedDay, setSelectedDay]           = useState<DaySummary | null>(null)
   const [activeTab, setActiveTab]               = useState<StatsTab>('overview')
+  const pagerRef = useRef<ScrollView>(null)
+
+  function switchTab(key: StatsTab) {
+    setActiveTab(key)
+    const idx = TABS.findIndex(t => t.key === key)
+    pagerRef.current?.scrollTo({ x: idx * STATS_SCREEN_W, animated: true })
+  }
   const [loading, setLoading]                   = useState(true)
   const [loadError, setLoadError]               = useState(false)
   const [streak, setStreak]                     = useState(0)
@@ -366,7 +374,7 @@ export default function StatsScreen() {
           <TouchableOpacity
             key={tab.key}
             style={[s.tab, activeTab === tab.key && s.tabActive]}
-            onPress={() => setActiveTab(tab.key)}
+            onPress={() => switchTab(tab.key)}
             activeOpacity={0.7}
           >
             <Ionicons name={tab.icon} size={16} color={activeTab === tab.key ? '#000' : TEXT_SECONDARY} />
@@ -375,10 +383,20 @@ export default function StatsScreen() {
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={pagerRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={e => {
+          const idx = Math.round(e.nativeEvent.contentOffset.x / STATS_SCREEN_W)
+          const key = TABS[idx]?.key
+          if (key && key !== activeTab) setActiveTab(key)
+        }}
+      >
 
         {/* ── ÖVERSIKT ── */}
-        {activeTab === 'overview' && (
+        <ScrollView style={{ width: STATS_SCREEN_W }} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
           <>
             {/* Ring chart */}
             <View style={s.card}>
@@ -457,10 +475,10 @@ export default function StatsScreen() {
               onPressDay={setSelectedDay}
             />
           </>
-        )}
+        </ScrollView>
 
         {/* ── CARDIO ── */}
-        {activeTab === 'cardio' && (
+        <ScrollView style={{ width: STATS_SCREEN_W }} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
           <>
             <View style={s.statsGrid}>
               <View style={s.statsRow}>
@@ -547,10 +565,10 @@ export default function StatsScreen() {
               </View>
             )}
           </>
-        )}
+        </ScrollView>
 
         {/* ── GYMPASS ── */}
-        {activeTab === 'gympass' && (
+        <ScrollView style={{ width: STATS_SCREEN_W }} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
           <>
             <View style={s.statsRow}>
               <StatCard label="pass denna vecka"   value={weekGymSessions.length} icon="barbell-outline"          color={ORANGE} />
@@ -679,7 +697,7 @@ export default function StatsScreen() {
               )}
             </View>
           </>
-        )}
+        </ScrollView>
       </ScrollView>
 
       <Modal visible={!!selectedDay} animationType="none" transparent onRequestClose={() => setSelectedDay(null)}>
