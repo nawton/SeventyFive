@@ -125,13 +125,34 @@ const MAP_HTML = `<!DOCTYPE html>
       0%   { transform:scale(1);   opacity:0.7; }
       100% { transform:scale(2.8); opacity:0; }
     }
+    /* Kompassen: svart, rund, placerad nere till vänster ovanför bottenmenyn */
+    .leaflet-bottom.leaflet-left { margin-bottom:175px; margin-left:8px; }
+    .leaflet-control-rotate {
+      border:none !important;
+      border-radius:50% !important;
+      overflow:hidden;
+      box-shadow:0 2px 10px rgba(0,0,0,0.35);
+    }
+    .leaflet-control-rotate .leaflet-control-rotate-toggle {
+      display:block;
+      width:44px !important; height:44px !important;
+      background:#161618 !important;
+      border:none !important;
+      border-radius:50% !important;
+    }
+    .leaflet-control-rotate-arrow {
+      background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10.5 14l4-8 4 8h-8z' fill='%23FF453A'/%3E%3Cpath d='M10.5 16l4 8 4-8h-8z' fill='%23fff'/%3E%3C/svg%3E") !important;
+    }
   </style>
 </head>
 <body>
 <div id="map"></div>
 <script>
-  var map = L.map('map', { zoomControl:false, attributionControl:false, rotate:true, touchRotate:true })
-    .setView([59.33, 18.06], 4);
+  var map = L.map('map', {
+    zoomControl:false, attributionControl:false,
+    rotate:true, touchRotate:true,
+    rotateControl:{ closeOnZeroBearing:true, position:'bottomleft' }
+  }).setView([59.33, 18.06], 4);
 
   var tileLayer = L.tileLayer(
     'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -617,15 +638,14 @@ export default function CardioScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ── Back button top-right ── */}
-      <SafeAreaView style={styles.topRight} edges={['top']}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => (status !== 'idle' ? handleFinish() : router.back())}
-        >
-          <Ionicons name="chevron-back" size={20} color="#000" />
-        </TouchableOpacity>
-      </SafeAreaView>
+      {/* ── Tillbaka-knapp — bara innan passet startats ── */}
+      {status === 'idle' && (
+        <SafeAreaView style={styles.topRight} edges={['top']}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={20} color="#000" />
+          </TouchableOpacity>
+        </SafeAreaView>
+      )}
 
       {/* ── Fullskärms-stats (kartan dold) — går att öppna även innan start ── */}
       {(
