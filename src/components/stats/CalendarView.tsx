@@ -110,11 +110,6 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
     })
   }
 
-  function pickMonth(year: number, month: number) {
-    setView(new Date(year, month, 1))
-    setYearOpen(false)
-  }
-
   // Alla månader som utmaningen spänner över (start → dag 75)
   const challengeMonths: Array<{ year: number; month: number }> = []
   if (startDate) {
@@ -207,45 +202,70 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
 
       <Legend />
 
-      {/* ── Årsöversikt: alla utmaningens månader i miniatyr ── */}
-      <Modal visible={yearOpen} transparent animationType="fade" onRequestClose={() => setYearOpen(false)}>
-        <View style={s.yearBackdrop}>
-          <View style={s.yearSheet}>
-            <View style={s.yearHeader}>
-              <Text style={s.yearTitle}>Hela utmaningen</Text>
-              <TouchableOpacity style={s.yearClose} onPress={() => setYearOpen(false)} activeOpacity={0.7}>
-                <Ionicons name="close" size={20} color={TEXT_PRIMARY} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.yearScroll}>
-              <View style={s.yearGrid}>
-                {challengeMonths.map(({ year, month }) => (
-                  <TouchableOpacity
-                    key={`${year}-${month}`}
-                    style={[s.miniCard, year === yr && month === mo && s.miniCardActive]}
-                    onPress={() => pickMonth(year, month)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={s.miniTitle}>{MONTHS_SV[month]} {year}</Text>
-                    <View style={s.miniGrid}>
-                      {buildCalendarCells(year, month).map((date, i) => {
-                        if (!date) return <View key={i} style={s.miniCell} />
-                        const cd  = startDate ? getChallengeDay(date, startDate) : null
-                        const sum = cd ? days[cd - 1] : null
-                        const color = sum
-                          ? sum.status === 'pending'
-                            ? ORANGE
-                            : DAY_COLORS[sum.status]
-                          : 'rgba(255,255,255,0.05)'
-                        return <View key={i} style={[s.miniCell, { backgroundColor: color }]} />
-                      })}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <Legend />
-            </ScrollView>
+      {/* ── Helskärmsöversikt: alla utmaningens månader med en ring per dag ── */}
+      <Modal visible={yearOpen} animationType="slide" onRequestClose={() => setYearOpen(false)}>
+        <View style={s.fullScreen}>
+          <View style={s.fullHeader}>
+            <Text style={s.fullTitle}>Hela utmaningen</Text>
+            <TouchableOpacity style={s.yearClose} onPress={() => setYearOpen(false)} activeOpacity={0.7}>
+              <Ionicons name="close" size={22} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
           </View>
+
+          {/* Fast veckodagsrad */}
+          <View style={s.fullWeekRow}>
+            {['M','T','O','T','F','L','S'].map((d, i) => (
+              <Text key={i} style={s.fullWeekLabel}>{d}</Text>
+            ))}
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.fullScroll}>
+            {challengeMonths.map(({ year, month }) => (
+              <View key={`${year}-${month}`} style={s.fullMonth}>
+                <Text style={s.fullMonthTitle}>{MONTHS_SV[month]} {year !== new Date().getFullYear() ? year : ''}</Text>
+                <View style={s.fullGrid}>
+                  {buildCalendarCells(year, month).map((date, i) => {
+                    if (!date) return <View key={i} style={s.fullDay} />
+                    const cd      = startDate ? getChallengeDay(date, startDate) : null
+                    const sum     = cd ? days[cd - 1] : null
+                    const isToday = sameDay(date, today)
+                    const ringColor = sum
+                      ? sum.status === 'completed' ? GREEN
+                        : sum.status === 'failed'  ? RED
+                        : sum.status === 'pending' ? ORANGE
+                        : 'rgba(255,255,255,0.12)'
+                      : 'transparent'
+                    const tappable = !!sum && sum.status !== 'future'
+                    return (
+                      <TouchableOpacity
+                        key={i}
+                        style={s.fullDay}
+                        disabled={!tappable}
+                        activeOpacity={0.7}
+                        onPress={() => { setYearOpen(false); if (sum) setTimeout(() => onPressDay(sum), 350) }}
+                      >
+                        <View style={[s.fullDayNum, isToday && s.fullDayNumToday]}>
+                          <Text style={[s.fullDayNumText, !sum && { color: 'rgba(255,255,255,0.25)' }, isToday && { color: '#000', fontWeight: '800' }]}>
+                            {date.getDate()}
+                          </Text>
+                        </View>
+                        <View style={[
+                          s.fullRing,
+                          { borderColor: ringColor },
+                          sum?.status === 'completed' && { backgroundColor: GREEN + '2A' },
+                          sum?.status === 'failed'    && { backgroundColor: RED + '1E' },
+                        ]}>
+                          {sum?.status === 'completed' && <Ionicons name="checkmark" size={13} color={GREEN} />}
+                          {sum?.status === 'failed'    && <Ionicons name="close" size={12} color={RED} />}
+                        </View>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              </View>
+            ))}
+            <Legend />
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -268,37 +288,43 @@ const s = StyleSheet.create({
   calMonthBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4, paddingHorizontal: 8 },
   calMonthLabel: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
 
-  // Årsöversikt
-  yearBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'center', padding: 16,
+  // Helskärmsöversikt (Apple Fitness-stil)
+  fullScreen: { flex: 1, backgroundColor: '#0E0E10', paddingTop: 60 },
+  fullHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingBottom: 14,
   },
-  yearSheet: {
-    backgroundColor: CARD, borderRadius: 24,
-    borderWidth: 1, borderColor: BORDER,
-    padding: 20, maxHeight: '85%',
-  },
-  yearHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  yearTitle:  { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
+  fullTitle: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800' },
   yearClose: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center', justifyContent: 'center',
   },
-  yearScroll: { gap: 16 },
-  yearGrid:   { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  miniCard: {
-    width: '47.5%', flexGrow: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14,
-    borderWidth: 1, borderColor: BORDER,
-    padding: 10, gap: 8,
+  fullWeekRow: {
+    flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 10,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  miniCardActive: { borderColor: ORANGE },
-  miniTitle: { color: TEXT_PRIMARY, fontSize: 12, fontWeight: '700' },
-  miniGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
-  miniCell: {
-    width: `${100 / 7 - 1.6}%` as never, aspectRatio: 1,
-    borderRadius: 3,
+  fullWeekLabel: {
+    flex: 1, textAlign: 'center',
+    color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600',
+  },
+  fullScroll:     { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48, gap: 28 },
+  fullMonth:      { gap: 10 },
+  fullMonthTitle: { color: TEXT_PRIMARY, fontSize: 24, fontWeight: '800', paddingLeft: 4 },
+  fullGrid:       { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 },
+  fullDay: {
+    width: `${100 / 7}%` as never,
+    alignItems: 'center', gap: 5,
+  },
+  fullDayNum: {
+    minWidth: 26, height: 22, borderRadius: 6,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
+  },
+  fullDayNumToday: { backgroundColor: ORANGE },
+  fullDayNumText:  { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  fullRing: {
+    width: 34, height: 34, borderRadius: 17, borderWidth: 3,
+    alignItems: 'center', justifyContent: 'center',
   },
   calWeekRow:    { flexDirection: 'row', justifyContent: 'space-between' },
   calWeekCell:   { width: CAL_SIZE, alignItems: 'center' },
