@@ -225,7 +225,14 @@ export function SessionEditor({
 
   // ── Draft exercises ──────────────────────────────────────────────────────────
   function addExercise(exName: string) {
-    setDrafts(prev => [...prev, { key: Date.now().toString(), exercise_name: exName, sets: '3', reps: '10' }])
+    // Cardio-övningar har varken set eller reps — lämna tomt så inget sparas
+    const isCardio = exercises.find(e => e.name === exName)?.category === 'cardio'
+    setDrafts(prev => [...prev, {
+      key: Date.now().toString(),
+      exercise_name: exName,
+      sets: isCardio ? '' : '3',
+      reps: isCardio ? '' : '10',
+    }])
   }
 
   function updateDraft(key: string, field: 'sets' | 'reps', value: string) {
@@ -256,11 +263,15 @@ export function SessionEditor({
     }
     setSaving(true)
     try {
-      const exList = drafts.map(d => ({
-        exercise_name: d.exercise_name,
-        sets: d.sets ? parseInt(d.sets) : null,
-        reps: d.reps || null,
-      }))
+      const exList = drafts.map(d => {
+        // Cardio-övningar sparas alltid utan set/reps, även om gamla drafts har värden
+        const isCardio = exercises.find(e => e.name === d.exercise_name)?.category === 'cardio'
+        return {
+          exercise_name: d.exercise_name,
+          sets: isCardio ? null : (d.sets ? parseInt(d.sets) : null),
+          reps: isCardio ? null : (d.reps || null),
+        }
+      })
       // Repeat OFF: store as one-time with ONCE:date:name convention, weekdays=[]
       const d = initialDate ?? new Date()
       const ds = toLocalDateString(d)

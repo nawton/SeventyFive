@@ -153,6 +153,104 @@ const FOCUS_SESSIONS: Record<string, { label: string; exercises: PlannedExercise
   },
 }
 
+// ─── Muskelsplittar ──────────────────────────────────────────────────────────
+// Ihophängande pass där varje dag har ett tydligt tema (bröst+triceps,
+// rygg+biceps, ben+mage …) — vilken split som används beror på antal dagar.
+
+interface SplitDay {
+  name: string
+  groups: string[]   // muskelgrupper dagen täcker (matchar fokusgruppernas nycklar)
+  exercises: PlannedExercise[]
+}
+
+const e = (exercise_name: string, sets: number | null, reps: string | null): PlannedExercise =>
+  ({ exercise_name, sets, reps })
+
+const SPLIT_DAYS: Record<string, SplitDay> = {
+  chestTri: {
+    name: 'Bröst & Triceps', groups: ['chest', 'arms'],
+    exercises: [
+      e('Bänkpress', 4, '8'), e('Lutande bänkpress', 3, '10'), e('Hantelpress liggande', 3, '10'),
+      e('Tricepsstötning kabel', 3, '10'), e('Skull crushers', 3, '10'),
+    ],
+  },
+  backBi: {
+    name: 'Rygg & Biceps', groups: ['back', 'arms'],
+    exercises: [
+      e('Marklyft', 4, '6'), e('Latsdrag framifrån', 4, '10'), e('Kabelrodd sittande', 3, '10'),
+      e('Bicepscurl', 3, '12'), e('Hammercurl', 3, '12'),
+    ],
+  },
+  legsCore: {
+    name: 'Ben & Mage', groups: ['legs', 'core'],
+    exercises: [
+      e('Knäböj', 4, '8'), e('Benpress', 3, '10'), e('Rumänsk marklyft', 3, '10'),
+      e('Vadpress stående', 3, '15'), e('Plankan', 3, '60 sek'), e('Russian twist', 3, '20'),
+    ],
+  },
+  shouldersCore: {
+    name: 'Axlar & Mage', groups: ['shoulders', 'core'],
+    exercises: [
+      e('Militärpress', 4, '8'), e('Sidolyft', 3, '12'), e('Bakre deltalyft', 3, '12'),
+      e('Hängande benlyft', 3, '10'), e('Sidoplanka', 3, '45 sek'),
+    ],
+  },
+  upper: {
+    name: 'Överkropp', groups: ['chest', 'back', 'shoulders', 'arms'],
+    exercises: [
+      e('Bänkpress', 4, '8'), e('Rodd med skivstång', 4, '8'), e('Militärpress', 3, '10'),
+      e('Latsdrag framifrån', 3, '10'), e('Bicepscurl', 3, '12'), e('Tricepsstötning kabel', 3, '12'),
+    ],
+  },
+  lower: {
+    name: 'Underkropp & Mage', groups: ['legs', 'core'],
+    exercises: [
+      e('Knäböj', 4, '8'), e('Marklyft', 4, '6'), e('Utfall', 3, '12'),
+      e('Vadpress stående', 3, '15'), e('Plankan', 3, '60 sek'),
+    ],
+  },
+  fullBody:  { name: 'Helkropp', groups: ['chest', 'back', 'legs', 'shoulders', 'arms', 'core'], exercises: FULL_BODY_PLAN[0].exercises },
+  chest:     { name: 'Bröst',  groups: ['chest'],     exercises: FOCUS_SESSIONS.chest.exercises },
+  back:      { name: 'Rygg',   groups: ['back'],      exercises: FOCUS_SESSIONS.back.exercises },
+  legs:      { name: 'Ben',    groups: ['legs'],      exercises: FOCUS_SESSIONS.legs.exercises },
+  shoulders: { name: 'Axlar',  groups: ['shoulders'], exercises: FOCUS_SESSIONS.shoulders.exercises },
+  arms:      { name: 'Armar',  groups: ['arms'],      exercises: FOCUS_SESSIONS.arms.exercises },
+  core:      { name: 'Mage',   groups: ['core'],      exercises: FOCUS_SESSIONS.core.exercises },
+}
+
+const SPLITS_BY_DAYS: Record<number, string[]> = {
+  1: ['fullBody'],
+  2: ['upper', 'lower'],
+  3: ['chestTri', 'backBi', 'legsCore'],
+  4: ['chestTri', 'backBi', 'legs', 'shouldersCore'],
+  5: ['chestTri', 'backBi', 'legs', 'shouldersCore', 'arms'],
+  6: ['chest', 'back', 'legs', 'shoulders', 'arms', 'core'],
+  7: ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'fullBody'],
+}
+
+/** Bygger dagsteman för valt antal dagar; fokusgrupper garanteras täckning och läggs först i veckan. */
+function buildMuscleSplit(numDays: number, focusGroups: string[]): SplitDay[] {
+  const dayKeys = [...(SPLITS_BY_DAYS[Math.min(Math.max(numDays, 1), 7)] ?? SPLITS_BY_DAYS[3])]
+
+  if (focusGroups.length > 0) {
+    const coversFocus = (key: string) =>
+      SPLIT_DAYS[key].groups.some(g => focusGroups.includes(g))
+
+    // Täcks inte en fokusgrupp av splitten? Byt ut sista icke-fokusdagen mot den
+    for (const g of focusGroups) {
+      if (dayKeys.some(k => SPLIT_DAYS[k].groups.includes(g))) continue
+      for (let i = dayKeys.length - 1; i >= 0; i--) {
+        if (!coversFocus(dayKeys[i])) { dayKeys[i] = g; break }
+      }
+    }
+
+    // Fokusdagarna först i veckan
+    dayKeys.sort((a, b) => Number(coversFocus(b)) - Number(coversFocus(a)))
+  }
+
+  return dayKeys.map(k => SPLIT_DAYS[k])
+}
+
 // ─── Besvär: övningsbyten ────────────────────────────────────────────────────
 // Byter belastande övningar mot snällare alternativ ur samma övningsbibliotek
 
@@ -222,37 +320,16 @@ function buildPlan(result: WizardResult): PlannedSession[] {
     return picked.map((s, i) => ({ ...s, weekdays: [days[i]] }))
   }
 
-  let plan: PlannedSession[]
-  if (result.musclePlan === 'focus' && result.focusGroups.length > 0) {
-    const [first, second] = result.focusGroups
-    const focusA = FOCUS_SESSIONS[first]
-    const focusB = second ? FOCUS_SESSIONS[second] : null
-    // Mönster: fokus 1 → helkropp som bas → fokus 2 (eller fokus 1 igen) → upprepa
-    const pattern: PlannedSession[] = [
-      { name: `Fokus: ${focusA.label}`, weekdays: [], exercises: focusA.exercises },
-      { ...FULL_BODY_PLAN[1], name: 'Helkropp', weekdays: [] },
-      focusB
-        ? { name: `Fokus: ${focusB.label}`, weekdays: [], exercises: focusB.exercises }
-        : { name: `Fokus: ${focusA.label} 2`, weekdays: [], exercises: focusA.exercises },
-    ]
-    plan = Array.from({ length: numDays }, (_, i) => {
-      const p = pattern[i % pattern.length]
-      const round = Math.floor(i / pattern.length)
-      return { ...p, name: round > 0 ? `${p.name} · ${round + 1}` : p.name }
-    })
-  } else {
-    // Helkropp A/B/C cyklas över valda dagar
-    plan = Array.from({ length: numDays }, (_, i) => {
-      const p = FULL_BODY_PLAN[i % FULL_BODY_PLAN.length]
-      const round = Math.floor(i / FULL_BODY_PLAN.length)
-      return { ...p, name: round > 0 ? `${p.name} · ${round + 1}` : p.name }
-    })
-  }
+  // Styrka: ihophängande split där varje dag har ett tydligt muskeltema
+  const split = buildMuscleSplit(
+    numDays,
+    result.musclePlan === 'focus' ? result.focusGroups : []
+  )
 
-  return plan.map((s, i) => ({
-    ...s,
+  return split.map((day, i) => ({
+    name: day.name,
     weekdays: [days[i]],
-    exercises: applyLimitations(s.exercises, result.limitations ?? []),
+    exercises: applyLimitations(day.exercises, result.limitations ?? []),
   }))
 }
 
