@@ -50,7 +50,7 @@ import { WorkoutSection } from '@/components/WorkoutSection'
 import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import { LogWorkoutSheet } from '@/components/LogWorkoutSheet'
-import { saveStrengthWorkout } from '@/services/workouts'
+import { saveStrengthWorkout, getWorkoutsForDate, type StrengthWorkout } from '@/services/workouts'
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
@@ -92,6 +92,7 @@ function dateToIndex(d: Date): number {
 const EMPTY_CHECKED: Record<string, boolean> = {}
 const EMPTY_COMPLETED = new Set<string>()
 const EMPTY_CARDIO_STATS: Record<string, { distanceKm: number; durationSeconds: number }> = {}
+const EMPTY_LOGGED: StrengthWorkout[] = []
 
 interface DayPageApi {
   toggleCheck:      (exId: string, date: string) => void
@@ -104,7 +105,7 @@ interface DayPageApi {
 }
 
 const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, cardioStats, progress, userId, dayAnimStyle, api,
+  idx, sessions, exercises, checked, completed, cardioStats, logged, progress, userId, dayAnimStyle, api,
 }: {
   idx: number
   sessions: WorkoutSession[]
@@ -113,6 +114,7 @@ const DayPage = React.memo(function DayPage({
   progress: Record<string, number>
   completed: Set<string>
   cardioStats: Record<string, { distanceKm: number; durationSeconds: number }>
+  logged: StrengthWorkout[]
   userId: string | null
   dayAnimStyle: AnimatedStyle<ViewStyle>
   api: DayPageApi
@@ -163,7 +165,7 @@ const DayPage = React.memo(function DayPage({
               </Animated.View>
 
               {/* Sessions */}
-              {sessions.filter(s => !s.name.startsWith('SKIP:')).length === 0 ? (
+              {sessions.filter(s => !s.name.startsWith('SKIP:')).length === 0 && logged.length === 0 ? (
                 <View style={styles.emptyState}>
                   <View style={styles.emptyIcon}>
                     <Ionicons name="barbell-outline" size={32} color={ORANGE} />
@@ -294,6 +296,34 @@ const DayPage = React.memo(function DayPage({
                     />
                   )}
 
+                  {/* Loggade gympass (via "Logga pass") */}
+                  {logged.length > 0 && (
+                    <View style={styles.loggedCard}>
+                      <View style={styles.loggedHeader}>
+                        <View style={styles.loggedIcon}>
+                          <Ionicons name="checkmark" size={15} color="#fff" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.loggedTitle}>Loggat gympass</Text>
+                          <Text style={styles.loggedSub}>{logged.length} {logged.length === 1 ? 'övning' : 'övningar'}</Text>
+                        </View>
+                      </View>
+                      {logged.map((w, i) => {
+                        const sets = w.data.sets ?? []
+                        const topKg = sets.reduce((m, st) => Math.max(m, st.weight_kg || 0), 0)
+                        const totalReps = sets.reduce((sum, st) => sum + (st.reps || 0), 0)
+                        return (
+                          <View key={w.id} style={[styles.loggedRow, i > 0 && styles.loggedRowBorder]}>
+                            <Text style={styles.loggedExName} numberOfLines={1}>{w.data.exercise_name}</Text>
+                            <Text style={styles.loggedExMeta}>
+                              {sets.length} set · {totalReps} reps{topKg > 0 ? ` · ${topKg} kg` : ''}
+                            </Text>
+                          </View>
+                        )
+                      })}
+                    </View>
+                  )}
+
                   {isPast && (
                     <TouchableOpacity
                       style={styles.quickAddBtn}
@@ -323,6 +353,8 @@ export default function SchemaScreen() {
   const [completedByDate, setCompletedByDate]   = useState<Record<string, Set<string>>>({})
   // Distans/tid per avklarat cardio-pass, nycklat på datum → session-id
   const [cardioStatsByDate, setCardioStatsByDate] = useState<Record<string, Record<string, { distanceKm: number; durationSeconds: number }>>>({})
+  // Loggade gympass (styrkepass) per datum
+  const [loggedByDate, setLoggedByDate] = useState<Record<string, StrengthWorkout[]>>({})
   const [pickerSession, setPickerSession]   = useState<WorkoutSession | null>(null)
   const [logSheetOpen, setLogSheetOpen]     = useState(false)
   const [wizardVisible, setWizardVisible]   = useState(false)
@@ -363,11 +395,12 @@ export default function SchemaScreen() {
 
   async function loadData(uid: string) {
     const date = isoDate(selectedDateRef.current)
-    const [exs, sess, sessionIds, cardioStats, exerciseIds, progressCounts] = await Promise.all([
+    const [exs, sess, sessionIds, cardioStats, logged, exerciseIds, progressCounts] = await Promise.all([
       getExercises().catch(() => [] as Exercise[]),
       getWorkoutSessions(uid).catch(() => [] as WorkoutSession[]),
       getCompletedSessionIds(uid, date).catch(() => [] as string[]),
       getCardioCompletions(uid, date).catch(() => ({})),
+      getWorkoutsForDate(uid, date).catch(() => [] as StrengthWorkout[]),
       getCompletedExerciseIds(uid, date).catch(() => [] as string[]),
       getExerciseCompletionCounts(uid).catch(() => ({} as Record<string, number>)),
     ])
@@ -378,6 +411,7 @@ export default function SchemaScreen() {
     exerciseIds.forEach(id => { exChecked[id] = true })
     setCompletedByDate(prev => ({ ...prev, [date]: new Set(sessionIds) }))
     setCardioStatsByDate(prev => ({ ...prev, [date]: cardioStats }))
+    setLoggedByDate(prev => ({ ...prev, [date]: logged }))
     setCheckedByDate(prev => ({ ...prev, [date]: exChecked }))
   }
 
@@ -414,12 +448,14 @@ export default function SchemaScreen() {
       Promise.all([
         getCompletedSessionIds(userId, date).catch(() => [] as string[]),
         getCardioCompletions(userId, date).catch(() => ({})),
+        getWorkoutsForDate(userId, date).catch(() => [] as StrengthWorkout[]),
         getCompletedExerciseIds(userId, date).catch(() => [] as string[]),
-      ]).then(([sessionIds, cardioStats, exerciseIds]) => {
+      ]).then(([sessionIds, cardioStats, logged, exerciseIds]) => {
         const exChecked: Record<string, boolean> = {}
         exerciseIds.forEach(id => { exChecked[id] = true })
         setCompletedByDate(prev => ({ ...prev, [date]: new Set(sessionIds) }))
         setCardioStatsByDate(prev => ({ ...prev, [date]: cardioStats }))
+        setLoggedByDate(prev => ({ ...prev, [date]: logged }))
         setCheckedByDate(prev => ({ ...prev, [date]: exChecked }))
       })
     }, 250)
@@ -722,6 +758,7 @@ export default function SchemaScreen() {
               progress={exerciseProgress}
               completed={completedByDate[dateStr] ?? EMPTY_COMPLETED}
               cardioStats={cardioStatsByDate[dateStr] ?? EMPTY_CARDIO_STATS}
+              logged={loggedByDate[dateStr] ?? EMPTY_LOGGED}
               userId={userId}
               dayAnimStyle={dayAnimStyle}
               api={api}
@@ -922,6 +959,24 @@ const styles = StyleSheet.create({
     borderColor: ORANGE + '40', borderStyle: 'dashed',
   },
   quickAddText: { color: ORANGE, fontSize: 15, fontWeight: '600' },
+
+  // Loggat gympass-kort
+  loggedCard: {
+    backgroundColor: '#0A2416',
+    borderRadius: 18, borderWidth: 1, borderColor: '#4CAF5045',
+    padding: 16, marginBottom: 12,
+  },
+  loggedHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  loggedIcon: {
+    width: 34, height: 34, borderRadius: 10, backgroundColor: '#4CAF50',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  loggedTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
+  loggedSub: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 1 },
+  loggedRow: { paddingVertical: 10 },
+  loggedRowBorder: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
+  loggedExName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+  loggedExMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
 
   emptyState: { alignItems: 'center', paddingVertical: 52, paddingHorizontal: 32, gap: 8 },
   emptyIcon: {
