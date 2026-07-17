@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
-  KeyboardAvoidingView, Platform, Alert, InputAccessoryView, Dimensions,
+  KeyboardAvoidingView, Platform, Alert, InputAccessoryView, Dimensions, Keyboard,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -378,7 +378,13 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
       </Animated.View>
 
       {Platform.OS === 'ios' && (
-        <InputAccessoryView nativeID="ex-log-kb"><View style={{ height: 0 }} /></InputAccessoryView>
+        <InputAccessoryView nativeID="ex-log-kb">
+          <View style={styles.kbBar}>
+            <TouchableOpacity onPress={() => Keyboard.dismiss()} style={styles.kbDone} activeOpacity={0.7}>
+              <Text style={styles.kbDoneText}>Klar</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
       )}
 
       {/* Datumväljare — View-lager (funkar även när sheeten ligger i en annan modal) */}
@@ -460,6 +466,15 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
 }
 
 const styles = StyleSheet.create({
+  kbBar: {
+    backgroundColor: '#1C1C1E',
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER,
+    flexDirection: 'row', justifyContent: 'flex-end',
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  kbDone: { paddingHorizontal: 14, paddingVertical: 6 },
+  kbDoneText: { color: ORANGE, fontSize: 17, fontWeight: '700' },
+
   backdrop: { backgroundColor: 'rgba(0,0,0,0.6)' },
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
