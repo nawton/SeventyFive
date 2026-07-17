@@ -41,6 +41,14 @@ const TIER_NAMES: Record<MedalTier, string> = {
   bronze: 'Brons', silver: 'Silver', gold: 'Guld', platinum: 'Platina', diamond: 'Diamant',
 }
 
+/** Vart varje engångsmål tar dig — sidan där målet klaras av */
+const ONE_TIME_ROUTES: Record<string, string> = {
+  hasAvatar:        '/(app)/edit-profile',   // profilbild sätts här
+  hasProgressPhoto: '/(app)/profile',        // fotoflödet med "Lägg till dagens foto"
+  hasSchedule:      '/(app)/add',            // schemafliken med skapa-banner/pass
+  hasCustomRule:    '/(app)/dashboard',      // regelsektionen med "Lägg till"
+}
+
 /** Innehåll för medalj-detaljmodalen — funkar för både medaljer och nivåer */
 interface MedalInfo {
   tier: MedalTier
@@ -281,18 +289,27 @@ export default function RecordsScreen() {
             {ONE_TIME_RULES.map((rule, i) => {
               const earned = oneTime[rule.id]
               return (
-                <View key={rule.id} style={[s.recordRow, i < ONE_TIME_RULES.length - 1 && s.recordBorder, !earned && { opacity: 0.55 }]}>
+                <TouchableOpacity
+                  key={rule.id}
+                  style={[s.recordRow, i < ONE_TIME_RULES.length - 1 && s.recordBorder, earned && { opacity: 0.55 }]}
+                  activeOpacity={earned ? 1 : 0.7}
+                  disabled={earned}
+                  onPress={() => {
+                    const route = ONE_TIME_ROUTES[rule.id]
+                    if (route) router.push(route as never)
+                  }}
+                >
                   <View style={s.ruleIcon}>
                     <Ionicons name={rule.icon} size={16} color={earned ? '#4CAF50' : ORANGE} />
                   </View>
                   <Text style={[s.ruleLabel, { flex: 1 }]}>{rule.label}</Text>
                   <Text style={s.rulePts}>{rule.pts} p</Text>
-                  <Ionicons
-                    name={earned ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={18}
-                    color={earned ? '#4CAF50' : 'rgba(255,255,255,0.2)'}
-                  />
-                </View>
+                  {earned ? (
+                    <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+                  )}
+                </TouchableOpacity>
               )
             })}
           </View>
