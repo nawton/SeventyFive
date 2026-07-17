@@ -17,6 +17,7 @@ import { getCardioWorkouts, getStrengthWorkouts } from '@/services/workouts'
 import { getCompletedSessionsHistory } from '@/services/workoutSchedule'
 import { getPersonalRecords, type ExerciseRecord } from '@/services/personalRecords'
 import { computeAchievements, type Achievement } from '@/lib/achievements'
+import { MedalBadge } from '@/components/MedalBadge'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 const GOLD = '#FFD54F'
@@ -93,13 +94,7 @@ export default function RecordsScreen() {
         <View style={s.medalGrid}>
           {achievements.map(a => (
             <View key={a.id} style={[s.medal, !a.unlocked && s.medalLocked]}>
-              <View style={[s.medalIcon, a.unlocked && s.medalIconUnlocked]}>
-                <Ionicons
-                  name={a.unlocked ? (a.icon.replace('-outline', '') as typeof a.icon) : a.icon}
-                  size={22}
-                  color={a.unlocked ? GOLD : '#3A3A40'}
-                />
-              </View>
+              <MedalBadge tier={a.tier} icon={a.icon} unlocked={a.unlocked} size={56} />
               <Text style={[s.medalTitle, !a.unlocked && { color: TEXT_SECONDARY }]} numberOfLines={1}>
                 {a.title}
               </Text>
@@ -179,13 +174,8 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
     padding: 12, alignItems: 'center', gap: 6,
   },
-  medalLocked: { opacity: 0.55 },
-  medalIcon: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  medalIconUnlocked: { backgroundColor: GOLD + '1E' },
+  // Låst-känslan bärs av den mörka metallen i badgen — lätt dimning räcker
+  medalLocked: { opacity: 0.75 },
   medalTitle: { color: TEXT_PRIMARY, fontSize: 12, fontWeight: '700', textAlign: 'center' },
   medalDesc:  { color: TEXT_SECONDARY, fontSize: 10, textAlign: 'center', lineHeight: 13 },
 
