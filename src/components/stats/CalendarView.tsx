@@ -242,7 +242,9 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
                         style={s.fullDay}
                         disabled={!tappable}
                         activeOpacity={0.7}
-                        onPress={() => { setYearOpen(false); if (sum) setTimeout(() => onPressDay(sum), 350) }}
+                        // Stäng INTE helskärmskalendern — dagsvyn öppnas ovanpå så
+                        // man stannar kvar i översikten när den stängs
+                        onPress={() => { if (sum) { Haptics.selectionAsync(); onPressDay(sum) } }}
                       >
                         <View style={[s.fullDayNum, isToday && s.fullDayNumToday]}>
                           <Text style={[s.fullDayNumText, !sum && { color: 'rgba(255,255,255,0.25)' }, isToday && { color: '#000', fontWeight: '800' }]}>
