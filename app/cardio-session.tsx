@@ -256,6 +256,14 @@ export default function CardioSessionScreen() {
                   </TouchableOpacity>
                 )
               })}
+              <TouchableOpacity
+                style={[s.presetChip, s.customChip]}
+                onPress={() => openEdit('dist')}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="pencil" size={11} color={CARDIO_BLUE} />
+                <Text style={[s.presetText, { color: CARDIO_BLUE }]}>Egen</Text>
+              </TouchableOpacity>
             </View>
             <GoalSlider
               value={goalDist}
@@ -285,6 +293,14 @@ export default function CardioSessionScreen() {
                   <Text style={[s.presetText, goalMin === min && s.presetTextActive]}>{min}</Text>
                 </TouchableOpacity>
               ))}
+              <TouchableOpacity
+                style={[s.presetChip, s.customChip]}
+                onPress={() => openEdit('time')}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="pencil" size={11} color={CARDIO_BLUE} />
+                <Text style={[s.presetText, { color: CARDIO_BLUE }]}>Egen</Text>
+              </TouchableOpacity>
             </View>
             <GoalSlider value={goalMin} max={90} step={5} onChange={setGoalMin} gestureRef={minSliderRef} />
           </View>
@@ -387,8 +403,9 @@ export default function CardioSessionScreen() {
               ))}
             </View>
 
-            <TouchableOpacity style={s.editSaveBtn} onPress={() => setSettingsOpen(false)} activeOpacity={0.85}>
-              <Text style={s.editSaveText}>Klar</Text>
+            <TouchableOpacity style={s.editSaveBtn} onPress={() => { Haptics.selectionAsync(); setSettingsOpen(false) }} activeOpacity={0.85}>
+              <Ionicons name="checkmark" size={17} color="#fff" />
+              <Text style={s.editSaveText}>Spara</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -489,8 +506,13 @@ const s = StyleSheet.create({
   },
   editClearText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
   editSaveBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: 13,
+    flex: 1, flexDirection: 'row', justifyContent: 'center', gap: 6,
+    alignItems: 'center', paddingVertical: 13,
     borderRadius: 14, backgroundColor: CARDIO_BLUE,
+  },
+  customChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderColor: CARDIO_BLUE + '55', borderStyle: 'dashed',
   },
   editSaveText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
