@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native'
 import Svg, { Circle as SvgCircle } from 'react-native-svg'
 import Animated, {
@@ -131,12 +131,19 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
 
   function applySwipe(dir: number, open: boolean) {
     if (open) {
+      // Månadssvep bläddrar bara vyn — vald dag ändras aldrig här.
+      // Kollapsar man utan att välja är man kvar på dagen man var på.
       if (dir > 0) nextMonth()
       else prevMonth()
     } else {
+      // Veckosvep: byt kalenderveckan FÖRST (lätt render), ladda den nya
+      // dagen strax efter — då krockar inte pager-scrollen med animationen
       const d = new Date(selDate)
       d.setDate(d.getDate() + dir * 7)
-      selectDate(d)
+      setSelDate(d)
+      setViewYear(d.getFullYear())
+      setViewMonth(d.getMonth())
+      setTimeout(() => onSelectDate(d), 120)
     }
   }
 
@@ -195,29 +202,50 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
 
   // ── Data helpers ─────────────────────────────────────────────────────────
 
+  // Förberäknat index — karusellen renderar ~150 celler, så per-cell-filter
+  // över alla sessioner gör kalendern laggig. Byggs om bara när sessions ändras.
+  const sessionIndex = useMemo(() => {
+    const byWeekday: WorkoutSession[][] = Array.from({ length: 8 }, () => [])
+    const onceByDate = new Map<string, WorkoutSession[]>()
+    const skipByDate = new Map<string, Set<string>>()
+    for (const sess of sessions) {
+      if (sess.name.startsWith('SKIP:')) {
+        // Format: SKIP:YYYY-MM-DD:sessionId
+        const parts = sess.name.split(':')
+        const date  = parts[1]
+        const id    = parts.slice(2).join(':')
+        if (!skipByDate.has(date)) skipByDate.set(date, new Set())
+        skipByDate.get(date)!.add(id)
+        continue
+      }
+      if (sess.weekdays.length === 0) {
+        if (sess.name.startsWith('ONCE:')) {
+          const date = sess.name.split(':')[1]
+          if (!onceByDate.has(date)) onceByDate.set(date, [])
+          onceByDate.get(date)!.push(sess)
+        }
+        continue
+      }
+      for (const wd of sess.weekdays) byWeekday[wd]?.push(sess)
+    }
+    return { byWeekday, onceByDate, skipByDate }
+  }, [sessions])
+
   function sessionInfo(date: Date) {
     const wd      = toWeekday(date)
     const dateStr = toLocalDateString(date)
-    const skipPfx = `SKIP:${dateStr}:`
-    const skipIds = sessions
-      .filter(s => s.name.startsWith(skipPfx))
-      .map(s => s.name.slice(skipPfx.length))
-    const daySess = sessions.filter(s =>
-      !s.name.startsWith('SKIP:') &&
-      !skipIds.includes(s.id) &&
-      (s.weekdays.includes(wd) ||
-        // Engångspass (t.ex. via "Logga pass") räknas på sin dag
-        (s.weekdays.length === 0 && s.name.startsWith(`ONCE:${dateStr}:`)))
-    )
-    if (daySess.length === 0) return { pct: -1, allDone: false, hasGym: false, hasCardio: false }
+    const skips   = sessionIndex.skipByDate.get(dateStr)
+    const daySess = [
+      ...sessionIndex.byWeekday[wd].filter(s => !skips?.has(s.id)),
+      ...(sessionIndex.onceByDate.get(dateStr) ?? []),
+    ]
+    if (daySess.length === 0) return { allDone: false, hasGym: false, hasCardio: false }
     const done      = completedByDate[dateStr] ?? new Set<string>()
-    const doneCount = daySess.filter(s => done.has(s.id)).length
-    const pct       = doneCount / daySess.length
-    const allDone   = doneCount === daySess.length
+    const allDone   = daySess.every(s => done.has(s.id))
     // Typindikatorer under datumet — orange = gym, blå = kondition
     const hasGym    = daySess.some(s => s.session_type !== 'cardio')
     const hasCardio = daySess.some(s => s.session_type === 'cardio')
-    return { pct, allDone, hasGym, hasCardio }
+    return { allDone, hasGym, hasCardio }
   }
 
   // ── Selection ─────────────────────────────────────────────────────────────
