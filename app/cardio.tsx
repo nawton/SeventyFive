@@ -125,9 +125,10 @@ const MAP_HTML = `<!DOCTYPE html>
       0%   { transform:scale(1);   opacity:0.7; }
       100% { transform:scale(2.8); opacity:0; }
     }
-    /* Kompassen: svart, rund, placerad nere till vänster ovanför bottenmenyn */
-    .leaflet-bottom.leaflet-left { margin-bottom:175px; margin-left:8px; }
+    /* Kompassen: svart, rund, direkt ovanför karttyps-/centreringsknapparna till höger */
+    .leaflet-bottom.leaflet-right { bottom:343px; right:16px; }
     .leaflet-control-rotate {
+      margin:0 !important;
       border:none !important;
       border-radius:50% !important;
       overflow:hidden;
@@ -151,7 +152,7 @@ const MAP_HTML = `<!DOCTYPE html>
   var map = L.map('map', {
     zoomControl:false, attributionControl:false,
     rotate:true, touchRotate:true,
-    rotateControl:{ closeOnZeroBearing:true, position:'bottomleft' }
+    rotateControl:{ closeOnZeroBearing:false, position:'bottomright' }
   }).setView([59.33, 18.06], 4);
 
   var tileLayer = L.tileLayer(
