@@ -139,13 +139,14 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     }
   }
 
-  function startSwipe(dir: number, open: boolean) {
+  function finishSwipe(dir: number, open: boolean) {
     Haptics.selectionAsync()
-    slide.value = withTiming(-dir * 44, { duration: 110, easing: Easing.in(Easing.quad) }, finished => {
+    // Fortsätt ut från fingrets läge, byt innehåll, glid in från andra sidan
+    slide.value = withTiming(-dir * 70, { duration: 90, easing: Easing.out(Easing.quad) }, finished => {
       if (finished) {
         runOnJS(applySwipe)(dir, open)
-        slide.value = dir * 44
-        slide.value = withTiming(0, { duration: 160, easing: Easing.out(Easing.quad) })
+        slide.value = dir * 70
+        slide.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.quad) })
       }
     })
   }
@@ -153,10 +154,18 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
   const hSwipe = Gesture.Pan()
     .activeOffsetX([-20, 20])
     .failOffsetY([-12, 12])
+    .onUpdate(e => {
+      // Följ fingret med lite motstånd så man ser vart man drar
+      slide.value = Math.max(-80, Math.min(80, e.translationX * 0.6))
+    })
     .onEnd(e => {
-      if (Math.abs(e.translationX) < 40 && Math.abs(e.velocityX) < 400) return
+      if (Math.abs(e.translationX) < 50 && Math.abs(e.velocityX) < 450) {
+        // Inte tillräckligt — fjädra tillbaka
+        slide.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.quad) })
+        return
+      }
       const dir = e.translationX < 0 ? 1 : -1
-      runOnJS(startSwipe)(dir, isOpen.value)
+      runOnJS(finishSwipe)(dir, isOpen.value)
     })
   const gestures = Gesture.Race(pan, hSwipe)
 
@@ -168,7 +177,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
 
   const monthGridStyle = useAnimatedStyle(() => ({
     opacity: interpolate(progress.value, [0.2, 0.7], [0, 1])
-      * interpolate(Math.abs(slide.value), [0, 44], [1, 0.15], Extrapolation.CLAMP),
+      * interpolate(Math.abs(slide.value), [0, 70], [1, 0.15], Extrapolation.CLAMP),
     transform: [
       { translateY: interpolate(progress.value, [0, 1], [-8, 0]) },
       { translateX: slide.value },
@@ -177,7 +186,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
 
   const weekRowStyle = useAnimatedStyle(() => ({
     opacity: interpolate(progress.value, [0, 0.3], [1, 0])
-      * interpolate(Math.abs(slide.value), [0, 44], [1, 0.15], Extrapolation.CLAMP),
+      * interpolate(Math.abs(slide.value), [0, 70], [1, 0.15], Extrapolation.CLAMP),
     transform: [{ translateX: slide.value }],
   }))
 
