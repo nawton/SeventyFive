@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   ActionSheetIOS,
+  type ViewStyle,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -20,6 +21,7 @@ import { useFocusEffect, router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withSpring, runOnUI,
+  type AnimatedStyle,
 } from 'react-native-reanimated'
 import { supabase } from '@/lib/supabase'
 import { getExercises, type Exercise } from '@/services/exercises'
@@ -68,6 +70,206 @@ function dateToIndex(d: Date): number {
   const now = todayMidnight()
   return CENTER_IDX + Math.round((d.getTime() - now.getTime()) / 86400000)
 }
+
+
+// ── DayPage ───────────────────────────────────────────────────────────────────
+// Memoiserad dagsida: en ibockning eller ett dagbyte ritar bara om den sida
+// vars props faktiskt ändrats — inte alla monterade sidor i pagern.
+
+const EMPTY_CHECKED: Record<string, boolean> = {}
+const EMPTY_COMPLETED = new Set<string>()
+
+interface DayPageApi {
+  toggleCheck:      (exId: string, date: string) => void
+  deleteExercise:   (sessionId: string, exId: string, date: string) => void
+  editExercise:     (exId: string, sets: number | null, reps: string | null) => void
+  sessionLongPress: (s: WorkoutSession, displayName: string) => void
+  setPickerSession: (s: WorkoutSession) => void
+  complete:         (sessionId: string, date: string) => void
+  uncomplete:       (sessionId: string, date: string) => void
+  openEditor:       (s: WorkoutSession | null) => void
+}
+
+const DayPage = React.memo(function DayPage({
+  idx, sessions, exercises, checked, completed, userId, dayAnimStyle, api,
+}: {
+  idx: number
+  sessions: WorkoutSession[]
+  exercises: Exercise[]
+  checked: Record<string, boolean>
+  completed: Set<string>
+  userId: string | null
+  dayAnimStyle: AnimatedStyle<ViewStyle>
+  api: DayPageApi
+}) {
+
+          const date       = indexToDate(idx)
+          const weekday    = weekdayOf(date)
+          const dateStr    = isoDate(date)
+          const todayMs    = todayMidnight().getTime()
+          const isToday    = date.getTime() === todayMs
+          const isPastOrToday = date.getTime() <= todayMs
+          const isPast        = date.getTime() < todayMs
+          const skipPrefix = `SKIP:${dateStr}:`
+          const skipIds    = sessions
+            .filter(s => s.name.startsWith(skipPrefix))
+            .map(s => s.name.slice(skipPrefix.length))
+          const daySessions = sessions.filter(s => {
+            if (s.name.startsWith('SKIP:')) return false
+            if (skipIds.includes(s.id))     return false
+            return (
+              s.weekdays.includes(weekday) ||
+              (s.weekdays.length === 0 && s.name === dateStr) ||
+              (s.weekdays.length === 0 && s.name.startsWith(`ONCE:${dateStr}:`))
+            )
+          })
+          function sessionDisplayName(s: WorkoutSession): string {
+            if (s.name.startsWith('ONCE:')) return s.name.split(':').slice(2).join(':')
+            if (s.name === dateStr) return 'Loggat idag'
+            return s.name
+          }
+          const scheduledSessions = daySessions.filter(s => s.weekdays.length > 0 || s.name.startsWith(`ONCE:${dateStr}:`))
+          const quickLogSession   = daySessions.find(s => s.weekdays.length === 0 && s.name === dateStr)
+          const dayLabel          = isToday ? 'IDAG' : DAY_SHORT[weekday - 1]
+          return (
+            <ScrollView
+              style={{ width: SCREEN_W }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scroll}
+            >
+              {/* Day header */}
+              <Animated.View style={[styles.dayHeader, dayAnimStyle]}>
+                <Text style={styles.dayName}>{dayLabel}</Text>
+                {daySessions.length > 0 && (
+                  <Text style={styles.daySubtitle}>
+                    {daySessions.length} pass · {daySessions.reduce((a, s) => a + s.exercises.length, 0)} övningar
+                  </Text>
+                )}
+              </Animated.View>
+
+              {/* Sessions */}
+              {sessions.filter(s => !s.name.startsWith('SKIP:')).length === 0 ? (
+                <View style={styles.emptyState}>
+                  <View style={styles.emptyIcon}>
+                    <Ionicons name="barbell-outline" size={32} color={ORANGE} />
+                  </View>
+                  <Text style={styles.emptyTitle}>Bygg ditt schema</Text>
+                  <Text style={styles.emptyText}>Skapa pass och lägg till övningar för varje dag</Text>
+                  <TouchableOpacity style={styles.emptyBtn} onPress={() => api.openEditor(null)} activeOpacity={0.8}>
+                    <Ionicons name="add" size={16} color="#000" />
+                    <Text style={styles.emptyBtnText}>Skapa första passet</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.sectionList}>
+                  {scheduledSessions.length === 0 ? (
+                    <View style={styles.restState}>
+                      <Ionicons name="moon-outline" size={40} color={BORDER} />
+                      <Text style={styles.restTitle}>Vildag</Text>
+                      <Text style={styles.restText}>Inget pass schemalagt {isToday ? 'idag' : WEEKDAYS[weekday - 1].toLowerCase()}</Text>
+                      <TouchableOpacity style={styles.restAddBtn} onPress={() => api.openEditor(null)} activeOpacity={0.8}>
+                        <Ionicons name="add" size={14} color={ORANGE} />
+                        <Text style={styles.restAddText}>Lägg till pass</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : scheduledSessions.map(s => {
+                    const isCompleted = completed.has(s.id)
+                    return (
+                    <WorkoutSection
+                      key={s.id}
+                      session={{ ...s, name: sessionDisplayName(s) }}
+                      checked={checked}
+                      isCompleted={isCompleted}
+                      onToggleExercise={(exId) => api.toggleCheck(exId, dateStr)}
+                      onDeleteExercise={(exId) => api.deleteExercise(s.id, exId, dateStr)}
+                      onEditExercise={(exId, sets, reps) => api.editExercise(exId, sets, reps)}
+                      onLongPress={() => api.sessionLongPress(s, sessionDisplayName(s))}
+                      onAddExercise={!isPast ? () => api.setPickerSession(s) : undefined}
+                      onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
+                      onStartCardioSession={s.session_type === 'cardio'
+                        ? () => router.push({ pathname: '/cardio', params: { name: s.cardio_type ?? 'running', sessionId: s.id, sessionDate: dateStr } })
+                        : undefined}
+                      onCardPress={(sessionEx) => {
+                        const name   = sessionEx.exercise_name
+                        const exInfo = exercises.find(e => e.name === name)
+                        if (!exInfo) return
+                        const hasMap = exInfo.category === 'cardio' && GPS_KEYWORDS.some(kw => name.toLowerCase().includes(kw))
+                        if (hasMap) {
+                          router.push({ pathname: '/cardio', params: { name } })
+                        } else {
+                          router.push({
+                            pathname: '/exercise/[id]',
+                            params: {
+                              id:          exInfo.id,
+                              name:        exInfo.name,
+                              description: exInfo.description ?? '',
+                              category:    exInfo.category,
+                              difficulty:  exInfo.difficulty,
+                              initialSets: sessionEx.sets != null ? String(sessionEx.sets) : '',
+                              initialReps: sessionEx.reps ?? '',
+                              sessionExId: sessionEx.id,
+                              sessionDate: dateStr,
+                            },
+                          })
+                        }
+                      }}
+                      onComplete={() => api.complete(s.id, dateStr)}
+                      onUncomplete={() => api.uncomplete(s.id, dateStr)}
+                      onEdit={() => api.openEditor(s)}
+                    />
+                  )})}
+
+
+                  {/* Quick-log section */}
+                  {quickLogSession && (
+                    <WorkoutSection
+                      key={quickLogSession.id}
+                      session={{ ...quickLogSession, name: 'Loggat idag' }}
+                      checked={checked}
+                      isCompleted={false}
+                      isQuickLog
+                      onToggleExercise={(exId) => api.toggleCheck(exId, dateStr)}
+                      onDeleteExercise={(exId) => api.deleteExercise(quickLogSession.id, exId, dateStr)}
+                      onEditExercise={(exId, sets, reps) => api.editExercise(exId, sets, reps)}
+                      onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
+                      onCardPress={(sessionEx) => {
+                        const name   = sessionEx.exercise_name
+                        const exInfo = exercises.find(e => e.name === name)
+                        if (!exInfo) return
+                        router.push({
+                          pathname: '/exercise/[id]',
+                          params: {
+                            id: exInfo.id, name: exInfo.name,
+                            description: exInfo.description ?? '',
+                            category: exInfo.category, difficulty: exInfo.difficulty,
+                            initialSets: sessionEx.sets != null ? String(sessionEx.sets) : '',
+                            initialReps: sessionEx.reps ?? '',
+                            sessionExId: sessionEx.id, sessionDate: dateStr,
+                          },
+                        })
+                      }}
+                      onComplete={() => {}}
+                      onUncomplete={() => {}}
+                      onEdit={() => Alert.alert('Snabb-logg', 'Redigera eller ta bort enskilda övningar via ··· bredvid övningen.')}
+                      onLongPress={() => api.sessionLongPress(quickLogSession, 'Loggat idag')}
+                    />
+                  )}
+
+                  {isPast && (
+                    <TouchableOpacity
+                      style={styles.quickAddBtn}
+                      onPress={() => api.setPickerSession({ id: dateStr, user_id: userId ?? '', name: dateStr, weekdays: [], sort_order: 0, created_at: '', notes: null, session_type: 'gym', cardio_type: null, exercises: [] })}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="add-circle-outline" size={18} color={ORANGE} />
+                      <Text style={styles.quickAddText}>Logga missad övning</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </ScrollView>
+          )
+})
 
 export default function SchemaScreen() {
   const [exercises, setExercises]           = useState<Exercise[]>([])
@@ -310,6 +512,30 @@ export default function SchemaScreen() {
     transform: [{ translateY: daySlide.value }],
   }))
 
+  // Stabilt API-objekt till de memoiserade dagsidorna: identiteten ändras aldrig,
+  // men anropen delegeras alltid till senaste renderns handlers via ref:en
+  const apiFnsRef = useRef<DayPageApi>(null as unknown as DayPageApi)
+  apiFnsRef.current = {
+    toggleCheck,
+    deleteExercise: handleDeleteExercise,
+    editExercise: handleEditExercise,
+    sessionLongPress: handleSessionLongPress,
+    setPickerSession,
+    complete: handleComplete,
+    uncomplete: handleUncomplete,
+    openEditor,
+  }
+  const api = useMemo<DayPageApi>(() => ({
+    toggleCheck:      (...a) => apiFnsRef.current.toggleCheck(...a),
+    deleteExercise:   (...a) => apiFnsRef.current.deleteExercise(...a),
+    editExercise:     (...a) => apiFnsRef.current.editExercise(...a),
+    sessionLongPress: (...a) => apiFnsRef.current.sessionLongPress(...a),
+    setPickerSession: (...a) => apiFnsRef.current.setPickerSession(...a),
+    complete:         (...a) => apiFnsRef.current.complete(...a),
+    uncomplete:       (...a) => apiFnsRef.current.uncomplete(...a),
+    openEditor:       (...a) => apiFnsRef.current.openEditor(...a),
+  }), [])
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -424,173 +650,18 @@ export default function SchemaScreen() {
         windowSize={5}
         maxToRenderPerBatch={3}
         renderItem={({ item: idx }) => {
-          const date       = indexToDate(idx)
-          const weekday    = weekdayOf(date)
-          const dateStr    = isoDate(date)
-          const todayMs    = todayMidnight().getTime()
-          const isToday    = date.getTime() === todayMs
-          const isPastOrToday = date.getTime() <= todayMs
-          const isPast        = date.getTime() < todayMs
-          const skipPrefix = `SKIP:${dateStr}:`
-          const skipIds    = sessions
-            .filter(s => s.name.startsWith(skipPrefix))
-            .map(s => s.name.slice(skipPrefix.length))
-          const daySessions = sessions.filter(s => {
-            if (s.name.startsWith('SKIP:')) return false
-            if (skipIds.includes(s.id))     return false
-            return (
-              s.weekdays.includes(weekday) ||
-              (s.weekdays.length === 0 && s.name === dateStr) ||
-              (s.weekdays.length === 0 && s.name.startsWith(`ONCE:${dateStr}:`))
-            )
-          })
-          function sessionDisplayName(s: WorkoutSession): string {
-            if (s.name.startsWith('ONCE:')) return s.name.split(':').slice(2).join(':')
-            if (s.name === dateStr) return 'Loggat idag'
-            return s.name
-          }
-          const scheduledSessions = daySessions.filter(s => s.weekdays.length > 0 || s.name.startsWith(`ONCE:${dateStr}:`))
-          const quickLogSession   = daySessions.find(s => s.weekdays.length === 0 && s.name === dateStr)
-          const dateChecked       = checkedByDate[dateStr] ?? {}
-          const dateCompleted     = completedByDate[dateStr] ?? new Set<string>()
-          const dayLabel          = isToday ? 'IDAG' : DAY_SHORT[weekday - 1]
+          const dateStr = isoDate(indexToDate(idx))
           return (
-            <ScrollView
-              style={{ width: SCREEN_W }}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scroll}
-            >
-              {/* Day header */}
-              <Animated.View style={[styles.dayHeader, dayAnimStyle]}>
-                <Text style={styles.dayName}>{dayLabel}</Text>
-                {daySessions.length > 0 && (
-                  <Text style={styles.daySubtitle}>
-                    {daySessions.length} pass · {daySessions.reduce((a, s) => a + s.exercises.length, 0)} övningar
-                  </Text>
-                )}
-              </Animated.View>
-
-              {/* Sessions */}
-              {sessions.filter(s => !s.name.startsWith('SKIP:')).length === 0 ? (
-                <View style={styles.emptyState}>
-                  <View style={styles.emptyIcon}>
-                    <Ionicons name="barbell-outline" size={32} color={ORANGE} />
-                  </View>
-                  <Text style={styles.emptyTitle}>Bygg ditt schema</Text>
-                  <Text style={styles.emptyText}>Skapa pass och lägg till övningar för varje dag</Text>
-                  <TouchableOpacity style={styles.emptyBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
-                    <Ionicons name="add" size={16} color="#000" />
-                    <Text style={styles.emptyBtnText}>Skapa första passet</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.sectionList}>
-                  {scheduledSessions.length === 0 ? (
-                    <View style={styles.restState}>
-                      <Ionicons name="moon-outline" size={40} color={BORDER} />
-                      <Text style={styles.restTitle}>Vildag</Text>
-                      <Text style={styles.restText}>Inget pass schemalagt {isToday ? 'idag' : WEEKDAYS[weekday - 1].toLowerCase()}</Text>
-                      <TouchableOpacity style={styles.restAddBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
-                        <Ionicons name="add" size={14} color={ORANGE} />
-                        <Text style={styles.restAddText}>Lägg till pass</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : scheduledSessions.map(s => {
-                    const isCompleted = dateCompleted.has(s.id)
-                    return (
-                    <WorkoutSection
-                      key={s.id}
-                      session={{ ...s, name: sessionDisplayName(s) }}
-                      checked={dateChecked}
-                      isCompleted={isCompleted}
-                      onToggleExercise={(exId) => toggleCheck(exId, dateStr)}
-                      onDeleteExercise={(exId) => handleDeleteExercise(s.id, exId, dateStr)}
-                      onEditExercise={(exId, sets, reps) => handleEditExercise(exId, sets, reps)}
-                      onLongPress={() => handleSessionLongPress(s, sessionDisplayName(s))}
-                      onAddExercise={!isPast ? () => setPickerSession(s) : undefined}
-                      onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
-                      onStartCardioSession={s.session_type === 'cardio'
-                        ? () => router.push({ pathname: '/cardio', params: { name: s.cardio_type ?? 'running', sessionId: s.id, sessionDate: dateStr } })
-                        : undefined}
-                      onCardPress={(sessionEx) => {
-                        const name   = sessionEx.exercise_name
-                        const exInfo = exercises.find(e => e.name === name)
-                        if (!exInfo) return
-                        const hasMap = exInfo.category === 'cardio' && GPS_KEYWORDS.some(kw => name.toLowerCase().includes(kw))
-                        if (hasMap) {
-                          router.push({ pathname: '/cardio', params: { name } })
-                        } else {
-                          router.push({
-                            pathname: '/exercise/[id]',
-                            params: {
-                              id:          exInfo.id,
-                              name:        exInfo.name,
-                              description: exInfo.description ?? '',
-                              category:    exInfo.category,
-                              difficulty:  exInfo.difficulty,
-                              initialSets: sessionEx.sets != null ? String(sessionEx.sets) : '',
-                              initialReps: sessionEx.reps ?? '',
-                              sessionExId: sessionEx.id,
-                              sessionDate: dateStr,
-                            },
-                          })
-                        }
-                      }}
-                      onComplete={() => handleComplete(s.id, dateStr)}
-                      onUncomplete={() => handleUncomplete(s.id, dateStr)}
-                      onEdit={() => openEditor(s)}
-                    />
-                  )})}
-
-
-                  {/* Quick-log section */}
-                  {quickLogSession && (
-                    <WorkoutSection
-                      key={quickLogSession.id}
-                      session={{ ...quickLogSession, name: 'Loggat idag' }}
-                      checked={dateChecked}
-                      isCompleted={false}
-                      isQuickLog
-                      onToggleExercise={(exId) => toggleCheck(exId, dateStr)}
-                      onDeleteExercise={(exId) => handleDeleteExercise(quickLogSession.id, exId, dateStr)}
-                      onEditExercise={(exId, sets, reps) => handleEditExercise(exId, sets, reps)}
-                      onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
-                      onCardPress={(sessionEx) => {
-                        const name   = sessionEx.exercise_name
-                        const exInfo = exercises.find(e => e.name === name)
-                        if (!exInfo) return
-                        router.push({
-                          pathname: '/exercise/[id]',
-                          params: {
-                            id: exInfo.id, name: exInfo.name,
-                            description: exInfo.description ?? '',
-                            category: exInfo.category, difficulty: exInfo.difficulty,
-                            initialSets: sessionEx.sets != null ? String(sessionEx.sets) : '',
-                            initialReps: sessionEx.reps ?? '',
-                            sessionExId: sessionEx.id, sessionDate: dateStr,
-                          },
-                        })
-                      }}
-                      onComplete={() => {}}
-                      onUncomplete={() => {}}
-                      onEdit={() => Alert.alert('Snabb-logg', 'Redigera eller ta bort enskilda övningar via ··· bredvid övningen.')}
-                      onLongPress={() => handleSessionLongPress(quickLogSession, 'Loggat idag')}
-                    />
-                  )}
-
-                  {isPast && (
-                    <TouchableOpacity
-                      style={styles.quickAddBtn}
-                      onPress={() => setPickerSession({ id: dateStr, user_id: userId ?? '', name: dateStr, weekdays: [], sort_order: 0, created_at: '', notes: null, session_type: 'gym', cardio_type: null, exercises: [] })}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="add-circle-outline" size={18} color={ORANGE} />
-                      <Text style={styles.quickAddText}>Logga missad övning</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            </ScrollView>
+            <DayPage
+              idx={idx}
+              sessions={sessions}
+              exercises={exercises}
+              checked={checkedByDate[dateStr] ?? EMPTY_CHECKED}
+              completed={completedByDate[dateStr] ?? EMPTY_COMPLETED}
+              userId={userId}
+              dayAnimStyle={dayAnimStyle}
+              api={api}
+            />
           )
         }}
       />

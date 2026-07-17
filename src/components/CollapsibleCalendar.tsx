@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import Svg, { Circle as SvgCircle } from 'react-native-svg'
 import Animated, {
@@ -68,7 +68,9 @@ function buildMonthGrid(year: number, month: number): Array<Array<Date | null>> 
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function CollapsibleCalendar({
+// React.memo: kalendern gör sessionsfiltrering per cell (42 st) — den ska inte
+// ritas om när t.ex. en övning bockas i (checkedByDate är inte ens en prop här)
+export const CollapsibleCalendar = memo(function CollapsibleCalendar({
   sessions,
   completedByDate,
   selectedDate,
@@ -297,7 +299,7 @@ export function CollapsibleCalendar({
     </Animated.View>
     </GestureDetector>
   )
-}
+})
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
