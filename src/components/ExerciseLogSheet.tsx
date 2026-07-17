@@ -10,7 +10,7 @@ import { getMusclesForName, bestSideForMuscles, SLUG_LABELS } from '@/lib/muscle
 import * as Haptics from 'expo-haptics'
 import { saveStrengthWorkout, deleteWorkout, getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
 import { getPersonalRecords, findNewPR, type ExerciseRecord } from '@/services/personalRecords'
-import { dateForWeekday } from '@/services/workoutSchedule'
+import { dateForWeekday, updateSessionExercise } from '@/services/workoutSchedule'
 import { supabase } from '@/lib/supabase'
 import { toLocalDateString } from '@/lib/date'
 import { CATEGORY_LABELS, DIFFICULTY_LABELS, DIFFICULTY_COLORS } from '@/services/exercises'
@@ -194,6 +194,14 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
         if (ok) {
           if (props.loggedWorkoutId) await deleteWorkout(props.loggedWorkoutId)
           await markScheduleComplete(userId)
+          // Spegla det loggade antalet set/reps till passets övningsrad,
+          // så kortet visar det man faktiskt gjorde
+          if (props.sessionExId) {
+            const repsStr = validSets.every(s => s.reps === validSets[0].reps)
+              ? String(validSets[0].reps)
+              : validSets.map(s => s.reps).join('/')
+            await updateSessionExercise(props.sessionExId, validSets.length, repsStr).catch(() => {})
+          }
           onSaved?.()
           const pr = findNewPR(prevRecord, validSets)
           if (pr) {

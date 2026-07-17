@@ -807,7 +807,14 @@ export default function SchemaScreen() {
 
       <SessionFullscreen
         visible={fullscreenTarget !== null}
-        session={fullscreenTarget?.session ?? null}
+        session={fullscreenTarget
+          ? {
+              ...fullscreenTarget.session,
+              // Färska övningar från senaste laddningen (snapshotet blir annars inaktuellt
+              // när man ändrar set/reps i övningsloggen)
+              exercises: sessions.find(x => x.id === fullscreenTarget.session.id)?.exercises ?? fullscreenTarget.session.exercises,
+            }
+          : null}
         checked={fullscreenTarget ? (checkedByDate[fullscreenTarget.date] ?? EMPTY_CHECKED) : EMPTY_CHECKED}
         isCompleted={!!fullscreenTarget && (completedByDate[fullscreenTarget.date]?.has(fullscreenTarget.session.id) ?? false)}
         exercisesList={exercises}
@@ -815,6 +822,7 @@ export default function SchemaScreen() {
         onToggle={(exId) => fullscreenTarget && toggleCheck(exId, fullscreenTarget.date)}
         onComplete={() => { if (fullscreenTarget) handleComplete(fullscreenTarget.session.id, fullscreenTarget.date) }}
         onUncomplete={() => { if (fullscreenTarget) handleUncomplete(fullscreenTarget.session.id, fullscreenTarget.date) }}
+        onExerciseSaved={() => { if (userId) loadData(userId) }}
         onClose={() => setFullscreenTarget(null)}
       />
 

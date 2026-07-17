@@ -9,7 +9,7 @@ import { ExerciseLogSheet } from '@/components/ExerciseLogSheet'
 
 export function SessionFullscreen({
   visible, session, checked, isCompleted, exercisesList, date,
-  onToggle, onComplete, onUncomplete, onClose,
+  onToggle, onComplete, onUncomplete, onClose, onExerciseSaved,
 }: {
   visible: boolean
   session: WorkoutSession | null
@@ -21,6 +21,7 @@ export function SessionFullscreen({
   onComplete: () => void
   onUncomplete: () => void
   onClose: () => void
+  onExerciseSaved?: () => void
 }) {
   const exercises = session?.exercises ?? []
   // Övningsloggen visas som ett lager INUTI passvyn (inte som ny sida)
@@ -121,7 +122,10 @@ export function SessionFullscreen({
             initialReps={selectedEx.reps ?? ''}
             sessionExId={selectedEx.id}
             sessionDate={date}
-            onSaved={() => { if (selectedEx && !isCompleted && !checked[selectedEx.id]) onToggle(selectedEx.id) }}
+            onSaved={() => {
+              if (selectedEx && !isCompleted && !checked[selectedEx.id]) onToggle(selectedEx.id)
+              onExerciseSaved?.()
+            }}
             onClose={() => setSelectedEx(null)}
           />
         )}
