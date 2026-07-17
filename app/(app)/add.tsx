@@ -812,7 +812,8 @@ export default function SchemaScreen() {
           const date = isoDate(todayMidnight())
           try {
             // Skapa ETT pass (ONCE för idag) → renderas som ett vanligt pass-kort
-            const session = await createWorkoutSession(
+            // (inte avklarat — användaren bockar av övningarna själv)
+            await createWorkoutSession(
               userId,
               `ONCE:${date}:${name}`,
               [],
@@ -821,8 +822,6 @@ export default function SchemaScreen() {
               'gym',
               null,
             )
-            // Markera som avklarat eftersom det redan är gjort
-            await completeSession(session.id, userId, date).catch(() => {})
           } catch { /* ignoreras — laddas om nedan */ }
           setLogSheetOpen(false)
           loadData(userId)
