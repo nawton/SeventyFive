@@ -519,9 +519,10 @@ export function WorkoutSection({
   const hasBody =
     (!isCardio && (total > 0 || !!onAddExercise)) ||
     (isCardio && (!isCompleted || !!onViewCardioSummary))
-  const [collapsed, setCollapsed] = useState(false)
+  // Passen startar alltid hopfällda — tryck på namnet fäller ut
+  const [collapsed, setCollapsed] = useState(true)
   const [bodyH, setBodyH]         = useState(0)
-  const collapseV = useSharedValue(1)   // 1 = utfälld
+  const collapseV = useSharedValue(0)   // 1 = utfälld
 
   function toggleCollapse() {
     if (!hasBody) return
