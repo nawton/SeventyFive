@@ -580,11 +580,16 @@ export default function SchemaScreen() {
     }
   }
 
-  // Scroll pager when calendar tap changes date
+  // Scroll pager when calendar tap changes date.
+  // Hopp längre än en dag (veckosvep, månadsval) sker DIREKT utan animation —
+  // annars scrollar pagern igenom och renderar varje mellanliggande dag
+  const lastPagerIdx = useRef(dateToIndex(todayMidnight()))
   useEffect(() => {
     if (isSwiping.current) return
     const idx = dateToIndex(selectedDate)
-    pagerRef.current?.scrollToIndex({ index: idx, animated: true })
+    const animate = Math.abs(idx - lastPagerIdx.current) <= 1
+    lastPagerIdx.current = idx
+    pagerRef.current?.scrollToIndex({ index: idx, animated: animate })
   }, [selectedDate])
 
   // Day header fade+slide animation — bara vid kalendertryck (innehållet byts
