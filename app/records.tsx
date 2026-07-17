@@ -41,12 +41,13 @@ const TIER_NAMES: Record<MedalTier, string> = {
   bronze: 'Brons', silver: 'Silver', gold: 'Guld', platinum: 'Platina', diamond: 'Diamant',
 }
 
-/** Vart varje engångsmål tar dig — sidan där målet klaras av */
+/** Vart varje engångsmål tar dig — action-parametern får sidan att scrolla
+    till rätt sektion och öppna själva flödet, så användaren lär sig var det bor */
 const ONE_TIME_ROUTES: Record<string, string> = {
-  hasAvatar:        '/(app)/edit-profile',   // profilbild sätts här
-  hasProgressPhoto: '/(app)/profile',        // fotoflödet med "Lägg till dagens foto"
-  hasSchedule:      '/(app)/add',            // schemafliken med skapa-banner/pass
-  hasCustomRule:    '/(app)/dashboard',      // regelsektionen med "Lägg till"
+  hasAvatar:        '/(app)/edit-profile?action=avatar',
+  hasProgressPhoto: '/(app)/profile?action=addPhoto',
+  hasSchedule:      '/(app)/add?action=wizard',
+  hasCustomRule:    '/(app)/dashboard?action=addRule',
 }
 
 /** Innehåll för medalj-detaljmodalen — funkar för både medaljer och nivåer */

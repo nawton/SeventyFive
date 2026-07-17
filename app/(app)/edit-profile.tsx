@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { router, useFocusEffect } from 'expo-router'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '@/lib/supabase'
@@ -65,6 +65,17 @@ export default function EditProfileScreen() {
       getProfile(userId).then(p => setName(p?.name ?? '')).catch(() => {})
     }
   }, [userId]))
+
+  // Guidat flöde från engångsmålen: landa på sidan, öppna sedan avatarväljaren
+  const { action } = useLocalSearchParams<{ action?: string }>()
+  const handledActionRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (loading || action !== 'avatar' || handledActionRef.current === action) return
+    handledActionRef.current = action
+    router.setParams({ action: undefined })
+    const timer = setTimeout(() => setModalVisible(true), 600)
+    return () => clearTimeout(timer)
+  }, [action, loading])
 
   async function pickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()

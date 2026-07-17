@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router, useFocusEffect } from 'expo-router'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
@@ -71,6 +71,17 @@ export default function ProfileScreen() {
   const [composerUri, setComposerUri] = useState<string | null>(null)
 
   useFocusEffect(useCallback(() => { load() }, []))
+
+  // Guidat flöde från engångsmålen: landa i fotoflödet, öppna sedan fotovalet
+  const { action } = useLocalSearchParams<{ action?: string }>()
+  const handledActionRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (loading || action !== 'addPhoto' || handledActionRef.current === action) return
+    handledActionRef.current = action
+    router.setParams({ action: undefined })
+    const timer = setTimeout(() => handleAddPhoto(), 600)
+    return () => clearTimeout(timer)
+  }, [action, loading])
 
   async function load() {
     try {

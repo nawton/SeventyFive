@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Ionicons } from '@expo/vector-icons'
-import { useFocusEffect, router } from 'expo-router'
+import { useFocusEffect, router, useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withSpring, runOnUI,
@@ -313,6 +313,17 @@ export default function SchemaScreen() {
       .then(v => setWizardBannerDismissed(v === '1'))
       .catch(() => setWizardBannerDismissed(false))
   }, [])
+
+  // Guidat flöde från engångsmålen: landa på sidan, öppna sedan schemaguiden
+  const { action } = useLocalSearchParams<{ action?: string }>()
+  const handledActionRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (loading || action !== 'wizard' || handledActionRef.current === action) return
+    handledActionRef.current = action
+    router.setParams({ action: undefined })
+    const timer = setTimeout(() => setWizardVisible(true), 600)
+    return () => clearTimeout(timer)
+  }, [action, loading])
 
   async function loadData(uid: string) {
     const date = isoDate(selectedDateRef.current)

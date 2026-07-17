@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { router, useFocusEffect } from 'expo-router'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   useSharedValue,
@@ -186,6 +186,19 @@ export default function DashboardScreen() {
 
   // Add-rule sheet (UI, animation och gest bor i AddRuleSheet-komponenten)
   const [addRuleOpen, setAddRuleOpen]   = useState(false)
+
+  // Guidat flöde från engångsmålen: scrolla till regelsektionen, öppna sedan sheeten
+  const { action } = useLocalSearchParams<{ action?: string }>()
+  const scrollRef  = useRef<ScrollView>(null)
+  const handledActionRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (loading || action !== 'addRule' || handledActionRef.current === action) return
+    handledActionRef.current = action
+    router.setParams({ action: undefined })
+    const scrollTimer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 450)
+    const openTimer   = setTimeout(() => setAddRuleOpen(true), 1300)
+    return () => { clearTimeout(scrollTimer); clearTimeout(openTimer) }
+  }, [action, loading])
 
   // ── 3D floating hero animation ──
   const tiltX = useSharedValue(0)
@@ -483,6 +496,7 @@ export default function DashboardScreen() {
       />
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
