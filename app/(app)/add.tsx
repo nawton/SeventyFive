@@ -37,6 +37,7 @@ import {
   addSingleExerciseToSession,
   getCompletedSessionIds,
   getCompletedExerciseIds,
+  getExerciseCompletionCounts,
   completeSession,
   uncompleteSession,
   completeExercise,
@@ -44,6 +45,7 @@ import {
   deleteRepeatingSessions,
   type WorkoutSession,
 } from '@/services/workoutSchedule'
+import { scaledReps } from '@/lib/progression'
 import { WorkoutSection } from '@/components/WorkoutSection'
 import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
@@ -91,12 +93,13 @@ interface DayPageApi {
 }
 
 const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, userId, dayAnimStyle, api,
+  idx, sessions, exercises, checked, completed, progress, userId, dayAnimStyle, api,
 }: {
   idx: number
   sessions: WorkoutSession[]
   exercises: Exercise[]
   checked: Record<string, boolean>
+  progress: Record<string, number>
   completed: Set<string>
   userId: string | null
   dayAnimStyle: AnimatedStyle<ViewStyle>
@@ -174,10 +177,16 @@ const DayPage = React.memo(function DayPage({
                     </View>
                   ) : scheduledSessions.map(s => {
                     const isCompleted = completed.has(s.id)
+                    // Progression: skala reps utifrån antal genomföranden av övningen
+                    const scaled = s.exercises.map(ex => {
+                      const { reps, progressed } = scaledReps(ex.reps, progress[ex.id] ?? 0)
+                      return { ex: progressed ? { ...ex, reps } : ex, progressed }
+                    })
                     return (
                     <WorkoutSection
                       key={s.id}
-                      session={{ ...s, name: sessionDisplayName(s) }}
+                      session={{ ...s, name: sessionDisplayName(s), exercises: scaled.map(x => x.ex) }}
+                      progressedIds={new Set(scaled.filter(x => x.progressed).map(x => x.ex.id))}
                       checked={checked}
                       isCompleted={isCompleted}
                       onToggleExercise={(exId) => api.toggleCheck(exId, dateStr)}
@@ -289,6 +298,8 @@ export default function SchemaScreen() {
   const [avatarUrl, setAvatarUrl]           = useState<string | null>(null)
   const [profileName, setProfileName]       = useState('')
   const [challengeDay, setChallengeDay]     = useState<number | null>(null)
+  // Genomföranden per övning — underlag för progressionsskalning av reps
+  const [exerciseProgress, setExerciseProgress] = useState<Record<string, number>>({})
   const pagerRef    = useRef<FlatList<number>>(null)
   const isSwiping   = useRef(false)
 
@@ -305,14 +316,16 @@ export default function SchemaScreen() {
 
   async function loadData(uid: string) {
     const date = isoDate(selectedDateRef.current)
-    const [exs, sess, sessionIds, exerciseIds] = await Promise.all([
+    const [exs, sess, sessionIds, exerciseIds, progressCounts] = await Promise.all([
       getExercises().catch(() => [] as Exercise[]),
       getWorkoutSessions(uid).catch(() => [] as WorkoutSession[]),
       getCompletedSessionIds(uid, date).catch(() => [] as string[]),
       getCompletedExerciseIds(uid, date).catch(() => [] as string[]),
+      getExerciseCompletionCounts(uid).catch(() => ({} as Record<string, number>)),
     ])
     setExercises(exs)
     setSessions(sess)
+    setExerciseProgress(progressCounts)
     const exChecked: Record<string, boolean> = {}
     exerciseIds.forEach(id => { exChecked[id] = true })
     setCompletedByDate(prev => ({ ...prev, [date]: new Set(sessionIds) }))
@@ -660,6 +673,7 @@ export default function SchemaScreen() {
               sessions={sessions}
               exercises={exercises}
               checked={checkedByDate[dateStr] ?? EMPTY_CHECKED}
+              progress={exerciseProgress}
               completed={completedByDate[dateStr] ?? EMPTY_COMPLETED}
               userId={userId}
               dayAnimStyle={dayAnimStyle}

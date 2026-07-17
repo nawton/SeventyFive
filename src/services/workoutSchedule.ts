@@ -363,6 +363,20 @@ export async function getCompletedExerciseIds(userId: string, date: string): Pro
   return (data ?? []).map(r => r.exercise_id)
 }
 
+/** Antal genomföranden per övning (session_exercise-id) — underlag för progression. */
+export async function getExerciseCompletionCounts(userId: string): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from('exercise_completions')
+    .select('exercise_id')
+    .eq('user_id', userId)
+  if (error) throw error
+  const counts: Record<string, number> = {}
+  for (const row of data ?? []) {
+    counts[row.exercise_id] = (counts[row.exercise_id] ?? 0) + 1
+  }
+  return counts
+}
+
 export async function completeExercise(exerciseId: string, userId: string, date: string): Promise<void> {
   const { error } = await supabase
     .from('exercise_completions')

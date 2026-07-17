@@ -70,6 +70,7 @@ const SP = { damping: 22, stiffness: 180, mass: 1 } as const
 function ExerciseRow({
   ex,
   done,
+  progressed,
   onToggle,
   onDelete,
   onEditExercise,
@@ -78,6 +79,7 @@ function ExerciseRow({
 }: {
   ex:              SessionExercise
   done:            boolean
+  progressed?:     boolean
   onToggle:        () => void
   onDelete:        () => void
   onEditExercise:  (sets: number | null, reps: string | null) => void
@@ -435,6 +437,9 @@ function ExerciseRow({
                   {[ex.sets && `${ex.sets} set`, ex.reps && `${ex.reps} reps`]
                     .filter(Boolean)
                     .join(' · ')}
+                  {progressed && (
+                    <Text style={r.progressedMark}>  ↑</Text>
+                  )}
                 </Text>
               )}
             </TouchableOpacity>
@@ -513,6 +518,7 @@ const r = StyleSheet.create({
   name:     { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   nameDone: { color: TEXT_SECONDARY, textDecorationLine: 'line-through' },
   meta:     { color: TEXT_SECONDARY, fontSize: 12, marginTop: 3 },
+  progressedMark: { color: ORANGE, fontSize: 12, fontWeight: '800' },
   optBtn:   { paddingHorizontal: 6, paddingVertical: 10 },
   ringWrap: { paddingRight: 14, paddingLeft: 4 },
   ring: {
@@ -586,6 +592,8 @@ export interface WorkoutSectionProps {
   onLongPress?:          () => void
   onAddExercise?:        () => void
   isQuickLog?:           boolean
+  /** Övnings-id:n vars reps skalats upp av progressionen — visar ↑-indikator */
+  progressedIds?:        Set<string>
 }
 
 // ─── WorkoutSection ───────────────────────────────────────────────────────────
@@ -606,6 +614,7 @@ export function WorkoutSection({
   onAddExercise,
   onEdit,
   isQuickLog,
+  progressedIds,
 }: WorkoutSectionProps) {
   const isCardio  = session.session_type === 'cardio'
   const total     = isCardio ? 0 : session.exercises.length
@@ -736,6 +745,7 @@ export function WorkoutSection({
             <ExerciseRow
               key={ex.id}
               ex={ex}
+              progressed={progressedIds?.has(ex.id)}
               done={isCompleted || !!checked[ex.id]}
               onToggle={() => onToggleExercise(ex.id)}
               onDelete={() => onDeleteExercise(ex.id)}
