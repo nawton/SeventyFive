@@ -6,7 +6,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native'
+import * as Haptics from 'expo-haptics'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -20,6 +23,24 @@ import { computeAchievements, type Achievement } from '@/lib/achievements'
 import { MedalBadge } from '@/components/MedalBadge'
 import { MEDAL_IMAGES } from '@/lib/medalImages'
 import { LEVEL_TIERS, POINT_RULES, computePoints, levelFor } from '@/lib/levels'
+import type { MedalTier } from '@/components/MedalBadge'
+
+const TIER_NAMES: Record<MedalTier, string> = {
+  bronze: 'Brons', silver: 'Silver', gold: 'Guld', platinum: 'Platina', diamond: 'Diamant',
+}
+
+/** Innehåll för medalj-detaljmodalen — funkar för både medaljer och nivåer */
+interface MedalInfo {
+  tier: MedalTier
+  icon?: React.ComponentProps<typeof import('@expo/vector-icons').Ionicons>['name']
+  label?: string
+  imageId?: string
+  title: string
+  subtitle: string
+  description: string
+  unlocked: boolean
+  progress?: string
+}
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 const GOLD = '#FFD54F'
@@ -29,6 +50,12 @@ export default function RecordsScreen() {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [records, setRecords]           = useState<ExerciseRecord[]>([])
   const [points, setPoints]             = useState(0)
+  const [selectedMedal, setSelectedMedal] = useState<MedalInfo | null>(null)
+
+  function openMedal(info: MedalInfo) {
+    Haptics.selectionAsync()
+    setSelectedMedal(info)
+  }
 
   useEffect(() => {
     async function load() {
@@ -122,11 +149,26 @@ export default function RecordsScreen() {
           {LEVEL_TIERS.map(t => {
             const reached = points >= t.threshold
             return (
-              <View key={t.id} style={[s.tierItem, !reached && { opacity: 0.45 }]}>
+              <TouchableOpacity
+                key={t.id}
+                style={[s.tierItem, !reached && { opacity: 0.45 }]}
+                activeOpacity={0.75}
+                onPress={() => openMedal({
+                  tier: t.tier,
+                  label: '75',
+                  title: t.name,
+                  subtitle: `Nivå · ${t.threshold.toLocaleString('sv-SE')} p`,
+                  description: reached
+                    ? 'Du har nått den här nivån. Fortsätt samla poäng genom dina dagliga aktiviteter.'
+                    : `Samla ${(t.threshold - points).toLocaleString('sv-SE')} p till för att nå ${t.name}.`,
+                  unlocked: reached,
+                  progress: reached ? undefined : `${points.toLocaleString('sv-SE')}/${t.threshold.toLocaleString('sv-SE')} p`,
+                })}
+              >
                 <MedalBadge tier={t.tier} label="75" unlocked={reached} size={56} />
                 <Text style={[s.tierName, reached && { color: TEXT_PRIMARY }]}>{t.name}</Text>
                 <Text style={s.tierPts}>{t.threshold.toLocaleString('sv-SE')} p</Text>
-              </View>
+              </TouchableOpacity>
             )
           })}
         </ScrollView>
@@ -154,7 +196,21 @@ export default function RecordsScreen() {
         </View>
         <View style={s.medalGrid}>
           {achievements.map(a => (
-            <View key={a.id} style={[s.medal, !a.unlocked && s.medalLocked]}>
+            <TouchableOpacity
+              key={a.id}
+              style={[s.medal, !a.unlocked && s.medalLocked]}
+              activeOpacity={0.75}
+              onPress={() => openMedal({
+                tier: a.tier,
+                icon: a.icon,
+                imageId: a.id,
+                title: a.title,
+                subtitle: `${TIER_NAMES[a.tier]}-medalj`,
+                description: a.description,
+                unlocked: a.unlocked,
+                progress: a.progress,
+              })}
+            >
               <MedalBadge tier={a.tier} icon={a.icon} unlocked={a.unlocked} size={56} imageSource={MEDAL_IMAGES[a.id]} />
               <Text style={[s.medalTitle, !a.unlocked && { color: TEXT_SECONDARY }]} numberOfLines={1}>
                 {a.title}
@@ -162,7 +218,7 @@ export default function RecordsScreen() {
               <Text style={s.medalDesc} numberOfLines={2}>
                 {a.unlocked ? a.description : (a.progress ?? a.description)}
               </Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
@@ -201,6 +257,48 @@ export default function RecordsScreen() {
         )}
 
       </ScrollView>
+
+      {/* ── Medaljinfo-modal ── */}
+      <Modal
+        visible={!!selectedMedal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedMedal(null)}
+      >
+        <Pressable style={s.modalBackdrop} onPress={() => setSelectedMedal(null)}>
+          {selectedMedal && (
+            <Pressable style={s.modalCard} onPress={() => {}}>
+              <MedalBadge
+                tier={selectedMedal.tier}
+                icon={selectedMedal.icon}
+                label={selectedMedal.label}
+                unlocked={selectedMedal.unlocked}
+                size={130}
+                imageSource={selectedMedal.imageId ? MEDAL_IMAGES[selectedMedal.imageId] : undefined}
+              />
+              <Text style={s.modalTitle}>{selectedMedal.title}</Text>
+              <Text style={s.modalSubtitle}>{selectedMedal.subtitle}</Text>
+
+              <View style={[s.statusPill, selectedMedal.unlocked ? s.statusPillUnlocked : s.statusPillLocked]}>
+                <Ionicons
+                  name={selectedMedal.unlocked ? 'checkmark-circle' : 'lock-closed'}
+                  size={13}
+                  color={selectedMedal.unlocked ? '#4CAF50' : TEXT_SECONDARY}
+                />
+                <Text style={[s.statusPillText, selectedMedal.unlocked && { color: '#4CAF50' }]}>
+                  {selectedMedal.unlocked ? 'Upplåst' : selectedMedal.progress ?? 'Låst'}
+                </Text>
+              </View>
+
+              <Text style={s.modalDesc}>{selectedMedal.description}</Text>
+
+              <TouchableOpacity style={s.modalClose} onPress={() => setSelectedMedal(null)} activeOpacity={0.85}>
+                <Text style={s.modalCloseText}>Stäng</Text>
+              </TouchableOpacity>
+            </Pressable>
+          )}
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -283,4 +381,35 @@ const s = StyleSheet.create({
   recordName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
   recordMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   recordDate: { color: TEXT_SECONDARY, fontSize: 11 },
+
+  // Medaljinfo-modal
+  modalBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center', justifyContent: 'center', padding: 32,
+  },
+  modalCard: {
+    width: '100%', maxWidth: 340,
+    backgroundColor: CARD, borderRadius: 24,
+    borderWidth: 1, borderColor: BORDER,
+    padding: 28, alignItems: 'center', gap: 8,
+  },
+  modalTitle:    { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', marginTop: 8, textAlign: 'center' },
+  modalSubtitle: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  statusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    marginTop: 6,
+  },
+  statusPillUnlocked: { backgroundColor: '#4CAF5018' },
+  statusPillLocked:   { backgroundColor: 'rgba(255,255,255,0.06)' },
+  statusPillText:     { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
+  modalDesc: {
+    color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center',
+    lineHeight: 20, marginTop: 6,
+  },
+  modalClose: {
+    backgroundColor: ORANGE, borderRadius: 14,
+    paddingVertical: 13, paddingHorizontal: 40, marginTop: 14,
+  },
+  modalCloseText: { color: '#000', fontSize: 15, fontWeight: '700' },
 })
