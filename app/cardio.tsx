@@ -183,9 +183,6 @@ export default function CardioScreen() {
 
   const [status, setStatus] = useState<Status>('idle')
   const [exercise, setExercise] = useState<ExerciseType>(() => nameToType(name ?? ''))
-  // Kom man hit med en vald aktivitet (från passdetaljen/schemat) är valet
-  // redan gjort — då visas ingen aktivitetsväljare
-  const typeLocked = !!name
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
   const [activeStyle, setActiveStyle] = useState<string>('standard')
@@ -531,8 +528,8 @@ export default function CardioScreen() {
       </SafeAreaView>
 
       {/* ── Bottom bar ── */}
-      {/* Dropdown menu — visas ovanför bottom-baren (bara när typen inte är låst) */}
-      {dropdownOpen && !typeLocked && (
+      {/* Aktivitetsmeny — visas ovanför startmenyn */}
+      {dropdownOpen && (
         <View style={styles.dropdown}>
           {EXERCISES.map((ex) => {
             const active = exercise === ex.key
@@ -543,7 +540,7 @@ export default function CardioScreen() {
                 onPress={() => { setExercise(ex.key); setDropdownOpen(false) }}
                 activeOpacity={0.75}
               >
-                <Ionicons name={ex.icon} size={20} color={active ? ORANGE : '#444'} />
+                <Ionicons name={ex.icon} size={20} color={active ? ORANGE : '#888'} />
                 <Text style={[styles.dropdownItemText, active && styles.dropdownItemTextActive]}>
                   {ex.label}
                 </Text>
@@ -634,28 +631,30 @@ export default function CardioScreen() {
       </Modal>
 
       <SafeAreaView style={styles.bottomBar} edges={['bottom']}>
+        <View style={styles.barHandle} />
         <View style={styles.bottomInner}>
 
           {status === 'idle' ? (
             <>
-              {typeLocked ? (
-                // Aktiviteten är redan vald — visa den bara, inget att ändra
-                <View style={styles.exerciseActive}>
-                  <Ionicons name={selectedExercise.icon} size={20} color={ORANGE} />
-                  <Text style={styles.exerciseActiveLabel}>{selectedExercise.label}</Text>
+              <TouchableOpacity
+                style={styles.idleCol}
+                onPress={() => setDropdownOpen(o => !o)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.typeCircle, dropdownOpen && styles.typeCircleOpen]}>
+                  <Ionicons name={selectedExercise.icon} size={26} color={ORANGE} />
+                  <View style={styles.typeBadge}>
+                    <Ionicons name="checkmark" size={11} color="#fff" />
+                  </View>
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.dropdownTrigger}
-                  onPress={() => setDropdownOpen(o => !o)}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name={selectedExercise.icon} size={26} color={dropdownOpen ? '#fff' : ORANGE} />
-                </TouchableOpacity>
-              )}
+                <Text style={styles.idleColLabel}>{selectedExercise.label}</Text>
+              </TouchableOpacity>
 
-              <TouchableOpacity style={styles.startBtn} onPress={startTracking} activeOpacity={0.85}>
-                <Ionicons name="play" size={30} color="#000" />
+              <TouchableOpacity style={styles.idleCol} onPress={startTracking} activeOpacity={0.85}>
+                <View style={styles.startCircle}>
+                  <Ionicons name="play" size={36} color="#fff" style={{ marginLeft: 4 }} />
+                </View>
+                <Text style={styles.startLabel}>Starta</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -670,7 +669,7 @@ export default function CardioScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.startBtn} onPress={handleFinish} activeOpacity={0.85}>
-                <Ionicons name="stop" size={28} color="#000" />
+                <Ionicons name="stop" size={28} color="#fff" />
               </TouchableOpacity>
 
               <View style={styles.exerciseActive}>
@@ -889,35 +888,45 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: 'rgba(22,22,24,0.97)',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
+  },
+  barHandle: {
+    alignSelf: 'center',
+    width: 44,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#3A3A3C',
+    marginTop: 10,
   },
   bottomInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 32,
-    paddingTop: 16,
+    paddingTop: 14,
     paddingBottom: 8,
   },
 
-  // ── Dropdown ──
+  // ── Aktivitetsmeny ──
   dropdown: {
     position: 'absolute',
-    bottom: 130,
+    bottom: 165,
     left: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#1F1F21',
+    borderWidth: 1,
+    borderColor: '#2C2C2E',
     borderRadius: 16,
     paddingVertical: 6,
     minWidth: 200,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.4,
     shadowRadius: 12,
     zIndex: 30,
   },
@@ -929,7 +938,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   dropdownItemText: {
-    color: '#333',
+    color: '#ccc',
     fontSize: 15,
     fontWeight: '500',
   },
@@ -937,17 +946,60 @@ const styles = StyleSheet.create({
     color: ORANGE,
     fontWeight: '700',
   },
-  dropdownTrigger: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#F2F2F2',
+
+  // ── Startmeny (idle) ──
+  idleCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 8,
+  },
+  idleColLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  typeCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: ORANGE + '2E',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+  },
+  typeCircleOpen: {
+    borderWidth: 2,
+    borderColor: ORANGE,
+  },
+  typeBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 21,
+    height: 21,
+    borderRadius: 11,
+    backgroundColor: ORANGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#161618',
+  },
+  startCircle: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: ORANGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  startLabel: {
+    color: ORANGE,
+    fontSize: 14,
+    fontWeight: '800',
   },
 
   // Start button
@@ -971,7 +1023,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: '#2C2C2E',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
