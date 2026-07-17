@@ -195,6 +195,15 @@ const DayPage = React.memo(function DayPage({
                       onStartCardioSession={s.session_type === 'cardio'
                         ? () => router.push({ pathname: '/cardio', params: { name: s.cardio_type ?? 'running', sessionId: s.id, sessionDate: dateStr } })
                         : undefined}
+                      onOpenCardio={s.session_type === 'cardio'
+                        ? () => router.push({ pathname: '/cardio-session', params: {
+                            sessionId: s.id,
+                            name: sessionDisplayName(s),
+                            cardioType: s.cardio_type ?? 'running',
+                            notes: s.notes ?? '',
+                            date: dateStr,
+                          } })
+                        : undefined}
                       onCardPress={(sessionEx) => {
                         const name   = sessionEx.exercise_name
                         const exInfo = exercises.find(e => e.name === name)

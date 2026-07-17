@@ -456,6 +456,8 @@ export interface WorkoutSectionProps {
   onDeleteExercise:  (exId: string) => void
   onStartCardio:         (name: string) => void
   onStartCardioSession?: () => void
+  /** Cardiopass: tryck på rubriken öppnar passdetaljen istället för collapse */
+  onOpenCardio?:         () => void
   onCardPress:           (ex: SessionExercise) => void
   onComplete:            () => void
   onUncomplete:          () => void
@@ -477,6 +479,7 @@ export function WorkoutSection({
   onDeleteExercise,
   onStartCardio,
   onStartCardioSession,
+  onOpenCardio,
   onCardPress,
   onComplete,
   onUncomplete,
@@ -581,7 +584,7 @@ export function WorkoutSection({
         <TouchableOpacity
           style={{ flex: 1 }}
           activeOpacity={0.7}
-          onPress={toggleCollapse}
+          onPress={isCardio && onOpenCardio ? onOpenCardio : toggleCollapse}
           onLongPress={onLongPress}
           delayLongPress={400}
         >

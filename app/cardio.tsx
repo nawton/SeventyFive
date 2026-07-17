@@ -167,7 +167,9 @@ const MAP_HTML = `<!DOCTYPE html>
 </html>`
 
 export default function CardioScreen() {
-  const { name, sessionId, sessionDate } = useLocalSearchParams<{ name?: string; sessionId?: string; sessionDate?: string }>()
+  const { name, sessionId, sessionDate, goalKm, goalMin } = useLocalSearchParams<{ name?: string; sessionId?: string; sessionDate?: string; goalKm?: string; goalMin?: string }>()
+  const goalKmNum  = goalKm  ? parseFloat(goalKm)  : 0
+  const goalMinNum = goalMin ? parseInt(goalMin, 10) : 0
 
   const webRef = useRef<InstanceType<typeof WebView>>(null)
   const locationSub = useRef<Location.LocationSubscription | null>(null)
@@ -417,6 +419,27 @@ export default function CardioScreen() {
                 </View>
               )}
             </View>
+            {/* Mål från passdetaljen — live-progress under passet */}
+            {(goalKmNum > 0 || goalMinNum > 0) && (
+              <View style={styles.goalTrackWrap}>
+                <View style={styles.goalTextRow}>
+                  <Text style={styles.goalText}>
+                    Mål: {goalKmNum > 0 ? `${goalKmNum.toFixed(1).replace('.', ',')} km` : `${goalMinNum} min`}
+                  </Text>
+                  <Text style={styles.goalPct}>
+                    {Math.min(100, Math.round(
+                      goalKmNum > 0 ? (distanceKm / goalKmNum) * 100 : (elapsed / (goalMinNum * 60)) * 100
+                    ))}%
+                  </Text>
+                </View>
+                <View style={styles.goalTrack}>
+                  <View style={[styles.goalFill, { width: `${Math.min(100,
+                    goalKmNum > 0 ? (distanceKm / goalKmNum) * 100 : (elapsed / (goalMinNum * 60)) * 100
+                  )}%` as never }]} />
+                </View>
+              </View>
+            )}
+
             <View style={styles.statsRow}>
               <View style={styles.stat}>
                 <Text style={styles.statValue}>{distanceKm.toFixed(2)}</Text>
@@ -671,6 +694,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
+  // Målprogress
+  goalTrackWrap: { marginBottom: 12, gap: 5 },
+  goalTextRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  goalText:      { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600' },
+  goalPct:       { color: '#4AA8E0', fontSize: 12, fontWeight: '800' },
+  goalTrack: {
+    height: 4, borderRadius: 2, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  goalFill: { height: '100%', backgroundColor: '#4AA8E0', borderRadius: 2 },
+
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
