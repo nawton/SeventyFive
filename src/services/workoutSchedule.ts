@@ -363,6 +363,45 @@ export async function getCompletedExerciseIds(userId: string, date: string): Pro
   return (data ?? []).map(r => r.exercise_id)
 }
 
+export interface CompletedSessionItem {
+  id: string
+  completedDate: string          // YYYY-MM-DD
+  name: string                   // visningsnamn utan ONCE:-prefix
+  sessionType: 'gym' | 'cardio'
+  cardioType: string | null
+  exerciseNames: string[]
+  distanceKm: number | null
+  durationSeconds: number | null
+}
+
+/** Alla avbockade schemapass med passinfo — för framstegskalenderns dagvy. */
+export async function getCompletedSessionsHistory(userId: string): Promise<CompletedSessionItem[]> {
+  const { data, error } = await supabase
+    .from('workout_completions')
+    .select('id, completed_date, distance_km, duration_seconds, workout_sessions(name, session_type, cardio_type, session_exercises(exercise_name, sort_order))')
+    .eq('user_id', userId)
+    .order('completed_date', { ascending: false })
+  if (error) throw error
+
+  return (data ?? []).map((c: any) => {
+    const ws = c.workout_sessions as any
+    let name: string = ws?.name ?? 'Pass'
+    if (name.startsWith('ONCE:')) name = name.split(':').slice(2).join(':')
+    return {
+      id: c.id,
+      completedDate: c.completed_date,
+      name,
+      sessionType: (ws?.session_type ?? 'gym') as 'gym' | 'cardio',
+      cardioType: ws?.cardio_type ?? null,
+      exerciseNames: [...(ws?.session_exercises ?? [])]
+        .sort((a: any, b: any) => a.sort_order - b.sort_order)
+        .map((e: any) => e.exercise_name as string),
+      distanceKm: c.distance_km != null ? Number(c.distance_km) : null,
+      durationSeconds: c.duration_seconds ?? null,
+    }
+  })
+}
+
 /** Antal genomföranden per övning (session_exercise-id) — underlag för progression. */
 export async function getExerciseCompletionCounts(userId: string): Promise<Record<string, number>> {
   const { data, error } = await supabase

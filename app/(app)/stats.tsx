@@ -13,7 +13,7 @@ import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getAllDays, getStreak, type DaySummary } from '@/services/dailyLog'
 import { getMusclesForName, type Slug } from '@/lib/muscles'
 import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
-import { getCompletedExerciseNamesForWeek } from '@/services/workoutSchedule'
+import { getCompletedExerciseNamesForWeek, getCompletedSessionsHistory, type CompletedSessionItem } from '@/services/workoutSchedule'
 import { CalendarView } from '@/components/stats/CalendarView'
 import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
 import { WorkoutDetail, WorkoutRow } from '@/components/stats/WorkoutDetail'
@@ -212,6 +212,7 @@ export default function StatsScreen() {
   const [loading, setLoading]                   = useState(true)
   const [loadError, setLoadError]               = useState(false)
   const [streak, setStreak]                     = useState(0)
+  const [completedSessions, setCompletedSessions] = useState<CompletedSessionItem[]>([])
   const [userId, setUserId]                     = useState<string | null>(null)
   const [weekOffset, setWeekOffset]             = useState(0)
   const [weekExNames, setWeekExNames]           = useState<string[]>([])
@@ -226,13 +227,15 @@ export default function StatsScreen() {
       if (!session?.user) return
       const uid = session.user.id
       setUserId(uid)
-      const [challenge, cardioWos, strengthWos] = await Promise.all([
+      const [challenge, cardioWos, strengthWos, sessionHistory] = await Promise.all([
         getActiveChallenge(uid),
         getCardioWorkouts(uid, 60),
         getStrengthWorkouts(uid),
+        getCompletedSessionsHistory(uid).catch(() => [] as CompletedSessionItem[]),
       ])
       setWorkouts(cardioWos)
       setStrengthWorkouts(strengthWos)
+      setCompletedSessions(sessionHistory)
       setLoadError(false)
       if (!challenge) return
       setStartDate(challenge.start_date)
@@ -686,6 +689,7 @@ export default function StatsScreen() {
             startDate={startDate}
             workouts={workouts}
             strengthWorkouts={strengthWorkouts}
+            completedSessions={completedSessions}
             onClose={() => setSelectedDay(null)}
             onSelectWorkout={setSelectedWorkout}
           />

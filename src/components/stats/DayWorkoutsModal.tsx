@@ -11,6 +11,7 @@ import { ORANGE, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
+import type { CompletedSessionItem } from '@/services/workoutSchedule'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 const SHEET_PARTIAL = SCREEN_HEIGHT * 0.44
@@ -43,11 +44,12 @@ function dayDate(startDate: string, dayNumber: number): Date {
   return d
 }
 
-export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, onClose, onSelectWorkout }: {
+export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, completedSessions, onClose, onSelectWorkout }: {
   day: DaySummary
   startDate: string
   workouts: CardioWorkout[]
   strengthWorkouts: StrengthWorkout[]
+  completedSessions?: CompletedSessionItem[]
   onClose: () => void
   onSelectWorkout: (w: CardioWorkout) => void
 }) {
@@ -107,7 +109,12 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, o
     const wd = w.data.workout_date
     return wd ? wd === dateIso : sameDay(new Date(w.created_at), date)
   })
-  const hasAny = dayCardio.length > 0 || dayStrength.length > 0
+  // Avbockade schemapass. GPS-avbockade cardiopass (med distans) hoppas över —
+  // de visas redan som tappbara pass i Cardio-sektionen.
+  const daySessions = (completedSessions ?? []).filter(c =>
+    c.completedDate === dateIso && !(c.sessionType === 'cardio' && c.distanceKm != null)
+  )
+  const hasAny = dayCardio.length > 0 || dayStrength.length > 0 || daySessions.length > 0
 
   return (
     <View style={{ flex: 1 }}>
@@ -132,9 +139,46 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, o
             </View>
           ) : (
             <>
+              {daySessions.length > 0 && (
+                <>
+                  {(dayStrength.length > 0 || dayCardio.length > 0) && <Text style={s.section}>Schemapass</Text>}
+                  {daySessions.map((c, i) => {
+                    const last = i === daySessions.length - 1 && dayStrength.length === 0 && dayCardio.length === 0
+                    return (
+                      <View key={c.id} style={[s.item, !last && s.itemBorder]}>
+                        <View style={s.itemIcon}>
+                          <Ionicons
+                            name={c.sessionType === 'cardio'
+                              ? (EXERCISE_ICONS[c.cardioType ?? ''] ?? 'fitness-outline')
+                              : 'barbell-outline'}
+                            size={18}
+                            color={ORANGE}
+                          />
+                        </View>
+                        <View style={s.itemBody}>
+                          <Text style={s.itemName}>{c.name}</Text>
+                          <View style={s.itemMeta}>
+                            {c.sessionType === 'gym' && c.exerciseNames.length > 0 ? (
+                              <Text style={s.itemStat} numberOfLines={1}>
+                                {c.exerciseNames.length} övningar · {c.exerciseNames.slice(0, 3).join(', ')}{c.exerciseNames.length > 3 ? ' …' : ''}
+                              </Text>
+                            ) : (
+                              <Text style={s.itemStat}>Avklarat pass</Text>
+                            )}
+                          </View>
+                        </View>
+                        <Ionicons name="checkmark-circle" size={18} color="#4CAF50" style={{ alignSelf: 'center' }} />
+                      </View>
+                    )
+                  })}
+                </>
+              )}
+
               {dayStrength.length > 0 && (
                 <>
-                  {dayCardio.length > 0 && <Text style={s.section}>Styrka</Text>}
+                  {(dayCardio.length > 0 || daySessions.length > 0) && (
+                    <Text style={[s.section, daySessions.length > 0 && { marginTop: 12 }]}>Styrka</Text>
+                  )}
                   {dayStrength.map((w, i) => {
                     const totalReps = w.data.sets.reduce((sum, r) => sum + r.reps, 0)
                     const last = i === dayStrength.length - 1 && dayCardio.length === 0
@@ -163,7 +207,9 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, o
 
               {dayCardio.length > 0 && (
                 <>
-                  {dayStrength.length > 0 && <Text style={[s.section, { marginTop: 12 }]}>Cardio</Text>}
+                  {(dayStrength.length > 0 || daySessions.length > 0) && (
+                    <Text style={[s.section, { marginTop: 12 }]}>Cardio</Text>
+                  )}
                   {dayCardio.map((w, i) => (
                     <TouchableOpacity
                       key={w.id}
