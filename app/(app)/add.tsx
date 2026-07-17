@@ -320,8 +320,11 @@ export default function SchemaScreen() {
   useEffect(() => {
     if (loading || action !== 'wizard' || handledActionRef.current === action) return
     handledActionRef.current = action
-    router.setParams({ action: undefined })
-    const timer = setTimeout(() => setWizardVisible(true), 600)
+    const timer = setTimeout(() => {
+      setWizardVisible(true)
+      // Rensas efter öppning — setParams triggar annars cleanupen som dödar timern
+      router.setParams({ action: undefined })
+    }, 600)
     return () => clearTimeout(timer)
   }, [action, loading])
 

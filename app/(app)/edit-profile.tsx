@@ -72,8 +72,11 @@ export default function EditProfileScreen() {
   useEffect(() => {
     if (loading || action !== 'avatar' || handledActionRef.current === action) return
     handledActionRef.current = action
-    router.setParams({ action: undefined })
-    const timer = setTimeout(() => setModalVisible(true), 600)
+    const timer = setTimeout(() => {
+      setModalVisible(true)
+      // Rensas efter öppning — setParams triggar annars cleanupen som dödar timern
+      router.setParams({ action: undefined })
+    }, 600)
     return () => clearTimeout(timer)
   }, [action, loading])
 

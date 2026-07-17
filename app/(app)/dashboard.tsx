@@ -194,9 +194,13 @@ export default function DashboardScreen() {
   useEffect(() => {
     if (loading || action !== 'addRule' || handledActionRef.current === action) return
     handledActionRef.current = action
-    router.setParams({ action: undefined })
     const scrollTimer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 450)
-    const openTimer   = setTimeout(() => setAddRuleOpen(true), 1300)
+    const openTimer   = setTimeout(() => {
+      setAddRuleOpen(true)
+      // Rensas EFTER att flödet öppnats — setParams ändrar action-dep:en och
+      // triggar effektens cleanup, vilket annars dödar timrarna i förtid
+      router.setParams({ action: undefined })
+    }, 1300)
     return () => { clearTimeout(scrollTimer); clearTimeout(openTimer) }
   }, [action, loading])
 

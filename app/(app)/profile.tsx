@@ -78,8 +78,11 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (loading || action !== 'addPhoto' || handledActionRef.current === action) return
     handledActionRef.current = action
-    router.setParams({ action: undefined })
-    const timer = setTimeout(() => handleAddPhoto(), 600)
+    const timer = setTimeout(() => {
+      handleAddPhoto()
+      // Rensas efter öppning — setParams triggar annars cleanupen som dödar timern
+      router.setParams({ action: undefined })
+    }, 600)
     return () => clearTimeout(timer)
   }, [action, loading])
 
