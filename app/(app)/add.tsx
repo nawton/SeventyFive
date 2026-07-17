@@ -36,6 +36,7 @@ import {
   addMissedExercise,
   addSingleExerciseToSession,
   getCompletedSessionIds,
+  getCompletedSessionsByDate,
   getCardioCompletions,
   getCompletedExerciseIds,
   getExerciseCompletionCounts,
@@ -408,10 +409,10 @@ export default function SchemaScreen() {
 
   async function loadData(uid: string) {
     const date = isoDate(selectedDateRef.current)
-    const [exs, sess, sessionIds, cardioStats, exerciseIds, progressCounts] = await Promise.all([
+    const [exs, sess, completedAll, cardioStats, exerciseIds, progressCounts] = await Promise.all([
       getExercises().catch(() => [] as Exercise[]),
       getWorkoutSessions(uid).catch(() => [] as WorkoutSession[]),
-      getCompletedSessionIds(uid, date).catch(() => [] as string[]),
+      getCompletedSessionsByDate(uid).catch(() => ({} as Record<string, string[]>)),
       getCardioCompletions(uid, date).catch(() => ({})),
       getCompletedExerciseIds(uid, date).catch(() => [] as string[]),
       getExerciseCompletionCounts(uid).catch(() => ({} as Record<string, number>)),
@@ -422,7 +423,13 @@ export default function SchemaScreen() {
     setExerciseProgress(progressCounts)
     const exChecked: Record<string, boolean> = {}
     exerciseIds.forEach(id => { exChecked[id] = true })
-    setCompletedByDate(prev => ({ ...prev, [date]: new Set(sessionIds) }))
+    // ALLA dagars avklarningar på en gång — kalenderns gröna ringar stämmer
+    // direkt utan att varje dag måste besökas
+    setCompletedByDate(() => {
+      const out: Record<string, Set<string>> = {}
+      for (const [d, ids] of Object.entries(completedAll)) out[d] = new Set(ids)
+      return out
+    })
     setCardioStatsByDate(prev => ({ ...prev, [date]: cardioStats }))
     setCheckedByDate(prev => ({ ...prev, [date]: exChecked }))
   }

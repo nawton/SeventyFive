@@ -464,6 +464,22 @@ export function dateForWeekday(weekdayNum: number): string {
   return isoDate(target)
 }
 
+/** ALLA avklarade pass grupperade på datum — en enda fråga, så kalenderns
+ *  gröna ringar kan visas direkt utan att varje dag måste besökas först. */
+export async function getCompletedSessionsByDate(userId: string): Promise<Record<string, string[]>> {
+  const { data, error } = await supabase
+    .from('workout_completions')
+    .select('session_id, completed_date')
+    .eq('user_id', userId)
+    .limit(2000)
+  if (error || !data) return {}
+  const out: Record<string, string[]> = {}
+  for (const r of data) {
+    (out[r.completed_date] ??= []).push(r.session_id)
+  }
+  return out
+}
+
 export async function getCompletedSessionIds(userId: string, date: string): Promise<string[]> {
   const { data, error } = await supabase
     .from('workout_completions')
