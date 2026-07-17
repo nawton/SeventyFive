@@ -322,21 +322,24 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
               </TouchableOpacity>
             </View>
           </ScrollView>
-
-          <View style={[styles.saveWrap, { paddingBottom: insets.bottom + 16 }]}>
-            <TouchableOpacity
-              style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-              onPress={() => handleSave(saveDate)}
-              disabled={saving}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="checkmark-circle" size={19} color="#000" />
-              <Text style={styles.saveBtnText}>
-                {saving ? 'Sparar…' : `Spara pass  ·  ${sets.length} set${totalReps > 0 ? ` · ${totalReps} reps` : ''}`}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </KeyboardAvoidingView>
+
+        {/* Ligger UTANFÖR KeyboardAvoidingView: knappen stannar längst ner på
+            sidan och täcks av tangentbordet vid inmatning istället för att
+            lyftas upp och skymma fälten */}
+        <View style={[styles.saveWrap, { paddingBottom: insets.bottom + 16 }]}>
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+            onPress={() => handleSave(saveDate)}
+            disabled={saving}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="checkmark-circle" size={19} color="#000" />
+            <Text style={styles.saveBtnText}>
+              {saving ? 'Sparar…' : `Spara pass  ·  ${sets.length} set${totalReps > 0 ? ` · ${totalReps} reps` : ''}`}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
 
