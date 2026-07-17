@@ -36,6 +36,8 @@ export type ExerciseLogProps = {
   sessionDate?: string
   loggedWorkoutId?: string
   loggedWorkoutDate?: string
+  /** false för upprepande pass — annars skrivs veckomallens set/reps om permanent */
+  updatePlanSets?: boolean
   onClose: () => void
   onSaved?: () => void
 }
@@ -195,8 +197,9 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
           if (props.loggedWorkoutId) await deleteWorkout(props.loggedWorkoutId)
           await markScheduleComplete(userId)
           // Spegla det loggade antalet set/reps till passets övningsrad,
-          // så kortet visar det man faktiskt gjorde
-          if (props.sessionExId) {
+          // så kortet visar det man faktiskt gjorde. Hoppa över för upprepande
+          // pass — där är raden mallen för alla framtida veckor.
+          if (props.sessionExId && props.updatePlanSets !== false) {
             const repsStr = validSets.every(s => s.reps === validSets[0].reps)
               ? String(validSets[0].reps)
               : validSets.map(s => s.reps).join('/')

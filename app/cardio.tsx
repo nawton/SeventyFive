@@ -365,7 +365,6 @@ export default function CardioScreen() {
   const splitToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const selectedExercise = EXERCISES.find(e => e.key === exercise)!
-  const pace = formatPace(distanceKm, elapsed)
   const calories = Math.round(distanceKm * 65)
 
   function openStats() {

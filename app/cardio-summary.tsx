@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { getCardioWorkoutByDate, type CardioWorkout } from '@/services/workouts'
+import { getCardioWorkoutByDate, getCardioWorkoutById, type CardioWorkout } from '@/services/workouts'
 import { getProfile } from '@/services/profile'
 import { BG, TEXT_SECONDARY } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
@@ -15,7 +15,7 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 export default function CardioSummaryScreen() {
-  const params = useLocalSearchParams<{ name?: string; cardioType?: string; date?: string }>()
+  const params = useLocalSearchParams<{ name?: string; cardioType?: string; date?: string; workoutId?: string }>()
   const type = params.cardioType ?? 'running'
 
   const [unit, setUnit] = useState<UnitSystem>('metric')
@@ -28,14 +28,19 @@ export default function CardioSummaryScreen() {
   useEffect(() => {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user || !params.date) { setLoading(false); return }
+      if (!session?.user) { setLoading(false); return }
       getProfile(session.user.id).then(p => setAvatarUrl(p?.avatar_url ?? null)).catch(() => {})
-      const w = await getCardioWorkoutByDate(session.user.id, type, params.date).catch(() => null)
+      // Exakt id om vi har det (loggade pass); annars typ + dag (schemapass)
+      const w = params.workoutId
+        ? await getCardioWorkoutById(session.user.id, params.workoutId).catch(() => null)
+        : params.date
+          ? await getCardioWorkoutByDate(session.user.id, type, params.date).catch(() => null)
+          : null
       setWorkout(w)
       setLoading(false)
     }
     load()
-  }, [type, params.date])
+  }, [type, params.date, params.workoutId])
 
   const dateLabel = params.date
     ? parseLocalDate(params.date).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })

@@ -14,6 +14,7 @@ export default function ExerciseDetailScreen() {
     sessionDate?: string
     loggedWorkoutId?: string
     loggedWorkoutDate?: string
+    repeating?: string
   }>()
 
   return (
@@ -29,6 +30,7 @@ export default function ExerciseDetailScreen() {
       sessionDate={params.sessionDate}
       loggedWorkoutId={params.loggedWorkoutId}
       loggedWorkoutDate={params.loggedWorkoutDate}
+      updatePlanSets={params.repeating !== '1'}
       onClose={() => router.back()}
     />
   )

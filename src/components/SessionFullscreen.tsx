@@ -124,6 +124,7 @@ export function SessionFullscreen({
             initialReps={selectedEx.reps ?? ''}
             sessionExId={selectedEx.id}
             sessionDate={date}
+            updatePlanSets={(session?.weekdays.length ?? 0) === 0}
             onSaved={() => {
               if (selectedEx && !isCompleted && !checked[selectedEx.id]) onToggle(selectedEx.id)
               onExerciseSaved?.()

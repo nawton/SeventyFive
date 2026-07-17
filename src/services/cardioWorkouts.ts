@@ -61,17 +61,41 @@ export async function deleteCardioWorkout(id: string): Promise<boolean> {
  * Passen saknar direkt koppling till schemat, så vi matchar på typ + dag och tar
  * det senaste (om man loggat flera samma dag).
  */
+/** Hämtar ett specifikt cardio-pass på id — säkraste uppslaget för detaljvyn. */
+export async function getCardioWorkoutById(userId: string, id: string): Promise<CardioWorkout | null> {
+  const { data, error } = await supabase
+    .from('user_workouts')
+    .select('id, name, created_at, exercises')
+    .eq('user_id', userId)
+    .eq('id', id)
+    .maybeSingle()
+  if (error || !data || !Array.isArray(data.exercises) || data.exercises[0]?.category !== 'cardio') return null
+  const raw = data.exercises[0]
+  return {
+    id: data.id,
+    name: data.name,
+    created_at: data.created_at,
+    data: {
+      category:         'cardio' as const,
+      type:             raw.type             ?? 'running',
+      distance_km:      raw.distance_km      ?? 0,
+      duration_seconds: raw.duration_seconds ?? 0,
+      calories:         raw.calories         ?? 0,
+      route:            raw.route,
+      splits:           raw.splits,
+    } satisfies CardioData,
+  }
+}
+
 export async function getCardioWorkoutByDate(
   userId: string,
   type: string,
   date: string,
 ): Promise<CardioWorkout | null> {
   const workouts = await getCardioWorkouts(userId, 100)
-  const match = workouts.find(
+  return workouts.find(
     w => w.data.type === type && toLocalDateString(new Date(w.created_at)) === date,
-  )
-  // Reservlösning: samma typ även om datumet inte råkar matcha (senaste passet)
-  return match ?? workouts.find(w => w.data.type === type) ?? null
+  ) ?? null
 }
 
 /** Cardio-pass loggade ett visst datum (matchar created_at:s LOKALA dag —

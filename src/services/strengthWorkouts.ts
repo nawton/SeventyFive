@@ -12,8 +12,6 @@ export interface StrengthData {
   exercise_name: string
   sets: StrengthSet[]
   workout_date?: string
-  /** Delas av alla övningar som loggades i samma pass (ett "Logga pass") */
-  log_id?: string
 }
 
 export interface StrengthWorkout {
@@ -30,7 +28,6 @@ export async function saveStrengthWorkout(params: {
   category: 'strength' | 'mobility' | 'hiit'
   sets: StrengthSet[]
   workoutDate?: string
-  logId?: string
 }): Promise<boolean> {
   const today = toLocalDateString()
   const entry: StrengthData = {
@@ -39,7 +36,6 @@ export async function saveStrengthWorkout(params: {
     exercise_name: params.exerciseName,
     sets: params.sets,
     workout_date: params.workoutDate ?? today,
-    log_id: params.logId,
   }
   const { error } = await supabase.from('user_workouts').insert({
     user_id: params.userId,
