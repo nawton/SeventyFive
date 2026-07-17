@@ -20,7 +20,9 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, run
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import type { ExerciseCategory } from '@/types/database'
 
-type SetRow = { reps: string; weight: string }
+type SetRow = { reps: string; weight: string; done: boolean }
+
+const REST_OPTIONS = [60, 90, 120, 180]
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 const SHEET_SP      = { damping: 26, stiffness: 260, mass: 1 } as const
@@ -56,7 +58,7 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
   const [sets, setSets] = useState<SetRow[]>(() => {
     const count = props.initialSets ? parseInt(props.initialSets) : 1
     const reps  = props.initialReps ?? ''
-    return Array.from({ length: Math.max(count, 1) }, () => ({ reps, weight: '' }))
+    return Array.from({ length: Math.max(count, 1) }, () => ({ reps, weight: '', done: false }))
   })
   const [saving, setSaving]     = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
@@ -184,12 +186,28 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
   const muscleData = muscles.map(slug => ({ slug, intensity: 1 as const }))
   const diffColor  = DIFFICULTY_COLORS[difficulty as keyof typeof DIFFICULTY_COLORS] ?? ORANGE
 
-  function updateSet(index: number, field: keyof SetRow, value: string) {
+  function updateSet(index: number, field: 'reps' | 'weight', value: string) {
     setSets(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s))
   }
   function addSet() {
     const last = sets[sets.length - 1]
-    setSets(prev => [...prev, { reps: last.reps, weight: last.weight }])
+    setSets(prev => [...prev, { reps: last.reps, weight: last.weight, done: false }])
+  }
+  // Gymflödet: bocka av setet → vilotimern startar automatiskt
+  function toggleSetDone(index: number) {
+    const wasDone = sets[index].done
+    setSets(prev => prev.map((s, i) => i === index ? { ...s, done: !s.done } : s))
+    if (!wasDone) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      startRest(restDefault)
+    }
+  }
+  function cycleRestDefault() {
+    Haptics.selectionAsync()
+    const i = REST_OPTIONS.indexOf(restDefault)
+    const next = REST_OPTIONS[(i + 1) % REST_OPTIONS.length] ?? 90
+    setRestDefault(next)
+    setRestSeconds(next).catch(() => {})
   }
   function removeSet(index: number) {
     if (sets.length === 1) return
@@ -344,7 +362,17 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
                 const prev = prevSets?.[i]
                 return (
                   <View key={i} style={styles.setRow}>
-                    <View style={styles.setIndex}><Text style={styles.setIndexText}>{i + 1}</Text></View>
+                    {/* Tryck på numret när setet är gjort → vilotimern startar */}
+                    <TouchableOpacity
+                      style={[styles.setIndex, s.done && styles.setIndexDone]}
+                      onPress={() => toggleSetDone(i)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      activeOpacity={0.7}
+                    >
+                      {s.done
+                        ? <Ionicons name="checkmark" size={18} color="#fff" />
+                        : <Text style={styles.setIndexText}>{i + 1}</Text>}
+                    </TouchableOpacity>
                     <View style={styles.fieldWrap}>
                       <TextInput
                         style={styles.fieldInput}
@@ -376,54 +404,39 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
                 )
               })}
               {prevSets && <Text style={styles.ghostHint}>Grå siffror = förra passet</Text>}
-              <TouchableOpacity style={styles.addSetBtn} onPress={addSet} activeOpacity={0.7}>
-                <Ionicons name="add-circle-outline" size={18} color={ORANGE} />
-                <Text style={styles.addSetText}>Lägg till set</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* ── Vilotimer ── */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>Vilotimer</Text>
-                <Ionicons name="timer-outline" size={18} color={TEXT_SECONDARY} />
+              <View style={styles.setFooterRow}>
+                <TouchableOpacity style={styles.addSetBtn} onPress={addSet} activeOpacity={0.7}>
+                  <Ionicons name="add-circle-outline" size={18} color={ORANGE} />
+                  <Text style={styles.addSetText}>Lägg till set</Text>
+                </TouchableOpacity>
+                {/* Vilolängd — trycket bläddrar 60/90/120/180 s */}
+                <TouchableOpacity style={styles.restDefaultPill} onPress={cycleRestDefault} activeOpacity={0.75}>
+                  <Ionicons name="timer-outline" size={14} color={TEXT_SECONDARY} />
+                  <Text style={styles.restDefaultText}>Vila {fmtRest(restDefault)}</Text>
+                </TouchableOpacity>
               </View>
-              {restLeft === null ? (
-                <View style={styles.restChips}>
-                  {[60, 90, 120, 180].map(secs => (
-                    <TouchableOpacity
-                      key={secs}
-                      style={[styles.restChip, restDefault === secs && styles.restChipActive]}
-                      onPress={() => startRest(secs)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[styles.restChipText, restDefault === secs && styles.restChipTextActive]}>
-                        {secs < 120 ? `${secs} s` : `${secs / 60} min`}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <>
-                  <Text style={[styles.restCount, restLeft === 0 && { color: '#4CAF50' }]}>
-                    {restLeft === 0 ? 'Vila klar!' : fmtRest(restLeft)}
-                  </Text>
-                  <View style={styles.restTrack}>
-                    <View style={[styles.restFill, { width: `${Math.min(100, (restLeft / restTotal) * 100)}%` as never }]} />
-                  </View>
-                  <View style={styles.restBtnRow}>
-                    <TouchableOpacity style={styles.restSmallBtn} onPress={() => extendRest(15)} activeOpacity={0.75}>
-                      <Text style={styles.restSmallText}>+15 s</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.restSmallBtn} onPress={cancelRest} activeOpacity={0.75}>
-                      <Text style={styles.restSmallText}>Avbryt</Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              )}
+              <Text style={styles.ghostHint}>Bocka av ett set — vilotimern startar automatiskt</Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* Kompakt vilotimer — dyker upp automatiskt när ett set bockas av */}
+        {restLeft !== null && (
+          <View style={styles.restBar}>
+            <Text style={[styles.restBarTime, restLeft === 0 && { color: '#4CAF50' }]}>
+              {restLeft === 0 ? 'Klar!' : fmtRest(restLeft)}
+            </Text>
+            <View style={styles.restBarTrack}>
+              <View style={[styles.restBarFill, { width: `${Math.min(100, (restLeft / restTotal) * 100)}%` as never }]} />
+            </View>
+            <TouchableOpacity onPress={() => extendRest(15)} style={styles.restBarBtn} activeOpacity={0.75}>
+              <Text style={styles.restBarBtnText}>+15</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={cancelRest} style={styles.restBarBtn} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }} activeOpacity={0.75}>
+              <Ionicons name="close" size={16} color={TEXT_SECONDARY} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Ligger UTANFÖR KeyboardAvoidingView: knappen stannar längst ner på
             sidan och täcks av tangentbordet vid inmatning istället för att
@@ -532,31 +545,36 @@ const styles = StyleSheet.create({
   historyChipText: { color: TEXT_PRIMARY, fontSize: 12, fontWeight: '600' },
   removeBtn: { width: 32, alignItems: 'center', justifyContent: 'center' },
 
-  // Vilotimer
-  restChips: { flexDirection: 'row', gap: 8 },
-  restChip: {
-    flex: 1, alignItems: 'center', paddingVertical: 11,
-    borderRadius: 12, borderWidth: 1.5, borderColor: BORDER,
+  // Vilotimer — gymflödet: bocka set → timern startar
+  setIndexDone: { backgroundColor: '#4CAF50' },
+  setFooterRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  restChipActive: { borderColor: ORANGE, backgroundColor: ORANGE + '15' },
-  restChipText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  restChipTextActive: { color: ORANGE, fontWeight: '700' },
-  restCount: {
-    color: TEXT_PRIMARY, fontSize: 40, fontWeight: '800',
-    textAlign: 'center', fontVariant: ['tabular-nums'], letterSpacing: -1,
+  restDefaultPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 11, paddingVertical: 7,
+    borderRadius: 14, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  restTrack: {
-    height: 6, borderRadius: 3, overflow: 'hidden',
+  restDefaultText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  restBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: 20, marginTop: 10,
+    paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1, borderColor: ORANGE + '50',
+  },
+  restBarTime: {
+    color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800',
+    fontVariant: ['tabular-nums'], minWidth: 46,
+  },
+  restBarTrack: {
+    flex: 1, height: 5, borderRadius: 3, overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  restFill: { height: '100%', borderRadius: 3, backgroundColor: ORANGE },
-  restBtnRow: { flexDirection: 'row', gap: 10 },
-  restSmallBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: 10,
-    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: BORDER,
-  },
-  restSmallText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+  restBarFill: { height: '100%', borderRadius: 3, backgroundColor: ORANGE },
+  restBarBtn: { paddingHorizontal: 6, paddingVertical: 4 },
+  restBarBtnText: { color: ORANGE, fontSize: 14, fontWeight: '700' },
   addSetBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   addSetText: { color: ORANGE, fontSize: 15, fontWeight: '600' },
   saveWrap: { paddingHorizontal: 20, paddingTop: 12 },
