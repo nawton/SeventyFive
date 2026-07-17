@@ -730,8 +730,12 @@ export default function SchemaScreen() {
           requestAnimationFrame(() => { isSwiping.current = false })
         }}
         scrollEventThrottle={16}
-        windowSize={5}
-        maxToRenderPerBatch={3}
+        // Litet fönster: bara föregående/nuvarande/nästa dag hålls monterade,
+        // och en sida i taget per batch — fjärrhopp fryser annars UI:t
+        windowSize={3}
+        initialNumToRender={1}
+        maxToRenderPerBatch={1}
+        updateCellsBatchingPeriod={40}
         renderItem={({ item: idx }) => {
           const dateStr = isoDate(indexToDate(idx))
           return (

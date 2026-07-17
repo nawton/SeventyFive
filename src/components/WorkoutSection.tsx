@@ -522,11 +522,16 @@ export function WorkoutSection({
   // Passen startar alltid hopfällda — tryck på namnet fäller ut
   const [collapsed, setCollapsed] = useState(true)
   const [bodyH, setBodyH]         = useState(0)
+  // Latmontering: kroppen (övningsrader med gester m.m.) är dyr att montera —
+  // skapa den först när kortet fälls ut första gången. Gör dagbyten mycket
+  // billigare eftersom pagern monterar flera dagars kort åt gången.
+  const [bodyMounted, setBodyMounted] = useState(false)
   const collapseV = useSharedValue(0)   // 1 = utfälld
 
   function toggleCollapse() {
     if (!hasBody) return
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    if (collapsed && !bodyMounted) setBodyMounted(true)
     collapseV.value = withTiming(collapsed ? 1 : 0, { duration: 260, easing: Easing.inOut(Easing.quad) })
     setCollapsed(!collapsed)
   }
@@ -673,8 +678,10 @@ export function WorkoutSection({
         </View>
       )}
 
-      {/* ── Kollapsbar kropp: allt under rubrik + progress ── */}
+      {/* ── Kollapsbar kropp: allt under rubrik + progress.
+             Monteras lat — först vid första utfällningen. ── */}
       <Animated.View style={bodyStyle}>
+      {bodyMounted && (
       <View onLayout={e => {
         const h = e.nativeEvent.layout.height
         // Monotont växande: under expanderingen rapporterar onLayout delhöjder
@@ -756,6 +763,7 @@ export function WorkoutSection({
       )}
 
       </View>
+      )}
       </Animated.View>
 
       </Animated.View>
