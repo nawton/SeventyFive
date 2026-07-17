@@ -49,6 +49,8 @@ import { scaledReps } from '@/lib/progression'
 import { WorkoutSection } from '@/components/WorkoutSection'
 import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
+import { LogWorkoutSheet } from '@/components/LogWorkoutSheet'
+import { saveStrengthWorkout } from '@/services/workouts'
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
@@ -322,6 +324,7 @@ export default function SchemaScreen() {
   // Distans/tid per avklarat cardio-pass, nycklat på datum → session-id
   const [cardioStatsByDate, setCardioStatsByDate] = useState<Record<string, Record<string, { distanceKm: number; durationSeconds: number }>>>({})
   const [pickerSession, setPickerSession]   = useState<WorkoutSession | null>(null)
+  const [logSheetOpen, setLogSheetOpen]     = useState(false)
   const [wizardVisible, setWizardVisible]   = useState(false)
   // null = inte inläst än (rendera inte bannern förrän vi vet, undviker blink)
   const [wizardBannerDismissed, setWizardBannerDismissed] = useState<boolean | null>(null)
@@ -428,15 +431,9 @@ export default function SchemaScreen() {
     setEditorVisible(true)
   }
 
-  // Samma flöde som "Logga missad övning", men för dagens datum
   function handleRecordWorkout() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    const todayStr = isoDate(todayMidnight())
-    setPickerSession({
-      id: todayStr, user_id: userId ?? '', name: todayStr,
-      weekdays: [], sort_order: 0, created_at: '', notes: null,
-      session_type: 'gym', cardio_type: null, exercises: [],
-    })
+    setLogSheetOpen(true)
   }
 
   function toggleCheck(exId: string, date: string) {
@@ -760,6 +757,33 @@ export default function SchemaScreen() {
             await addSingleExerciseToSession(pickerSession.id, ex.name, pickerSession.exercises.length, sets, reps).catch(() => null)
           }
           loadData(userId)
+        }}
+      />
+
+      <LogWorkoutSheet
+        visible={logSheetOpen}
+        exercises={exercises}
+        onClose={() => setLogSheetOpen(false)}
+        onPickCardio={(type, label) => {
+          setLogSheetOpen(false)
+          router.push({ pathname: '/cardio-session', params: { name: label, cardioType: type } })
+        }}
+        onSaveGym={async (items) => {
+          if (!userId) { setLogSheetOpen(false); return }
+          const date = isoDate(todayMidnight())
+          for (const it of items) {
+            await saveStrengthWorkout({
+              userId,
+              exerciseId: it.exerciseId,
+              exerciseName: it.exerciseName,
+              category: 'strength',
+              sets: it.sets,
+              workoutDate: date,
+            }).catch(() => {})
+          }
+          setLogSheetOpen(false)
+          loadData(userId)
+          Alert.alert('Pass loggat', `${items.length} ${items.length === 1 ? 'övning' : 'övningar'} sparade i dagens pass.`)
         }}
       />
 
