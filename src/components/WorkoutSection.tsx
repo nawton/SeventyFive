@@ -649,8 +649,10 @@ export function WorkoutSection({
       <Animated.View style={bodyStyle}>
       <View onLayout={e => {
         const h = e.nativeEvent.layout.height
-        // Spara bara riktiga mätningar — 0/krympta värden under hopfällning ignoreras
-        if (h > 0 && (bodyH === 0 || !collapsed)) setBodyH(h)
+        // Monotont växande: under expanderingen rapporterar onLayout delhöjder
+        // (innehållet begränsas av animerad maxHeight) — att spara dem skapar en
+        // återkopplingsloop som krymper målhöjden mot noll. Bara större gäller.
+        if (h > bodyH) setBodyH(h)
       }}>
 
       {/* ── Cardio start row ── */}
