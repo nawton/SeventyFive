@@ -70,6 +70,7 @@ const SP = { damping: 22, stiffness: 180, mass: 1 } as const
 function ExerciseRow({
   ex,
   done,
+  divider,
   progressed,
   onToggle,
   onDelete,
@@ -79,6 +80,8 @@ function ExerciseRow({
 }: {
   ex:              SessionExercise
   done:            boolean
+  /** Tunn linje ovanför raden — alla utom första i kortet */
+  divider?:        boolean
   progressed?:     boolean
   onToggle:        () => void
   onDelete:        () => void
@@ -115,7 +118,7 @@ function ExerciseRow({
   // Collapse (delete animation)
   const maxH = useSharedValue(200)
   const opac = useSharedValue(1)
-  const marg = useSharedValue(6)
+  const marg = useSharedValue(0)  // raderna sitter kant i kant i kortet, avdelare emellan
 
   // Done visual (0 = undone, 1 = done)
   const doneV = useSharedValue(done ? 1 : 0)
@@ -267,11 +270,6 @@ function ExerciseRow({
   const cardStyle = useAnimatedStyle(() => ({
     transform:       [{ translateX: tx.value }],
     backgroundColor: interpolateColor(doneV.value, [0, 1], [CARD, '#0B2418']),
-    borderColor:     interpolateColor(doneV.value, [0, 1], [BORDER, GREEN + '45']),
-  }))
-
-  const barStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(doneV.value, [0, 1], [ORANGE, GREEN]),
   }))
 
   const ringStyle = useAnimatedStyle(() => ({
@@ -401,7 +399,7 @@ function ExerciseRow({
         Container: overflow hidden — clips left side of card during swipe.
         Action button lives here absolutely at right, revealed as card moves.
       */}
-      <View style={r.container}>
+      <View style={[r.container, divider && r.containerDivider]}>
 
         {/* Action button — behind card, revealed by swipe */}
         <View style={r.btnArea}>
@@ -421,7 +419,6 @@ function ExerciseRow({
         {/* Main card */}
         <GestureDetector gesture={gesture}>
           <Animated.View style={[r.row, cardStyle]}>
-            <Animated.View style={[r.bar, barStyle]} />
 
             {/* Tapping the text area toggles completion */}
             <TouchableOpacity
@@ -485,6 +482,10 @@ const r = StyleSheet.create({
   container: {
     overflow: 'hidden',
   },
+  containerDivider: {
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+  },
   btnArea: {
     position:       'absolute',
     right:          BTN_R_PAD,
@@ -507,14 +508,11 @@ const r = StyleSheet.create({
   row: {
     flexDirection:   'row',
     alignItems:      'center',
-    borderRadius:    14,
-    borderWidth:     1,
     overflow:        'hidden',
     minHeight:       62,
     backgroundColor: CARD,
   },
-  bar:      { width: 3, alignSelf: 'stretch' },
-  text:     { flex: 1, paddingVertical: 13, paddingHorizontal: 14 },
+  text:     { flex: 1, paddingVertical: 13, paddingHorizontal: 16 },
   name:     { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   nameDone: { color: TEXT_SECONDARY, textDecorationLine: 'line-through' },
   meta:     { color: TEXT_SECONDARY, fontSize: 12, marginTop: 3 },
@@ -626,7 +624,8 @@ export function WorkoutSection({
     completedV.value = withSpring(isCompleted ? 1 : 0, { damping: 18, stiffness: 140 })
   }, [isCompleted])
 
-  const headerStyle = useAnimatedStyle(() => ({
+  // Hela kortets ram och bakgrund tonar mot grönt när passet är klart
+  const cardOuterStyle = useAnimatedStyle(() => ({
     borderColor:     interpolateColor(completedV.value, [0, 1], [BORDER, GREEN + '45']),
     backgroundColor: interpolateColor(completedV.value, [0, 1], [CARD, '#0A2416']),
   }))
@@ -652,9 +651,11 @@ export function WorkoutSection({
 
   return (
     <View style={s.section}>
+      {/* Hela passet bor i ETT kort: rubrik, progress, övningar, lägg till */}
+      <Animated.View style={[s.card, cardOuterStyle]}>
 
       {/* ── Session header ── */}
-      <Animated.View style={[s.header, headerStyle]}>
+      <View style={s.header}>
         <Animated.View style={[s.headerAccent, accentBarStyle]} />
 
         <View style={[s.headerIcon, isCompleted && s.headerIconDone]}>
@@ -716,7 +717,7 @@ export function WorkoutSection({
             <Ionicons name="ellipsis-horizontal" size={17} color={TEXT_SECONDARY} />
           </TouchableOpacity>
         )}
-      </Animated.View>
+      </View>
 
       {/* ── Progress bar ── */}
       {total > 0 && (
@@ -738,13 +739,14 @@ export function WorkoutSection({
         </TouchableOpacity>
       )}
 
-      {/* ── Exercise rows (flat, NOT nested inside session card) ── */}
+      {/* ── Exercise rows — inbäddade i passkortet ── */}
       {!isCardio && total > 0 && (
         <View style={s.exList}>
-          {session.exercises.map(ex => (
+          {session.exercises.map((ex, i) => (
             <ExerciseRow
               key={ex.id}
               ex={ex}
+              divider={i > 0}
               progressed={progressedIds?.has(ex.id)}
               done={isCompleted || !!checked[ex.id]}
               onToggle={() => onToggleExercise(ex.id)}
@@ -764,6 +766,7 @@ export function WorkoutSection({
         </TouchableOpacity>
       )}
 
+      </Animated.View>
     </View>
   )
 }
@@ -771,15 +774,19 @@ export function WorkoutSection({
 // ─── Styles (section) ─────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  section: { marginBottom: 28 },
+  section: { marginBottom: 20 },
+
+  // Ett kort per pass — rubrik, progress, övningar och lägg-till bor innanför
+  card: {
+    borderRadius: 18,
+    borderWidth:  1,
+    overflow:     'hidden',
+  },
 
   header: {
     flexDirection:   'row',
     alignItems:      'center',
     gap:             11,
-    borderRadius:    18,
-    borderWidth:     1,
-    overflow:        'hidden',
     paddingRight:    14,
     paddingVertical: 14,
   },
@@ -834,24 +841,18 @@ const s = StyleSheet.create({
   progressTrack: {
     height:          3,
     backgroundColor: BORDER,
-    borderRadius:    2,
-    marginTop:       6,
-    marginBottom:    10,
     overflow:        'hidden',
   },
-  progressFill:  { height: 3, borderRadius: 2 },
+  progressFill:  { height: 3 },
 
-  exList: { gap: 6, marginBottom: 6 },
+  exList: {},
 
   addRow: {
     flexDirection:     'row',
     alignItems:        'center',
     gap:               8,
-    backgroundColor:   CARD,
-    borderRadius:      14,
-    borderWidth:       1,
-    borderColor:       BORDER,
-    borderStyle:       'dashed',
+    borderTopWidth:    1,
+    borderTopColor:    BORDER,
     paddingHorizontal: 16,
     paddingVertical:   14,
   },
@@ -861,10 +862,8 @@ const s = StyleSheet.create({
     flexDirection:     'row',
     alignItems:        'center',
     gap:               10,
-    backgroundColor:   CARD,
-    borderRadius:      14,
-    borderWidth:       1,
-    borderColor:       ORANGE + '40',
+    borderTopWidth:    1,
+    borderTopColor:    BORDER,
     paddingHorizontal: 16,
     paddingVertical:   14,
     marginBottom:      6,
