@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { toLocalDateString } from '@/lib/date'
 import { deleteWorkout } from './strengthWorkouts'
 
 export interface CardioSplit {
@@ -67,16 +68,17 @@ export async function getCardioWorkoutByDate(
 ): Promise<CardioWorkout | null> {
   const workouts = await getCardioWorkouts(userId, 100)
   const match = workouts.find(
-    w => w.data.type === type && w.created_at.slice(0, 10) === date,
+    w => w.data.type === type && toLocalDateString(new Date(w.created_at)) === date,
   )
   // Reservlösning: samma typ även om datumet inte råkar matcha (senaste passet)
   return match ?? workouts.find(w => w.data.type === type) ?? null
 }
 
-/** Cardio-pass loggade ett visst datum (matchar created_at:s lokala dag). */
+/** Cardio-pass loggade ett visst datum (matchar created_at:s LOKALA dag —
+ *  created_at är UTC, så kvällspass hamnar annars på fel dag). */
 export async function getCardioWorkoutsForDate(userId: string, date: string): Promise<CardioWorkout[]> {
   const all = await getCardioWorkouts(userId, 100)
-  return all.filter(w => w.created_at.slice(0, 10) === date)
+  return all.filter(w => toLocalDateString(new Date(w.created_at)) === date)
 }
 
 export async function getCardioWorkouts(userId: string, limit = 30): Promise<CardioWorkout[]> {
