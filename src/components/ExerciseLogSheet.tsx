@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
-  KeyboardAvoidingView, Platform, Alert, InputAccessoryView, Dimensions, Keyboard,
+  KeyboardAvoidingView, Platform, Alert, Dimensions,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -329,9 +329,9 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
                         value={s.reps}
                         onChangeText={v => updateSet(i, 'reps', v.replace(/[^0-9]/g, ''))}
                         keyboardType="number-pad"
+                        returnKeyType="done"
                         placeholder={prev && prev.reps > 0 ? String(prev.reps) : '—'}
                         placeholderTextColor="rgba(255,255,255,0.22)"
-                        inputAccessoryViewID={Platform.OS === 'ios' ? 'ex-log-kb' : undefined}
                       />
                       <Text style={styles.fieldSuffix}>reps</Text>
                     </View>
@@ -341,9 +341,9 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
                         value={s.weight}
                         onChangeText={v => updateSet(i, 'weight', v.replace(/[^0-9.]/g, ''))}
                         keyboardType="decimal-pad"
+                        returnKeyType="done"
                         placeholder={prev && prev.weight_kg > 0 ? String(prev.weight_kg) : '—'}
                         placeholderTextColor="rgba(255,255,255,0.22)"
-                        inputAccessoryViewID={Platform.OS === 'ios' ? 'ex-log-kb' : undefined}
                       />
                       <Text style={styles.fieldSuffix}>kg</Text>
                     </View>
@@ -377,15 +377,6 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
         </KeyboardAvoidingView>
       </Animated.View>
 
-      {Platform.OS === 'ios' && (
-        <InputAccessoryView nativeID="ex-log-kb">
-          <View style={styles.kbBar}>
-            <TouchableOpacity onPress={() => Keyboard.dismiss()} style={styles.kbDone} activeOpacity={0.7}>
-              <Text style={styles.kbDoneText}>Klar</Text>
-            </TouchableOpacity>
-          </View>
-        </InputAccessoryView>
-      )}
 
       {/* Datumväljare — View-lager (funkar även när sheeten ligger i en annan modal) */}
       {datePicker && (
@@ -466,15 +457,6 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
 }
 
 const styles = StyleSheet.create({
-  kbBar: {
-    backgroundColor: '#1C1C1E',
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER,
-    flexDirection: 'row', justifyContent: 'flex-end',
-    paddingHorizontal: 12, paddingVertical: 8,
-  },
-  kbDone: { paddingHorizontal: 14, paddingVertical: 6 },
-  kbDoneText: { color: ORANGE, fontSize: 17, fontWeight: '700' },
-
   backdrop: { backgroundColor: 'rgba(0,0,0,0.6)' },
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
