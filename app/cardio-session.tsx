@@ -5,11 +5,12 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import { runOnJS } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
@@ -18,13 +19,19 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 
 const CARDIO_BLUE = '#4AA8E0'
+const SCREEN_W    = Dimensions.get('window').width
+const GOAL_PAGE_W = SCREEN_W - 40   // scrollens padding är 20 per sida
+const GOAL_GAP    = 12
+const GOAL_SNAP   = GOAL_PAGE_W + GOAL_GAP
 
 /** Egen slider: track + blå fyllnad + tumme, snäpper till steg med haptiskt tick */
-function GoalSlider({ value, max, step, onChange }: {
+function GoalSlider({ value, max, step, onChange, gestureRef }: {
   value: number
   max: number
   step: number
   onChange: (v: number) => void
+  /** Registreras i pagerns waitFor så slidern vinner över sidsvepet */
+  gestureRef?: React.MutableRefObject<GestureType | undefined>
 }) {
   const [trackW, setTrackW] = useState(0)
   const last = useRef(value)
@@ -42,10 +49,11 @@ function GoalSlider({ value, max, step, onChange }: {
     }
   }
 
-  const pan = Gesture.Pan()
+  let pan = Gesture.Pan()
     .minDistance(0)
     .onBegin(e => { runOnJS(setFromX)(e.x) })
     .onUpdate(e => { runOnJS(setFromX)(e.x) })
+  if (gestureRef) pan = pan.withRef(gestureRef)
 
   const pct = max > 0 ? Math.min(1, value / max) : 0
 
@@ -119,6 +127,10 @@ export default function CardioSessionScreen() {
   const KM_PRESETS  = [3, 5, 10]
   const MIN_PRESETS = [20, 30, 60]
 
+  const [goalPage, setGoalPage] = useState(0)
+  const kmSliderRef  = useRef<GestureType | undefined>(undefined)
+  const minSliderRef = useRef<GestureType | undefined>(undefined)
+
   function handleStart() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     router.replace({
@@ -159,10 +171,20 @@ export default function CardioSessionScreen() {
           </View>
         </View>
 
-        {/* ── Mål för passet: två stora tiles ── */}
+        {/* ── Mål för passet: en tile i taget, svep mellan distans och tid ── */}
         <Text style={s.sectionTitle}>MÅL FÖR PASSET</Text>
-        <View style={s.goalTiles}>
-          <View style={[s.goalTile, goalKm > 0 && s.goalTileActive]}>
+        <GHScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          waitFor={[kmSliderRef, minSliderRef]}
+          snapToInterval={GOAL_SNAP}
+          snapToAlignment="start"
+          decelerationRate="fast"
+          onMomentumScrollEnd={e => setGoalPage(Math.round(e.nativeEvent.contentOffset.x / GOAL_SNAP))}
+          style={{ marginHorizontal: -20 }}
+          contentContainerStyle={{ paddingHorizontal: 20, gap: GOAL_GAP }}
+        >
+          <View style={[s.goalTile, { width: GOAL_PAGE_W }, goalKm > 0 && s.goalTileActive]}>
             <Text style={s.goalTileLabel}>DISTANS</Text>
             <TouchableOpacity onPress={() => { if (goalKm > 0) { Haptics.selectionAsync(); setGoalKm(0) } }} activeOpacity={0.7}>
               <Text style={[s.goalTileValue, goalKm > 0 && { color: CARDIO_BLUE }]}>
@@ -182,10 +204,10 @@ export default function CardioSessionScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            <GoalSlider value={goalKm} max={15} step={0.5} onChange={setGoalKm} />
+            <GoalSlider value={goalKm} max={15} step={0.5} onChange={setGoalKm} gestureRef={kmSliderRef} />
           </View>
 
-          <View style={[s.goalTile, goalMin > 0 && s.goalTileActive]}>
+          <View style={[s.goalTile, { width: GOAL_PAGE_W }, goalMin > 0 && s.goalTileActive]}>
             <Text style={s.goalTileLabel}>TID</Text>
             <TouchableOpacity onPress={() => { if (goalMin > 0) { Haptics.selectionAsync(); setGoalMin(0) } }} activeOpacity={0.7}>
               <Text style={[s.goalTileValue, goalMin > 0 && { color: CARDIO_BLUE }]}>
@@ -205,8 +227,15 @@ export default function CardioSessionScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            <GoalSlider value={goalMin} max={90} step={5} onChange={setGoalMin} />
+            <GoalSlider value={goalMin} max={90} step={5} onChange={setGoalMin} gestureRef={minSliderRef} />
           </View>
+        </GHScrollView>
+
+        {/* Sidprickar */}
+        <View style={s.goalDots}>
+          {[0, 1].map(i => (
+            <View key={i} style={[s.goalDot, goalPage === i && s.goalDotActive]} />
+          ))}
         </View>
         <Text style={s.goalHint}>
           {goalKm > 0 || goalMin > 0
@@ -299,9 +328,8 @@ const s = StyleSheet.create({
     padding: 16, gap: 12,
   },
 
-  goalTiles: { flexDirection: 'row', gap: 12 },
   goalTile: {
-    flex: 1, alignItems: 'center', gap: 8,
+    alignItems: 'center', gap: 8,
     backgroundColor: CARD, borderRadius: 20,
     borderWidth: 1.5, borderColor: BORDER,
     paddingVertical: 18,
@@ -319,6 +347,13 @@ const s = StyleSheet.create({
   presetChipActive: { borderColor: CARDIO_BLUE, backgroundColor: CARDIO_BLUE + '1C' },
   presetText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
   presetTextActive: { color: CARDIO_BLUE },
+
+  goalDots: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginTop: 2 },
+  goalDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  goalDotActive: { backgroundColor: CARDIO_BLUE, width: 16 },
 
   goalHint: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17, textAlign: 'center' },
 
