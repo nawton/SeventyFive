@@ -1,9 +1,9 @@
 import { useState, useEffect, memo } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native'
 import Svg, { Circle as SvgCircle } from 'react-native-svg'
 import Animated, {
   useSharedValue, useAnimatedStyle,
-  withSpring, withTiming, interpolate, runOnJS, Easing, Extrapolation,
+  withSpring, withTiming, interpolate, runOnJS, Easing,
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
@@ -14,6 +14,7 @@ import type { WorkoutSession } from '@/services/workoutSchedule'
 
 const GREEN       = '#4CAF50'
 const CARDIO_BLUE = '#4AA8E0'
+const SCREEN_W    = Dimensions.get('window').width
 // Kompakta höjder — kalendern ska ta så lite plats som möjligt från passlistan
 const ROW_H   = 46    // height of one week row
 const HEADER_H = 38   // month title + nav
@@ -124,8 +125,8 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
       }
     })
 
-  // Horisontellt svep: byter vecka i hopfällt läge, månad i utfällt.
-  // Mjuk övergång: innehållet glider ut åt svephållet, byts, glider in
+  // Horisontellt svep: äkta karusell — förra/nästa vecka (eller månad) ligger
+  // bredvid och följer fingret medan man drar
   const slide = useSharedValue(0)
 
   function applySwipe(dir: number, open: boolean) {
@@ -139,15 +140,15 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     }
   }
 
+  // Nollställ glidningen FÖRST när nya innehållet är på plats i trädet —
+  // annars blinkar det gamla till en frame
+  useEffect(() => { slide.value = 0 }, [selDate, viewYear, viewMonth])
+
   function finishSwipe(dir: number, open: boolean) {
     Haptics.selectionAsync()
-    // Fortsätt ut från fingrets läge, byt innehåll, glid in från andra sidan
-    slide.value = withTiming(-dir * 70, { duration: 90, easing: Easing.out(Easing.quad) }, finished => {
-      if (finished) {
-        runOnJS(applySwipe)(dir, open)
-        slide.value = dir * 70
-        slide.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.quad) })
-      }
+    // Glid hela vägen till grannsidan; statebytet + effekten ovan centrerar om
+    slide.value = withTiming(-dir * SCREEN_W, { duration: 200, easing: Easing.out(Easing.quad) }, finished => {
+      if (finished) runOnJS(applySwipe)(dir, open)
     })
   }
 
@@ -155,13 +156,12 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     .activeOffsetX([-20, 20])
     .failOffsetY([-12, 12])
     .onUpdate(e => {
-      // Följ fingret med lite motstånd så man ser vart man drar
-      slide.value = Math.max(-80, Math.min(80, e.translationX * 0.6))
+      // 1:1 med fingret — grannsidan syns direkt
+      slide.value = Math.max(-SCREEN_W, Math.min(SCREEN_W, e.translationX))
     })
     .onEnd(e => {
-      if (Math.abs(e.translationX) < 50 && Math.abs(e.velocityX) < 450) {
-        // Inte tillräckligt — fjädra tillbaka
-        slide.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.quad) })
+      if (Math.abs(e.translationX) < SCREEN_W * 0.25 && Math.abs(e.velocityX) < 500) {
+        slide.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.quad) })
         return
       }
       const dir = e.translationX < 0 ? 1 : -1
@@ -176,8 +176,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
   }))
 
   const monthGridStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0.2, 0.7], [0, 1])
-      * interpolate(Math.abs(slide.value), [0, 70], [1, 0.15], Extrapolation.CLAMP),
+    opacity: interpolate(progress.value, [0.2, 0.7], [0, 1]),
     transform: [
       { translateY: interpolate(progress.value, [0, 1], [-8, 0]) },
       { translateX: slide.value },
@@ -185,8 +184,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
   }))
 
   const weekRowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.3], [1, 0])
-      * interpolate(Math.abs(slide.value), [0, 70], [1, 0.15], Extrapolation.CLAMP),
+    opacity: interpolate(progress.value, [0, 0.3], [1, 0]),
     transform: [{ translateX: slide.value }],
   }))
 
@@ -251,16 +249,26 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     })
   }
 
-  // ── Week row dates ────────────────────────────────────────────────────────
+  // ── Week row dates — tre sidor (förra/nuvarande/nästa) för karusellen ────
 
-  const weekStart  = mondayOf(selDate)
-  const weekDates  = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart)
-    d.setDate(weekStart.getDate() + i)
-    return d
-  })
+  function weekFrom(offsetDays: number): Date[] {
+    const start = mondayOf(selDate)
+    start.setDate(start.getDate() + offsetDays)
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      return d
+    })
+  }
+  const weekPages = [weekFrom(-7), weekFrom(0), weekFrom(7)]
 
-  const monthGrid = buildMonthGrid(viewYear, viewMonth)
+  const prevYM = viewMonth === 0  ? { y: viewYear - 1, m: 11 } : { y: viewYear, m: viewMonth - 1 }
+  const nextYM = viewMonth === 11 ? { y: viewYear + 1, m: 0 }  : { y: viewYear, m: viewMonth + 1 }
+  const monthPages = [
+    buildMonthGrid(prevYM.y, prevYM.m),
+    buildMonthGrid(viewYear, viewMonth),
+    buildMonthGrid(nextYM.y, nextYM.m),
+  ]
 
   // ── Day cell ─────────────────────────────────────────────────────────────
 
@@ -331,16 +339,24 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
         {DAY_LABELS.map((l, i) => <Text key={i} style={s.label}>{l}</Text>)}
       </View>
 
-      {/* Week row (collapsed view) */}
+      {/* Week row (collapsed view) — karusell: förra/nuvarande/nästa vecka */}
       <Animated.View style={[s.weekRowWrap, weekRowStyle]}>
-        {weekDates.map((d, i) => <DayCell key={i} date={d} />)}
+        {weekPages.map((wk, pi) => (
+          <View key={pi} style={s.weekPage}>
+            {wk.map((d, i) => <DayCell key={i} date={d} />)}
+          </View>
+        ))}
       </Animated.View>
 
-      {/* Month grid (expanded view) */}
+      {/* Month grid (expanded view) — karusell: förra/nuvarande/nästa månad */}
       <Animated.View style={[s.monthGrid, monthGridStyle]}>
-        {monthGrid.map((row, ri) => (
-          <View key={ri} style={s.gridRow}>
-            {row.map((d, di) => <DayCell key={di} date={d} />)}
+        {monthPages.map((grid, pi) => (
+          <View key={pi} style={s.monthPage}>
+            {grid.map((row, ri) => (
+              <View key={ri} style={s.gridRow}>
+                {row.map((d, di) => <DayCell key={di} date={d} />)}
+              </View>
+            ))}
           </View>
         ))}
       </Animated.View>
@@ -400,11 +416,17 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
 
+  // Karusellerna är tre skärmbredder breda med mittsidan centrerad
   weekRowWrap: {
     position: 'absolute',
     top: HEADER_H + LABELS_H,
-    left: 0, right: 0,
+    left: -SCREEN_W,
+    width: SCREEN_W * 3,
     height: ROW_H,
+    flexDirection: 'row',
+  },
+  weekPage: {
+    width: SCREEN_W,
     flexDirection: 'row',
     paddingHorizontal: 8,
   },
@@ -412,7 +434,12 @@ const s = StyleSheet.create({
   monthGrid: {
     position: 'absolute',
     top: HEADER_H + LABELS_H,
-    left: 0, right: 0,
+    left: -SCREEN_W,
+    width: SCREEN_W * 3,
+    flexDirection: 'row',
+  },
+  monthPage: {
+    width: SCREEN_W,
   },
   gridRow: {
     height: ROW_H,
