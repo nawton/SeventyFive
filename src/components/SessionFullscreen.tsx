@@ -1,136 +1,374 @@
-import { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import {
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+} from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
-import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
+import type { WorkoutSession } from '@/services/workoutSchedule'
+import { completeExercise, updateSessionExercise } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
-import { ExerciseLogSheet } from '@/components/ExerciseLogSheet'
+import { saveStrengthWorkout, getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
+import { getPersonalRecords, findNewPR } from '@/services/personalRecords'
+import { getRestSeconds, setRestSeconds } from '@/lib/prefs'
+
+type LogSet = { reps: string; weight: string; done: boolean }
+
+const REST_OPTIONS = [60, 90, 120, 180]
+
+function fmtClock(secs: number): string {
+  const m = Math.floor(secs / 60)
+  const s = secs % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
 
 export function SessionFullscreen({
-  visible, session, checked, isCompleted, exercisesList, date,
-  onToggle, onComplete, onUncomplete, onClose, onExerciseSaved,
+  visible, session, isCompleted, exercisesList, date, userId,
+  onComplete, onUncomplete, onSaved, onClose,
 }: {
   visible: boolean
   session: WorkoutSession | null
-  checked: Record<string, boolean>
   isCompleted: boolean
   exercisesList: Exercise[]
   date: string
-  onToggle: (exId: string) => void
+  userId: string | null
   onComplete: () => void
   onUncomplete: () => void
+  onSaved?: () => void
   onClose: () => void
-  onExerciseSaved?: () => void
 }) {
   const insets = useSafeAreaInsets()
   const exercises = session?.exercises ?? []
-  // Övningsloggen visas som ett lager INUTI passvyn (inte som ny sida)
-  const [selectedEx, setSelectedEx] = useState<SessionExercise | null>(null)
-  const selectedInfo = selectedEx ? exercisesList.find(e => e.name === selectedEx.exercise_name) : undefined
-  const done  = exercises.filter(e => isCompleted || checked[e.id]).length
-  const total = exercises.length
-  const pct   = total > 0 ? done / total : 0
+
+  // ── Loggade set per övningsrad (key = session_exercises.id) ──
+  const [logs, setLogs] = useState<Record<string, LogSet[]>>({})
+  const [prevByName, setPrevByName] = useState<Record<string, StrengthSet[]>>({})
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!visible || !session) return
+    setLogs(() => {
+      const out: Record<string, LogSet[]> = {}
+      for (const ex of session.exercises) {
+        const n = Math.max(1, ex.sets ?? 3)
+        out[ex.id] = Array.from({ length: n }, () => ({ reps: '', weight: '', done: false }))
+      }
+      return out
+    })
+    setElapsed(0)
+    startTs.current = Date.now()
+  }, [visible, session?.id])
+
+  // Förra passets set per övning — visas i FÖRRA-kolumnen och som placeholders
+  useEffect(() => {
+    if (!visible || !userId) return
+    getStrengthWorkouts(userId, 150).then(ws => {
+      const map: Record<string, StrengthSet[]> = {}
+      for (const w of ws) {
+        if (!map[w.data.exercise_name] && w.data.sets?.length > 0) map[w.data.exercise_name] = w.data.sets
+      }
+      setPrevByName(map)
+    }).catch(() => {})
+  }, [visible, userId])
+
+  // ── Passtid — tickar medan skärmen är öppen ──
+  const startTs = useRef(Date.now())
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    if (!visible) return
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTs.current) / 1000)), 1000)
+    return () => clearInterval(t)
+  }, [visible])
+
+  // ── Vilotimer (samma mönster som övningsloggen) ──
+  const [restLeft, setRestLeft]       = useState<number | null>(null)
+  const [restTotal, setRestTotal]     = useState(90)
+  const [restDefault, setRestDefault] = useState(90)
+  const restInterval = useRef<ReturnType<typeof setInterval> | null>(null)
+  const restEnd      = useRef(0)
+  const restLastSec  = useRef(-1)
+
+  useEffect(() => { getRestSeconds().then(setRestDefault) }, [])
+  useEffect(() => () => { if (restInterval.current) clearInterval(restInterval.current) }, [])
+
+  function startRest(secs: number) {
+    setRestTotal(secs)
+    restEnd.current = Date.now() + secs * 1000
+    restLastSec.current = secs
+    setRestLeft(secs)
+    if (restInterval.current) clearInterval(restInterval.current)
+    restInterval.current = setInterval(() => {
+      const left = Math.max(0, Math.round((restEnd.current - Date.now()) / 1000))
+      if (left !== restLastSec.current) {
+        restLastSec.current = left
+        setRestLeft(left)
+        if (left > 0 && left <= 3) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+      }
+      if (left <= 0 && restInterval.current) {
+        clearInterval(restInterval.current)
+        restInterval.current = null
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        setTimeout(() => setRestLeft(null), 1200)
+      }
+    }, 200)
+  }
+  function extendRest(secs: number) {
+    Haptics.selectionAsync()
+    restEnd.current += secs * 1000
+    setRestTotal(t => t + secs)
+    setRestLeft(l => (l ?? 0) + secs)
+  }
+  function cancelRest() {
+    if (restInterval.current) clearInterval(restInterval.current)
+    restInterval.current = null
+    setRestLeft(null)
+  }
+  function cycleRestDefault() {
+    Haptics.selectionAsync()
+    const i = REST_OPTIONS.indexOf(restDefault)
+    const next = REST_OPTIONS[(i + 1) % REST_OPTIONS.length] ?? 90
+    setRestDefault(next)
+    setRestSeconds(next).catch(() => {})
+  }
+
+  // ── Set-hantering ──
+  function updateLog(exId: string, i: number, field: 'reps' | 'weight', value: string) {
+    setLogs(prev => ({
+      ...prev,
+      [exId]: (prev[exId] ?? []).map((r, j) => j === i ? { ...r, [field]: value } : r),
+    }))
+  }
+  function toggleDone(exId: string, i: number) {
+    const wasDone = logs[exId]?.[i]?.done
+    setLogs(prev => ({
+      ...prev,
+      [exId]: (prev[exId] ?? []).map((r, j) => j === i ? { ...r, done: !r.done } : r),
+    }))
+    if (!wasDone) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      startRest(restDefault)
+    }
+  }
+  function addSet(exId: string) {
+    setLogs(prev => {
+      const rows = prev[exId] ?? []
+      const last = rows[rows.length - 1]
+      return { ...prev, [exId]: [...rows, { reps: last?.reps ?? '', weight: last?.weight ?? '', done: false }] }
+    })
+  }
+  function removeSet(exId: string, i: number) {
+    setLogs(prev => {
+      const rows = prev[exId] ?? []
+      if (rows.length <= 1) return prev
+      return { ...prev, [exId]: rows.filter((_, j) => j !== i) }
+    })
+  }
+
+  // ── Statistik i toppraden ──
+  const allRows   = Object.values(logs).flat()
+  const doneRows  = allRows.filter(r => r.done)
+  const volumeKg  = doneRows.reduce((sum, r) => sum + (parseFloat(r.weight) || 0) * (parseInt(r.reps) || 0), 0)
+
+  // ── Slutför: spara allt, bocka övningar, markera passet klart ──
+  async function finish() {
+    if (!session || !userId || saving) return
+    // Rader med reps räknas — även om man glömt bocka dem
+    const toSave = session.exercises.map(ex => {
+      const rows = logs[ex.id] ?? []
+      const validSets = rows
+        .map(r => ({ reps: parseInt(r.reps) || 0, weight_kg: parseFloat(r.weight) || 0 }))
+        .filter(r => r.reps > 0)
+      return { ex, validSets }
+    })
+    const anySets = toSave.some(t => t.validSets.length > 0)
+    if (!anySets) {
+      Alert.alert('Inga set ifyllda', 'Vill du markera passet som klart utan att logga set?', [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Markera klart', onPress: () => { onComplete(); onClose() } },
+      ])
+      return
+    }
+
+    setSaving(true)
+    try {
+      const records = await getPersonalRecords(userId).catch(() => [])
+      const prs: string[] = []
+      const isOneTime = (session.weekdays?.length ?? 0) === 0
+
+      for (const { ex, validSets } of toSave) {
+        if (validSets.length === 0) continue
+        const exInfo = exercisesList.find(e => e.name === ex.exercise_name)
+        await saveStrengthWorkout({
+          userId,
+          exerciseId: exInfo?.id ?? ex.id,
+          exerciseName: ex.exercise_name,
+          category: (exInfo?.category === 'mobility' || exInfo?.category === 'hiit') ? exInfo.category : 'strength',
+          sets: validSets,
+          workoutDate: date,
+        }).catch(() => false)
+        await completeExercise(ex.id, userId, date).catch(() => {})
+        // Spegla till passets rad — bara för engångspass (mallar lämnas orörda)
+        if (isOneTime) {
+          const repsStr = validSets.every(r => r.reps === validSets[0].reps)
+            ? String(validSets[0].reps)
+            : validSets.map(r => r.reps).join('/')
+          await updateSessionExercise(ex.id, validSets.length, repsStr).catch(() => {})
+        }
+        const pr = findNewPR(records.find(r => r.exerciseName === ex.exercise_name), validSets)
+        if (pr) prs.push(`${ex.exercise_name}: ${pr.weightKg} kg × ${pr.reps}`)
+      }
+
+      cancelRest()
+      onComplete()
+      onSaved?.()
+      onClose()
+      if (prs.length > 0) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        setTimeout(() => Alert.alert('🏆 Nytt personligt rekord!', prs.join('\n')), 400)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={s.screen}>
-        {/* Explicit inset — SafeAreaView kan rapportera 0 inuti en modal */}
-        <View style={{ paddingTop: insets.top + 6 }}>
-          <View style={s.header}>
-            <TouchableOpacity onPress={onClose} style={s.iconBtn} activeOpacity={0.7}>
-              <Ionicons name="chevron-down" size={26} color={TEXT_PRIMARY} />
-            </TouchableOpacity>
-            <View style={{ flex: 1 }} />
-            {isCompleted ? (
-              <TouchableOpacity onPress={onUncomplete} style={s.doneBadge} activeOpacity={0.8}>
-                <Ionicons name="checkmark-circle" size={15} color={GREEN} />
-                <Text style={s.doneBadgeText}>Klar</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          <View style={s.titleWrap}>
-            <View style={s.titleIcon}>
-              <Ionicons name="barbell" size={22} color={ORANGE} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.title} numberOfLines={2}>{session?.name}</Text>
-              <Text style={s.sub}>{total} övningar · {done} klara</Text>
-            </View>
-          </View>
-
-          <View style={s.progressTrack}>
-            <View style={[s.progressFill, { width: `${pct * 100}%` as never }]} />
-          </View>
-        </View>
-
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-          {exercises.map((ex, i) => {
-            const on = isCompleted || checked[ex.id]
-            return (
-              <TouchableOpacity
-                key={ex.id}
-                style={[s.exCard, on && s.exCardDone]}
-                onPress={() => setSelectedEx(ex)}
-                activeOpacity={0.8}
-              >
-                <View style={s.exIndex}><Text style={s.exIndexText}>{i + 1}</Text></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.exName, on && { color: TEXT_SECONDARY, textDecorationLine: 'line-through' }]} numberOfLines={1}>
-                    {ex.exercise_name}
-                  </Text>
-                  <Text style={s.exMeta}>
-                    {ex.sets != null ? `${ex.sets} set` : ''}{ex.sets != null && ex.reps ? ' · ' : ''}{ex.reps ? `${ex.reps} reps` : ''}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => onToggle(ex.id)}
-                  disabled={isCompleted}
-                  style={[s.check, on && s.checkOn]}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  {on && <Ionicons name="checkmark" size={17} color="#000" />}
-                </TouchableOpacity>
-              </TouchableOpacity>
-            )
-          })}
-          {total === 0 && <Text style={s.empty}>Inga övningar i passet</Text>}
-        </ScrollView>
-
-        <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]}>
+        {/* ── Header: stäng · titel · vila · Slutför ── */}
+        <View style={[s.header, { paddingTop: insets.top + 6 }]}>
+          <TouchableOpacity onPress={onClose} style={s.iconBtn} activeOpacity={0.7}>
+            <Ionicons name="chevron-down" size={26} color={TEXT_PRIMARY} />
+          </TouchableOpacity>
+          <Text style={s.title} numberOfLines={1}>{session?.name}</Text>
+          <TouchableOpacity style={s.restPill} onPress={cycleRestDefault} activeOpacity={0.75}>
+            <Ionicons name="timer-outline" size={13} color={TEXT_SECONDARY} />
+            <Text style={s.restPillText}>{fmtClock(restDefault)}</Text>
+          </TouchableOpacity>
           {isCompleted ? (
-            <TouchableOpacity style={[s.cta, s.ctaDone]} onPress={onUncomplete} activeOpacity={0.85}>
-              <Ionicons name="refresh" size={19} color={TEXT_PRIMARY} />
-              <Text style={[s.ctaText, { color: TEXT_PRIMARY }]}>Ångra klart</Text>
+            <TouchableOpacity onPress={onUncomplete} style={s.doneBadge} activeOpacity={0.8}>
+              <Ionicons name="checkmark-circle" size={14} color={GREEN} />
+              <Text style={s.doneBadgeText}>Klar</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={s.cta} onPress={onComplete} activeOpacity={0.85}>
-              <Ionicons name="checkmark" size={20} color="#000" />
-              <Text style={s.ctaText}>Markera pass klart</Text>
+            <TouchableOpacity onPress={finish} style={[s.finishBtn, saving && { opacity: 0.6 }]} disabled={saving} activeOpacity={0.85}>
+              {saving ? <ActivityIndicator size="small" color="#000" /> : <Text style={s.finishText}>Slutför</Text>}
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Övningslogg som lager ovanpå passvyn */}
-        {selectedEx && selectedInfo && (
-          <ExerciseLogSheet
-            id={selectedInfo.id}
-            name={selectedInfo.name}
-            description={selectedInfo.description ?? ''}
-            category={selectedInfo.category}
-            difficulty={selectedInfo.difficulty}
-            initialSets={selectedEx.sets != null ? String(selectedEx.sets) : ''}
-            initialReps={selectedEx.reps ?? ''}
-            sessionExId={selectedEx.id}
-            sessionDate={date}
-            updatePlanSets={(session?.weekdays.length ?? 0) === 0}
-            onSaved={() => {
-              if (selectedEx && !isCompleted && !checked[selectedEx.id]) onToggle(selectedEx.id)
-              onExerciseSaved?.()
-            }}
-            onClose={() => setSelectedEx(null)}
-          />
+        {/* ── Statistikrad: tid · volym · set ── */}
+        <View style={s.statsRow}>
+          <View style={s.stat}>
+            <Text style={s.statLabel}>Tid</Text>
+            <Text style={[s.statValue, { color: ORANGE }]}>{fmtClock(elapsed)}</Text>
+          </View>
+          <View style={s.stat}>
+            <Text style={s.statLabel}>Volym</Text>
+            <Text style={s.statValue}>{Math.round(volumeKg)} kg</Text>
+          </View>
+          <View style={s.stat}>
+            <Text style={s.statLabel}>Set</Text>
+            <Text style={s.statValue}>{doneRows.length}</Text>
+          </View>
+        </View>
+
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: 40 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {exercises.map(ex => {
+              const rows = logs[ex.id] ?? []
+              const prev = prevByName[ex.exercise_name]
+              return (
+                <View key={ex.id} style={s.exBlock}>
+                  <Text style={s.exName}>{ex.exercise_name}</Text>
+
+                  <View style={s.tableHead}>
+                    <Text style={[s.th, { width: 36 }]}>SET</Text>
+                    <Text style={[s.th, { flex: 1 }]}>FÖRRA</Text>
+                    <Text style={[s.th, { width: 64, textAlign: 'center' }]}>KG</Text>
+                    <Text style={[s.th, { width: 64, textAlign: 'center' }]}>REPS</Text>
+                    <View style={{ width: 40 }} />
+                  </View>
+
+                  {rows.map((r, i) => {
+                    const p = prev?.[i]
+                    const prevStr = p ? `${p.weight_kg > 0 ? `${p.weight_kg} kg × ` : ''}${p.reps}` : '—'
+                    return (
+                      <View key={i} style={[s.setRow, r.done && s.setRowDone]}>
+                        <TouchableOpacity
+                          style={{ width: 36 }}
+                          onLongPress={() => removeSet(ex.id, i)}
+                          delayLongPress={350}
+                          activeOpacity={0.6}
+                        >
+                          <Text style={s.setNum}>{i + 1}</Text>
+                        </TouchableOpacity>
+                        <Text style={s.prevText} numberOfLines={1}>{prevStr}</Text>
+                        <TextInput
+                          style={s.input}
+                          value={r.weight}
+                          onChangeText={v => updateLog(ex.id, i, 'weight', v.replace(/[^0-9.,]/g, '').replace(',', '.'))}
+                          keyboardType="decimal-pad"
+                          returnKeyType="done"
+                          placeholder={p && p.weight_kg > 0 ? String(p.weight_kg) : '0'}
+                          placeholderTextColor="rgba(255,255,255,0.22)"
+                          selectTextOnFocus
+                        />
+                        <TextInput
+                          style={s.input}
+                          value={r.reps}
+                          onChangeText={v => updateLog(ex.id, i, 'reps', v.replace(/[^0-9]/g, ''))}
+                          keyboardType="number-pad"
+                          returnKeyType="done"
+                          placeholder={p && p.reps > 0 ? String(p.reps) : (ex.reps ?? '0')}
+                          placeholderTextColor="rgba(255,255,255,0.22)"
+                          selectTextOnFocus
+                        />
+                        <TouchableOpacity
+                          style={[s.check, r.done && s.checkOn]}
+                          onPress={() => toggleDone(ex.id, i)}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="checkmark" size={17} color={r.done ? '#000' : TEXT_SECONDARY} />
+                        </TouchableOpacity>
+                      </View>
+                    )
+                  })}
+
+                  <TouchableOpacity style={s.addSetBtn} onPress={() => addSet(ex.id)} activeOpacity={0.75}>
+                    <Ionicons name="add" size={16} color={TEXT_PRIMARY} />
+                    <Text style={s.addSetText}>Lägg till set</Text>
+                  </TouchableOpacity>
+                </View>
+              )
+            })}
+            {exercises.length === 0 && <Text style={s.empty}>Inga övningar i passet</Text>}
+            <Text style={s.hint}>Håll in setnumret för att ta bort ett set</Text>
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        {/* ── Vilotimer — dyker upp när ett set bockas av ── */}
+        {restLeft !== null && (
+          <View style={[s.restBar, { marginBottom: insets.bottom + 10 }]}>
+            <Text style={[s.restBarTime, restLeft === 0 && { color: GREEN }]}>
+              {restLeft === 0 ? 'Klar!' : fmtClock(restLeft)}
+            </Text>
+            <View style={s.restBarTrack}>
+              <View style={[s.restBarFill, { width: `${Math.min(100, (restLeft / restTotal) * 100)}%` as never }]} />
+            </View>
+            <TouchableOpacity onPress={() => extendRest(15)} style={s.restBarBtn} activeOpacity={0.75}>
+              <Text style={s.restBarBtnText}>+15</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={cancelRest} style={s.restBarBtn} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }} activeOpacity={0.75}>
+              <Ionicons name="close" size={16} color={TEXT_SECONDARY} />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </Modal>
@@ -139,48 +377,90 @@ export function SessionFullscreen({
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
+
   header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingTop: 6, paddingBottom: 2,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 12, paddingBottom: 8,
   },
-  iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  iconBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  title: { flex: 1, color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
+  restPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 9, paddingVertical: 6,
+    borderRadius: 12, borderWidth: 1, borderColor: BORDER,
+  },
+  restPillText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  finishBtn: {
+    backgroundColor: ORANGE, borderRadius: 18,
+    paddingHorizontal: 16, paddingVertical: 9,
+    minWidth: 74, alignItems: 'center',
+  },
+  finishText: { color: '#000', fontSize: 14, fontWeight: '800' },
   doneBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: GREEN + '1E', borderRadius: 12, paddingHorizontal: 11, paddingVertical: 6,
-    marginRight: 8,
+    backgroundColor: GREEN + '1E', borderRadius: 12,
+    paddingHorizontal: 11, paddingVertical: 7,
   },
   doneBadgeText: { color: GREEN, fontSize: 13, fontWeight: '700' },
 
-  titleWrap: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 14 },
-  titleIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: ORANGE + '22', alignItems: 'center', justifyContent: 'center' },
-  title: { color: TEXT_PRIMARY, fontSize: 24, fontWeight: '800', letterSpacing: -0.4 },
-  sub: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500', marginTop: 3 },
-
-  progressTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.08)', marginHorizontal: 20, borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: ORANGE, borderRadius: 2 },
-
-  scroll: { padding: 16, gap: 10 },
-  exCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 14,
+  statsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 20, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+    gap: 28,
   },
-  exCardDone: { borderColor: GREEN + '40', backgroundColor: '#0A2416' },
-  exIndex: { width: 30, height: 30, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
-  exIndexText: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '700' },
-  exName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  exMeta: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
+  stat: { gap: 2 },
+  statLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
+  statValue: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', fontVariant: ['tabular-nums'] },
+
+  exBlock: { paddingTop: 18, paddingHorizontal: 16 },
+  exName: { color: ORANGE, fontSize: 17, fontWeight: '800', marginBottom: 10 },
+
+  tableHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 6 },
+  th: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+
+  setRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 5, borderRadius: 10, marginHorizontal: -6, paddingHorizontal: 6,
+  },
+  setRowDone: { backgroundColor: GREEN + '14' },
+  setNum: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', width: 36 },
+  prevText: { flex: 1, color: TEXT_SECONDARY, fontSize: 13, fontVariant: ['tabular-nums'] },
+  input: {
+    width: 64, height: 38,
+    backgroundColor: CARD, borderRadius: 10,
+    borderWidth: 1, borderColor: BORDER,
+    color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700',
+    textAlign: 'center', fontVariant: ['tabular-nums'],
+  },
   check: {
-    width: 30, height: 30, borderRadius: 9, borderWidth: 1.5, borderColor: BORDER,
+    width: 40, height: 34, borderRadius: 9,
+    backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center',
   },
-  checkOn: { backgroundColor: GREEN, borderColor: GREEN },
-  empty: { color: TEXT_SECONDARY, textAlign: 'center', marginTop: 48, fontSize: 15 },
+  checkOn: { backgroundColor: GREEN },
 
-  footer: { paddingHorizontal: 16, paddingTop: 10 },
-  cta: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ORANGE, borderRadius: 16, paddingVertical: 16,
+  addSetBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: CARD, borderRadius: 12,
+    paddingVertical: 10, marginTop: 10,
+    borderWidth: 1, borderColor: BORDER,
   },
-  ctaDone: { backgroundColor: CARD, borderWidth: 1, borderColor: BORDER },
-  ctaText: { color: '#000', fontSize: 16, fontWeight: '800' },
+  addSetText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+
+  empty: { color: TEXT_SECONDARY, textAlign: 'center', marginTop: 48, fontSize: 15 },
+  hint: { color: 'rgba(255,255,255,0.25)', fontSize: 11, textAlign: 'center', marginTop: 18 },
+
+  restBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: 16, marginTop: 8,
+    paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1, borderColor: ORANGE + '50',
+  },
+  restBarTime: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'], minWidth: 46 },
+  restBarTrack: { flex: 1, height: 5, borderRadius: 3, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.08)' },
+  restBarFill: { height: '100%', borderRadius: 3, backgroundColor: ORANGE },
+  restBarBtn: { paddingHorizontal: 6, paddingVertical: 4 },
+  restBarBtnText: { color: ORANGE, fontSize: 14, fontWeight: '700' },
 })

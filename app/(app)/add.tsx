@@ -803,14 +803,13 @@ export default function SchemaScreen() {
               exercises: sessions.find(x => x.id === fullscreenTarget.session.id)?.exercises ?? fullscreenTarget.session.exercises,
             }
           : null}
-        checked={fullscreenTarget ? (checkedByDate[fullscreenTarget.date] ?? EMPTY_CHECKED) : EMPTY_CHECKED}
         isCompleted={!!fullscreenTarget && (completedByDate[fullscreenTarget.date]?.has(fullscreenTarget.session.id) ?? false)}
         exercisesList={exercises}
         date={fullscreenTarget?.date ?? ''}
-        onToggle={(exId) => fullscreenTarget && toggleCheck(exId, fullscreenTarget.date)}
+        userId={userId}
         onComplete={() => { if (fullscreenTarget) handleComplete(fullscreenTarget.session.id, fullscreenTarget.date) }}
         onUncomplete={() => { if (fullscreenTarget) handleUncomplete(fullscreenTarget.session.id, fullscreenTarget.date) }}
-        onExerciseSaved={() => { if (userId) loadData(userId) }}
+        onSaved={() => { if (userId) loadData(userId) }}
         onClose={() => setFullscreenTarget(null)}
       />
 
