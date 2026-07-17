@@ -100,11 +100,17 @@ function mapHtml(route: Array<[number, number]>, o: { compassTop: number; topPad
     var map = L.map('map',{zoomControl:false,attributionControl:false,rotate:true,touchRotate:true,
       rotateControl:{closeOnZeroBearing:false, position:'topright'}});
     var tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
-    L.polyline(pts,{color:'#FF6A00',weight:9,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(map);
-    var line = L.polyline(pts,{color:'#FC4C02',weight:5,lineCap:'round',lineJoin:'round'}).addTo(map);
-    L.circleMarker(pts[0],{radius:7,color:'#fff',weight:3,fillColor:'#22C55E',fillOpacity:1}).addTo(map);
-    L.circleMarker(pts[pts.length-1],{radius:7,color:'#fff',weight:3,fillColor:'#EF4444',fillOpacity:1}).addTo(map);
+    var glow  = L.polyline(pts,{color:'#FF6A00',weight:9,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(map);
+    var line  = L.polyline(pts,{color:'#FC4C02',weight:5,lineCap:'round',lineJoin:'round'}).addTo(map);
+    var startM = L.circleMarker(pts[0],{radius:7,color:'#fff',weight:3,fillColor:'#22C55E',fillOpacity:1}).addTo(map);
+    var endM   = L.circleMarker(pts[pts.length-1],{radius:7,color:'#fff',weight:3,fillColor:'#EF4444',fillOpacity:1}).addTo(map);
     map.fitBounds(line.getBounds(),{paddingTopLeft:[36,${o.topPad}],paddingBottomRight:[36,${o.bottomPad}]});
+    // leaflet-rotate reprojekterar vektorer först vid rotationsslut → gör det på
+    // varje frame så linje/prickar sitter kvar på kartan under vridningen.
+    function reprojectVectors(){
+      [glow, line, startM, endM].forEach(function(l){ try { l._project(); l._update(); } catch(e){} });
+    }
+    map.on('rotate', reprojectVectors);
     window.addEventListener('message', function(e){
       try { var msg = JSON.parse(e.data);
         if (msg.type === 'style') { map.removeLayer(tileLayer);
