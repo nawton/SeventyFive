@@ -329,7 +329,9 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    zIndex: 20,
+    // Under arket (zIndex 10) men över kartan → göms när arket dras upp,
+    // men går att trycka på när kartan syns
+    zIndex: 5,
   },
   circleBtn: {
     width: 44, height: 44, borderRadius: 22,
