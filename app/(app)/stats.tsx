@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   useSharedValue, useAnimatedStyle, interpolate, runOnJS, Extrapolation,
 } from 'react-native-reanimated'
-import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
 import Svg, { Circle, Text as SvgText } from 'react-native-svg'
 import { useFocusEffect } from 'expo-router'
@@ -239,14 +239,18 @@ export default function StatsScreen() {
     if (key) switchTab(key)
   }
 
-  // Svep på kroppsfiguren växlar fram/bak — gesten vinner över sid-pagern
-  // inom figurens yta, resten av sidan sveper mellan flikar som vanligt
+  // Svep på kroppsfiguren växlar fram/bak. Pagern får waitFor=denna gest så
+  // horisontella svep som startar på figuren flippar den istället för att byta
+  // flik; vertikala drag faller igenom till sidscrollen (failOffsetY).
   function toggleBodyView() {
     Haptics.selectionAsync()
     setBodyView(v => (v === 'front' ? 'back' : 'front'))
   }
+  const bodyFlipRef = useRef(null)
   const bodyFlip = Gesture.Pan()
-    .activeOffsetX([-15, 15])
+    .withRef(bodyFlipRef)
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-15, 15])
     .onEnd(e => {
       if (Math.abs(e.translationX) > 40 || Math.abs(e.velocityX) > 500) {
         runOnJS(toggleBodyView)()
@@ -437,12 +441,13 @@ export default function StatsScreen() {
         </View>
       </GestureDetector>
 
-      <ScrollView
-        ref={pagerRef}
+      <GHScrollView
+        ref={pagerRef as never}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
+        waitFor={bodyFlipRef}
         onScroll={e => { pagerX.value = e.nativeEvent.contentOffset.x }}
         onMomentumScrollEnd={e => {
           const idx = Math.round(e.nativeEvent.contentOffset.x / STATS_SCREEN_W)
@@ -760,7 +765,7 @@ export default function StatsScreen() {
 
           </>
         </ScrollView>
-      </ScrollView>
+      </GHScrollView>
 
       <Modal visible={!!selectedDay} animationType="none" transparent onRequestClose={() => setSelectedDay(null)}>
         {selectedDay && startDate && (
