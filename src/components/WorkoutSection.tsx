@@ -477,7 +477,8 @@ export interface WorkoutSectionProps {
   onCardPress:           (ex: SessionExercise) => void
   onComplete:            () => void
   onUncomplete:          () => void
-  onEdit:                () => void
+  /** Passinställningar nås numera via långtryck på passnamnet → Inställningar */
+  onEdit?:               () => void
   onLongPress?:          () => void
   onAddExercise?:        () => void
   isQuickLog?:           boolean
@@ -662,15 +663,6 @@ export function WorkoutSection({
           </TouchableOpacity>
         )}
 
-        {!isQuickLog && (
-          <TouchableOpacity
-            onPress={onEdit}
-            style={s.editBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-          >
-            <Ionicons name="ellipsis-horizontal" size={17} color={TEXT_SECONDARY} />
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* ── Progress bar ── */}
@@ -835,15 +827,6 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: ORANGE + '80', backgroundColor: ORANGE + '15',
   },
   openBtnText: { color: ORANGE, fontSize: 13, fontWeight: '700' },
-
-  editBtn: {
-    width:           30,
-    height:          30,
-    borderRadius:    9,
-    backgroundColor: BG,
-    alignItems:      'center',
-    justifyContent:  'center',
-  },
 
   progressTrack: {
     height:          3,

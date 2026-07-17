@@ -264,7 +264,6 @@ const DayPage = React.memo(function DayPage({
                       }}
                       onComplete={() => api.complete(s.id, dateStr)}
                       onUncomplete={() => api.uncomplete(s.id, dateStr)}
-                      onEdit={() => api.openEditor(s)}
                     />
                   )})}
 
@@ -298,7 +297,6 @@ const DayPage = React.memo(function DayPage({
                       }}
                       onComplete={() => {}}
                       onUncomplete={() => {}}
-                      onEdit={() => Alert.alert('Snabb-logg', 'Redigera eller ta bort enskilda övningar via ··· bredvid övningen.')}
                       onLongPress={() => api.sessionLongPress(quickLogSession, 'Loggat idag')}
                     />
                   )}
@@ -547,46 +545,30 @@ export default function SchemaScreen() {
 
   function handleSessionLongPress(session: WorkoutSession, displayedName: string) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    const isRepeating = session.weekdays.length > 0
+    // Inställningar öppnar passredigeraren (dit de gamla tre prickarna ledde)
+    const deletePass = () => deleteWorkoutSession(session.id)
+      .then(() => { if (userId) loadData(userId) })
+      .catch(() => { if (userId) loadData(userId) })
 
-    if (isRepeating) {
-      if (Platform.OS === 'ios') {
-        ActionSheetIOS.showActionSheetWithOptions(
-          { title: displayedName, options: ['Avbryt', 'Inställningar'], cancelButtonIndex: 0 },
-          i => { if (i === 1) router.push('/manage-sessions') },
-        )
-      } else {
-        Alert.alert(displayedName, undefined, [
-          { text: 'Inställningar', onPress: () => router.push('/manage-sessions') },
-          { text: 'Avbryt', style: 'cancel' },
-        ])
-      }
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: displayedName,
+          options: ['Avbryt', 'Inställningar', 'Ta bort pass'],
+          destructiveButtonIndex: 2,
+          cancelButtonIndex: 0,
+        },
+        i => {
+          if (i === 1) openEditor(session)
+          if (i === 2) deletePass()
+        },
+      )
     } else {
-      if (Platform.OS === 'ios') {
-        ActionSheetIOS.showActionSheetWithOptions(
-          {
-            title: displayedName,
-            options: ['Avbryt', 'Ta bort pass'],
-            destructiveButtonIndex: 1,
-            cancelButtonIndex: 0,
-          },
-          i => {
-            if (i === 1) deleteWorkoutSession(session.id)
-              .then(() => { if (userId) loadData(userId) })
-              .catch(() => { if (userId) loadData(userId) })
-          },
-        )
-      } else {
-        Alert.alert(displayedName, 'Ta bort detta pass?', [
-          { text: 'Avbryt', style: 'cancel' },
-          {
-            text: 'Ta bort', style: 'destructive',
-            onPress: () => deleteWorkoutSession(session.id)
-              .then(() => { if (userId) loadData(userId) })
-              .catch(() => { if (userId) loadData(userId) }),
-          },
-        ])
-      }
+      Alert.alert(displayedName, undefined, [
+        { text: 'Inställningar', onPress: () => openEditor(session) },
+        { text: 'Ta bort pass', style: 'destructive', onPress: deletePass },
+        { text: 'Avbryt', style: 'cancel' },
+      ])
     }
   }
 
