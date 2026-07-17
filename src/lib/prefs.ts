@@ -36,3 +36,19 @@ export async function getVoiceCues(): Promise<boolean> {
 export async function setVoiceCues(on: boolean): Promise<void> {
   await AsyncStorage.setItem(VOICE_KEY, on ? 'on' : 'off').catch(() => {})
 }
+
+// Vilotimerns senast valda längd (sekunder) — förvalet i övningsloggen
+const REST_KEY = 'restTimerSeconds'
+
+export async function getRestSeconds(): Promise<number> {
+  try {
+    const v = parseInt((await AsyncStorage.getItem(REST_KEY)) ?? '', 10)
+    return Number.isFinite(v) && v > 0 ? v : 90
+  } catch {
+    return 90
+  }
+}
+
+export async function setRestSeconds(secs: number): Promise<void> {
+  await AsyncStorage.setItem(REST_KEY, String(secs)).catch(() => {})
+}

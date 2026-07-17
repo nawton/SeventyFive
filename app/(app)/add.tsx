@@ -197,7 +197,7 @@ const DayPage = React.memo(function DayPage({
                   {scheduledSessions.length === 0 && visibleCardioLogs.length === 0 ? (
                     <View style={styles.restState}>
                       <Ionicons name="moon-outline" size={40} color={BORDER} />
-                      <Text style={styles.restTitle}>Vildag</Text>
+                      <Text style={styles.restTitle}>Vilodag</Text>
                       <Text style={styles.restText}>Inget pass schemalagt {isToday ? 'idag' : WEEKDAYS[weekday - 1].toLowerCase()}</Text>
                       <TouchableOpacity style={styles.restAddBtn} onPress={() => api.openEditor(null)} activeOpacity={0.8}>
                         <Ionicons name="add" size={14} color={ORANGE} />

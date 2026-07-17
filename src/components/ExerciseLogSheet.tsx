@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
   KeyboardAvoidingView, Platform, Alert, Dimensions,
@@ -7,6 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import Body from 'react-native-body-highlighter'
 import { getMusclesForName, bestSideForMuscles, SLUG_LABELS } from '@/lib/muscles'
+import { getRestSeconds, setRestSeconds } from '@/lib/prefs'
 import * as Haptics from 'expo-haptics'
 import { saveStrengthWorkout, deleteWorkout, getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
 import { getPersonalRecords, findNewPR, type ExerciseRecord } from '@/services/personalRecords'
@@ -59,6 +60,62 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
   })
   const [saving, setSaving]     = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
+
+  // ── Vilotimer mellan set ──
+  const [restLeft, setRestLeft]       = useState<number | null>(null)
+  const [restTotal, setRestTotal]     = useState(90)
+  const [restDefault, setRestDefault] = useState(90)
+  const restInterval = useRef<ReturnType<typeof setInterval> | null>(null)
+  const restEnd      = useRef(0)
+  const restLastSec  = useRef(-1)
+
+  useEffect(() => { getRestSeconds().then(setRestDefault) }, [])
+  useEffect(() => () => { if (restInterval.current) clearInterval(restInterval.current) }, [])
+
+  function startRest(secs: number) {
+    Haptics.selectionAsync()
+    setRestDefault(secs)
+    setRestSeconds(secs).catch(() => {})
+    setRestTotal(secs)
+    restEnd.current = Date.now() + secs * 1000
+    restLastSec.current = secs
+    setRestLeft(secs)
+    if (restInterval.current) clearInterval(restInterval.current)
+    // Tidsstämpel-baserad nedräkning så den inte driftar
+    restInterval.current = setInterval(() => {
+      const left = Math.max(0, Math.round((restEnd.current - Date.now()) / 1000))
+      if (left !== restLastSec.current) {
+        restLastSec.current = left
+        setRestLeft(left)
+        if (left > 0 && left <= 3) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+      }
+      if (left <= 0 && restInterval.current) {
+        clearInterval(restInterval.current)
+        restInterval.current = null
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        setTimeout(() => setRestLeft(null), 1200)
+      }
+    }, 200)
+  }
+
+  function extendRest(secs: number) {
+    Haptics.selectionAsync()
+    restEnd.current += secs * 1000
+    setRestTotal(t => t + secs)
+    setRestLeft(l => (l ?? 0) + secs)
+  }
+
+  function cancelRest() {
+    if (restInterval.current) clearInterval(restInterval.current)
+    restInterval.current = null
+    setRestLeft(null)
+  }
+
+  function fmtRest(secs: number): string {
+    const m = Math.floor(secs / 60)
+    const ss = secs % 60
+    return `${m}:${String(ss).padStart(2, '0')}`
+  }
 
   const [record, setRecord]     = useState<ExerciseRecord | null>(null)
   const [prevSets, setPrevSets] = useState<StrengthSet[] | null>(null)
@@ -324,6 +381,47 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
                 <Text style={styles.addSetText}>Lägg till set</Text>
               </TouchableOpacity>
             </View>
+
+            {/* ── Vilotimer ── */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>Vilotimer</Text>
+                <Ionicons name="timer-outline" size={18} color={TEXT_SECONDARY} />
+              </View>
+              {restLeft === null ? (
+                <View style={styles.restChips}>
+                  {[60, 90, 120, 180].map(secs => (
+                    <TouchableOpacity
+                      key={secs}
+                      style={[styles.restChip, restDefault === secs && styles.restChipActive]}
+                      onPress={() => startRest(secs)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.restChipText, restDefault === secs && styles.restChipTextActive]}>
+                        {secs < 120 ? `${secs} s` : `${secs / 60} min`}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <>
+                  <Text style={[styles.restCount, restLeft === 0 && { color: '#4CAF50' }]}>
+                    {restLeft === 0 ? 'Vila klar!' : fmtRest(restLeft)}
+                  </Text>
+                  <View style={styles.restTrack}>
+                    <View style={[styles.restFill, { width: `${Math.min(100, (restLeft / restTotal) * 100)}%` as never }]} />
+                  </View>
+                  <View style={styles.restBtnRow}>
+                    <TouchableOpacity style={styles.restSmallBtn} onPress={() => extendRest(15)} activeOpacity={0.75}>
+                      <Text style={styles.restSmallText}>+15 s</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.restSmallBtn} onPress={cancelRest} activeOpacity={0.75}>
+                      <Text style={styles.restSmallText}>Avbryt</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
 
@@ -433,6 +531,32 @@ const styles = StyleSheet.create({
   historyChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER, paddingHorizontal: 12, paddingVertical: 7 },
   historyChipText: { color: TEXT_PRIMARY, fontSize: 12, fontWeight: '600' },
   removeBtn: { width: 32, alignItems: 'center', justifyContent: 'center' },
+
+  // Vilotimer
+  restChips: { flexDirection: 'row', gap: 8 },
+  restChip: {
+    flex: 1, alignItems: 'center', paddingVertical: 11,
+    borderRadius: 12, borderWidth: 1.5, borderColor: BORDER,
+  },
+  restChipActive: { borderColor: ORANGE, backgroundColor: ORANGE + '15' },
+  restChipText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  restChipTextActive: { color: ORANGE, fontWeight: '700' },
+  restCount: {
+    color: TEXT_PRIMARY, fontSize: 40, fontWeight: '800',
+    textAlign: 'center', fontVariant: ['tabular-nums'], letterSpacing: -1,
+  },
+  restTrack: {
+    height: 6, borderRadius: 3, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  restFill: { height: '100%', borderRadius: 3, backgroundColor: ORANGE },
+  restBtnRow: { flexDirection: 'row', gap: 10 },
+  restSmallBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 10,
+    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: BORDER,
+  },
+  restSmallText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
   addSetBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   addSetText: { color: ORANGE, fontSize: 15, fontWeight: '600' },
   saveWrap: { paddingHorizontal: 20, paddingTop: 12 },
