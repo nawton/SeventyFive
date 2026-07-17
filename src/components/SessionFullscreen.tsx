@@ -1,24 +1,31 @@
+import { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
+import type { Exercise } from '@/services/exercises'
+import { ExerciseLogSheet } from '@/components/ExerciseLogSheet'
 
 export function SessionFullscreen({
-  visible, session, checked, isCompleted,
-  onToggle, onComplete, onUncomplete, onOpenExercise, onClose,
+  visible, session, checked, isCompleted, exercisesList, date,
+  onToggle, onComplete, onUncomplete, onClose,
 }: {
   visible: boolean
   session: WorkoutSession | null
   checked: Record<string, boolean>
   isCompleted: boolean
+  exercisesList: Exercise[]
+  date: string
   onToggle: (exId: string) => void
   onComplete: () => void
   onUncomplete: () => void
-  onOpenExercise: (ex: SessionExercise) => void
   onClose: () => void
 }) {
   const exercises = session?.exercises ?? []
+  // Övningsloggen visas som ett lager INUTI passvyn (inte som ny sida)
+  const [selectedEx, setSelectedEx] = useState<SessionExercise | null>(null)
+  const selectedInfo = selectedEx ? exercisesList.find(e => e.name === selectedEx.exercise_name) : undefined
   const done  = exercises.filter(e => isCompleted || checked[e.id]).length
   const total = exercises.length
   const pct   = total > 0 ? done / total : 0
@@ -62,7 +69,7 @@ export function SessionFullscreen({
               <TouchableOpacity
                 key={ex.id}
                 style={[s.exCard, on && s.exCardDone]}
-                onPress={() => onOpenExercise(ex)}
+                onPress={() => setSelectedEx(ex)}
                 activeOpacity={0.8}
               >
                 <View style={s.exIndex}><Text style={s.exIndexText}>{i + 1}</Text></View>
@@ -101,6 +108,23 @@ export function SessionFullscreen({
             </TouchableOpacity>
           )}
         </SafeAreaView>
+
+        {/* Övningslogg som lager ovanpå passvyn */}
+        {selectedEx && selectedInfo && (
+          <ExerciseLogSheet
+            id={selectedInfo.id}
+            name={selectedInfo.name}
+            description={selectedInfo.description ?? ''}
+            category={selectedInfo.category}
+            difficulty={selectedInfo.difficulty}
+            initialSets={selectedEx.sets != null ? String(selectedEx.sets) : ''}
+            initialReps={selectedEx.reps ?? ''}
+            sessionExId={selectedEx.id}
+            sessionDate={date}
+            onSaved={() => { if (selectedEx && !isCompleted && !checked[selectedEx.id]) onToggle(selectedEx.id) }}
+            onClose={() => setSelectedEx(null)}
+          />
+        )}
       </View>
     </Modal>
   )

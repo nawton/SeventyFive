@@ -810,26 +810,11 @@ export default function SchemaScreen() {
         session={fullscreenTarget?.session ?? null}
         checked={fullscreenTarget ? (checkedByDate[fullscreenTarget.date] ?? EMPTY_CHECKED) : EMPTY_CHECKED}
         isCompleted={!!fullscreenTarget && (completedByDate[fullscreenTarget.date]?.has(fullscreenTarget.session.id) ?? false)}
+        exercisesList={exercises}
+        date={fullscreenTarget?.date ?? ''}
         onToggle={(exId) => fullscreenTarget && toggleCheck(exId, fullscreenTarget.date)}
         onComplete={() => { if (fullscreenTarget) handleComplete(fullscreenTarget.session.id, fullscreenTarget.date) }}
         onUncomplete={() => { if (fullscreenTarget) handleUncomplete(fullscreenTarget.session.id, fullscreenTarget.date) }}
-        onOpenExercise={(ex) => {
-          const exInfo = exercises.find(e => e.name === ex.exercise_name)
-          if (!exInfo || !fullscreenTarget) return
-          const date = fullscreenTarget.date
-          setFullscreenTarget(null)
-          router.push({
-            pathname: '/exercise/[id]',
-            params: {
-              id: exInfo.id, name: exInfo.name,
-              description: exInfo.description ?? '',
-              category: exInfo.category, difficulty: exInfo.difficulty,
-              initialSets: ex.sets != null ? String(ex.sets) : '',
-              initialReps: ex.reps ?? '',
-              sessionExId: ex.id, sessionDate: date,
-            },
-          })
-        }}
         onClose={() => setFullscreenTarget(null)}
       />
 
