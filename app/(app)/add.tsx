@@ -29,6 +29,7 @@ import { getProfile } from '@/services/profile'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import {
   getWorkoutSessions,
+  createWorkoutSession,
   deleteSessionExercise,
   deleteWorkoutSession,
   skipExerciseForDay,
@@ -50,7 +51,7 @@ import { WorkoutSection } from '@/components/WorkoutSection'
 import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import { LogWorkoutSheet } from '@/components/LogWorkoutSheet'
-import { saveStrengthWorkout, getWorkoutsForDate, getCardioWorkoutsForDate, type StrengthWorkout, type CardioWorkout } from '@/services/workouts'
+import { getWorkoutsForDate, getCardioWorkoutsForDate, type StrengthWorkout, type CardioWorkout } from '@/services/workouts'
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
@@ -297,38 +298,6 @@ const DayPage = React.memo(function DayPage({
                       onLongPress={() => api.sessionLongPress(quickLogSession, 'Loggat idag')}
                     />
                   )}
-
-                  {/* Loggade gympass — ett kort per "Logga pass" (grupperat på log_id) */}
-                  {Object.values(logged.reduce((acc, w) => {
-                    const key = w.data.log_id ?? w.id
-                    ;(acc[key] ??= []).push(w)
-                    return acc
-                  }, {} as Record<string, StrengthWorkout[]>)).map((group, gi) => (
-                    <View key={`gym-${group[0].data.log_id ?? group[0].id}`} style={styles.loggedCard}>
-                      <View style={styles.loggedHeader}>
-                        <View style={styles.loggedIcon}>
-                          <Ionicons name="checkmark" size={15} color="#fff" />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.loggedTitle}>Loggat gympass{gi > 0 ? ` ${gi + 1}` : ''}</Text>
-                          <Text style={styles.loggedSub}>{group.length} {group.length === 1 ? 'övning' : 'övningar'}</Text>
-                        </View>
-                      </View>
-                      {group.map((w, i) => {
-                        const sets = w.data.sets ?? []
-                        const topKg = sets.reduce((m, st) => Math.max(m, st.weight_kg || 0), 0)
-                        const totalReps = sets.reduce((sum, st) => sum + (st.reps || 0), 0)
-                        return (
-                          <View key={w.id} style={[styles.loggedRow, i > 0 && styles.loggedRowBorder]}>
-                            <Text style={styles.loggedExName} numberOfLines={1}>{w.data.exercise_name}</Text>
-                            <Text style={styles.loggedExMeta}>
-                              {sets.length} set · {totalReps} reps{topKg > 0 ? ` · ${topKg} kg` : ''}
-                            </Text>
-                          </View>
-                        )
-                      })}
-                    </View>
-                  ))}
 
                   {/* Loggade cardio-pass — ett kort per pass, tappbart till detaljvyn */}
                   {cardioLogs.map(w => (
@@ -838,25 +807,25 @@ export default function SchemaScreen() {
           setLogSheetOpen(false)
           setTimeout(() => router.push({ pathname: '/cardio-session', params: { name: label, cardioType: type } }), 350)
         }}
-        onSaveGym={async (items) => {
+        onSaveGym={async (name, items) => {
           if (!userId) { setLogSheetOpen(false); return }
           const date = isoDate(todayMidnight())
-          // Ett gemensamt log_id → alla övningar hamnar i SAMMA (nya) pass
-          const logId = `${Date.now()}`
-          for (const it of items) {
-            await saveStrengthWorkout({
+          try {
+            // Skapa ETT pass (ONCE för idag) → renderas som ett vanligt pass-kort
+            const session = await createWorkoutSession(
               userId,
-              exerciseId: it.exerciseId,
-              exerciseName: it.exerciseName,
-              category: 'strength',
-              sets: it.sets,
-              workoutDate: date,
-              logId,
-            }).catch(() => {})
-          }
+              `ONCE:${date}:${name}`,
+              [],
+              items.map(it => ({ exercise_name: it.exerciseName, sets: it.sets, reps: it.reps })),
+              null,
+              'gym',
+              null,
+            )
+            // Markera som avklarat eftersom det redan är gjort
+            await completeSession(session.id, userId, date).catch(() => {})
+          } catch { /* ignoreras — laddas om nedan */ }
           setLogSheetOpen(false)
           loadData(userId)
-          Alert.alert('Pass loggat', `${items.length} ${items.length === 1 ? 'övning' : 'övningar'} sparade som ett nytt pass.`)
         }}
       />
 

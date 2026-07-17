@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { getExerciseMuscleGroup } from '@/lib/muscles'
 import type { Exercise } from '@/services/exercises'
-import type { StrengthSet } from '@/services/workouts'
 
 const CARDIO_GREEN = '#34C759'
 
@@ -30,14 +29,16 @@ const GROUPS = [
   { key: 'core',      label: 'Mage' },
 ]
 
-type GymEntry = { exercise: Exercise; sets: StrengthSet[] }
+type GymEntry = { exercise: Exercise; sets: string; reps: string }
+
+export type GymLogItem = { exerciseName: string; sets: number; reps: string }
 
 export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onSaveGym }: {
   visible: boolean
   exercises: Exercise[]
   onClose: () => void
   onPickCardio: (type: string, label: string) => void
-  onSaveGym: (entries: { exerciseId: string; exerciseName: string; sets: StrengthSet[] }[]) => void
+  onSaveGym: (name: string, items: GymLogItem[]) => void
 }) {
   const insets = useSafeAreaInsets()
   const [step, setStep] = useState<Step>('choose')
@@ -45,12 +46,13 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
   const [group, setGroup] = useState('all')
   const [selected, setSelected] = useState<Exercise[]>([])
   const [entries, setEntries] = useState<GymEntry[]>([])
+  const [passName, setPassName] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (!visible) {
       setStep('choose'); setSearch(''); setGroup('all')
-      setSelected([]); setEntries([]); setSaving(false)
+      setSelected([]); setEntries([]); setPassName(''); setSaving(false)
     }
   }, [visible])
 
@@ -67,37 +69,29 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
 
   function goToOverview() {
     Keyboard.dismiss()
-    setEntries(selected.map(ex => ({
-      exercise: ex,
-      sets: [ { reps: 10, weight_kg: 0 }, { reps: 10, weight_kg: 0 }, { reps: 10, weight_kg: 0 } ],
-    })))
+    setEntries(selected.map(ex => ({ exercise: ex, sets: '3', reps: '10' })))
     setStep('gymOverview')
   }
 
-  function updateSet(exId: string, i: number, field: keyof StrengthSet, value: string) {
-    const num = value.trim() === '' ? 0 : parseFloat(value.replace(',', '.'))
-    setEntries(prev => prev.map(en => en.exercise.id !== exId ? en : {
-      ...en, sets: en.sets.map((st, j) => j === i ? { ...st, [field]: Number.isFinite(num) ? num : 0 } : st),
-    }))
+  function updateEntry(exId: string, field: 'sets' | 'reps', value: string) {
+    setEntries(prev => prev.map(en => en.exercise.id === exId ? { ...en, [field]: value } : en))
   }
-  function addSet(exId: string) {
-    setEntries(prev => prev.map(en => en.exercise.id !== exId ? en : {
-      ...en, sets: [...en.sets, { ...(en.sets[en.sets.length - 1] ?? { reps: 10, weight_kg: 0 }) }],
-    }))
-  }
-  function removeSet(exId: string, i: number) {
-    setEntries(prev => prev.map(en => en.exercise.id !== exId ? en : {
-      ...en, sets: en.sets.filter((_, j) => j !== i),
-    }))
+  function removeEntry(exId: string) {
+    setEntries(prev => prev.filter(en => en.exercise.id !== exId))
+    setSelected(prev => prev.filter(e => e.id !== exId))
   }
 
   function save() {
+    if (entries.length === 0) return
     setSaving(true)
-    onSaveGym(entries.map(en => ({
-      exerciseId: en.exercise.id,
-      exerciseName: en.exercise.name,
-      sets: en.sets,
-    })))
+    onSaveGym(
+      passName.trim() || 'Gympass',
+      entries.map(en => ({
+        exerciseName: en.exercise.name,
+        sets: en.sets.trim() ? parseInt(en.sets) : 3,
+        reps: en.reps.trim() || '10',
+      })),
+    )
   }
 
   const headerTitle = step === 'choose' ? 'Logga pass'
@@ -214,48 +208,51 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
           </View>
         )}
 
-        {/* ── Gym: översikt med set/reps/kg ── */}
+        {/* ── Gym: översikt — namnge passet + set/reps ── */}
         {step === 'gymOverview' && (
           <View style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 14 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <View>
+                <Text style={s.fieldLabel}>PASSNAMN</Text>
+                <TextInput
+                  style={s.nameInput}
+                  value={passName}
+                  onChangeText={setPassName}
+                  placeholder="t.ex. Push, Ben, Överkropp…"
+                  placeholderTextColor={TEXT_SECONDARY}
+                  autoCorrect={false}
+                  returnKeyType="done"
+                />
+              </View>
+
               {entries.map(en => (
                 <View key={en.exercise.id} style={s.exCard}>
                   <View style={s.exCardHeader}>
-                    <Text style={s.exCardName}>{en.exercise.name}</Text>
-                    <Text style={s.exCardCount}>{en.sets.length} set</Text>
+                    <Text style={s.exCardName} numberOfLines={1}>{en.exercise.name}</Text>
+                    <TouchableOpacity onPress={() => removeEntry(en.exercise.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="close-circle" size={20} color={TEXT_SECONDARY} />
+                    </TouchableOpacity>
                   </View>
-                  <View style={s.setHeadRow}>
-                    <Text style={[s.setHeadLabel, { width: 40 }]}>SET</Text>
-                    <Text style={[s.setHeadLabel, { flex: 1 }]}>REPS</Text>
-                    <Text style={[s.setHeadLabel, { flex: 1 }]}>KG</Text>
-                    <View style={{ width: 30 }} />
-                  </View>
-                  {en.sets.map((st, i) => (
-                    <View key={i} style={s.setRow}>
-                      <Text style={s.setNum}>{i + 1}</Text>
+                  <View style={s.fieldRow}>
+                    <View style={s.field}>
+                      <Text style={s.fieldSmall}>SET</Text>
                       <TextInput
-                        style={s.setInput}
-                        defaultValue={String(st.reps)}
-                        onChangeText={v => updateSet(en.exercise.id, i, 'reps', v)}
-                        keyboardType="number-pad"
-                        placeholder="0" placeholderTextColor={TEXT_SECONDARY} selectTextOnFocus
+                        style={s.fieldInput}
+                        defaultValue={en.sets}
+                        onChangeText={v => updateEntry(en.exercise.id, 'sets', v)}
+                        keyboardType="number-pad" placeholder="3" placeholderTextColor={TEXT_SECONDARY} selectTextOnFocus
                       />
-                      <TextInput
-                        style={s.setInput}
-                        defaultValue={st.weight_kg ? String(st.weight_kg) : ''}
-                        onChangeText={v => updateSet(en.exercise.id, i, 'weight_kg', v)}
-                        keyboardType="decimal-pad"
-                        placeholder="0" placeholderTextColor={TEXT_SECONDARY} selectTextOnFocus
-                      />
-                      <TouchableOpacity onPress={() => removeSet(en.exercise.id, i)} style={s.setRemove} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} disabled={en.sets.length <= 1}>
-                        <Ionicons name="close-circle" size={20} color={en.sets.length <= 1 ? 'rgba(255,255,255,0.12)' : TEXT_SECONDARY} />
-                      </TouchableOpacity>
                     </View>
-                  ))}
-                  <TouchableOpacity style={s.addSet} onPress={() => addSet(en.exercise.id)} activeOpacity={0.75}>
-                    <Ionicons name="add" size={16} color={ORANGE} />
-                    <Text style={s.addSetText}>Lägg till set</Text>
-                  </TouchableOpacity>
+                    <View style={s.field}>
+                      <Text style={s.fieldSmall}>REPS</Text>
+                      <TextInput
+                        style={s.fieldInput}
+                        defaultValue={en.reps}
+                        onChangeText={v => updateEntry(en.exercise.id, 'reps', v)}
+                        keyboardType="default" placeholder="10" placeholderTextColor={TEXT_SECONDARY} selectTextOnFocus
+                      />
+                    </View>
+                  </View>
                 </View>
               ))}
             </ScrollView>
@@ -342,19 +339,19 @@ const s = StyleSheet.create({
   },
   primaryBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
 
-  exCard: { backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER, padding: 16, gap: 6 },
-  exCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  exCardName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', flex: 1 },
-  exCardCount: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
-  setHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 2 },
-  setHeadLabel: { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '700', letterSpacing: 1, textAlign: 'center' },
-  setRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
-  setNum: { width: 40, textAlign: 'center', color: TEXT_SECONDARY, fontSize: 14, fontWeight: '700' },
-  setInput: {
-    flex: 1, height: 42, backgroundColor: BG, borderRadius: 10, borderWidth: 1, borderColor: BORDER,
-    color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', textAlign: 'center',
+  fieldLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: 8, paddingHorizontal: 4 },
+  nameInput: {
+    backgroundColor: CARD, borderRadius: 14, borderWidth: 1, borderColor: BORDER,
+    color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600', paddingHorizontal: 14, paddingVertical: 14,
   },
-  setRemove: { width: 30, alignItems: 'center', justifyContent: 'center' },
-  addSet: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginTop: 2 },
-  addSetText: { color: ORANGE, fontSize: 14, fontWeight: '600' },
+  exCard: { backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER, padding: 16, gap: 12 },
+  exCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  exCardName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', flex: 1, marginRight: 10 },
+  fieldRow: { flexDirection: 'row', gap: 12 },
+  field: { flex: 1, gap: 6 },
+  fieldSmall: { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '700', letterSpacing: 1 },
+  fieldInput: {
+    height: 46, backgroundColor: BG, borderRadius: 12, borderWidth: 1, borderColor: BORDER,
+    color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', textAlign: 'center',
+  },
 })
