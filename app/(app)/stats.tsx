@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   useSharedValue, useAnimatedStyle, interpolate, runOnJS, Extrapolation,
 } from 'react-native-reanimated'
-import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-native-gesture-handler'
+import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
 import Svg, { Circle, Text as SvgText } from 'react-native-svg'
 import { useFocusEffect } from 'expo-router'
@@ -246,7 +246,7 @@ export default function StatsScreen() {
     Haptics.selectionAsync()
     setBodyView(v => (v === 'front' ? 'back' : 'front'))
   }
-  const bodyFlipRef = useRef(null)
+  const bodyFlipRef = useRef<GestureType | undefined>(undefined)
   const bodyFlip = Gesture.Pan()
     .withRef(bodyFlipRef)
     .activeOffsetX([-12, 12])
