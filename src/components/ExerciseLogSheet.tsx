@@ -57,7 +57,6 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
   })
   const [saving, setSaving]     = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
-  const [datePicker, setDatePicker] = useState(false)
 
   const [record, setRecord]     = useState<ExerciseRecord | null>(null)
   const [prevSets, setPrevSets] = useState<StrengthSet[] | null>(null)
@@ -120,52 +119,8 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
   const sheetStyle    = useAnimatedStyle(() => ({ top: sheetTop.value }))
   const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropAnim.value }))
 
-  const dpTranslateY   = useSharedValue(0)
-  const dpBackdropAnim = useSharedValue(0)
-  useEffect(() => {
-    if (datePicker) {
-      dpTranslateY.value   = 500
-      dpBackdropAnim.value = 0
-      dpTranslateY.value   = withSpring(0, { damping: 26, stiffness: 260 })
-      dpBackdropAnim.value = withTiming(1, { duration: 260 })
-    }
-  }, [datePicker])
-  function closeDatePicker() {
-    dpTranslateY.value   = withTiming(500, { duration: 290 }, (f) => { if (f) runOnJS(setDatePicker)(false) })
-    dpBackdropAnim.value = withTiming(0, { duration: 240 })
-  }
-  const dpPanGesture = Gesture.Pan()
-    .activeOffsetY(8)
-    .onUpdate(e => {
-      if (e.translationY > 0) {
-        dpTranslateY.value   = e.translationY
-        dpBackdropAnim.value = Math.max(0, 1 - e.translationY / 300)
-      }
-    })
-    .onEnd(e => {
-      if (e.translationY > 100 || e.velocityY > 600) {
-        dpTranslateY.value   = withTiming(500, { duration: 280 }, (f) => { if (f) runOnJS(setDatePicker)(false) })
-        dpBackdropAnim.value = withTiming(0, { duration: 230 })
-      } else {
-        dpTranslateY.value   = withSpring(0, { damping: 26, stiffness: 260 })
-        dpBackdropAnim.value = withTiming(1, { duration: 200 })
-      }
-    })
-  const dpSheetStyle    = useAnimatedStyle(() => ({ transform: [{ translateY: dpTranslateY.value }] }))
-  const dpBackdropStyle = useAnimatedStyle(() => ({ opacity: dpBackdropAnim.value }))
-
-  const DAY_OPTIONS = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    const iso   = toLocalDateString(d)
-    const label = i === 0 ? 'Idag' : i === 1 ? 'Igår' : d.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'short' })
-    return { iso, label }
-  })
-  const [workoutDate, setWorkoutDate] = useState(
-    props.loggedWorkoutDate && DAY_OPTIONS.some(d => d.iso === props.loggedWorkoutDate)
-      ? props.loggedWorkoutDate
-      : DAY_OPTIONS[0].iso
-  )
+  // Sparas på dagen man är inne på (session/loggat pass), annars idag
+  const saveDate = props.sessionDate ?? props.loggedWorkoutDate ?? toLocalDateString()
 
   const muscleData = muscles.map(slug => ({ slug, intensity: 1 as const }))
   const diffColor  = DIFFICULTY_COLORS[difficulty as keyof typeof DIFFICULTY_COLORS] ?? ORANGE
@@ -221,7 +176,6 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
       Alert.alert('Lägg till set', 'Fyll i minst ett set med reps.')
       return
     }
-    setDatePicker(false)
     setSaving(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -364,7 +318,7 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
           <View style={[styles.saveWrap, { paddingBottom: insets.bottom + 16 }]}>
             <TouchableOpacity
               style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-              onPress={() => setDatePicker(true)}
+              onPress={() => handleSave(saveDate)}
               disabled={saving}
               activeOpacity={0.85}
             >
@@ -377,37 +331,6 @@ export function ExerciseLogSheet(props: ExerciseLogProps) {
         </KeyboardAvoidingView>
       </Animated.View>
 
-
-      {/* Datumväljare — View-lager (funkar även när sheeten ligger i en annan modal) */}
-      {datePicker && (
-        <View style={[StyleSheet.absoluteFill, styles.dpOverlay]}>
-          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.55)' }, dpBackdropStyle]}>
-            <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={closeDatePicker} />
-          </Animated.View>
-          <GestureDetector gesture={dpPanGesture}>
-            <Animated.View style={[styles.dpSheet, dpSheetStyle]}>
-              <View style={styles.dpHandle} />
-              <View style={styles.dpHeader}>
-                <Text style={styles.dpTitle}>Välj dag</Text>
-                <TouchableOpacity onPress={closeDatePicker} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <Ionicons name="close" size={20} color={TEXT_PRIMARY} />
-                </TouchableOpacity>
-              </View>
-              {DAY_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.iso}
-                  style={[styles.dpRow, workoutDate === opt.iso && styles.dpRowActive]}
-                  onPress={() => { setWorkoutDate(opt.iso); handleSave(opt.iso) }}
-                  activeOpacity={0.75}
-                >
-                  <Text style={[styles.dpRowText, workoutDate === opt.iso && styles.dpRowTextActive]}>{opt.label}</Text>
-                  {workoutDate === opt.iso && <Ionicons name="checkmark" size={18} color={ORANGE} />}
-                </TouchableOpacity>
-              ))}
-            </Animated.View>
-          </GestureDetector>
-        </View>
-      )}
 
       {/* Info — helskärmslager */}
       {infoOpen && (
@@ -501,15 +424,6 @@ const styles = StyleSheet.create({
   saveWrap: { paddingHorizontal: 20, paddingTop: 12 },
   saveBtn: { flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: ORANGE, borderRadius: 16, paddingVertical: 18, alignItems: 'center', shadowColor: ORANGE, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12 },
   saveBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
-  dpOverlay: { flex: 1, justifyContent: 'flex-end' },
-  dpSheet: { backgroundColor: BG, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 36, paddingTop: 10 },
-  dpHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.25)', alignSelf: 'center', marginBottom: 4 },
-  dpHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: BORDER },
-  dpTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
-  dpRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: BORDER },
-  dpRowActive: { backgroundColor: ORANGE + '12' },
-  dpRowText: { color: TEXT_PRIMARY, fontSize: 16 },
-  dpRowTextActive: { color: ORANGE, fontWeight: '700' },
   infoSheet: { flex: 1, backgroundColor: BG },
   infoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: BORDER },
   infoTitle: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', flex: 1, marginRight: 12 },
