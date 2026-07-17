@@ -347,7 +347,6 @@ export default function StatsScreen() {
     slug,
     intensity: (count >= 4 ? 3 : count >= 2 ? 2 : 1) as 1 | 2 | 3,
   }))
-  const weekUniqueEx = Array.from(new Set(weekExNames))
   const weekBounds   = getWeekBounds(weekOffset)
 
   const completedDays = days.filter(d => d.status === 'completed').length
@@ -646,39 +645,6 @@ export default function StatsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Completed gym sessions */}
-            {weekLoading ? (
-              <ActivityIndicator color={ORANGE} style={{ marginVertical: 16 }} />
-            ) : weekGymSessions.length > 0 ? (
-              <View style={s.card}>
-                <Text style={s.cardTitle}>Genomförda pass</Text>
-                <View style={s.gymList}>
-                  {weekGymSessions.map(gs => {
-                    const gymDay    = new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
-                    const exPreview = gs.exercises.slice(0, 3).join(' · ')
-                      + (gs.exercises.length > 3 ? ` · +${gs.exercises.length - 3}` : '')
-                    return (
-                      <View key={gs.id} style={s.gymRow}>
-                        <View style={s.gymCheck}>
-                          <Ionicons name="checkmark" size={14} color={GREEN} />
-                        </View>
-                        <View style={s.gymInfo}>
-                          <Text style={s.gymName}>{gs.sessionName}</Text>
-                          {!!exPreview && <Text style={s.gymExs}>{exPreview}</Text>}
-                        </View>
-                        <Text style={s.gymDay}>{gymDay}</Text>
-                      </View>
-                    )
-                  })}
-                </View>
-              </View>
-            ) : (
-              <View style={s.empty}>
-                <Ionicons name="barbell-outline" size={40} color="rgba(255,255,255,0.12)" />
-                <Text style={s.emptyText}>Inga gympass klarade denna vecka</Text>
-              </View>
-            )}
-
             {/* Body map */}
             <View style={s.card}>
               <View style={s.muscleHeader}>
@@ -740,16 +706,41 @@ export default function StatsScreen() {
                 </Text>
               )}
 
-              {weekUniqueEx.length > 0 && (
-                <View style={s.exChips}>
-                  {weekUniqueEx.map(name => (
-                    <View key={name} style={s.exChip}>
-                      <Text style={s.exChipText} numberOfLines={1}>{name}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
             </View>
+
+            {/* Completed gym sessions */}
+            {weekLoading ? (
+              <ActivityIndicator color={ORANGE} style={{ marginVertical: 16 }} />
+            ) : weekGymSessions.length > 0 ? (
+              <View style={s.card}>
+                <Text style={s.cardTitle}>Genomförda pass</Text>
+                <View style={s.gymList}>
+                  {weekGymSessions.map(gs => {
+                    const gymDay    = new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
+                    const exPreview = gs.exercises.slice(0, 3).join(' · ')
+                      + (gs.exercises.length > 3 ? ` · +${gs.exercises.length - 3}` : '')
+                    return (
+                      <View key={gs.id} style={s.gymRow}>
+                        <View style={s.gymCheck}>
+                          <Ionicons name="checkmark" size={14} color={GREEN} />
+                        </View>
+                        <View style={s.gymInfo}>
+                          <Text style={s.gymName}>{gs.sessionName}</Text>
+                          {!!exPreview && <Text style={s.gymExs}>{exPreview}</Text>}
+                        </View>
+                        <Text style={s.gymDay}>{gymDay}</Text>
+                      </View>
+                    )
+                  })}
+                </View>
+              </View>
+            ) : (
+              <View style={s.empty}>
+                <Ionicons name="barbell-outline" size={40} color="rgba(255,255,255,0.12)" />
+                <Text style={s.emptyText}>Inga gympass klarade denna vecka</Text>
+              </View>
+            )}
+
           </>
         </ScrollView>
       </ScrollView>
@@ -808,14 +799,14 @@ const s = StyleSheet.create({
   compactLabel: {
     color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600',
   },
-  compactLabelActive: { color: TEXT_PRIMARY, fontWeight: '700' },
+  compactLabelActive: { color: ORANGE, fontWeight: '700' },
   compactTrack: {
     height: 3, borderRadius: 2, overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
   compactIndicator: {
     width: SEG_W, height: '100%',
-    backgroundColor: TEXT_PRIMARY, borderRadius: 2,
+    backgroundColor: ORANGE, borderRadius: 2,
   },
 
   statsGrid: { gap: 10 },
@@ -910,13 +901,4 @@ const s = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot:  { width: 10, height: 10, borderRadius: 5 },
   legendText: { color: TEXT_SECONDARY, fontSize: 12 },
-
-  exChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  exChip:  {
-    backgroundColor: ORANGE + '18', borderRadius: 20,
-    borderWidth: 1, borderColor: ORANGE + '44',
-    paddingHorizontal: 10, paddingVertical: 5,
-    maxWidth: 160,
-  },
-  exChipText: { color: ORANGE, fontSize: 12, fontWeight: '600' },
 })
