@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
@@ -23,6 +23,7 @@ export function SessionFullscreen({
   onClose: () => void
   onExerciseSaved?: () => void
 }) {
+  const insets = useSafeAreaInsets()
   const exercises = session?.exercises ?? []
   // Övningsloggen visas som ett lager INUTI passvyn (inte som ny sida)
   const [selectedEx, setSelectedEx] = useState<SessionExercise | null>(null)
@@ -34,7 +35,8 @@ export function SessionFullscreen({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={s.screen}>
-        <SafeAreaView edges={['top']}>
+        {/* Explicit inset — SafeAreaView kan rapportera 0 inuti en modal */}
+        <View style={{ paddingTop: insets.top + 6 }}>
           <View style={s.header}>
             <TouchableOpacity onPress={onClose} style={s.iconBtn} activeOpacity={0.7}>
               <Ionicons name="chevron-down" size={26} color={TEXT_PRIMARY} />
@@ -61,7 +63,7 @@ export function SessionFullscreen({
           <View style={s.progressTrack}>
             <View style={[s.progressFill, { width: `${pct * 100}%` as never }]} />
           </View>
-        </SafeAreaView>
+        </View>
 
         <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
           {exercises.map((ex, i) => {
@@ -96,7 +98,7 @@ export function SessionFullscreen({
           {total === 0 && <Text style={s.empty}>Inga övningar i passet</Text>}
         </ScrollView>
 
-        <SafeAreaView edges={['bottom']} style={s.footer}>
+        <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]}>
           {isCompleted ? (
             <TouchableOpacity style={[s.cta, s.ctaDone]} onPress={onUncomplete} activeOpacity={0.85}>
               <Ionicons name="refresh" size={19} color={TEXT_PRIMARY} />
@@ -108,7 +110,7 @@ export function SessionFullscreen({
               <Text style={s.ctaText}>Markera pass klart</Text>
             </TouchableOpacity>
           )}
-        </SafeAreaView>
+        </View>
 
         {/* Övningslogg som lager ovanpå passvyn */}
         {selectedEx && selectedInfo && (
