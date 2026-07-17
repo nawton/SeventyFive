@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons'
 import WebView from 'react-native-webview'
 import { supabase } from '@/lib/supabase'
 import { getCardioWorkoutByDate, type CardioWorkout } from '@/services/workouts'
+import { getProfile } from '@/services/profile'
 import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, GREEN } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import {
@@ -121,6 +122,7 @@ export default function CardioSummaryScreen() {
 
   const [unit, setUnit] = useState<UnitSystem>('metric')
   const [workout, setWorkout] = useState<CardioWorkout | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   // Kartstil + slide-up-väljare
@@ -145,19 +147,28 @@ export default function CardioSummaryScreen() {
     )
   }
 
-  // Detalj-ark: dra upp för stats, dra ner för karta (peek visar namnet)
-  const SHEET_H  = 336 + insets.bottom
-  const PEEK_H   = 108
-  const MAX_DOWN = SHEET_H - PEEK_H
-  const ty = useSharedValue(0)          // 0 = uppfällt, MAX_DOWN = nerfällt
-  const startY = useSharedValue(0)
+  // Detalj-ark med tre lägen (translateY):
+  //   FULL = täcker hela kartan · MID = karta + stats · PEEK = bara namnet
+  const FULL = insets.top
+  const MID  = Math.round(SCREEN_H * 0.44)
+  const PEEK = SCREEN_H - (108 + insets.bottom)
+  const ty = useSharedValue(MID)   // startar i mellanläget (karta + stats)
+  const startY = useSharedValue(MID)
   const detailPan = Gesture.Pan()
     .onStart(() => { startY.value = ty.value })
-    .onUpdate(e => { ty.value = clamp(startY.value + e.translationY, 0, MAX_DOWN) })
+    .onUpdate(e => { ty.value = clamp(startY.value + e.translationY, FULL, PEEK) })
     .onEnd(e => {
-      const target = e.velocityY < -500 ? 0
-        : e.velocityY > 500 ? MAX_DOWN
-        : ty.value > MAX_DOWN / 2 ? MAX_DOWN : 0
+      'worklet'
+      let target: number
+      if (e.velocityY < -600)      target = ty.value > MID ? MID : FULL   // snabb upp
+      else if (e.velocityY > 600)  target = ty.value < MID ? MID : PEEK   // snabb ner
+      else {
+        // snäpp till närmaste av FULL / MID / PEEK
+        const dF = Math.abs(ty.value - FULL)
+        const dM = Math.abs(ty.value - MID)
+        const dP = Math.abs(ty.value - PEEK)
+        target = dF < dM && dF < dP ? FULL : dP < dM ? PEEK : MID
+      }
       ty.value = withTiming(target, { duration: 280 })
     })
   const detailStyle = useAnimatedStyle(() => ({ transform: [{ translateY: ty.value }] }))
@@ -170,6 +181,7 @@ export default function CardioSummaryScreen() {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user || !params.date) { setLoading(false); return }
+      getProfile(session.user.id).then(p => setAvatarUrl(p?.avatar_url ?? null)).catch(() => {})
       const w = await getCardioWorkoutByDate(session.user.id, type, params.date).catch(() => null)
       setWorkout(w)
       setLoading(false)
@@ -202,7 +214,7 @@ export default function CardioSummaryScreen() {
         <WebView
           ref={webRef}
           style={StyleSheet.absoluteFill}
-          source={{ html: mapHtml(route, { compassTop: insets.top + 68, topPad: insets.top + 70, bottomPad: SHEET_H }) }}
+          source={{ html: mapHtml(route, { compassTop: insets.top + 68, topPad: insets.top + 70, bottomPad: SCREEN_H - MID }) }}
           javaScriptEnabled
           originWhitelist={['*']}
         />
@@ -230,13 +242,17 @@ export default function CardioSummaryScreen() {
       ) : (
         /* ── Detalj-ark ── */
         <GestureDetector gesture={detailPan}>
-          <Animated.View style={[s.sheet, { height: SHEET_H, paddingBottom: insets.bottom + 20 }, detailStyle]}>
+          <Animated.View style={[s.sheet, { height: SCREEN_H }, detailStyle]}>
             <View style={s.grip} />
 
             <View style={s.hero}>
-              <View style={s.heroIcon}>
-                <Ionicons name={meta.icon} size={24} color={CARDIO_BLUE} />
-              </View>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={s.heroAvatar} />
+              ) : (
+                <View style={s.heroIcon}>
+                  <Ionicons name={meta.icon} size={24} color={CARDIO_BLUE} />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={s.heroTitle} numberOfLines={1}>{params.name ?? meta.label}</Text>
                 {dateLabel && <Text style={s.heroDate}>{dateLabel}</Text>}
@@ -342,6 +358,11 @@ const s = StyleSheet.create({
     width: 52, height: 52, borderRadius: 26,
     backgroundColor: CARDIO_BLUE + '22',
     alignItems: 'center', justifyContent: 'center',
+  },
+  heroAvatar: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: CARD,
+    borderWidth: 2, borderColor: CARDIO_BLUE + '55',
   },
   heroTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4 },
   heroDate: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500', marginTop: 3, textTransform: 'capitalize' },
