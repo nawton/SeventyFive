@@ -394,25 +394,15 @@ export default function SchemaScreen() {
     setEditorVisible(true)
   }
 
+  // Samma flöde som "Logga missad övning", men för dagens datum
   function handleRecordWorkout() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    const types = [
-      { label: 'Löpning',     name: 'running' },
-      { label: 'Cykling',     name: 'cycling' },
-      { label: 'Promenad',    name: 'walking' },
-      { label: 'Intervaller', name: 'interval' },
-    ]
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { title: 'Spela in pass', options: ['Avbryt', ...types.map(t => t.label)], cancelButtonIndex: 0 },
-        i => { if (i > 0) router.push({ pathname: '/cardio', params: { name: types[i - 1].name } }) },
-      )
-    } else {
-      Alert.alert('Spela in pass', 'Välj aktivitet', [
-        ...types.map(t => ({ text: t.label, onPress: () => router.push({ pathname: '/cardio', params: { name: t.name } }) })),
-        { text: 'Avbryt', style: 'cancel' as const },
-      ])
-    }
+    const todayStr = isoDate(todayMidnight())
+    setPickerSession({
+      id: todayStr, user_id: userId ?? '', name: todayStr,
+      weekdays: [], sort_order: 0, created_at: '', notes: null,
+      session_type: 'gym', cardio_type: null, exercises: [],
+    })
   }
 
   function toggleCheck(exId: string, date: string) {
@@ -780,13 +770,15 @@ export default function SchemaScreen() {
         }}
       />
 
-      {/* ── Spela in pass — fast knapp längst ner (à la Runna) ── */}
-      <View style={styles.recordWrap} pointerEvents="box-none">
-        <TouchableOpacity style={styles.recordBtn} onPress={handleRecordWorkout} activeOpacity={0.9}>
-          <Ionicons name="play" size={18} color="#000" />
-          <Text style={styles.recordBtnText}>Spela in pass</Text>
-        </TouchableOpacity>
-      </View>
+      {/* ── Logga pass — fast knapp, bara på dagens datum ── */}
+      {isoDate(selectedDate) === isoDate(todayMidnight()) && (
+        <View style={styles.recordWrap} pointerEvents="box-none">
+          <TouchableOpacity style={styles.recordBtn} onPress={handleRecordWorkout} activeOpacity={0.9}>
+            <Ionicons name="play" size={18} color="#000" />
+            <Text style={styles.recordBtnText}>Logga pass</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
     </SafeAreaView>
   )
