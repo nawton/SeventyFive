@@ -13,6 +13,7 @@ export default function RootLayout() {
           <Stack.Screen name="exercise/[id]" options={{ presentation: 'transparentModal', animation: 'none' }} />
           <Stack.Screen name="edit-name" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="records" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+        <Stack.Screen name="change-password" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         </Stack>
       </ErrorBoundary>
     </GestureHandlerRootView>

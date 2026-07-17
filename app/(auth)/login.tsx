@@ -196,6 +196,15 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
+        {mode === 'login' && (
+          <TouchableOpacity
+            style={styles.switchButton}
+            onPress={() => router.push('/(auth)/forgot-password')}
+          >
+            <Text style={styles.switchText}>Glömt lösenordet?</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={styles.switchButton}
           onPress={switchMode}
