@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, router, useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import Animated, {
-  useSharedValue, useAnimatedStyle, withTiming, withSpring, runOnUI,
+  useAnimatedStyle,
   type AnimatedStyle,
 } from 'react-native-reanimated'
 import { supabase } from '@/lib/supabase'
@@ -592,25 +592,8 @@ export default function SchemaScreen() {
     pagerRef.current?.scrollToIndex({ index: idx, animated: animate })
   }, [selectedDate])
 
-  // Day header fade+slide animation — bara vid kalendertryck (innehållet byts
-  // på plats). Vid swipe är sidglidningen själva övergången; att då även blinka
-  // rubriken ser ut som en extra omladdning.
-  const dayFade  = useSharedValue(1)
-  const daySlide = useSharedValue(0)
-  useEffect(() => {
-    if (isSwiping.current) return
-    runOnUI(() => {
-      'worklet'
-      dayFade.value  = 0
-      daySlide.value = -10
-      dayFade.value  = withTiming(1, { duration: 220 })
-      daySlide.value = withSpring(0, { damping: 18, stiffness: 240 })
-    })()
-  }, [selectedDate])
-  const dayAnimStyle = useAnimatedStyle(() => ({
-    opacity:   dayFade.value,
-    transform: [{ translateY: daySlide.value }],
-  }))
+  // Ingen animation på dagrubriken — den hoppade till vid varje dagbyte
+  const dayAnimStyle = useAnimatedStyle(() => ({}))
 
   // Stabilt API-objekt till de memoiserade dagsidorna: identiteten ändras aldrig,
   // men anropen delegeras alltid till senaste renderns handlers via ref:en
