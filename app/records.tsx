@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics'
 
 const SCREEN_W = Dimensions.get('window').width
 const PAGE_W   = SCREEN_W - 40   // scroll-paddingen är 20 per sida
+const MAX_THRESHOLD = 7500       // Diamant — sliderns högra ände
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -167,33 +168,19 @@ export default function RecordsScreen() {
           <Text style={s.levelName}>{level.current.name}</Text>
         </View>
 
-        <View style={s.levelProgressTrack}>
-          <View style={[s.levelProgressFill, { width: `${Math.round(level.progress * 100)}%` as any }]} />
-        </View>
-        <View style={s.levelPtsRow}>
-          <Text style={s.levelPtsBig}>
-            {level.next
-              ? `${(level.next.threshold - points).toLocaleString('sv-SE')} p till ${level.next.name}`
-              : 'Högsta nivån nådd!'}
-          </Text>
-          <TouchableOpacity
-            style={s.levelPtsTotalBtn}
-            onPress={() => setBreakdownVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={s.levelPtsTotal}>Totalt: {points.toLocaleString('sv-SE')} p</Text>
-            <Ionicons name="chevron-forward" size={13} color={TEXT_SECONDARY} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Tier-rad */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tierRow}>
+        {/* Kompakt nivå-slider: progress mot Diamant med tier-markörer längs banan */}
+        <View style={s.tierSlider}>
+          <View style={s.tierTrack}>
+            <View style={[s.tierFill, { width: `${Math.min(100, (points / MAX_THRESHOLD) * 100)}%` as any }]} />
+          </View>
           {LEVEL_TIERS.map(t => {
+            const pct     = (t.threshold / MAX_THRESHOLD) * 100
             const reached = points >= t.threshold
             return (
               <TouchableOpacity
                 key={t.id}
-                style={[s.tierItem, !reached && { opacity: 0.45 }]}
+                style={[s.tierMarker, { left: `${pct}%` as any }]}
+                hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
                 activeOpacity={0.75}
                 onPress={() => openMedal({
                   tier: t.tier,
@@ -207,13 +194,27 @@ export default function RecordsScreen() {
                   progress: reached ? undefined : `${points.toLocaleString('sv-SE')}/${t.threshold.toLocaleString('sv-SE')} p`,
                 })}
               >
-                <MedalBadge tier={t.tier} label="75" unlocked={reached} size={56} />
-                <Text style={[s.tierName, reached && { color: TEXT_PRIMARY }]}>{t.name}</Text>
-                <Text style={s.tierPts}>{t.threshold.toLocaleString('sv-SE')} p</Text>
+                <MedalBadge tier={t.tier} label="" unlocked={reached} size={24} />
               </TouchableOpacity>
             )
           })}
-        </ScrollView>
+        </View>
+
+        <View style={s.levelPtsRow}>
+          <Text style={s.levelPtsBig}>
+            {level.next
+              ? `${(level.next.threshold - points).toLocaleString('sv-SE')} p till ${level.next.name}`
+              : 'Högsta nivån nådd!'}
+          </Text>
+          <TouchableOpacity
+            style={s.historyBtn}
+            onPress={() => setBreakdownVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="time-outline" size={14} color={ORANGE} />
+            <Text style={s.historyBtnText}>Poänghistorik</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Tjäna poäng — svep mellan återkommande och engångsmål */}
         <View style={s.sectionRow}>
@@ -457,15 +458,32 @@ const s = StyleSheet.create({
   // Min nivå
   levelHero: { alignItems: 'center', gap: 12, paddingTop: 12, paddingBottom: 4 },
   levelName: { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800' },
-  levelProgressTrack: {
-    height: 8, backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 4, overflow: 'hidden',
+  // Kompakt tier-slider
+  tierSlider: {
+    height: 32, justifyContent: 'center',
+    marginHorizontal: 12, marginTop: 4,
   },
-  levelProgressFill: { height: '100%', backgroundColor: GOLD, borderRadius: 4 },
-  levelPtsRow:   { alignItems: 'flex-end', gap: 2 },
-  levelPtsBig:   { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  levelPtsTotalBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 2 },
-  levelPtsTotal: { color: TEXT_SECONDARY, fontSize: 13 },
+  tierTrack: {
+    height: 6, backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 3, overflow: 'hidden',
+  },
+  tierFill: { height: '100%', backgroundColor: GOLD, borderRadius: 3 },
+  tierMarker: {
+    position: 'absolute', top: 4, marginLeft: -12,
+  },
+
+  levelPtsRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  levelPtsBig: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', flexShrink: 1 },
+  historyBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: CARD, borderRadius: 18,
+    borderWidth: 1, borderColor: ORANGE + '44',
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  historyBtnText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
 
   // Tjäna poäng-flikar
   earnTabs: {
@@ -477,10 +495,6 @@ const s = StyleSheet.create({
   earnTabActive: { backgroundColor: ORANGE },
   earnTabText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   earnTabTextActive: { color: '#000', fontWeight: '700' },
-  tierRow:  { gap: 14, paddingVertical: 8 },
-  tierItem: { alignItems: 'center', gap: 4, width: 72 },
-  tierName: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '700' },
-  tierPts:  { color: TEXT_SECONDARY, fontSize: 11 },
 
   // Poängregler
   ruleIcon: {
