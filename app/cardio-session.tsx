@@ -19,6 +19,61 @@ import { parseLocalDate } from '@/lib/date'
 
 const CARDIO_BLUE = '#4AA8E0'
 
+/** Egen slider: track + blå fyllnad + tumme, snäpper till steg med haptiskt tick */
+function GoalSlider({ value, max, step, onChange }: {
+  value: number
+  max: number
+  step: number
+  onChange: (v: number) => void
+}) {
+  const [trackW, setTrackW] = useState(0)
+  const last = useRef(value)
+  useEffect(() => { last.current = value }, [value])
+
+  function setFromX(x: number) {
+    if (trackW <= 0) return
+    const raw = (x / trackW) * max
+    const v = Math.min(max, Math.max(0, Math.round(raw / step) * step))
+    const rounded = Math.round(v * 10) / 10
+    if (rounded !== last.current) {
+      last.current = rounded
+      Haptics.selectionAsync()
+      onChange(rounded)
+    }
+  }
+
+  const pan = Gesture.Pan()
+    .minDistance(0)
+    .onBegin(e => { runOnJS(setFromX)(e.x) })
+    .onUpdate(e => { runOnJS(setFromX)(e.x) })
+
+  const pct = max > 0 ? Math.min(1, value / max) : 0
+
+  return (
+    <GestureDetector gesture={pan}>
+      <View style={sl.hit} onLayout={e => setTrackW(e.nativeEvent.layout.width)}>
+        <View style={sl.track}>
+          <View style={[sl.fill, { width: `${pct * 100}%` as never }]} />
+        </View>
+        <View style={[sl.thumb, { left: Math.max(0, Math.min(trackW - 22, pct * trackW - 11)) }]} />
+      </View>
+    </GestureDetector>
+  )
+}
+
+const sl = StyleSheet.create({
+  hit:   { alignSelf: 'stretch', height: 34, justifyContent: 'center', marginHorizontal: 16 },
+  track: { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+  fill:  { height: '100%', backgroundColor: CARDIO_BLUE, borderRadius: 3 },
+  thumb: {
+    position: 'absolute', width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#fff',
+    borderWidth: 2, borderColor: CARDIO_BLUE,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35, shadowRadius: 4, elevation: 4,
+  },
+})
+
 const TYPE_META: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
   running:  { label: 'Löpning',    icon: 'fitness-outline' },
   cycling:  { label: 'Cykling',    icon: 'bicycle-outline' },
@@ -60,55 +115,6 @@ export default function CardioSessionScreen() {
   const dateLabel = params.date
     ? parseLocalDate(params.date).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
     : null
-
-  function bumpKm(delta: number) {
-    Haptics.selectionAsync()
-    setGoalKm(v => Math.max(0, Math.round((v + delta) * 10) / 10))
-  }
-
-  function bumpMin(delta: number) {
-    Haptics.selectionAsync()
-    setGoalMin(v => Math.max(0, v + delta))
-  }
-
-  // ── Skrubb-gester: dra i sidled på en tile för att justera värdet ──────────
-  const dragStartKm  = useRef(0)
-  const dragStartMin = useRef(0)
-  const lastDragKm   = useRef(0)
-  const lastDragMin  = useRef(0)
-
-  function captureKm()  { dragStartKm.current = goalKm;  lastDragKm.current = goalKm }
-  function captureMin() { dragStartMin.current = goalMin; lastDragMin.current = goalMin }
-
-  function dragKm(tx: number) {
-    const v = Math.max(0, Math.round((dragStartKm.current + Math.round(tx / 14) * 0.5) * 10) / 10)
-    if (v !== lastDragKm.current) {
-      lastDragKm.current = v
-      Haptics.selectionAsync()
-      setGoalKm(v)
-    }
-  }
-
-  function dragMin(tx: number) {
-    const v = Math.max(0, dragStartMin.current + Math.round(tx / 14) * 5)
-    if (v !== lastDragMin.current) {
-      lastDragMin.current = v
-      Haptics.selectionAsync()
-      setGoalMin(v)
-    }
-  }
-
-  const kmPan = Gesture.Pan()
-    .activeOffsetX([-10, 10])
-    .failOffsetY([-15, 15])
-    .onBegin(() => { runOnJS(captureKm)() })
-    .onUpdate(e => { runOnJS(dragKm)(e.translationX) })
-
-  const minPan = Gesture.Pan()
-    .activeOffsetX([-10, 10])
-    .failOffsetY([-15, 15])
-    .onBegin(() => { runOnJS(captureMin)() })
-    .onUpdate(e => { runOnJS(dragMin)(e.translationX) })
 
   const KM_PRESETS  = [3, 5, 10]
   const MIN_PRESETS = [20, 30, 60]
@@ -156,74 +162,56 @@ export default function CardioSessionScreen() {
         {/* ── Mål för passet: två stora tiles ── */}
         <Text style={s.sectionTitle}>MÅL FÖR PASSET</Text>
         <View style={s.goalTiles}>
-          <GestureDetector gesture={kmPan}>
-            <View style={[s.goalTile, goalKm > 0 && s.goalTileActive]}>
-              <Text style={s.goalTileLabel}>DISTANS</Text>
-              <TouchableOpacity onPress={() => { if (goalKm > 0) { Haptics.selectionAsync(); setGoalKm(0) } }} activeOpacity={0.7}>
-                <Text style={[s.goalTileValue, goalKm > 0 && { color: CARDIO_BLUE }]}>
-                  {goalKm > 0 ? goalKm.toFixed(1).replace('.', ',') : '—'}
-                </Text>
-                <Text style={s.goalTileUnit}>km</Text>
-              </TouchableOpacity>
-              <View style={s.presetRow}>
-                {KM_PRESETS.map(km => (
-                  <TouchableOpacity
-                    key={km}
-                    style={[s.presetChip, goalKm === km && s.presetChipActive]}
-                    onPress={() => { Haptics.selectionAsync(); setGoalKm(goalKm === km ? 0 : km) }}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[s.presetText, goalKm === km && s.presetTextActive]}>{km}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={s.goalTileBtns}>
-                <TouchableOpacity style={s.roundBtn} onPress={() => bumpKm(-0.5)} hitSlop={6}>
-                  <Ionicons name="remove" size={20} color={goalKm > 0 ? TEXT_PRIMARY : BORDER} />
+          <View style={[s.goalTile, goalKm > 0 && s.goalTileActive]}>
+            <Text style={s.goalTileLabel}>DISTANS</Text>
+            <TouchableOpacity onPress={() => { if (goalKm > 0) { Haptics.selectionAsync(); setGoalKm(0) } }} activeOpacity={0.7}>
+              <Text style={[s.goalTileValue, goalKm > 0 && { color: CARDIO_BLUE }]}>
+                {goalKm > 0 ? goalKm.toFixed(1).replace('.', ',') : '—'}
+              </Text>
+              <Text style={s.goalTileUnit}>km</Text>
+            </TouchableOpacity>
+            <View style={s.presetRow}>
+              {KM_PRESETS.map(km => (
+                <TouchableOpacity
+                  key={km}
+                  style={[s.presetChip, goalKm === km && s.presetChipActive]}
+                  onPress={() => { Haptics.selectionAsync(); setGoalKm(goalKm === km ? 0 : km) }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[s.presetText, goalKm === km && s.presetTextActive]}>{km}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[s.roundBtn, s.roundBtnPlus]} onPress={() => bumpKm(0.5)} hitSlop={6}>
-                  <Ionicons name="add" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
+              ))}
             </View>
-          </GestureDetector>
+            <GoalSlider value={goalKm} max={15} step={0.5} onChange={setGoalKm} />
+          </View>
 
-          <GestureDetector gesture={minPan}>
-            <View style={[s.goalTile, goalMin > 0 && s.goalTileActive]}>
-              <Text style={s.goalTileLabel}>TID</Text>
-              <TouchableOpacity onPress={() => { if (goalMin > 0) { Haptics.selectionAsync(); setGoalMin(0) } }} activeOpacity={0.7}>
-                <Text style={[s.goalTileValue, goalMin > 0 && { color: CARDIO_BLUE }]}>
-                  {goalMin > 0 ? goalMin : '—'}
-                </Text>
-                <Text style={s.goalTileUnit}>min</Text>
-              </TouchableOpacity>
-              <View style={s.presetRow}>
-                {MIN_PRESETS.map(min => (
-                  <TouchableOpacity
-                    key={min}
-                    style={[s.presetChip, goalMin === min && s.presetChipActive]}
-                    onPress={() => { Haptics.selectionAsync(); setGoalMin(goalMin === min ? 0 : min) }}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[s.presetText, goalMin === min && s.presetTextActive]}>{min}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={s.goalTileBtns}>
-                <TouchableOpacity style={s.roundBtn} onPress={() => bumpMin(-5)} hitSlop={6}>
-                  <Ionicons name="remove" size={20} color={goalMin > 0 ? TEXT_PRIMARY : BORDER} />
+          <View style={[s.goalTile, goalMin > 0 && s.goalTileActive]}>
+            <Text style={s.goalTileLabel}>TID</Text>
+            <TouchableOpacity onPress={() => { if (goalMin > 0) { Haptics.selectionAsync(); setGoalMin(0) } }} activeOpacity={0.7}>
+              <Text style={[s.goalTileValue, goalMin > 0 && { color: CARDIO_BLUE }]}>
+                {goalMin > 0 ? goalMin : '—'}
+              </Text>
+              <Text style={s.goalTileUnit}>min</Text>
+            </TouchableOpacity>
+            <View style={s.presetRow}>
+              {MIN_PRESETS.map(min => (
+                <TouchableOpacity
+                  key={min}
+                  style={[s.presetChip, goalMin === min && s.presetChipActive]}
+                  onPress={() => { Haptics.selectionAsync(); setGoalMin(goalMin === min ? 0 : min) }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[s.presetText, goalMin === min && s.presetTextActive]}>{min}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[s.roundBtn, s.roundBtnPlus]} onPress={() => bumpMin(5)} hitSlop={6}>
-                  <Ionicons name="add" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
+              ))}
             </View>
-          </GestureDetector>
+            <GoalSlider value={goalMin} max={90} step={5} onChange={setGoalMin} />
+          </View>
         </View>
         <Text style={s.goalHint}>
           {goalKm > 0 || goalMin > 0
-            ? 'Dra på kortet eller använd knapparna · tryck på siffran för att rensa'
-            : 'Valfritt — välj ett förval eller dra i sidled på kortet för att sätta ett mål'}
+            ? 'Målet visas live under passet · tryck på siffran för att rensa'
+            : 'Valfritt — välj ett förval eller dra i reglaget för att sätta ett mål'}
         </Text>
 
         {/* ── Senast ── */}
@@ -331,14 +319,6 @@ const s = StyleSheet.create({
   presetChipActive: { borderColor: CARDIO_BLUE, backgroundColor: CARDIO_BLUE + '1C' },
   presetText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
   presetTextActive: { color: CARDIO_BLUE },
-
-  goalTileBtns:   { flexDirection: 'row', gap: 12, marginTop: 4 },
-  roundBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  roundBtnPlus: { backgroundColor: CARDIO_BLUE },
 
   goalHint: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17, textAlign: 'center' },
 
