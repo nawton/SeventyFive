@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import Svg, { Circle as SvgCircle } from 'react-native-svg'
 import Animated, {
   useSharedValue, useAnimatedStyle,
-  withSpring, interpolate, runOnJS,
+  withSpring, withTiming, interpolate, runOnJS, Easing, Extrapolation,
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
@@ -124,26 +124,39 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
       }
     })
 
-  // Horisontellt svep: byter vecka i hopfällt läge, månad i utfällt
-  function swipeWeek(dir: number) {
-    Haptics.selectionAsync()
-    const d = new Date(selDate)
-    d.setDate(d.getDate() + dir * 7)
-    selectDate(d)
+  // Horisontellt svep: byter vecka i hopfällt läge, månad i utfällt.
+  // Mjuk övergång: innehållet glider ut åt svephållet, byts, glider in
+  const slide = useSharedValue(0)
+
+  function applySwipe(dir: number, open: boolean) {
+    if (open) {
+      if (dir > 0) nextMonth()
+      else prevMonth()
+    } else {
+      const d = new Date(selDate)
+      d.setDate(d.getDate() + dir * 7)
+      selectDate(d)
+    }
   }
-  function swipeMonth(dir: number) {
+
+  function startSwipe(dir: number, open: boolean) {
     Haptics.selectionAsync()
-    if (dir > 0) nextMonth()
-    else prevMonth()
+    slide.value = withTiming(-dir * 44, { duration: 110, easing: Easing.in(Easing.quad) }, finished => {
+      if (finished) {
+        runOnJS(applySwipe)(dir, open)
+        slide.value = dir * 44
+        slide.value = withTiming(0, { duration: 160, easing: Easing.out(Easing.quad) })
+      }
+    })
   }
+
   const hSwipe = Gesture.Pan()
     .activeOffsetX([-20, 20])
     .failOffsetY([-12, 12])
     .onEnd(e => {
       if (Math.abs(e.translationX) < 40 && Math.abs(e.velocityX) < 400) return
       const dir = e.translationX < 0 ? 1 : -1
-      if (isOpen.value) runOnJS(swipeMonth)(dir)
-      else runOnJS(swipeWeek)(dir)
+      runOnJS(startSwipe)(dir, isOpen.value)
     })
   const gestures = Gesture.Race(pan, hSwipe)
 
@@ -154,12 +167,23 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
   }))
 
   const monthGridStyle = useAnimatedStyle(() => ({
-    opacity:   interpolate(progress.value, [0.2, 0.7], [0, 1]),
-    transform: [{ translateY: interpolate(progress.value, [0, 1], [-8, 0]) }],
+    opacity: interpolate(progress.value, [0.2, 0.7], [0, 1])
+      * interpolate(Math.abs(slide.value), [0, 44], [1, 0.15], Extrapolation.CLAMP),
+    transform: [
+      { translateY: interpolate(progress.value, [0, 1], [-8, 0]) },
+      { translateX: slide.value },
+    ],
   }))
 
   const weekRowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.3], [1, 0]),
+    opacity: interpolate(progress.value, [0, 0.3], [1, 0])
+      * interpolate(Math.abs(slide.value), [0, 44], [1, 0.15], Extrapolation.CLAMP),
+    transform: [{ translateX: slide.value }],
+  }))
+
+  // Förklaringen ska inte glida med i sidled — bara tona in med månadsvyn
+  const legendStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0.2, 0.7], [0, 1]),
   }))
 
   // ── Data helpers ─────────────────────────────────────────────────────────
@@ -313,7 +337,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
       </Animated.View>
 
       {/* Förklaring — vad prickarna betyder (syns i utfällt läge) */}
-      <Animated.View style={[s.legend, monthGridStyle]}>
+      <Animated.View style={[s.legend, legendStyle]}>
         <View style={s.legendItem}>
           <View style={[s.dot, { backgroundColor: ORANGE }]} />
           <Text style={s.legendText}>Gym</Text>
