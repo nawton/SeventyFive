@@ -1527,18 +1527,18 @@ const styles = StyleSheet.create({
   // Staplade storvärden i fullskärm (inga boxar)
   exStack: {
     flex: 1,
-    justifyContent: 'center',
-    paddingBottom: 120,
+    justifyContent: 'space-evenly',
+    paddingBottom: 150, // håll sista raden ovanför bottenbaren
   },
   exBlock: {
     alignItems: 'center',
     gap: 2,
-    paddingVertical: 14,
+    paddingVertical: 4,
   },
   exRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 4,
   },
   exBlockHalf: {
     flex: 1,
@@ -1547,7 +1547,7 @@ const styles = StyleSheet.create({
   },
   exValueBig: {
     color: '#fff',
-    fontSize: 56,
+    fontSize: 50,
     fontWeight: '800',
     letterSpacing: -1.5,
     fontVariant: ['tabular-nums'],
