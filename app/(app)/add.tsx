@@ -63,6 +63,15 @@ const CENTER_IDX = 182
 const PAGER_DATA = Array.from({ length: TOTAL_DAYS }, (_, i) => i)
 
 function isoDate(d: Date): string { return toLocalDateString(d) }
+
+/** Mappar en cardio-övnings namn till detaljskärmens typnyckel. */
+function cardioTypeForName(name: string): string {
+  const n = name.toLowerCase()
+  if (n.includes('cykl') || n.includes('cycling'))                    return 'cycling'
+  if (n.includes('promenad') || n.includes('gång') || n.includes('walking')) return 'walking'
+  if (n.includes('intervall'))                                        return 'interval'
+  return 'running'
+}
 function todayMidnight(): Date { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
 function indexToDate(i: number): Date {
   const d = todayMidnight(); d.setDate(d.getDate() + i - CENTER_IDX); return d
@@ -193,9 +202,6 @@ const DayPage = React.memo(function DayPage({
                       onAddExercise={!isPast ? () => api.setPickerSession(s) : undefined}
                       onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
                       onStartCardioSession={s.session_type === 'cardio'
-                        ? () => router.push({ pathname: '/cardio', params: { name: s.cardio_type ?? 'running', sessionId: s.id, sessionDate: dateStr } })
-                        : undefined}
-                      onOpenCardio={s.session_type === 'cardio'
                         ? () => router.push({ pathname: '/cardio-session', params: {
                             sessionId: s.id,
                             name: sessionDisplayName(s),
@@ -210,7 +216,13 @@ const DayPage = React.memo(function DayPage({
                         if (!exInfo) return
                         const hasMap = exInfo.category === 'cardio' && GPS_KEYWORDS.some(kw => name.toLowerCase().includes(kw))
                         if (hasMap) {
-                          router.push({ pathname: '/cardio', params: { name } })
+                          // Cardio-övning → passdetaljen med målsättning, inte rakt in i GPS:en
+                          router.push({ pathname: '/cardio-session', params: {
+                            name,
+                            cardioType: cardioTypeForName(name),
+                            notes: sessionEx.reps ?? '',
+                            date: dateStr,
+                          } })
                         } else {
                           router.push({
                             pathname: '/exercise/[id]',

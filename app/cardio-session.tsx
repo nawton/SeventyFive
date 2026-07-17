@@ -24,8 +24,6 @@ const TYPE_META: Record<string, { label: string; icon: React.ComponentProps<type
   interval: { label: 'Intervaller', icon: 'flash-outline' },
 }
 
-const KM_CHIPS = [2, 3, 5, 8, 10]
-
 function fmtTime(secs: number): string {
   const m = Math.floor(secs / 60)
   const s = secs % 60
@@ -111,60 +109,50 @@ export default function CardioSessionScreen() {
           </View>
         </View>
 
-        {/* ── Mål för passet ── */}
+        {/* ── Mål för passet: två stora tiles ── */}
         <Text style={s.sectionTitle}>MÅL FÖR PASSET</Text>
-        <View style={s.card}>
-          <View style={s.goalRow}>
-            <Text style={s.goalLabel}>Distans</Text>
-            <View style={s.stepper}>
-              <TouchableOpacity style={s.stepBtn} onPress={() => bumpKm(-0.5)} hitSlop={8}>
-                <Ionicons name="remove" size={17} color={goalKm > 0 ? CARDIO_BLUE : BORDER} />
-              </TouchableOpacity>
-              <Text style={[s.goalValue, goalKm > 0 && { color: CARDIO_BLUE }]}>
-                {goalKm > 0 ? `${goalKm.toFixed(1).replace('.', ',')} km` : '—'}
+        <View style={s.goalTiles}>
+          <View style={[s.goalTile, goalKm > 0 && s.goalTileActive]}>
+            <Text style={s.goalTileLabel}>DISTANS</Text>
+            <TouchableOpacity onPress={() => { if (goalKm > 0) { Haptics.selectionAsync(); setGoalKm(0) } }} activeOpacity={0.7}>
+              <Text style={[s.goalTileValue, goalKm > 0 && { color: CARDIO_BLUE }]}>
+                {goalKm > 0 ? goalKm.toFixed(1).replace('.', ',') : '—'}
               </Text>
-              <TouchableOpacity style={s.stepBtn} onPress={() => bumpKm(0.5)} hitSlop={8}>
-                <Ionicons name="add" size={17} color={CARDIO_BLUE} />
+              <Text style={s.goalTileUnit}>km</Text>
+            </TouchableOpacity>
+            <View style={s.goalTileBtns}>
+              <TouchableOpacity style={s.roundBtn} onPress={() => bumpKm(-0.5)} hitSlop={6}>
+                <Ionicons name="remove" size={20} color={goalKm > 0 ? TEXT_PRIMARY : BORDER} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.roundBtn, s.roundBtnPlus]} onPress={() => bumpKm(0.5)} hitSlop={6}>
+                <Ionicons name="add" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>
 
-          <View style={s.chipRow}>
-            {KM_CHIPS.map(km => (
-              <TouchableOpacity
-                key={km}
-                style={[s.chip, goalKm === km && s.chipActive]}
-                onPress={() => { Haptics.selectionAsync(); setGoalKm(goalKm === km ? 0 : km) }}
-                activeOpacity={0.75}
-              >
-                <Text style={[s.chipText, goalKm === km && s.chipTextActive]}>{km} km</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={s.divider} />
-
-          <View style={s.goalRow}>
-            <Text style={s.goalLabel}>Tid</Text>
-            <View style={s.stepper}>
-              <TouchableOpacity style={s.stepBtn} onPress={() => bumpMin(-5)} hitSlop={8}>
-                <Ionicons name="remove" size={17} color={goalMin > 0 ? CARDIO_BLUE : BORDER} />
-              </TouchableOpacity>
-              <Text style={[s.goalValue, goalMin > 0 && { color: CARDIO_BLUE }]}>
-                {goalMin > 0 ? `${goalMin} min` : '—'}
+          <View style={[s.goalTile, goalMin > 0 && s.goalTileActive]}>
+            <Text style={s.goalTileLabel}>TID</Text>
+            <TouchableOpacity onPress={() => { if (goalMin > 0) { Haptics.selectionAsync(); setGoalMin(0) } }} activeOpacity={0.7}>
+              <Text style={[s.goalTileValue, goalMin > 0 && { color: CARDIO_BLUE }]}>
+                {goalMin > 0 ? goalMin : '—'}
               </Text>
-              <TouchableOpacity style={s.stepBtn} onPress={() => bumpMin(5)} hitSlop={8}>
-                <Ionicons name="add" size={17} color={CARDIO_BLUE} />
+              <Text style={s.goalTileUnit}>min</Text>
+            </TouchableOpacity>
+            <View style={s.goalTileBtns}>
+              <TouchableOpacity style={s.roundBtn} onPress={() => bumpMin(-5)} hitSlop={6}>
+                <Ionicons name="remove" size={20} color={goalMin > 0 ? TEXT_PRIMARY : BORDER} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.roundBtn, s.roundBtnPlus]} onPress={() => bumpMin(5)} hitSlop={6}>
+                <Ionicons name="add" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>
-
-          <Text style={s.goalHint}>
-            {goalKm > 0 || goalMin > 0
-              ? 'Målet visas live under passet.'
-              : 'Valfritt — sätt ett mål så ser du din progress under passet.'}
-          </Text>
         </View>
+        <Text style={s.goalHint}>
+          {goalKm > 0 || goalMin > 0
+            ? 'Målet visas live under passet · tryck på siffran för att rensa'
+            : 'Valfritt — sätt ett mål så ser du din progress live under passet'}
+        </Text>
 
         {/* ── Senast ── */}
         <Text style={s.sectionTitle}>SENAST DU {meta.label === 'Cykling' ? 'CYKLADE' : meta.label === 'Promenad' ? 'PROMENERADE' : 'SPRANG'}</Text>
@@ -251,27 +239,26 @@ const s = StyleSheet.create({
     padding: 16, gap: 12,
   },
 
-  goalRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  goalLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  stepper:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  stepBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+  goalTiles: { flexDirection: 'row', gap: 12 },
+  goalTile: {
+    flex: 1, alignItems: 'center', gap: 8,
+    backgroundColor: CARD, borderRadius: 20,
+    borderWidth: 1.5, borderColor: BORDER,
+    paddingVertical: 18,
+  },
+  goalTileActive: { borderColor: CARDIO_BLUE + '70', backgroundColor: CARDIO_BLUE + '0C' },
+  goalTileLabel:  { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
+  goalTileValue:  { color: TEXT_SECONDARY, fontSize: 38, fontWeight: '800', textAlign: 'center', lineHeight: 42 },
+  goalTileUnit:   { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', marginTop: -2 },
+  goalTileBtns:   { flexDirection: 'row', gap: 12, marginTop: 4 },
+  roundBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center',
   },
-  goalValue: { color: TEXT_SECONDARY, fontSize: 16, fontWeight: '700', minWidth: 76, textAlign: 'center' },
+  roundBtnPlus: { backgroundColor: CARDIO_BLUE },
 
-  chipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  chip: {
-    paddingHorizontal: 13, paddingVertical: 7, borderRadius: 18,
-    borderWidth: 1.5, borderColor: BORDER,
-  },
-  chipActive:     { borderColor: CARDIO_BLUE, backgroundColor: CARDIO_BLUE + '18' },
-  chipText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  chipTextActive: { color: CARDIO_BLUE },
-
-  divider:  { height: 1, backgroundColor: BORDER },
-  goalHint: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17 },
+  goalHint: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17, textAlign: 'center' },
 
   lastRow:     { flexDirection: 'row', alignItems: 'center' },
   lastStat:    { flex: 1, alignItems: 'center', gap: 2 },
