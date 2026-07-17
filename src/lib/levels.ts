@@ -124,7 +124,7 @@ export function computePoints(e: PointsEvents, one: OneTimeInput): {
   const prs      = countCappedPerWeek(e.prDates, CAPS.prPerWeek)
   const oneTimePts = ONE_TIME_RULES.reduce((sum, r) => sum + (one[r.id] ? r.pts : 0), 0)
 
-  const sources: PointSource[] = [
+  const allSources: PointSource[] = [
     { label: 'Klarade dagar',    detail: `${e.completedDays} dagar`,  pts: e.completedDays * PTS.day,   icon: 'checkmark-circle-outline' },
     { label: 'Schemapass',       detail: `${sessions} pass`,          pts: sessions * PTS.session,      icon: 'barbell-outline' },
     { label: 'Cardiopass',       detail: `${cardio} pass`,            pts: cardio * PTS.cardio,         icon: 'walk-outline' },
@@ -132,7 +132,8 @@ export function computePoints(e: PointsEvents, one: OneTimeInput): {
     { label: 'Personliga rekord', detail: `${prs} rekord`,            pts: prs * PTS.pr,                icon: 'trophy-outline' },
     { label: 'Medaljer',         detail: `${e.medalsUnlocked} upplåsta`, pts: e.medalsUnlocked * PTS.medal, icon: 'ribbon-outline' },
     { label: 'Engångsmål',       detail: `${ONE_TIME_RULES.filter(r => one[r.id]).length} av ${ONE_TIME_RULES.length}`, pts: oneTimePts, icon: 'star-outline' },
-  ].filter(sr => sr.pts > 0)
+  ]
+  const sources = allSources.filter(sr => sr.pts > 0)
 
   return {
     total: sources.reduce((sum, sr) => sum + sr.pts, 0),
