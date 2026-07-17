@@ -28,7 +28,6 @@ const GRID_PADDING = 20
 const STATS_SCREEN_W = Dimensions.get('window').width
 const TAB_BAR_W = STATS_SCREEN_W - GRID_PADDING * 2
 const SEG_W     = TAB_BAR_W / 3      // en flik-kolumns bredd
-const COLLAPSE_DIST = 60             // scrollsträcka tills flikraden är helt minimerad
 const BLUE   = '#4A90D9'
 const RED    = '#FF453A'
 const YELLOW = '#F5A623'
@@ -225,25 +224,8 @@ export default function StatsScreen() {
     pagerRef.current?.scrollTo({ x: idx * STATS_SCREEN_W, animated: true })
   }
 
-  // ── Kollapsande flikrad + dragbar indikator ──────────────────────────────────
-  const pagerX   = useSharedValue(0)   // horisontell offset — driver indikatorn
-  const collapse = useSharedValue(0)   // 0 = pill-rad, 1 = text + underline
-  const pageOffsets = useRef<Record<StatsTab, number>>({ overview: 0, cardio: 0, gympass: 0 })
-
-  function onPageScroll(key: StatsTab, y: number) {
-    pageOffsets.current[key] = y
-    if (key === activeTab) collapse.value = Math.min(1, Math.max(0, y / COLLAPSE_DIST))
-  }
-
-  const tabWrapStyle = useAnimatedStyle(() => ({
-    height: interpolate(collapse.value, [0, 1], [48, 32], Extrapolation.CLAMP),
-  }))
-  const pillLayerStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(collapse.value, [0, 0.6], [1, 0], Extrapolation.CLAMP),
-  }))
-  const compactLayerStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(collapse.value, [0.4, 1], [0, 1], Extrapolation.CLAMP),
-  }))
+  // ── Flikrad: text + glidande underline, dragbar ──────────────────────────────
+  const pagerX = useSharedValue(0)   // horisontell offset — driver indikatorn
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: (pagerX.value / STATS_SCREEN_W) * SEG_W }],
   }))
@@ -420,50 +402,25 @@ export default function StatsScreen() {
       </View>
 
       <GestureDetector gesture={tabPan}>
-        <Animated.View style={[s.tabWrap, tabWrapStyle]}>
-
-          {/* Lager A: pill-raden (syns i toppläge) */}
-          <Animated.View style={[StyleSheet.absoluteFill, pillLayerStyle]} pointerEvents="none">
-            <View style={s.tabBar}>
-              {TABS.map(tab => (
-                <View key={tab.key} style={[s.tab, activeTab === tab.key && s.tabActive]}>
-                  <Ionicons name={tab.icon} size={16} color={activeTab === tab.key ? '#000' : TEXT_SECONDARY} />
-                  <Text style={[s.tabText, activeTab === tab.key && s.tabTextActive]}>{tab.label}</Text>
-                </View>
-              ))}
-            </View>
-          </Animated.View>
-
-          {/* Lager B: minimerad — bara text + glidande underline */}
-          <Animated.View style={[StyleSheet.absoluteFill, s.compactWrap, compactLayerStyle]} pointerEvents="none">
-            <View style={s.compactRow}>
-              {TABS.map(tab => (
-                <Text
-                  key={tab.key}
-                  style={[s.compactLabel, activeTab === tab.key && s.compactLabelActive]}
-                >
-                  {tab.label}
-                </Text>
-              ))}
-            </View>
-            <View style={s.compactTrack}>
-              <Animated.View style={[s.compactIndicator, indicatorStyle]} />
-            </View>
-          </Animated.View>
-
-          {/* Tryckytor — alltid aktiva ovanpå båda lagren */}
-          <View style={[StyleSheet.absoluteFill, { flexDirection: 'row' }]}>
+        <View style={s.tabWrap}>
+          <View style={s.compactRow}>
             {TABS.map(tab => (
               <TouchableOpacity
                 key={tab.key}
-                style={{ flex: 1 }}
+                style={s.compactTab}
                 onPress={() => switchTab(tab.key)}
                 activeOpacity={0.7}
-              />
+              >
+                <Text style={[s.compactLabel, activeTab === tab.key && s.compactLabelActive]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
             ))}
           </View>
-
-        </Animated.View>
+          <View style={s.compactTrack}>
+            <Animated.View style={[s.compactIndicator, indicatorStyle]} />
+          </View>
+        </View>
       </GestureDetector>
 
       <ScrollView
@@ -476,11 +433,7 @@ export default function StatsScreen() {
         onMomentumScrollEnd={e => {
           const idx = Math.round(e.nativeEvent.contentOffset.x / STATS_SCREEN_W)
           const key = TABS[idx]?.key
-          if (key && key !== activeTab) {
-            setActiveTab(key)
-            // Flikraden speglar den nya sidans scrolläge
-            collapse.value = Math.min(1, (pageOffsets.current[key] ?? 0) / COLLAPSE_DIST)
-          }
+          if (key && key !== activeTab) setActiveTab(key)
         }}
       >
 
@@ -489,8 +442,6 @@ export default function StatsScreen() {
           style={{ width: STATS_SCREEN_W }}
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onScroll={e => onPageScroll('overview', e.nativeEvent.contentOffset.y)}
         >
           <>
             {/* Ring chart */}
@@ -577,8 +528,6 @@ export default function StatsScreen() {
           style={{ width: STATS_SCREEN_W }}
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onScroll={e => onPageScroll('cardio', e.nativeEvent.contentOffset.y)}
         >
           <>
             <View style={s.statsGrid}>
@@ -673,8 +622,6 @@ export default function StatsScreen() {
           style={{ width: STATS_SCREEN_W }}
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onScroll={e => onPageScroll('gympass', e.nativeEvent.contentOffset.y)}
         >
           <>
             <View style={s.statsRow}>
@@ -854,23 +801,12 @@ const s = StyleSheet.create({
   title:    { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '700' },
   subtitle: { color: TEXT_SECONDARY, fontSize: 14 },
 
-  // Wrappern äger marginaler och animerad höjd; lagren fyller den
-  tabWrap: {
-    marginHorizontal: GRID_PADDING, marginBottom: 4,
-    overflow: 'hidden', justifyContent: 'center',
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: CARD, borderRadius: 16, padding: 4,
-    borderWidth: 1, borderColor: BORDER, gap: 4,
-  },
-
-  // Minimerat läge: text + glidande underline
-  compactWrap:  { justifyContent: 'flex-end', paddingBottom: 2 },
-  compactRow:   { flexDirection: 'row' },
+  // Flikrad: text + glidande underline
+  tabWrap: { marginHorizontal: GRID_PADDING, marginBottom: 6 },
+  compactRow: { flexDirection: 'row' },
+  compactTab: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   compactLabel: {
-    flex: 1, textAlign: 'center',
-    color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600', paddingBottom: 6,
+    color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600',
   },
   compactLabelActive: { color: TEXT_PRIMARY, fontWeight: '700' },
   compactTrack: {
@@ -881,10 +817,6 @@ const s = StyleSheet.create({
     width: SEG_W, height: '100%',
     backgroundColor: TEXT_PRIMARY, borderRadius: 2,
   },
-  tab:           { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12 },
-  tabActive:     { backgroundColor: ORANGE },
-  tabText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  tabTextActive: { color: '#000', fontWeight: '700' },
 
   statsGrid: { gap: 10 },
   statsRow:  { flexDirection: 'row', gap: 10 },
