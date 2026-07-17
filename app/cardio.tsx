@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics'
 import * as Location from 'expo-location'
 import * as Speech from 'expo-speech'
+import { useKeepAwake } from 'expo-keep-awake'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -215,6 +216,9 @@ const MAP_HTML = `<!DOCTYPE html>
 </html>`
 
 export default function CardioScreen() {
+  // Skärmen släcks inte medan GPS-skärmen är öppen (som Strava under pass)
+  useKeepAwake()
+
   const { name, sessionId, sessionDate, goalKm, goalMin } = useLocalSearchParams<{ name?: string; sessionId?: string; sessionDate?: string; goalKm?: string; goalMin?: string }>()
   const goalKmNum  = goalKm  ? parseFloat(goalKm)  : 0
   const goalMinNum = goalMin ? parseInt(goalMin, 10) : 0
