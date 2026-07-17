@@ -90,10 +90,10 @@ export default function RecordsScreen() {
         setAchievements(medals)
         setPoints(computePoints({
           completedDays,
-          sessionCount: sessionHistory.length,
-          cardioCount: cardio.length,
-          strengthCount: strength.length,
-          prCount: prs.length,
+          sessionDates: sessionHistory.map(c => c.completedDate),
+          cardioDates: cardio.map(w => w.created_at.slice(0, 10)),
+          strengthDates: strength.map(w => w.data.workout_date ?? w.created_at.slice(0, 10)),
+          prDates: prs.map(r => r.date),
           medalsUnlocked: medals.filter(m => m.unlocked).length,
         }))
       } finally {
@@ -183,7 +183,10 @@ export default function RecordsScreen() {
               <View style={s.ruleIcon}>
                 <Ionicons name={rule.icon} size={16} color={ORANGE} />
               </View>
-              <Text style={s.ruleLabel}>{rule.label}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.ruleLabel}>{rule.label}</Text>
+                <Text style={s.ruleCap}>{rule.cap}</Text>
+              </View>
               <Text style={s.rulePts}>{rule.pts} p</Text>
             </View>
           ))}
@@ -344,7 +347,8 @@ const s = StyleSheet.create({
     backgroundColor: ORANGE + '18',
     alignItems: 'center', justifyContent: 'center',
   },
-  ruleLabel: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500' },
+  ruleLabel: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500' },
+  ruleCap:   { color: TEXT_SECONDARY, fontSize: 11, marginTop: 1 },
   rulePts:   { color: ORANGE, fontSize: 14, fontWeight: '700' },
 
   sectionRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
