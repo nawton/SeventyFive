@@ -210,11 +210,10 @@ export default function CardioSummaryScreen() {
   const hasRoute = route.length > 1
   const avgPaceSec = distKm > 0.01 ? paceForUnit(dur / distKm, unit) : 0
 
-  const stats: { label: string; value: string }[] = [
-    { label: `Distans (${unitLabel})`, value: toDisplayDistance(distKm, unit).toFixed(2) },
-    { label: 'Tid',                    value: formatTime(dur) },
-    { label: `Snitt /${unitLabel}`,    value: formatPace(avgPaceSec) },
-    { label: 'Kcal',                   value: String(d?.calories ?? 0) },
+  const secondary: { icon: React.ComponentProps<typeof Ionicons>['name']; value: string; label: string; color: string }[] = [
+    { icon: 'time-outline',        value: formatTime(dur),            label: 'Tid',              color: CARDIO_BLUE },
+    { icon: 'speedometer-outline', value: formatPace(avgPaceSec),     label: `Snitt /${unitLabel}`, color: GREEN },
+    { icon: 'flame-outline',       value: String(d?.calories ?? 0),   label: 'Kcal',             color: ORANGE },
   ]
 
   return (
@@ -273,11 +272,24 @@ export default function CardioSummaryScreen() {
               </View>
             </View>
 
-            <View style={s.statsGrid}>
-              {stats.map((st, i) => (
-                <View key={st.label} style={[s.statCell, i % 2 === 0 && s.statCellLeft, i >= 2 && s.statCellTop]}>
-                  <Text style={s.statValue}>{st.value}</Text>
-                  <Text style={s.statLabel}>{st.label}</Text>
+            {/* Primär statistik: distansen stor och prominent */}
+            <View style={s.primaryStat}>
+              <View style={s.primaryValueRow}>
+                <Text style={s.primaryValue}>{toDisplayDistance(distKm, unit).toFixed(2)}</Text>
+                <Text style={s.primaryUnit}>{unitLabel}</Text>
+              </View>
+              <Text style={s.primaryLabel}>Distans</Text>
+            </View>
+
+            {/* Sekundär statistik med ikoner */}
+            <View style={s.secondaryRow}>
+              {secondary.map((st, i) => (
+                <View key={st.label} style={[s.secondaryItem, i > 0 && s.secondaryDivider]}>
+                  <View style={[s.secondaryIcon, { backgroundColor: st.color + '1F' }]}>
+                    <Ionicons name={st.icon} size={16} color={st.color} />
+                  </View>
+                  <Text style={s.secondaryValue}>{st.value}</Text>
+                  <Text style={s.secondaryLabel}>{st.label}</Text>
                 </View>
               ))}
             </View>
@@ -385,18 +397,39 @@ const s = StyleSheet.create({
   },
   donePillText: { color: GREEN, fontSize: 12, fontWeight: '700' },
 
-  statsGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
+  // Primär statistik
+  primaryStat: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  primaryValueRow: { flexDirection: 'row', alignItems: 'baseline' },
+  primaryValue: {
+    color: TEXT_PRIMARY, fontSize: 56, fontWeight: '900',
+    letterSpacing: -2, fontVariant: ['tabular-nums'],
+  },
+  primaryUnit: {
+    color: TEXT_SECONDARY, fontSize: 22, fontWeight: '700', marginLeft: 6,
+  },
+  primaryLabel: {
+    color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700',
+    textTransform: 'uppercase', letterSpacing: 1.5, marginTop: -2,
+  },
+  // Sekundär statistik
+  secondaryRow: {
+    flexDirection: 'row',
     backgroundColor: CARD,
     borderRadius: 20,
     borderWidth: 1, borderColor: BORDER,
-    overflow: 'hidden',
+    paddingVertical: 16,
   },
-  statCell: { width: '50%', paddingVertical: 20, paddingHorizontal: 20, gap: 4 },
-  statCellLeft: { borderRightWidth: 1, borderRightColor: BORDER },
-  statCellTop:  { borderTopWidth: 1, borderTopColor: BORDER },
-  statValue: { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
-  statLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  secondaryItem: { flex: 1, alignItems: 'center', gap: 6 },
+  secondaryDivider: { borderLeftWidth: 1, borderLeftColor: BORDER },
+  secondaryIcon: {
+    width: 32, height: 32, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 2,
+  },
+  secondaryValue: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  secondaryLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 },
 
   // Kartväljare
   styleSheet: {
