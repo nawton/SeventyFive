@@ -539,10 +539,14 @@ export function WorkoutSection({
     transform: [{ rotate: `${interpolate(collapseV.value, [0, 1], [-90, 0])}deg` }],
   }))
 
-  const completedV = useSharedValue(isCompleted ? 1 : 0)
+  // Cardio-pass tonar INTE mot grönt när de är klara — statistiken (distans,
+  // tid, tempo) i kroppen är tecknet på att passet är gjort. Bara gympass blir gröna.
+  const greenComplete = isCompleted && !isCardio
+
+  const completedV = useSharedValue(greenComplete ? 1 : 0)
   useEffect(() => {
-    completedV.value = withSpring(isCompleted ? 1 : 0, { damping: 18, stiffness: 140 })
-  }, [isCompleted])
+    completedV.value = withSpring(greenComplete ? 1 : 0, { damping: 18, stiffness: 140 })
+  }, [greenComplete])
 
   // Hela kortets ram och bakgrund tonar mot grönt när passet är klart
   const cardOuterStyle = useAnimatedStyle(() => ({
@@ -580,7 +584,7 @@ export function WorkoutSection({
       {/* ── Session header ── */}
       <View style={s.header}>
         {/* Subtil typfärgad wash från vänster — skiljer gym/kondition i en blick */}
-        {!isCompleted && (
+        {!greenComplete && (
           <LinearGradient
             colors={[typeColor + '1E', 'transparent']}
             start={{ x: 0, y: 0 }}
@@ -591,11 +595,11 @@ export function WorkoutSection({
         )}
         <Animated.View style={[s.headerAccent, accentBarStyle]} />
 
-        <View style={[s.headerIcon, { backgroundColor: typeColor + '22' }, isCompleted && s.headerIconDone]}>
+        <View style={[s.headerIcon, { backgroundColor: typeColor + '22' }, greenComplete && s.headerIconDone]}>
           <Ionicons
-            name={isCompleted ? 'checkmark' : isCardio ? cardioIcon(session.cardio_type) : 'barbell-outline'}
+            name={greenComplete ? 'checkmark' : isCardio ? cardioIcon(session.cardio_type) : 'barbell-outline'}
             size={16}
-            color={isCompleted ? '#fff' : typeColor}
+            color={greenComplete ? '#fff' : typeColor}
           />
         </View>
 
@@ -631,7 +635,9 @@ export function WorkoutSection({
           )}
         </TouchableOpacity>
 
-        {isCompleted ? (
+        {/* Cardio-pass har ingen Klar-knapp när de är gjorda — statistiken i
+            kroppen visar att passet är avklarat, och man ska inte råka av-markera. */}
+        {isCardio && isCompleted ? null : greenComplete ? (
           <TouchableOpacity onPress={handleUncomplete} style={s.doneBadge} activeOpacity={0.7}>
             <Ionicons name="checkmark-circle" size={13} color={GREEN} />
             <Text style={s.doneBadgeText}>Klar</Text>
@@ -864,7 +870,7 @@ const s = StyleSheet.create({
 
   cardioSummary: {
     borderTopWidth: 1,
-    borderTopColor: GREEN + '30',
+    borderTopColor: BORDER,
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 12,
