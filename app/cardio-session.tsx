@@ -26,6 +26,7 @@ import {
   getUnitSystem, setUnitSystem, toDisplayDistance, fromDisplayDistance,
   distanceUnitLabel, paceForUnit, type UnitSystem,
 } from '@/lib/units'
+import { getCardioStatsTheme, setCardioStatsTheme, type CardioStatsTheme } from '@/lib/prefs'
 
 const CARDIO_BLUE = '#4AA8E0'
 const SCREEN_W    = Dimensions.get('window').width
@@ -119,12 +120,16 @@ export default function CardioSessionScreen() {
   const [goalMin, setGoalMin] = useState(0)
   const [last, setLast]       = useState<CardioWorkout | null>(null)
   const [unit, setUnit]       = useState<UnitSystem>('metric')
+  const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Egen inmatning: vilken siffra som redigeras + fältets text
   const [editTarget, setEditTarget] = useState<'dist' | 'time' | null>(null)
   const [editValue, setEditValue]   = useState('')
 
-  useEffect(() => { getUnitSystem().then(setUnit) }, [])
+  useEffect(() => {
+    getUnitSystem().then(setUnit)
+    getCardioStatsTheme().then(setStatsTheme)
+  }, [])
 
   const unitLabel = distanceUnitLabel(unit)
   const goalDist  = toDisplayDistance(goalKm, unit)   // visningsvärde i vald enhet
@@ -151,6 +156,12 @@ export default function CardioSessionScreen() {
     Haptics.selectionAsync()
     setUnit(u)
     await setUnitSystem(u)
+  }
+
+  async function chooseStatsTheme(t: CardioStatsTheme) {
+    Haptics.selectionAsync()
+    setStatsTheme(t)
+    await setCardioStatsTheme(t)
   }
 
   useEffect(() => {
@@ -402,6 +413,25 @@ export default function CardioSessionScreen() {
                   activeOpacity={0.8}
                 >
                   <Text style={[s.unitBtnText, unit === key && s.unitBtnTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={s.settingLabel}>STATISTIKPANEL UNDER PASSET</Text>
+            <View style={s.unitRow}>
+              {([['dark', 'Mörk'], ['light', 'Ljus']] as const).map(([key, label]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[s.unitBtn, { flexDirection: 'row', justifyContent: 'center', gap: 6 }, statsTheme === key && s.unitBtnActive]}
+                  onPress={() => chooseStatsTheme(key)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={key === 'dark' ? 'moon-outline' : 'sunny-outline'}
+                    size={15}
+                    color={statsTheme === key ? CARDIO_BLUE : TEXT_SECONDARY}
+                  />
+                  <Text style={[s.unitBtnText, statsTheme === key && s.unitBtnTextActive]}>{label}</Text>
                 </TouchableOpacity>
               ))}
             </View>

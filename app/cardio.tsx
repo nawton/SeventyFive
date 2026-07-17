@@ -21,6 +21,7 @@ import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
+import { getCardioStatsTheme, type CardioStatsTheme } from '@/lib/prefs'
 
 type Coord = { latitude: number; longitude: number }
 type Status = 'idle' | 'running' | 'paused'
@@ -178,6 +179,11 @@ export default function CardioScreen() {
   const [unit, setUnit] = useState<UnitSystem>('metric')
   useEffect(() => { getUnitSystem().then(setUnit) }, [])
   const unitLabel = distanceUnitLabel(unit)
+
+  // Statspanelens utseende (mörk/ljus) — ändras i inställningarna på passdetaljen
+  const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
+  useEffect(() => { getCardioStatsTheme().then(setStatsTheme) }, [])
+  const lightCard = statsTheme === 'light'
 
   const webRef = useRef<InstanceType<typeof WebView>>(null)
   const locationSub = useRef<Location.LocationSubscription | null>(null)
@@ -449,9 +455,9 @@ export default function CardioScreen() {
       {status !== 'idle' && (
         <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
           <GestureDetector gesture={expandGesture}>
-          <View style={styles.statsCard}>
+          <View style={[styles.statsCard, lightCard && styles.statsCardLight]}>
             <View style={styles.timerRow}>
-              <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
+              <Text style={[styles.timerText, lightCard && { color: '#000' }]}>{formatTime(elapsed)}</Text>
               {status === 'paused' && (
                 <View style={styles.pausedBadge}>
                   <Text style={styles.pausedBadgeText}>PAUSAD</Text>
@@ -462,7 +468,7 @@ export default function CardioScreen() {
             {(goalKmNum > 0 || goalMinNum > 0) && (
               <View style={styles.goalTrackWrap}>
                 <View style={styles.goalTextRow}>
-                  <Text style={[styles.goalText, { color: '#555' }]}>
+                  <Text style={[styles.goalText, lightCard && { color: '#555' }]}>
                     Mål: {goalKmNum > 0 ? `${toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} ${unitLabel}` : `${goalMinNum} min`}
                   </Text>
                   <Text style={styles.goalPct}>
@@ -471,7 +477,7 @@ export default function CardioScreen() {
                     ))}%
                   </Text>
                 </View>
-                <View style={[styles.goalTrack, { backgroundColor: 'rgba(0,0,0,0.08)' }]}>
+                <View style={[styles.goalTrack, lightCard && { backgroundColor: 'rgba(0,0,0,0.08)' }]}>
                   <View style={[styles.goalFill, { width: `${Math.min(100,
                     goalKmNum > 0 ? (distanceKm / goalKmNum) * 100 : (elapsed / (goalMinNum * 60)) * 100
                   )}%` as never }]} />
@@ -481,30 +487,30 @@ export default function CardioScreen() {
 
             <View style={styles.statsRow}>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>{toDisplayDistance(distanceKm, unit).toFixed(2)}</Text>
+                <Text style={[styles.statValue, lightCard && { color: '#000' }]}>{toDisplayDistance(distanceKm, unit).toFixed(2)}</Text>
                 <Text style={styles.statLabel}>{unitLabel}</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, lightCard && { backgroundColor: '#E0E0E0' }]} />
               <View style={styles.stat}>
-                <Text style={styles.statValue}>
+                <Text style={[styles.statValue, lightCard && { color: '#000' }]}>
                   {distanceKm > 0.01 ? formatPace(1, paceForUnit(elapsed / distanceKm, unit)) : '--:--'}
                 </Text>
                 <Text style={styles.statLabel}>snitt /{unitLabel}</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, lightCard && { backgroundColor: '#E0E0E0' }]} />
               <View style={styles.stat}>
-                <Text style={[styles.statValue, currentPaceSec > 0 && { color: ORANGE }]}>
+                <Text style={[styles.statValue, lightCard && { color: '#000' }, currentPaceSec > 0 && { color: ORANGE }]}>
                   {currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '--:--'}
                 </Text>
                 <Text style={styles.statLabel}>nu /{unitLabel}</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, lightCard && { backgroundColor: '#E0E0E0' }]} />
               <View style={styles.stat}>
-                <Text style={styles.statValue}>{calories}</Text>
+                <Text style={[styles.statValue, lightCard && { color: '#000' }]}>{calories}</Text>
                 <Text style={styles.statLabel}>kcal</Text>
               </View>
             </View>
-            <Ionicons name="chevron-down" size={14} color="#999" style={{ marginTop: -2 }} />
+            <Ionicons name="chevron-down" size={14} color={lightCard ? '#999' : '#666'} style={{ marginTop: -2 }} />
           </View>
           </GestureDetector>
         </SafeAreaView>
@@ -575,16 +581,6 @@ export default function CardioScreen() {
                 <Text style={styles.expandedHint}>Svep upp för karta</Text>
               </TouchableOpacity>
 
-              <View style={styles.expandedTimerWrap}>
-                <Text style={styles.expandedTimer}>{formatTime(elapsed)}</Text>
-                <Text style={styles.expandedTimerLabel}>Tid</Text>
-                {status === 'paused' && (
-                  <View style={[styles.pausedBadge, { marginTop: 8 }]}>
-                    <Text style={styles.pausedBadgeText}>PAUSAD</Text>
-                  </View>
-                )}
-              </View>
-
               {(goalKmNum > 0 || goalMinNum > 0) && (
                 <View style={styles.expandedGoal}>
                   <View style={styles.goalTextRow}>
@@ -605,21 +601,51 @@ export default function CardioScreen() {
                 </View>
               )}
 
-              <View style={styles.summaryGrid2}>
-                {([
-                  { icon: 'map-outline' as const,         value: toDisplayDistance(distanceKm, unit).toFixed(2),                                          label: unitLabel,           color: ORANGE },
-                  { icon: 'speedometer-outline' as const,  value: distanceKm > 0.01 ? formatPace(1, paceForUnit(elapsed / distanceKm, unit)) : '--:--',    label: `snitt /${unitLabel}`, color: '#4CAF50' },
-                  { icon: 'pulse-outline' as const,        value: currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '--:--',         label: `nu /${unitLabel}`,  color: '#4AA8E0' },
-                  { icon: 'flash-outline' as const,        value: String(calories),                                                                        label: 'kcal',              color: '#9B6DFF' },
-                ]).map(stat => (
-                  <View key={stat.label} style={styles.summaryStatCard}>
-                    <View style={[styles.summaryStatIcon, { backgroundColor: stat.color + '22' }]}>
-                      <Ionicons name={stat.icon} size={17} color={stat.color} />
-                    </View>
-                    <Text style={styles.summaryStatValue}>{stat.value}</Text>
-                    <Text style={styles.summaryStatLabel}>{stat.label}</Text>
+              {/* Staplade storvärden: tid → nu-tempo → distans → snitt + kcal */}
+              <View style={styles.exStack}>
+                <View style={styles.exBlock}>
+                  <Text style={styles.exValueBig}>{formatTime(elapsed)}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={styles.exLabel}>Tid</Text>
+                    {status === 'paused' && (
+                      <View style={styles.pausedBadge}>
+                        <Text style={styles.pausedBadgeText}>PAUSAD</Text>
+                      </View>
+                    )}
                   </View>
-                ))}
+                </View>
+
+                <View style={styles.exDivider} />
+
+                <View style={styles.exBlock}>
+                  <Text style={[styles.exValueBig, currentPaceSec > 0 && { color: ORANGE }]}>
+                    {currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '--:--'}
+                  </Text>
+                  <Text style={styles.exLabel}>Nu /{unitLabel}</Text>
+                </View>
+
+                <View style={styles.exDivider} />
+
+                <View style={styles.exBlock}>
+                  <Text style={styles.exValueBig}>{toDisplayDistance(distanceKm, unit).toFixed(2)}</Text>
+                  <Text style={styles.exLabel}>Distans ({unitLabel})</Text>
+                </View>
+
+                <View style={styles.exDivider} />
+
+                <View style={styles.exRow}>
+                  <View style={styles.exBlockHalf}>
+                    <Text style={styles.exValueMed}>
+                      {distanceKm > 0.01 ? formatPace(1, paceForUnit(elapsed / distanceKm, unit)) : '--:--'}
+                    </Text>
+                    <Text style={styles.exLabel}>Snitt /{unitLabel}</Text>
+                  </View>
+                  <View style={styles.exDividerV} />
+                  <View style={styles.exBlockHalf}>
+                    <Text style={styles.exValueMed}>{calories}</Text>
+                    <Text style={styles.exLabel}>Kcal</Text>
+                  </View>
+                </View>
               </View>
             </SafeAreaView>
           </GestureDetector>
@@ -764,28 +790,22 @@ export default function CardioScreen() {
               </TouchableOpacity>
             </>
           ) : status === 'running' ? (
-            // Under passet: bara en pausknapp
-            <TouchableOpacity style={styles.idleCol} onPress={pauseTracking} activeOpacity={0.85}>
-              <View style={styles.startCircle}>
-                <Ionicons name="pause" size={34} color="#fff" />
-              </View>
-              <Text style={styles.startLabel}>Pausa</Text>
+            // Under passet: bara en bred pausknapp
+            <TouchableOpacity style={styles.pausePill} onPress={pauseTracking} activeOpacity={0.85}>
+              <Ionicons name="pause" size={24} color="#fff" />
+              <Text style={styles.pausePillText}>Pausa</Text>
             </TouchableOpacity>
           ) : (
-            // Pausad: stor Återuppta, liten Avsluta så man inte råkar avsluta
+            // Pausad: bred Återuppta, mindre Avsluta så man inte råkar avsluta
             <>
-              <TouchableOpacity style={styles.idleCol} onPress={startTracking} activeOpacity={0.85}>
-                <View style={styles.startCircle}>
-                  <Ionicons name="play" size={36} color="#fff" style={{ marginLeft: 4 }} />
-                </View>
-                <Text style={styles.startLabel}>Återuppta</Text>
+              <TouchableOpacity style={[styles.pausePill, { flex: 2 }]} onPress={startTracking} activeOpacity={0.85}>
+                <Ionicons name="play" size={22} color="#fff" style={{ marginLeft: 2 }} />
+                <Text style={styles.pausePillText}>Återuppta</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.idleCol} onPress={handleFinish} activeOpacity={0.85}>
-                <View style={styles.finishCircle}>
-                  <Ionicons name="stop" size={20} color="#fff" />
-                </View>
-                <Text style={styles.finishLabel}>Avsluta</Text>
+              <TouchableOpacity style={styles.finishPill} onPress={handleFinish} activeOpacity={0.85}>
+                <Ionicons name="stop" size={18} color="#fff" />
+                <Text style={styles.finishPillText}>Avsluta</Text>
               </TouchableOpacity>
             </>
           )}
@@ -812,7 +832,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   statsCard: {
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(20,20,22,0.94)',
     borderRadius: 20,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -821,8 +841,12 @@ const styles = StyleSheet.create({
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
+  },
+  statsCardLight: {
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    shadowOpacity: 0.12,
   },
   timerRow: {
     flexDirection: 'row',
@@ -830,7 +854,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   timerText: {
-    color: '#000',
+    color: '#fff',
     fontSize: 42,
     fontWeight: '800',
     letterSpacing: -1,
@@ -870,7 +894,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   statValue: {
-    color: '#000',
+    color: '#fff',
     fontSize: 20,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
@@ -885,7 +909,7 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 30,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#3A3A3C',
   },
 
   // ── Km split toast ──
@@ -1006,11 +1030,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
+    zIndex: 30, // ovanpå fullskärms-statsen så kontrollerna alltid nås
   },
   bottomInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
     paddingHorizontal: 32,
     paddingTop: 16,
     paddingBottom: 8,
@@ -1097,29 +1123,62 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  expandedTimerWrap: {
-    alignItems: 'center',
-    marginTop: 28,
-    marginBottom: 28,
+  expandedGoal: {
+    gap: 5,
+    marginTop: 8,
   },
-  expandedTimer: {
+  // Staplade storvärden i fullskärm (inga boxar)
+  exStack: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingBottom: 120,
+  },
+  exBlock: {
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 14,
+  },
+  exRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  exBlockHalf: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  exValueBig: {
     color: '#fff',
-    fontSize: 62,
+    fontSize: 56,
     fontWeight: '800',
-    letterSpacing: -1,
+    letterSpacing: -1.5,
     fontVariant: ['tabular-nums'],
   },
-  expandedTimerLabel: {
+  exValueMed: {
+    color: '#fff',
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    fontVariant: ['tabular-nums'],
+  },
+  exLabel: {
     color: '#666',
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginTop: 2,
   },
-  expandedGoal: {
-    gap: 5,
-    marginBottom: 20,
+  exDivider: {
+    height: 1,
+    backgroundColor: '#232325',
+    alignSelf: 'stretch',
+    marginHorizontal: 24,
+  },
+  exDividerV: {
+    width: 1,
+    height: 44,
+    backgroundColor: '#232325',
   },
 
   // ── Startmeny (idle) ──
@@ -1173,19 +1232,41 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // Pausad: liten avsluta-knapp
-  finishCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#3A3A3C',
+  // Breda kontroller under passet
+  pausePill: {
+    flex: 1,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: ORANGE,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  finishLabel: {
-    color: '#999',
-    fontSize: 13,
-    fontWeight: '600',
+  pausePillText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  finishPill: {
+    flex: 1,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#3A3A3C',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  finishPillText: {
+    color: '#ddd',
+    fontSize: 15,
+    fontWeight: '700',
   },
 
   // ── Summary modal ──
