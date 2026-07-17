@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   useSharedValue, useAnimatedStyle, interpolate, runOnJS, Extrapolation,
+  withTiming, Easing,
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
@@ -242,10 +243,28 @@ export default function StatsScreen() {
   // Svep på kroppsfiguren växlar fram/bak. Pagern får waitFor=denna gest så
   // horisontella svep som startar på figuren flippar den istället för att byta
   // flik; vertikala drag faller igenom till sidscrollen (failOffsetY).
-  function toggleBodyView() {
-    Haptics.selectionAsync()
+  // Bytet animeras som en 3D-flip: rotera ut till 90°, byt sida, rotera in.
+  const bodyRot = useSharedValue(0)
+  const bodyAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ perspective: 900 }, { rotateY: `${bodyRot.value}deg` }],
+    opacity: interpolate(Math.abs(bodyRot.value), [0, 90], [1, 0.25], Extrapolation.CLAMP),
+  }))
+
+  function swapSide() {
     setBodyView(v => (v === 'front' ? 'back' : 'front'))
   }
+
+  function animateFlip(dir: number = 1) {
+    Haptics.selectionAsync()
+    bodyRot.value = withTiming(90 * dir, { duration: 150, easing: Easing.in(Easing.quad) }, finished => {
+      if (finished) {
+        runOnJS(swapSide)()
+        bodyRot.value = -90 * dir
+        bodyRot.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.quad) })
+      }
+    })
+  }
+
   const bodyFlipRef = useRef<GestureType | undefined>(undefined)
   const bodyFlip = Gesture.Pan()
     .withRef(bodyFlipRef)
@@ -253,7 +272,7 @@ export default function StatsScreen() {
     .failOffsetY([-15, 15])
     .onEnd(e => {
       if (Math.abs(e.translationX) > 40 || Math.abs(e.velocityX) > 500) {
-        runOnJS(toggleBodyView)()
+        runOnJS(animateFlip)(e.translationX < 0 ? 1 : -1)
       }
     })
 
@@ -677,7 +696,7 @@ export default function StatsScreen() {
                     <TouchableOpacity
                       key={side}
                       style={[s.bodyToggleBtn, bodyView === side && s.bodyToggleBtnActive]}
-                      onPress={() => setBodyView(side)}
+                      onPress={() => bodyView !== side && animateFlip(side === 'back' ? 1 : -1)}
                       activeOpacity={0.8}
                     >
                       <Text style={[s.bodyToggleText, bodyView === side && s.bodyToggleTextActive]}>
@@ -694,15 +713,17 @@ export default function StatsScreen() {
                 <>
                   <GestureDetector gesture={bodyFlip}>
                     <View style={s.bodyWrap}>
-                      <Body
-                        data={weekMuscleData}
-                        side={bodyView}
-                        gender="male"
-                        scale={1.6}
-                        colors={[BLUE, YELLOW, ORANGE]}
-                        defaultFill="#2A2A2C"
-                        border="rgba(255,255,255,0.10)"
-                      />
+                      <Animated.View style={bodyAnimStyle}>
+                        <Body
+                          data={weekMuscleData}
+                          side={bodyView}
+                          gender="male"
+                          scale={1.6}
+                          colors={[BLUE, YELLOW, ORANGE]}
+                          defaultFill="#2A2A2C"
+                          border="rgba(255,255,255,0.10)"
+                        />
+                      </Animated.View>
                     </View>
                   </GestureDetector>
                   {weekMuscleData.length > 0 && (
