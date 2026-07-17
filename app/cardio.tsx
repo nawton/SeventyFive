@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
+  Dimensions,
   Image,
   Modal,
   Pressable,
@@ -42,6 +43,13 @@ function nameToType(name: string): ExerciseType {
   if (s.includes('intervall') || s.includes('interval')) return 'interval'
   if (s.includes('promenad') || s.includes('walk')) return 'walking'
   return 'running'
+}
+
+const DIAL = Math.min(Dimensions.get('window').width - 70, 320)
+
+function cardinalLabel(deg: number): string {
+  const dirs = ['N', 'NÖ', 'Ö', 'SÖ', 'S', 'SV', 'V', 'NV']
+  return dirs[Math.round(deg / 45) % 8]
 }
 
 function formatTime(seconds: number): string {
@@ -125,25 +133,6 @@ const MAP_HTML = `<!DOCTYPE html>
       0%   { transform:scale(1);   opacity:0.7; }
       100% { transform:scale(2.8); opacity:0; }
     }
-    /* Kompassen: svart, rund, direkt ovanför karttyps-/centreringsknapparna till höger */
-    .leaflet-bottom.leaflet-right { bottom:343px; right:16px; }
-    .leaflet-control-rotate {
-      margin:0 !important;
-      border:none !important;
-      border-radius:50% !important;
-      overflow:hidden;
-      box-shadow:0 2px 10px rgba(0,0,0,0.35);
-    }
-    .leaflet-control-rotate .leaflet-control-rotate-toggle {
-      display:block;
-      width:44px !important; height:44px !important;
-      background:#161618 !important;
-      border:none !important;
-      border-radius:50% !important;
-    }
-    .leaflet-control-rotate-arrow {
-      background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10.5 14l4-8 4 8h-8z' fill='%23FF453A'/%3E%3Cpath d='M10.5 16l4 8 4-8h-8z' fill='%23fff'/%3E%3C/svg%3E") !important;
-    }
   </style>
 </head>
 <body>
@@ -151,8 +140,7 @@ const MAP_HTML = `<!DOCTYPE html>
 <script>
   var map = L.map('map', {
     zoomControl:false, attributionControl:false,
-    rotate:true, touchRotate:true,
-    rotateControl:{ closeOnZeroBearing:false, position:'bottomright' }
+    rotate:true, touchRotate:true, rotateControl:false
   }).setView([59.33, 18.06], 4);
 
   var tileLayer = L.tileLayer(
@@ -184,6 +172,7 @@ const MAP_HTML = `<!DOCTYPE html>
       var ll = [msg.lat, msg.lng];
 
       if (msg.type === 'center') {
+        map.setBearing(0);
         map.setView(ll, 16, { animate:true });
         return;
       }
@@ -230,6 +219,15 @@ export default function CardioScreen() {
   const webRef = useRef<InstanceType<typeof WebView>>(null)
   const locationSub = useRef<Location.LocationSubscription | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Kompass: enhetens riktning från sensorn
+  const headingSub = useRef<Location.LocationSubscription | null>(null)
+  const headingCont = useRef(0)          // kontinuerlig vinkel (utan 359→0-hopp)
+  const lastHeadingInt = useRef(-1)
+  const compassOpenRef = useRef(false)
+  const [compassOpen, setCompassOpen] = useState(false)
+  const [headingDeg, setHeadingDeg] = useState(0)
+  const headingV = useSharedValue(0)
 
   const [status, setStatus] = useState<Status>('idle')
   const [exercise, setExercise] = useState<ExerciseType>(() => nameToType(name ?? ''))
@@ -346,6 +344,14 @@ export default function CardioScreen() {
     transform: [{ translateY: styleY.value }],
   }))
 
+  // Kompassnål och gradskiva roterar mot norr
+  const needleStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${-headingV.value}deg` }],
+  }))
+  const dialStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${-headingV.value}deg` }],
+  }))
+
   useEffect(() => {
     initLocation()
     return () => cleanup()
@@ -370,11 +376,37 @@ export default function CardioScreen() {
       sendInit(c)
     }
 
+    // Kompass: följ enhetens riktning
+    headingSub.current = await Location.watchHeadingAsync((h) => {
+      const raw = h.trueHeading >= 0 ? h.trueHeading : h.magHeading
+      // Kortaste vägen runt så nålen inte snurrar ett helt varv vid 359→0
+      const prev = headingCont.current
+      const delta = ((raw - (((prev % 360) + 360) % 360)) + 540) % 360 - 180
+      headingCont.current = prev + delta
+      headingV.value = withTiming(headingCont.current, { duration: 150 })
+      const i = Math.round(raw) % 360
+      if (i !== lastHeadingInt.current) {
+        lastHeadingInt.current = i
+        // Gradtexten behöver bara uppdateras när fullskärmskompassen är öppen
+        if (compassOpenRef.current) setHeadingDeg(i)
+      }
+    })
+
     // Exakt: hämta aktuell position
     const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
     const c = { latitude: loc.coords.latitude, longitude: loc.coords.longitude }
     latestCoord.current = c
     sendInit(c)
+  }
+
+  function openCompass() {
+    setHeadingDeg(Math.round(((headingCont.current % 360) + 360) % 360))
+    compassOpenRef.current = true
+    setCompassOpen(true)
+  }
+  function closeCompass() {
+    compassOpenRef.current = false
+    setCompassOpen(false)
   }
 
   function sendInit(coord: Coord) {
@@ -497,6 +529,7 @@ export default function CardioScreen() {
 
   function cleanup() {
     locationSub.current?.remove()
+    headingSub.current?.remove()
     if (timerRef.current) clearInterval(timerRef.current)
     if (splitToastTimer.current) clearTimeout(splitToastTimer.current)
   }
@@ -551,6 +584,51 @@ export default function CardioScreen() {
         originWhitelist={['*']}
         onLoadEnd={() => { mapReady.current = true }}
       />
+
+      {/* ── Fullskärmskompass — kolsvart med vita symboler ── */}
+      <Modal visible={compassOpen} animationType="fade" onRequestClose={closeCompass}>
+        <View style={styles.compassRoot}>
+          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+            <TouchableOpacity style={styles.compassClose} onPress={closeCompass} activeOpacity={0.7}>
+              <Ionicons name="close" size={26} color="#fff" />
+            </TouchableOpacity>
+
+            <View style={styles.compassStage}>
+              {/* Fast markör som visar riktningen mot den roterande skivan */}
+              <Ionicons name="caret-down" size={24} color="#FF453A" style={{ marginBottom: 8 }} />
+
+              <View style={{ width: DIAL, height: DIAL }}>
+                <Animated.View style={[styles.compassDial, dialStyle]}>
+                  {/* Gradstreck var 6:e grad, längre var 30:e */}
+                  {Array.from({ length: 60 }).map((_, i) => (
+                    <View key={i} style={[styles.tickWrap, { transform: [{ rotate: `${i * 6}deg` }] }]}>
+                      <View style={[styles.tick, i % 5 === 0 && styles.tickMajor]} />
+                    </View>
+                  ))}
+                  {/* Gradtal var 30:e grad */}
+                  {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(d => (
+                    <View key={`n${d}`} style={[styles.tickWrap, { transform: [{ rotate: `${d}deg` }] }]}>
+                      <Text style={styles.dialNum}>{d}</Text>
+                    </View>
+                  ))}
+                  {/* Väderstreck */}
+                  {([['N', 0], ['Ö', 90], ['S', 180], ['V', 270]] as const).map(([letter, d]) => (
+                    <View key={letter} style={[styles.tickWrap, { transform: [{ rotate: `${d}deg` }] }]}>
+                      <Text style={[styles.dialCardinal, letter === 'N' && { color: '#FF453A' }]}>{letter}</Text>
+                    </View>
+                  ))}
+                </Animated.View>
+
+                {/* Fast mitt — grader + väderstreck */}
+                <View style={styles.compassCenter} pointerEvents="none">
+                  <Text style={styles.compassDeg}>{headingDeg}°</Text>
+                  <Text style={styles.compassCard}>{cardinalLabel(headingDeg)}</Text>
+                </View>
+              </View>
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
 
       {/* ── Stats overlay — syns även innan start ── */}
       {(
@@ -627,6 +705,12 @@ export default function CardioScreen() {
 
       {/* ── Right-side buttons ── */}
       <View style={styles.rightBtns}>
+        <TouchableOpacity style={styles.compassBtn} onPress={openCompass} activeOpacity={0.8}>
+          <Animated.View style={[{ alignItems: 'center' }, needleStyle]}>
+            <Ionicons name="caret-up" size={17} color="#FF453A" style={{ marginBottom: -5 }} />
+            <Ionicons name="caret-down" size={17} color="#fff" style={{ marginTop: -5 }} />
+          </Animated.View>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.mapBtn}
           onPress={() => (styleMenuOpen ? closeStyleSheet() : openStyleSheet())}
@@ -1092,6 +1176,83 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
+  },
+
+  // ── Kompass ──
+  compassBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#161618',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  compassRoot: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  compassClose: {
+    alignSelf: 'flex-end',
+    padding: 18,
+  },
+  compassStage: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 60,
+  },
+  compassDial: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: DIAL / 2,
+  },
+  tickWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+  },
+  tick: {
+    width: 1.5,
+    height: 11,
+    backgroundColor: '#4A4A4C',
+  },
+  tickMajor: {
+    height: 17,
+    width: 2,
+    backgroundColor: '#fff',
+  },
+  dialNum: {
+    color: '#8A8A8E',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 24,
+    fontVariant: ['tabular-nums'],
+  },
+  dialCardinal: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '800',
+    marginTop: 46,
+  },
+  compassCenter: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compassDeg: {
+    color: '#fff',
+    fontSize: 58,
+    fontWeight: '800',
+    letterSpacing: -1,
+    fontVariant: ['tabular-nums'],
+  },
+  compassCard: {
+    color: '#8A8A8E',
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 2,
   },
 
   // ── Kartval — grid med förhandsbilder ──
