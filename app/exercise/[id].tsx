@@ -20,7 +20,8 @@ import Body from 'react-native-body-highlighter'
 import { getMusclesForName, bestSideForMuscles, SLUG_LABELS } from '@/lib/muscles'
 import * as Haptics from 'expo-haptics'
 import { saveStrengthWorkout, deleteWorkout } from '@/services/workouts'
-import { getPersonalRecords, findNewPR } from '@/services/personalRecords'
+import { getPersonalRecords, findNewPR, type ExerciseRecord } from '@/services/personalRecords'
+import { getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
 import { dateForWeekday } from '@/services/workoutSchedule'
 import { supabase } from '@/lib/supabase'
 import { toLocalDateString } from '@/lib/date'
@@ -77,6 +78,25 @@ export default function ExerciseDetailScreen() {
   const [saving, setSaving]     = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
   const [datePicker, setDatePicker] = useState(false)
+
+  // Rekord + förra passet — visas som stats och ghost-förslag i fälten
+  const [record, setRecord]     = useState<ExerciseRecord | null>(null)
+  const [prevSets, setPrevSets] = useState<StrengthSet[] | null>(null)
+
+  useEffect(() => {
+    async function loadHistory() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user || !name) return
+      const [records, workouts] = await Promise.all([
+        getPersonalRecords(session.user.id).catch(() => [] as ExerciseRecord[]),
+        getStrengthWorkouts(session.user.id).catch(() => []),
+      ])
+      setRecord(records.find(r => r.exerciseName === name) ?? null)
+      const lastWo = workouts.find(w => w.data.exercise_name === name)
+      if (lastWo && lastWo.data.sets.length > 0) setPrevSets(lastWo.data.sets)
+    }
+    loadHistory()
+  }, [name])
 
   // ── Sheet animation ─────────────────────────────────────────────────────────
   const snapState    = useSharedValue(0)   // 0 = partial, 1 = fullscreen
@@ -325,47 +345,78 @@ export default function ExerciseDetailScreen() {
               </View>
             </View>
 
+            {/* Rekord & senaste pass */}
+            {(record || prevSets) && (
+              <View style={styles.historyRow}>
+                {record && (
+                  <View style={styles.historyChip}>
+                    <Ionicons name="trophy" size={13} color="#FFD54F" />
+                    <Text style={styles.historyChipText}>
+                      {record.bestWeightKg} kg × {record.bestWeightReps}
+                    </Text>
+                  </View>
+                )}
+                {prevSets && (
+                  <View style={styles.historyChip}>
+                    <Ionicons name="time-outline" size={13} color={TEXT_SECONDARY} />
+                    <Text style={styles.historyChipText}>
+                      Senast {prevSets.length} set
+                      {Math.max(...prevSets.map(p => p.weight_kg)) > 0
+                        ? ` · topp ${Math.max(...prevSets.map(p => p.weight_kg))} kg`
+                        : ''}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Log card */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Logga träning</Text>
-              <View style={styles.setHeader}>
-                <Text style={[styles.setHeaderText, { width: 36 }]}>Set</Text>
-                <Text style={[styles.setHeaderText, { flex: 1 }]}>Reps</Text>
-                <Text style={[styles.setHeaderText, { flex: 1 }]}>Kg</Text>
-                <View style={{ width: 32 }} />
-              </View>
-              {sets.map((s, i) => (
-                <View key={i} style={styles.setRow}>
-                  <View style={styles.setIndex}>
-                    <Text style={styles.setIndexText}>{i + 1}</Text>
+              {sets.map((s, i) => {
+                const prev = prevSets?.[i]
+                return (
+                  <View key={i} style={styles.setRow}>
+                    <View style={styles.setIndex}>
+                      <Text style={styles.setIndexText}>{i + 1}</Text>
+                    </View>
+                    <View style={styles.fieldWrap}>
+                      <TextInput
+                        style={styles.fieldInput}
+                        value={s.reps}
+                        onChangeText={v => updateSet(i, 'reps', v.replace(/[^0-9]/g, ''))}
+                        keyboardType="number-pad"
+                        placeholder={prev && prev.reps > 0 ? String(prev.reps) : '—'}
+                        placeholderTextColor="rgba(255,255,255,0.22)"
+                        inputAccessoryViewID={Platform.OS === 'ios' ? 'ex-log-kb' : undefined}
+                      />
+                      <Text style={styles.fieldSuffix}>reps</Text>
+                    </View>
+                    <View style={styles.fieldWrap}>
+                      <TextInput
+                        style={styles.fieldInput}
+                        value={s.weight}
+                        onChangeText={v => updateSet(i, 'weight', v.replace(/[^0-9.]/g, ''))}
+                        keyboardType="decimal-pad"
+                        placeholder={prev && prev.weight_kg > 0 ? String(prev.weight_kg) : '—'}
+                        placeholderTextColor="rgba(255,255,255,0.22)"
+                        inputAccessoryViewID={Platform.OS === 'ios' ? 'ex-log-kb' : undefined}
+                      />
+                      <Text style={styles.fieldSuffix}>kg</Text>
+                    </View>
+                    <TouchableOpacity style={styles.removeBtn} onPress={() => removeSet(i)}>
+                      <Ionicons
+                        name="close-circle"
+                        size={20}
+                        color={sets.length > 1 ? 'rgba(255,255,255,0.3)' : 'transparent'}
+                      />
+                    </TouchableOpacity>
                   </View>
-                  <TextInput
-                    style={styles.setInput}
-                    value={s.reps}
-                    onChangeText={v => updateSet(i, 'reps', v.replace(/[^0-9]/g, ''))}
-                    keyboardType="number-pad"
-                    placeholder="—"
-                    placeholderTextColor="rgba(255,255,255,0.2)"
-                    inputAccessoryViewID={Platform.OS === 'ios' ? 'ex-log-kb' : undefined}
-                  />
-                  <TextInput
-                    style={styles.setInput}
-                    value={s.weight}
-                    onChangeText={v => updateSet(i, 'weight', v.replace(/[^0-9.]/g, ''))}
-                    keyboardType="decimal-pad"
-                    placeholder="—"
-                    placeholderTextColor="rgba(255,255,255,0.2)"
-                    inputAccessoryViewID={Platform.OS === 'ios' ? 'ex-log-kb' : undefined}
-                  />
-                  <TouchableOpacity style={styles.removeBtn} onPress={() => removeSet(i)}>
-                    <Ionicons
-                      name="close-circle"
-                      size={20}
-                      color={sets.length > 1 ? 'rgba(255,255,255,0.3)' : 'transparent'}
-                    />
-                  </TouchableOpacity>
-                </View>
-              ))}
+                )
+              })}
+              {prevSets && (
+                <Text style={styles.ghostHint}>Grå siffror = förra passet</Text>
+              )}
               <TouchableOpacity style={styles.addSetBtn} onPress={addSet} activeOpacity={0.7}>
                 <Ionicons name="add-circle-outline" size={18} color={ORANGE} />
                 <Text style={styles.addSetText}>Lägg till set</Text>
@@ -382,8 +433,9 @@ export default function ExerciseDetailScreen() {
               disabled={saving}
               activeOpacity={0.85}
             >
+              <Ionicons name="checkmark-circle" size={19} color="#000" />
               <Text style={styles.saveBtnText}>
-                {saving ? 'Sparar…' : `Spara  ·  ${sets.length} set${totalReps > 0 ? `  ·  ${totalReps} reps` : ''}`}
+                {saving ? 'Sparar…' : `Spara pass  ·  ${sets.length} set${totalReps > 0 ? ` · ${totalReps} reps` : ''}`}
               </Text>
             </TouchableOpacity>
           </View>
@@ -556,29 +608,44 @@ const styles = StyleSheet.create({
   toggleText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   toggleTextActive: { color: '#000' },
 
-  setHeader:     { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  setHeaderText: {
-    color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600',
-    textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center',
-  },
   setRow:   { flexDirection: 'row', alignItems: 'center', gap: 12 },
   setIndex: {
     width: 36, height: 36, borderRadius: 10,
     backgroundColor: ORANGE + '22', alignItems: 'center', justifyContent: 'center',
   },
   setIndexText: { color: ORANGE, fontSize: 14, fontWeight: '700' },
-  setInput: {
-    flex: 1, height: 44, backgroundColor: '#2C2C2E',
-    borderRadius: 12, color: TEXT_PRIMARY,
-    fontSize: 18, fontWeight: '700', textAlign: 'center',
-    fontVariant: ['tabular-nums'],
+  // Inmatningsfält med enhets-suffix
+  fieldWrap: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    height: 48, backgroundColor: '#232326',
+    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+    paddingRight: 12,
   },
+  fieldInput: {
+    flex: 1, height: '100%',
+    color: TEXT_PRIMARY, fontSize: 19, fontWeight: '700',
+    textAlign: 'center', fontVariant: ['tabular-nums'],
+  },
+  fieldSuffix: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  ghostHint:   { color: 'rgba(255,255,255,0.28)', fontSize: 11, textAlign: 'center' },
+
+  // Rekord & senaste
+  historyRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  historyChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: CARD, borderRadius: 18,
+    borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  historyChipText: { color: TEXT_PRIMARY, fontSize: 12, fontWeight: '600' },
+
   removeBtn: { width: 32, alignItems: 'center', justifyContent: 'center' },
   addSetBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   addSetText: { color: ORANGE, fontSize: 15, fontWeight: '600' },
 
   saveWrap: { paddingHorizontal: 20, paddingTop: 12 },
   saveBtn: {
+    flexDirection: 'row', justifyContent: 'center', gap: 8,
     backgroundColor: ORANGE, borderRadius: 16,
     paddingVertical: 18, alignItems: 'center',
     shadowColor: ORANGE, shadowOffset: { width: 0, height: 4 },
