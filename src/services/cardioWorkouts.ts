@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { toLocalDateString } from '@/lib/date'
+import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { deleteWorkout } from './strengthWorkouts'
 
 export interface CardioSplit {
@@ -92,17 +92,46 @@ export async function getCardioWorkoutByDate(
   type: string,
   date: string,
 ): Promise<CardioWorkout | null> {
-  const workouts = await getCardioWorkouts(userId, 100)
-  return workouts.find(
-    w => w.data.type === type && toLocalDateString(new Date(w.created_at)) === date,
-  ) ?? null
+  const workouts = await getCardioWorkoutsForDate(userId, date)
+  return workouts.find(w => w.data.type === type) ?? null
 }
 
-/** Cardio-pass loggade ett visst datum (matchar created_at:s LOKALA dag —
- *  created_at är UTC, så kvällspass hamnar annars på fel dag). */
+/** Cardio-pass loggade ett visst LOKALT datum. Frågar bara dygnets UTC-intervall
+ *  istället för hela historiken — rutterna är stora och detta körs per dagbyte. */
 export async function getCardioWorkoutsForDate(userId: string, date: string): Promise<CardioWorkout[]> {
-  const all = await getCardioWorkouts(userId, 100)
-  return all.filter(w => toLocalDateString(new Date(w.created_at)) === date)
+  const dayStart = parseLocalDate(date)
+  const dayEnd   = new Date(dayStart)
+  dayEnd.setDate(dayEnd.getDate() + 1)
+
+  const { data, error } = await supabase
+    .from('user_workouts')
+    .select('id, name, created_at, exercises')
+    .eq('user_id', userId)
+    .gte('created_at', dayStart.toISOString())
+    .lt('created_at', dayEnd.toISOString())
+    .order('created_at', { ascending: false })
+
+  if (error || !data) return []
+
+  return data
+    .filter(w => Array.isArray(w.exercises) && w.exercises[0]?.category === 'cardio')
+    .map(w => {
+      const raw = w.exercises[0]
+      return {
+        id: w.id,
+        name: w.name,
+        created_at: w.created_at,
+        data: {
+          category:         'cardio' as const,
+          type:             raw.type             ?? 'running',
+          distance_km:      raw.distance_km      ?? 0,
+          duration_seconds: raw.duration_seconds ?? 0,
+          calories:         raw.calories         ?? 0,
+          route:            raw.route,
+          splits:           raw.splits,
+        } satisfies CardioData,
+      }
+    })
 }
 
 export async function getCardioWorkouts(userId: string, limit = 30): Promise<CardioWorkout[]> {

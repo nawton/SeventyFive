@@ -466,45 +466,50 @@ export default function CardioScreen() {
   }, [])
 
   async function initLocation() {
-    const { status } = await Location.requestForegroundPermissionsAsync()
-    if (status !== 'granted') {
-      Alert.alert(
-        'Platstjänster krävs',
-        'Aktivera platstjänster för att spåra din träning.',
-        [{ text: 'OK', onPress: () => router.back() }]
-      )
-      return
-    }
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert(
+          'Platstjänster krävs',
+          'Aktivera platstjänster för att spåra din träning.',
+          [{ text: 'OK', onPress: () => router.back() }]
+        )
+        return
+      }
 
-    // Snabb: sista kända position (omedelbar, ingen GPS-request)
-    const last = await Location.getLastKnownPositionAsync()
-    if (last) {
-      const c = { latitude: last.coords.latitude, longitude: last.coords.longitude }
+      // Snabb: sista kända position (omedelbar, ingen GPS-request)
+      const last = await Location.getLastKnownPositionAsync().catch(() => null)
+      if (last) {
+        const c = { latitude: last.coords.latitude, longitude: last.coords.longitude }
+        latestCoord.current = c
+        sendInit(c)
+      }
+
+      // Kompass: följ enhetens riktning (kan sakna magnetometer — ofarligt att hoppa över)
+      headingSub.current = await Location.watchHeadingAsync((h) => {
+        const raw = h.trueHeading >= 0 ? h.trueHeading : h.magHeading
+        // Kortaste vägen runt så nålen inte snurrar ett helt varv vid 359→0
+        const prev = headingCont.current
+        const delta = ((raw - (((prev % 360) + 360) % 360)) + 540) % 360 - 180
+        headingCont.current = prev + delta
+        headingV.value = withTiming(headingCont.current, { duration: 150 })
+        const i = Math.round(raw) % 360
+        if (i !== lastHeadingInt.current) {
+          lastHeadingInt.current = i
+          // Gradtexten behöver bara uppdateras när fullskärmskompassen är öppen
+          if (compassOpenRef.current) setHeadingDeg(i)
+        }
+      }).catch(() => null)
+
+      // Exakt: hämta aktuell position
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
+      const c = { latitude: loc.coords.latitude, longitude: loc.coords.longitude }
       latestCoord.current = c
       sendInit(c)
+    } catch {
+      // GPS:en kan vägra svara (flygplansläge, ingen signal) — skärmen funkar ändå,
+      // kartan centreras när första positionen väl kommer under passet
     }
-
-    // Kompass: följ enhetens riktning
-    headingSub.current = await Location.watchHeadingAsync((h) => {
-      const raw = h.trueHeading >= 0 ? h.trueHeading : h.magHeading
-      // Kortaste vägen runt så nålen inte snurrar ett helt varv vid 359→0
-      const prev = headingCont.current
-      const delta = ((raw - (((prev % 360) + 360) % 360)) + 540) % 360 - 180
-      headingCont.current = prev + delta
-      headingV.value = withTiming(headingCont.current, { duration: 150 })
-      const i = Math.round(raw) % 360
-      if (i !== lastHeadingInt.current) {
-        lastHeadingInt.current = i
-        // Gradtexten behöver bara uppdateras när fullskärmskompassen är öppen
-        if (compassOpenRef.current) setHeadingDeg(i)
-      }
-    })
-
-    // Exakt: hämta aktuell position
-    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
-    const c = { latitude: loc.coords.latitude, longitude: loc.coords.longitude }
-    latestCoord.current = c
-    sendInit(c)
   }
 
   function openCompass() {
@@ -653,7 +658,13 @@ export default function CardioScreen() {
         routeCoords.current.push([coord.latitude, coord.longitude])
         sendToMap(coord.latitude, coord.longitude, true)
       }
-    )
+    ).catch(() => {
+      // GPS-prenumerationen kunde inte startas — timern rullar ändå,
+      // och ett nytt försök görs vid Återuppta
+      locationSub.current = null
+      Alert.alert('GPS-problem', 'Kunde inte starta positionsspårningen. Tid loggas, men distans kan saknas.')
+      return null
+    })
   }
 
   function pauseTracking() {
@@ -1206,7 +1217,7 @@ export default function CardioScreen() {
                     <View key={i} style={styles.splitRow}>
                       <Text style={styles.splitKm}>{sp.label}</Text>
                       <View style={styles.splitBarTrack}>
-                        <View style={[styles.splitBar, { width: `${Math.max(12, (fastest / sp.paceSec) * 100)}%` as never }]} />
+                        <View style={[styles.splitBar, { width: `${sp.paceSec > 0 ? Math.max(12, (fastest / sp.paceSec) * 100) : 12}%` as never }]} />
                       </View>
                       <Text style={styles.splitPace}>{formatPace(1, sp.paceSec)}</Text>
                     </View>

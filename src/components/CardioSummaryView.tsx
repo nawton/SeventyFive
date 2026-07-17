@@ -247,7 +247,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
                 <View key={i} style={s.splitRow}>
                   <Text style={s.splitKm}>{sp.label}</Text>
                   <View style={s.splitBarTrack}>
-                    <View style={[s.splitBar, { width: `${Math.max(10, (fastestSplit / sp.paceSec) * 100)}%` as never }]} />
+                    <View style={[s.splitBar, { width: `${sp.paceSec > 0 ? Math.max(10, (fastestSplit / sp.paceSec) * 100) : 10}%` as never }]} />
                   </View>
                   <Text style={s.splitPace}>{formatPace(sp.paceSec)}</Text>
                 </View>

@@ -86,11 +86,15 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
     setSaving(true)
     onSaveGym(
       passName.trim() || 'Gympass',
-      entries.map(en => ({
-        exerciseName: en.exercise.name,
-        sets: en.sets.trim() ? parseInt(en.sets) : 3,
-        reps: en.reps.trim() || '10',
-      })),
+      entries.map(en => {
+        // Ogiltig inmatning får inte bli NaN — då failar databas-inserten tyst
+        const parsed = parseInt(en.sets, 10)
+        return {
+          exerciseName: en.exercise.name,
+          sets: Number.isFinite(parsed) && parsed > 0 ? parsed : 3,
+          reps: en.reps.trim() || '10',
+        }
+      }),
     )
   }
 
