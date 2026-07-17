@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ScrollView, Alert } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Gesture, GestureDetector, type GestureType } from 'react-native-gesture-handler'
 import Animated, {
@@ -9,6 +9,12 @@ import * as Haptics from 'expo-haptics'
 import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import type { DaySummary } from '@/services/dailyLog'
+import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
+import type { CompletedSessionItem } from '@/services/workoutSchedule'
+import { deleteCardioWorkout } from '@/services/workouts'
+import type { UnitSystem } from '@/lib/units'
+import { DayWorkoutsModal } from './DayWorkoutsModal'
+import { CardioSummaryView } from '@/components/CardioSummaryView'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
 const GRID_PADDING = 20
@@ -71,13 +77,24 @@ function Legend() {
   )
 }
 
-export function CalendarView({ days, startDate, currentDay, onPressDay, gestureRef }: {
+export function CalendarView({
+  days, startDate, currentDay, onPressDay, gestureRef,
+  workouts = [], strengthWorkouts = [], completedSessions = [],
+  unit = 'metric', avatarUrl = null, onDeleteWorkout,
+}: {
   days: DaySummary[]
   startDate: string | null
   currentDay: number
   onPressDay: (d: DaySummary) => void
   /** Skickas till omgivande pagers waitFor så månadssvepet vinner över flikbytet */
   gestureRef?: React.MutableRefObject<GestureType | undefined>
+  // För att kunna öppna dagsvyn och passdetaljen INUTI helskärmskalendern
+  workouts?: CardioWorkout[]
+  strengthWorkouts?: StrengthWorkout[]
+  completedSessions?: CompletedSessionItem[]
+  unit?: UnitSystem
+  avatarUrl?: string | null
+  onDeleteWorkout?: (id: string) => void
 }) {
   const init  = startDate ? parseLocalDate(startDate) : new Date()
   const [view, setView] = useState(new Date(init.getFullYear(), init.getMonth(), 1))
@@ -87,6 +104,22 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
   const today = new Date()
 
   const [yearOpen, setYearOpen] = useState(false)
+  // Dagsvy + passdetalj som lager INUTI helskärmskalendern (så de stackar rätt)
+  const [fsDay, setFsDay] = useState<DaySummary | null>(null)
+  const [fsWorkout, setFsWorkout] = useState<CardioWorkout | null>(null)
+
+  function deleteFsWorkout() {
+    const w = fsWorkout
+    if (!w) return
+    Alert.alert('Radera träning', 'Det här går inte att ångra.', [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Radera', style: 'destructive', onPress: async () => {
+        await deleteCardioWorkout(w.id).catch(() => {})
+        onDeleteWorkout?.(w.id)
+        setFsWorkout(null)
+      } },
+    ])
+  }
 
   // Mjuk övergång: rutnätet glider ut åt svepets håll, månaden byts, glider in
   const slide = useSharedValue(0)
@@ -205,6 +238,7 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
       {/* ── Helskärmsöversikt: alla utmaningens månader med en ring per dag ── */}
       <Modal visible={yearOpen} animationType="slide" onRequestClose={() => setYearOpen(false)}>
         <View style={s.fullScreen}>
+          <View style={s.fullInner}>
           <View style={s.fullHeader}>
             <Text style={s.fullTitle}>Hela utmaningen</Text>
             <TouchableOpacity style={s.yearClose} onPress={() => setYearOpen(false)} activeOpacity={0.7}>
@@ -242,9 +276,9 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
                         style={s.fullDay}
                         disabled={!tappable}
                         activeOpacity={0.7}
-                        // Stäng INTE helskärmskalendern — dagsvyn öppnas ovanpå så
-                        // man stannar kvar i översikten när den stängs
-                        onPress={() => { if (sum) { Haptics.selectionAsync(); onPressDay(sum) } }}
+                        // Öppnar dagsvyn som ett lager INUTI helskärmskalendern,
+                        // så man stannar kvar i översikten när den stängs
+                        onPress={() => { if (sum) { Haptics.selectionAsync(); setFsDay(sum) } }}
                       >
                         <View style={[s.fullDayNum, isToday && s.fullDayNumToday]}>
                           <Text style={[s.fullDayNumText, !sum && { color: 'rgba(255,255,255,0.25)' }, isToday && { color: '#000', fontWeight: '800' }]}>
@@ -268,6 +302,37 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
             ))}
             <Legend />
           </ScrollView>
+          </View>
+
+          {/* Dagsvy — lager ovanpå helskärmskalendern */}
+          {fsDay && startDate && (
+            <View style={StyleSheet.absoluteFill}>
+              <DayWorkoutsModal
+                day={fsDay}
+                startDate={startDate}
+                workouts={workouts}
+                strengthWorkouts={strengthWorkouts}
+                completedSessions={completedSessions}
+                onClose={() => setFsDay(null)}
+                onSelectWorkout={setFsWorkout}
+              />
+            </View>
+          )}
+
+          {/* Passdetalj — lager ovanpå dagsvyn */}
+          {fsWorkout && (
+            <View style={StyleSheet.absoluteFill}>
+              <CardioSummaryView
+                workout={fsWorkout}
+                title={fsWorkout.name}
+                dateLabel={new Date(fsWorkout.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+                avatarUrl={avatarUrl}
+                unit={unit}
+                onClose={() => setFsWorkout(null)}
+                onDelete={deleteFsWorkout}
+              />
+            </View>
+          )}
         </View>
       </Modal>
     </View>
@@ -291,7 +356,8 @@ const s = StyleSheet.create({
   calMonthLabel: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
 
   // Helskärmsöversikt (Apple Fitness-stil)
-  fullScreen: { flex: 1, backgroundColor: '#0E0E10', paddingTop: 60 },
+  fullScreen: { flex: 1, backgroundColor: '#0E0E10' },
+  fullInner:  { flex: 1, paddingTop: 60 },
   fullHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingBottom: 14,

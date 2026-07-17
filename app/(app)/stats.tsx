@@ -585,6 +585,12 @@ export default function StatsScreen() {
               currentDay={currentDay}
               onPressDay={setSelectedDay}
               gestureRef={calSwipeRef}
+              workouts={workouts}
+              strengthWorkouts={strengthWorkouts}
+              completedSessions={completedSessions}
+              unit={unit}
+              avatarUrl={avatarUrl}
+              onDeleteWorkout={id => setWorkouts(prev => prev.filter(w => w.id !== id))}
             />
           </>
         </ScrollView>
