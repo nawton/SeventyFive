@@ -120,8 +120,22 @@ export async function completeCardioSession(
       { session_id: sessionId, user_id: userId, completed_date: date, distance_km: distanceKm, duration_seconds: durationSeconds },
       { onConflict: 'session_id,completed_date' },
     )
+  if (!error) return
   // 23505 = redan markerad som klar — ofarligt
-  if (error && error.code !== '23505') throw error
+  if (error.code === '23505') return
+  // 42703 = distans-/tidskolumnerna saknas (migration ej körd) → markera ändå
+  // klar utan detaljerna, så passet inte blir hängande som oavklarat.
+  if (error.code === '42703') {
+    const { error: e2 } = await supabase
+      .from('workout_completions')
+      .upsert(
+        { session_id: sessionId, user_id: userId, completed_date: date },
+        { onConflict: 'session_id,completed_date' },
+      )
+    if (e2 && e2.code !== '23505') throw e2
+    return
+  }
+  throw error
 }
 
 export async function deleteWorkoutSession(id: string): Promise<void> {

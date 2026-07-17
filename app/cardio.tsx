@@ -695,26 +695,41 @@ export default function CardioScreen() {
     setSaving(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        await saveCardioWorkout({
-          userId: session.user.id,
-          name: selectedExercise.label,
-          type: exercise,
-          distanceKm: summary.distanceKm,
-          durationSeconds: summary.elapsed,
-          calories: summary.calories,
-          route: summary.route,
-        })
-        if (sessionId) {
-          const date = sessionDate ?? toLocalDateString()
+      if (!session?.user) {
+        Alert.alert('Inte inloggad', 'Du måste vara inloggad för att spara passet.')
+        return
+      }
+
+      // 1) Spara själva passet (måste lyckas)
+      await saveCardioWorkout({
+        userId: session.user.id,
+        name: selectedExercise.label,
+        type: exercise,
+        distanceKm: summary.distanceKm,
+        durationSeconds: summary.elapsed,
+        calories: summary.calories,
+        route: summary.route,
+      })
+
+      // 2) Markera det schemalagda passet som klart (om vi kom från ett sådant).
+      //    Ett fel här ska inte kasta bort passet — vi varnar men går vidare.
+      if (sessionId) {
+        const date = sessionDate ?? toLocalDateString()
+        try {
           await completeCardioSession(sessionId, session.user.id, date, summary.distanceKm, summary.elapsed)
+        } catch (e: any) {
+          Alert.alert(
+            'Passet sparades',
+            `…men kunde inte markeras som klart i schemat.\n\n${e?.message ?? e?.code ?? 'Okänt fel'}`,
+          )
         }
       }
+
       setSummary(null)
       router.back()
-    } catch {
+    } catch (e: any) {
       // Behåll sammanfattningen så passet inte går förlorat — användaren kan spara igen
-      Alert.alert('Kunde inte spara passet', 'Kontrollera din anslutning och försök igen.')
+      Alert.alert('Kunde inte spara passet', e?.message ?? 'Kontrollera din anslutning och försök igen.')
     } finally {
       setSaving(false)
     }
