@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import WebView from 'react-native-webview'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { ORANGE } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { saveCardioWorkout } from '@/services/workouts'
@@ -183,7 +185,10 @@ export default function CardioScreen() {
 
   const [status, setStatus] = useState<Status>('idle')
   const [exercise, setExercise] = useState<ExerciseType>(() => nameToType(name ?? ''))
-  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  // Fullskärms-stats: dra ner på statskortet för att dölja kartan
+  const [statsExpanded, setStatsExpanded] = useState(false)
+  const expandV = useSharedValue(0)
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
   const [activeStyle, setActiveStyle] = useState<string>('standard')
   const [summary, setSummary] = useState<{ distanceKm: number; elapsed: number; calories: number; route: Array<[number, number]> } | null>(null)
@@ -207,6 +212,32 @@ export default function CardioScreen() {
   const selectedExercise = EXERCISES.find(e => e.key === exercise)!
   const pace = formatPace(distanceKm, elapsed)
   const calories = Math.round(distanceKm * 65)
+
+  function openStats() {
+    setStatsExpanded(true)
+    expandV.value = withTiming(1, { duration: 260 })
+  }
+  function closeStats() {
+    setStatsExpanded(false)
+    expandV.value = withTiming(0, { duration: 220 })
+  }
+
+  // Dra ner på statskortet → fullskärms-stats; dra upp i fullskärm → karta igen
+  const expandGesture = Gesture.Pan()
+    .activeOffsetY([-15, 15])
+    .onEnd(e => {
+      if (e.translationY > 30) runOnJS(openStats)()
+    })
+  const collapseGesture = Gesture.Pan()
+    .activeOffsetY([-15, 15])
+    .onEnd(e => {
+      if (e.translationY < -30) runOnJS(closeStats)()
+    })
+
+  const expandedStyle = useAnimatedStyle(() => ({
+    opacity: expandV.value,
+    transform: [{ translateY: interpolate(expandV.value, [0, 1], [-50, 0]) }],
+  }))
 
   useEffect(() => {
     initLocation()
@@ -365,6 +396,7 @@ export default function CardioScreen() {
 
   function handleFinish() {
     cleanup()
+    closeStats()
     setSummary({ distanceKm, elapsed, calories, route: routeCoords.current })
     setStatus('idle')
   }
@@ -415,7 +447,8 @@ export default function CardioScreen() {
 
       {/* ── Stats overlay (only while active) ── */}
       {status !== 'idle' && (
-        <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="none">
+        <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
+          <GestureDetector gesture={expandGesture}>
           <View style={styles.statsCard}>
             <View style={styles.timerRow}>
               <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
@@ -429,7 +462,7 @@ export default function CardioScreen() {
             {(goalKmNum > 0 || goalMinNum > 0) && (
               <View style={styles.goalTrackWrap}>
                 <View style={styles.goalTextRow}>
-                  <Text style={styles.goalText}>
+                  <Text style={[styles.goalText, { color: '#555' }]}>
                     Mål: {goalKmNum > 0 ? `${toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} ${unitLabel}` : `${goalMinNum} min`}
                   </Text>
                   <Text style={styles.goalPct}>
@@ -438,7 +471,7 @@ export default function CardioScreen() {
                     ))}%
                   </Text>
                 </View>
-                <View style={styles.goalTrack}>
+                <View style={[styles.goalTrack, { backgroundColor: 'rgba(0,0,0,0.08)' }]}>
                   <View style={[styles.goalFill, { width: `${Math.min(100,
                     goalKmNum > 0 ? (distanceKm / goalKmNum) * 100 : (elapsed / (goalMinNum * 60)) * 100
                   )}%` as never }]} />
@@ -471,7 +504,9 @@ export default function CardioScreen() {
                 <Text style={styles.statLabel}>kcal</Text>
               </View>
             </View>
+            <Ionicons name="chevron-down" size={14} color="#999" style={{ marginTop: -2 }} />
           </View>
+          </GestureDetector>
         </SafeAreaView>
       )}
 
@@ -527,29 +562,101 @@ export default function CardioScreen() {
         </TouchableOpacity>
       </SafeAreaView>
 
-      {/* ── Bottom bar ── */}
-      {/* Aktivitetsmeny — visas ovanför startmenyn */}
-      {dropdownOpen && (
-        <View style={styles.dropdown}>
-          {EXERCISES.map((ex) => {
-            const active = exercise === ex.key
-            return (
-              <TouchableOpacity
-                key={ex.key}
-                style={styles.dropdownItem}
-                onPress={() => { setExercise(ex.key); setDropdownOpen(false) }}
-                activeOpacity={0.75}
-              >
-                <Ionicons name={ex.icon} size={20} color={active ? ORANGE : '#888'} />
-                <Text style={[styles.dropdownItemText, active && styles.dropdownItemTextActive]}>
-                  {ex.label}
-                </Text>
-                {active && <Ionicons name="checkmark" size={18} color={ORANGE} style={{ marginLeft: 'auto' }} />}
+      {/* ── Fullskärms-stats (kartan dold) ── */}
+      {status !== 'idle' && (
+        <Animated.View
+          style={[styles.expandedStats, expandedStyle]}
+          pointerEvents={statsExpanded ? 'auto' : 'none'}
+        >
+          <GestureDetector gesture={collapseGesture}>
+            <SafeAreaView style={styles.expandedInner} edges={['top']}>
+              <TouchableOpacity style={styles.expandedHandleWrap} onPress={closeStats} activeOpacity={0.7}>
+                <View style={styles.sheetHandle} />
+                <Text style={styles.expandedHint}>Svep upp för karta</Text>
               </TouchableOpacity>
-            )
-          })}
-        </View>
+
+              <View style={styles.expandedTimerWrap}>
+                <Text style={styles.expandedTimer}>{formatTime(elapsed)}</Text>
+                <Text style={styles.expandedTimerLabel}>Tid</Text>
+                {status === 'paused' && (
+                  <View style={[styles.pausedBadge, { marginTop: 8 }]}>
+                    <Text style={styles.pausedBadgeText}>PAUSAD</Text>
+                  </View>
+                )}
+              </View>
+
+              {(goalKmNum > 0 || goalMinNum > 0) && (
+                <View style={styles.expandedGoal}>
+                  <View style={styles.goalTextRow}>
+                    <Text style={styles.goalText}>
+                      Mål: {goalKmNum > 0 ? `${toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} ${unitLabel}` : `${goalMinNum} min`}
+                    </Text>
+                    <Text style={styles.goalPct}>
+                      {Math.min(100, Math.round(
+                        goalKmNum > 0 ? (distanceKm / goalKmNum) * 100 : (elapsed / (goalMinNum * 60)) * 100
+                      ))}%
+                    </Text>
+                  </View>
+                  <View style={styles.goalTrack}>
+                    <View style={[styles.goalFill, { width: `${Math.min(100,
+                      goalKmNum > 0 ? (distanceKm / goalKmNum) * 100 : (elapsed / (goalMinNum * 60)) * 100
+                    )}%` as never }]} />
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.summaryGrid2}>
+                {([
+                  { icon: 'map-outline' as const,         value: toDisplayDistance(distanceKm, unit).toFixed(2),                                          label: unitLabel,           color: ORANGE },
+                  { icon: 'speedometer-outline' as const,  value: distanceKm > 0.01 ? formatPace(1, paceForUnit(elapsed / distanceKm, unit)) : '--:--',    label: `snitt /${unitLabel}`, color: '#4CAF50' },
+                  { icon: 'pulse-outline' as const,        value: currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '--:--',         label: `nu /${unitLabel}`,  color: '#4AA8E0' },
+                  { icon: 'flash-outline' as const,        value: String(calories),                                                                        label: 'kcal',              color: '#9B6DFF' },
+                ]).map(stat => (
+                  <View key={stat.label} style={styles.summaryStatCard}>
+                    <View style={[styles.summaryStatIcon, { backgroundColor: stat.color + '22' }]}>
+                      <Ionicons name={stat.icon} size={17} color={stat.color} />
+                    </View>
+                    <Text style={styles.summaryStatValue}>{stat.value}</Text>
+                    <Text style={styles.summaryStatLabel}>{stat.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </SafeAreaView>
+          </GestureDetector>
+        </Animated.View>
       )}
+
+      {/* ── Aktivitetsväljare — slide-up ── */}
+      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+        <View style={styles.sheetRoot}>
+          <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setPickerOpen(false)} />
+          <SafeAreaView style={styles.sheet} edges={['bottom']}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Välj aktivitet</Text>
+            {EXERCISES.map((ex) => {
+              const active = exercise === ex.key
+              return (
+                <TouchableOpacity
+                  key={ex.key}
+                  style={[styles.sheetItem, active && styles.sheetItemActive]}
+                  onPress={() => {
+                    setExercise(ex.key)
+                    Haptics.selectionAsync()
+                    setPickerOpen(false)
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.sheetItemIcon, active && { backgroundColor: ORANGE + '2E' }]}>
+                    <Ionicons name={ex.icon} size={22} color={active ? ORANGE : '#999'} />
+                  </View>
+                  <Text style={[styles.sheetItemText, active && styles.sheetItemTextActive]}>{ex.label}</Text>
+                  {active && <Ionicons name="checkmark-circle" size={22} color={ORANGE} style={{ marginLeft: 'auto' }} />}
+                </TouchableOpacity>
+              )
+            })}
+          </SafeAreaView>
+        </View>
+      </Modal>
 
       {/* ── Workout summary modal ── */}
       <Modal visible={!!summary} animationType="slide" transparent>
@@ -631,17 +738,16 @@ export default function CardioScreen() {
       </Modal>
 
       <SafeAreaView style={styles.bottomBar} edges={['bottom']}>
-        <View style={styles.barHandle} />
         <View style={styles.bottomInner}>
 
           {status === 'idle' ? (
             <>
               <TouchableOpacity
                 style={styles.idleCol}
-                onPress={() => setDropdownOpen(o => !o)}
+                onPress={() => setPickerOpen(true)}
                 activeOpacity={0.8}
               >
-                <View style={[styles.typeCircle, dropdownOpen && styles.typeCircleOpen]}>
+                <View style={styles.typeCircle}>
                   <Ionicons name={selectedExercise.icon} size={26} color={ORANGE} />
                   <View style={styles.typeBadge}>
                     <Ionicons name="checkmark" size={11} color="#fff" />
@@ -657,25 +763,30 @@ export default function CardioScreen() {
                 <Text style={styles.startLabel}>Starta</Text>
               </TouchableOpacity>
             </>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={styles.sideBtn}
-                onPress={status === 'running' ? pauseTracking : startTracking}
-                activeOpacity={0.8}
-              >
-                <Ionicons name={status === 'running' ? 'pause' : 'play'} size={20} color="#fff" />
-                <Text style={styles.sideBtnText}>{status === 'running' ? 'Pausa' : 'Fortsätt'}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.startBtn} onPress={handleFinish} activeOpacity={0.85}>
-                <Ionicons name="stop" size={28} color="#fff" />
-              </TouchableOpacity>
-
-              <View style={styles.exerciseActive}>
-                <Ionicons name={selectedExercise.icon} size={20} color={ORANGE} />
-                <Text style={styles.exerciseActiveLabel}>{selectedExercise.label}</Text>
+          ) : status === 'running' ? (
+            // Under passet: bara en pausknapp
+            <TouchableOpacity style={styles.idleCol} onPress={pauseTracking} activeOpacity={0.85}>
+              <View style={styles.startCircle}>
+                <Ionicons name="pause" size={34} color="#fff" />
               </View>
+              <Text style={styles.startLabel}>Pausa</Text>
+            </TouchableOpacity>
+          ) : (
+            // Pausad: stor Återuppta, liten Avsluta så man inte råkar avsluta
+            <>
+              <TouchableOpacity style={styles.idleCol} onPress={startTracking} activeOpacity={0.85}>
+                <View style={styles.startCircle}>
+                  <Ionicons name="play" size={36} color="#fff" style={{ marginLeft: 4 }} />
+                </View>
+                <Text style={styles.startLabel}>Återuppta</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.idleCol} onPress={handleFinish} activeOpacity={0.85}>
+                <View style={styles.finishCircle}>
+                  <Ionicons name="stop" size={20} color="#fff" />
+                </View>
+                <Text style={styles.finishLabel}>Avsluta</Text>
+              </TouchableOpacity>
             </>
           )}
 
@@ -896,55 +1007,119 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
   },
-  barHandle: {
-    alignSelf: 'center',
-    width: 44,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#3A3A3C',
-    marginTop: 10,
-  },
   bottomInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 32,
-    paddingTop: 14,
+    paddingTop: 16,
     paddingBottom: 8,
   },
 
-  // ── Aktivitetsmeny ──
-  dropdown: {
-    position: 'absolute',
-    bottom: 165,
-    left: 20,
-    backgroundColor: '#1F1F21',
-    borderWidth: 1,
-    borderColor: '#2C2C2E',
-    borderRadius: 16,
-    paddingVertical: 6,
-    minWidth: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    zIndex: 30,
+  // ── Aktivitetsväljare (slide-up) ──
+  sheetRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  dropdownItem: {
+  sheetBackdrop: {
+    flex: 1,
+  },
+  sheet: {
+    backgroundColor: '#1C1C1E',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#3A3A3C',
+  },
+  sheetTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginTop: 14,
+    marginBottom: 10,
+  },
+  sheetItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
+    gap: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 16,
   },
-  dropdownItemText: {
+  sheetItemActive: {
+    backgroundColor: '#242426',
+  },
+  sheetItemIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#2C2C2E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetItemText: {
     color: '#ccc',
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
   },
-  dropdownItemTextActive: {
-    color: ORANGE,
+  sheetItemTextActive: {
+    color: '#fff',
     fontWeight: '700',
+  },
+
+  // ── Fullskärms-stats ──
+  expandedStats: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#121214',
+    zIndex: 20,
+  },
+  expandedInner: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  expandedHandleWrap: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 8,
+  },
+  expandedHint: {
+    color: '#555',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  expandedTimerWrap: {
+    alignItems: 'center',
+    marginTop: 28,
+    marginBottom: 28,
+  },
+  expandedTimer: {
+    color: '#fff',
+    fontSize: 62,
+    fontWeight: '800',
+    letterSpacing: -1,
+    fontVariant: ['tabular-nums'],
+  },
+  expandedTimerLabel: {
+    color: '#666',
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+  expandedGoal: {
+    gap: 5,
+    marginBottom: 20,
   },
 
   // ── Startmeny (idle) ──
@@ -965,10 +1140,6 @@ const styles = StyleSheet.create({
     backgroundColor: ORANGE + '2E',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  typeCircleOpen: {
-    borderWidth: 2,
-    borderColor: ORANGE,
   },
   typeBadge: {
     position: 'absolute',
@@ -1002,46 +1173,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // Start button
-  startBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: ORANGE,
+  // Pausad: liten avsluta-knapp
+  finishCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#3A3A3C',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: ORANGE,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 8,
-    flexShrink: 0,
   },
-
-  // Active controls (running/paused)
-  sideBtn: {
-    flex: 1,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#2C2C2E',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  sideBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  exerciseActive: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  exerciseActiveLabel: {
-    color: '#888',
-    fontSize: 11,
+  finishLabel: {
+    color: '#999',
+    fontSize: 13,
     fontWeight: '600',
   },
 
