@@ -266,6 +266,7 @@ export default function StatsScreen() {
   }
 
   const bodyFlipRef = useRef<GestureType | undefined>(undefined)
+  const calSwipeRef = useRef<GestureType | undefined>(undefined)
   const bodyFlip = Gesture.Pan()
     .withRef(bodyFlipRef)
     .activeOffsetX([-12, 12])
@@ -466,7 +467,7 @@ export default function StatsScreen() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
-        waitFor={bodyFlipRef}
+        waitFor={[bodyFlipRef, calSwipeRef]}
         onScroll={e => { pagerX.value = e.nativeEvent.contentOffset.x }}
         onMomentumScrollEnd={e => {
           const idx = Math.round(e.nativeEvent.contentOffset.x / STATS_SCREEN_W)
@@ -557,6 +558,7 @@ export default function StatsScreen() {
               startDate={startDate}
               currentDay={currentDay}
               onPressDay={setSelectedDay}
+              gestureRef={calSwipeRef}
             />
           </>
         </ScrollView>

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { Gesture, GestureDetector, type GestureType } from 'react-native-gesture-handler'
+import { runOnJS } from 'react-native-reanimated'
+import * as Haptics from 'expo-haptics'
 import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import type { DaySummary } from '@/services/dailyLog'
@@ -33,16 +36,17 @@ function getChallengeDay(date: Date, startDate: string): number | null {
   return diff >= 0 && diff < 75 ? diff + 1 : null
 }
 
-function buildCalendarCells(year: number, month: number): Date[] {
+// Bara månadens egna dagar — start/slut fylls med tomma celler så t.ex.
+// juni aldrig visar 1–5 juli i sista raden
+function buildCalendarCells(year: number, month: number): Array<Date | null> {
   const firstDay    = new Date(year, month, 1)
   const offset      = (firstDay.getDay() + 6) % 7
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const prevDays    = new Date(year, month, 0).getDate()
-  const cells: Date[] = []
-  for (let i = offset - 1; i >= 0; i--)    cells.push(new Date(year, month - 1, prevDays - i))
-  for (let d = 1; d <= daysInMonth; d++)    cells.push(new Date(year, month, d))
+  const cells: Array<Date | null> = []
+  for (let i = 0; i < offset; i++)       cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d))
   const rem = (7 - (cells.length % 7)) % 7
-  for (let d = 1; d <= rem; d++)            cells.push(new Date(year, month + 1, d))
+  for (let i = 0; i < rem; i++)          cells.push(null)
   return cells
 }
 
@@ -65,11 +69,13 @@ function Legend() {
   )
 }
 
-export function CalendarView({ days, startDate, currentDay, onPressDay }: {
+export function CalendarView({ days, startDate, currentDay, onPressDay, gestureRef }: {
   days: DaySummary[]
   startDate: string | null
   currentDay: number
   onPressDay: (d: DaySummary) => void
+  /** Skickas till omgivande pagers waitFor så månadssvepet vinner över flikbytet */
+  gestureRef?: React.MutableRefObject<GestureType | undefined>
 }) {
   const init  = startDate ? parseLocalDate(startDate) : new Date()
   const [view, setView] = useState(new Date(init.getFullYear(), init.getMonth(), 1))
@@ -78,7 +84,24 @@ export function CalendarView({ days, startDate, currentDay, onPressDay }: {
   const cells = buildCalendarCells(yr, mo)
   const today = new Date()
 
+  function changeMonth(dir: number) {
+    Haptics.selectionAsync()
+    setView(v => new Date(v.getFullYear(), v.getMonth() + dir, 1))
+  }
+
+  // Svep vänster = nästa månad, höger = föregående
+  let monthSwipe = Gesture.Pan()
+    .activeOffsetX([-15, 15])
+    .failOffsetY([-15, 15])
+    .onEnd(e => {
+      if (Math.abs(e.translationX) > 40 || Math.abs(e.velocityX) > 500) {
+        runOnJS(changeMonth)(e.translationX < 0 ? 1 : -1)
+      }
+    })
+  if (gestureRef) monthSwipe = monthSwipe.withRef(gestureRef)
+
   return (
+    <GestureDetector gesture={monthSwipe}>
     <View style={s.calCard}>
       <View style={s.calHeader}>
         <TouchableOpacity style={s.calNavBtn} onPress={() => setView(new Date(yr, mo - 1, 1))} activeOpacity={0.7}>
@@ -100,6 +123,7 @@ export function CalendarView({ days, startDate, currentDay, onPressDay }: {
 
       <View style={s.calGrid}>
         {cells.map((date, i) => {
+          if (!date) return <View key={i} style={s.calDay} />
           const challengeDay = startDate ? getChallengeDay(date, startDate) : null
           const summary      = challengeDay ? days[challengeDay - 1] : null
           const isToday      = sameDay(date, today)
@@ -138,6 +162,7 @@ export function CalendarView({ days, startDate, currentDay, onPressDay }: {
 
       <Legend />
     </View>
+    </GestureDetector>
   )
 }
 
