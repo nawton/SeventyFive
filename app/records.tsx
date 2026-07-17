@@ -18,6 +18,7 @@ import { getCompletedSessionsHistory } from '@/services/workoutSchedule'
 import { getPersonalRecords, type ExerciseRecord } from '@/services/personalRecords'
 import { computeAchievements, type Achievement } from '@/lib/achievements'
 import { MedalBadge } from '@/components/MedalBadge'
+import { MEDAL_IMAGES } from '@/lib/medalImages'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 const GOLD = '#FFD54F'
@@ -94,7 +95,7 @@ export default function RecordsScreen() {
         <View style={s.medalGrid}>
           {achievements.map(a => (
             <View key={a.id} style={[s.medal, !a.unlocked && s.medalLocked]}>
-              <MedalBadge tier={a.tier} icon={a.icon} unlocked={a.unlocked} size={56} />
+              <MedalBadge tier={a.tier} icon={a.icon} unlocked={a.unlocked} size={56} imageSource={MEDAL_IMAGES[a.id]} />
               <Text style={[s.medalTitle, !a.unlocked && { color: TEXT_SECONDARY }]} numberOfLines={1}>
                 {a.title}
               </Text>

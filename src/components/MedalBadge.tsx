@@ -1,4 +1,4 @@
-import { View, StyleSheet } from 'react-native'
+import { View, Image, StyleSheet, type ImageSourcePropType } from 'react-native'
 import Svg, { Polygon, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { Ionicons } from '@expo/vector-icons'
 
@@ -36,14 +36,27 @@ export function MedalBadge({
   icon,
   unlocked,
   size = 56,
+  imageSource,
 }: {
   tier: MedalTier
   icon: React.ComponentProps<typeof Ionicons>['name']
   unlocked: boolean
   size?: number
+  /** Egen medaljbild (PNG) — ersätter SVG-hexagonen när den finns */
+  imageSource?: ImageSourcePropType
 }) {
   const c = unlocked ? TIERS[tier] : LOCKED
   const gradId = `medal-${tier}-${unlocked ? 'on' : 'off'}`
+
+  if (imageSource) {
+    return (
+      <Image
+        source={imageSource}
+        style={{ width: size, height: size, opacity: unlocked ? 1 : 0.3 }}
+        resizeMode="contain"
+      />
+    )
+  }
 
   return (
     <View style={{ width: size, height: size }}>
