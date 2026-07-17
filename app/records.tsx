@@ -19,6 +19,7 @@ import { getPersonalRecords, type ExerciseRecord } from '@/services/personalReco
 import { computeAchievements, type Achievement } from '@/lib/achievements'
 import { MedalBadge } from '@/components/MedalBadge'
 import { MEDAL_IMAGES } from '@/lib/medalImages'
+import { LEVEL_TIERS, POINT_RULES, computePoints, levelFor } from '@/lib/levels'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 const GOLD = '#FFD54F'
@@ -27,6 +28,7 @@ export default function RecordsScreen() {
   const [loading, setLoading]           = useState(true)
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [records, setRecords]           = useState<ExerciseRecord[]>([])
+  const [points, setPoints]             = useState(0)
 
   useEffect(() => {
     async function load() {
@@ -50,13 +52,22 @@ export default function RecordsScreen() {
           : [0, 0]
 
         setRecords(prs)
-        setAchievements(computeAchievements({
+        const medals = computeAchievements({
           completedDays,
           streak,
           totalWorkouts: strength.length + cardio.length + sessionHistory.length,
           totalCardio: cardio.length,
           totalKm: cardio.reduce((sum, w) => sum + w.data.distance_km, 0),
           prCount: prs.length,
+        })
+        setAchievements(medals)
+        setPoints(computePoints({
+          completedDays,
+          sessionCount: sessionHistory.length,
+          cardioCount: cardio.length,
+          strengthCount: strength.length,
+          prCount: prs.length,
+          medalsUnlocked: medals.filter(m => m.unlocked).length,
         }))
       } finally {
         setLoading(false)
@@ -66,6 +77,7 @@ export default function RecordsScreen() {
   }, [])
 
   const unlockedCount = achievements.filter(a => a.unlocked).length
+  const level = levelFor(points)
 
   if (loading) {
     return (
@@ -86,6 +98,54 @@ export default function RecordsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* ── Min nivå ── */}
+        <View style={s.levelHero}>
+          <MedalBadge tier={level.current.tier} label="75" unlocked size={120} />
+          <Text style={s.levelName}>{level.current.name}</Text>
+        </View>
+
+        <View style={s.levelProgressTrack}>
+          <View style={[s.levelProgressFill, { width: `${Math.round(level.progress * 100)}%` as any }]} />
+        </View>
+        <View style={s.levelPtsRow}>
+          <Text style={s.levelPtsBig}>
+            {level.next
+              ? `${(level.next.threshold - points).toLocaleString('sv-SE')} p till ${level.next.name}`
+              : 'Högsta nivån nådd!'}
+          </Text>
+          <Text style={s.levelPtsTotal}>Totalt: {points.toLocaleString('sv-SE')} p</Text>
+        </View>
+
+        {/* Tier-rad */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tierRow}>
+          {LEVEL_TIERS.map(t => {
+            const reached = points >= t.threshold
+            return (
+              <View key={t.id} style={[s.tierItem, !reached && { opacity: 0.45 }]}>
+                <MedalBadge tier={t.tier} label="75" unlocked={reached} size={56} />
+                <Text style={[s.tierName, reached && { color: TEXT_PRIMARY }]}>{t.name}</Text>
+                <Text style={s.tierPts}>{t.threshold.toLocaleString('sv-SE')} p</Text>
+              </View>
+            )
+          })}
+        </ScrollView>
+
+        {/* Så tjänar du poäng */}
+        <View style={s.sectionRow}>
+          <Text style={s.sectionTitle}>SÅ TJÄNAR DU POÄNG</Text>
+        </View>
+        <View style={s.recordCard}>
+          {POINT_RULES.map((rule, i) => (
+            <View key={rule.label} style={[s.recordRow, i < POINT_RULES.length - 1 && s.recordBorder]}>
+              <View style={s.ruleIcon}>
+                <Ionicons name={rule.icon} size={16} color={ORANGE} />
+              </View>
+              <Text style={s.ruleLabel}>{rule.label}</Text>
+              <Text style={s.rulePts}>{rule.pts} p</Text>
+            </View>
+          ))}
+        </View>
 
         {/* ── Medaljer ── */}
         <View style={s.sectionRow}>
@@ -163,6 +223,31 @@ const s = StyleSheet.create({
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
 
   scroll: { padding: 20, paddingBottom: 48, gap: 12 },
+
+  // Min nivå
+  levelHero: { alignItems: 'center', gap: 12, paddingTop: 12, paddingBottom: 4 },
+  levelName: { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800' },
+  levelProgressTrack: {
+    height: 8, backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 4, overflow: 'hidden',
+  },
+  levelProgressFill: { height: '100%', backgroundColor: GOLD, borderRadius: 4 },
+  levelPtsRow:   { alignItems: 'flex-end', gap: 2 },
+  levelPtsBig:   { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+  levelPtsTotal: { color: TEXT_SECONDARY, fontSize: 13 },
+  tierRow:  { gap: 14, paddingVertical: 8 },
+  tierItem: { alignItems: 'center', gap: 4, width: 72 },
+  tierName: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '700' },
+  tierPts:  { color: TEXT_SECONDARY, fontSize: 11 },
+
+  // Poängregler
+  ruleIcon: {
+    width: 30, height: 30, borderRadius: 9,
+    backgroundColor: ORANGE + '18',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ruleLabel: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500' },
+  rulePts:   { color: ORANGE, fontSize: 14, fontWeight: '700' },
 
   sectionRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
