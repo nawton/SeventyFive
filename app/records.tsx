@@ -13,8 +13,10 @@ import {
 import * as Haptics from 'expo-haptics'
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated'
 
-const SCREEN_W = Dimensions.get('window').width
-const PAGE_W   = SCREEN_W - 40   // scroll-paddingen är 20 per sida
+const SCREEN_W  = Dimensions.get('window').width
+const PAGE_W    = SCREEN_W - 40  // scroll-paddingen är 20 per sida
+const PAGE_GAP  = 14             // mellanrum mellan korten i pagern
+const SNAP_W    = PAGE_W + PAGE_GAP
 const MAX_THRESHOLD = 7500       // Diamant — sliderns högra ände
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -71,7 +73,7 @@ export default function RecordsScreen() {
   // Indikatorlinjen följer svepet i realtid (halva banans bredd per flik)
   const earnScrollX = useSharedValue(0)
   const earnIndicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: (earnScrollX.value / PAGE_W) * (PAGE_W / 2) }],
+    transform: [{ translateX: (earnScrollX.value / SNAP_W) * (PAGE_W / 2) }],
   }))
 
   function openMedal(info: MedalInfo) {
@@ -81,7 +83,7 @@ export default function RecordsScreen() {
 
   function switchEarnTab(tab: 0 | 1) {
     setEarnTab(tab)
-    earnPagerRef.current?.scrollTo({ x: tab * PAGE_W, animated: true })
+    earnPagerRef.current?.scrollTo({ x: tab * SNAP_W, animated: true })
   }
 
   useEffect(() => {
@@ -246,16 +248,16 @@ export default function RecordsScreen() {
         <ScrollView
           ref={earnPagerRef}
           horizontal
-          pagingEnabled
           showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
           onScroll={e => { earnScrollX.value = e.nativeEvent.contentOffset.x }}
           onMomentumScrollEnd={e => {
-            setEarnTab(Math.round(e.nativeEvent.contentOffset.x / PAGE_W) as 0 | 1)
+            setEarnTab(Math.round(e.nativeEvent.contentOffset.x / SNAP_W) as 0 | 1)
           }}
           style={{ marginHorizontal: -20 }}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
-          snapToInterval={PAGE_W}
+          contentContainerStyle={{ paddingHorizontal: 20, gap: PAGE_GAP }}
+          snapToInterval={SNAP_W}
+          snapToAlignment="start"
           decelerationRate="fast"
         >
           {/* Sida 1: återkommande */}
