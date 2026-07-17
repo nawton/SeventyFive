@@ -799,38 +799,51 @@ export default function CardioScreen() {
               {selectedExercise.label} · {new Date().toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}
             </Text>
 
-            {/* 2×2 statskort med typfärgade ikoner */}
-            <View style={styles.summaryGrid2}>
-              {([
-                { icon: 'time-outline' as const,       value: formatTime(summary?.elapsed ?? 0),                                              label: 'Tid',              color: '#4AA8E0' },
-                { icon: 'map-outline' as const,        value: toDisplayDistance(summary?.distanceKm ?? 0, unit).toFixed(2),                   label: unitLabel,          color: ORANGE },
-                { icon: 'speedometer-outline' as const, value: (summary?.distanceKm ?? 0) > 0.01 ? formatPace(1, paceForUnit((summary!.elapsed) / (summary!.distanceKm), unit)) : '--:--', label: `min/${unitLabel}`, color: '#4CAF50' },
-                { icon: 'flash-outline' as const,      value: String(summary?.calories ?? 0),                                                 label: 'kcal',             color: '#9B6DFF' },
-              ]).map(stat => (
-                <View key={stat.label} style={styles.summaryStatCard}>
-                  <View style={[styles.summaryStatIcon, { backgroundColor: stat.color + '22' }]}>
-                    <Ionicons name={stat.icon} size={17} color={stat.color} />
-                  </View>
-                  <Text style={styles.summaryStatValue}>{stat.value}</Text>
-                  <Text style={styles.summaryStatLabel}>{stat.label}</Text>
+            {/* Staplade värden — samma stil som fullskärms-statsen */}
+            <View style={styles.summaryStack}>
+              <View style={styles.exBlock}>
+                <Text style={styles.exValueBig}>{formatTime(summary?.elapsed ?? 0)}</Text>
+                <Text style={styles.exLabel}>Tid</Text>
+              </View>
+
+              <View style={styles.exDivider} />
+
+              <View style={styles.exBlock}>
+                <Text style={styles.exValueBig}>{toDisplayDistance(summary?.distanceKm ?? 0, unit).toFixed(2)}</Text>
+                <Text style={styles.exLabel}>Distans ({unitLabel})</Text>
+              </View>
+
+              <View style={styles.exDivider} />
+
+              <View style={styles.exRow}>
+                <View style={styles.exBlockHalf}>
+                  <Text style={styles.exValueMed}>
+                    {(summary?.distanceKm ?? 0) > 0.01 ? formatPace(1, paceForUnit((summary!.elapsed) / (summary!.distanceKm), unit)) : '--:--'}
+                  </Text>
+                  <Text style={styles.exLabel}>Snitt /{unitLabel}</Text>
                 </View>
-              ))}
+                <View style={styles.exDividerV} />
+                <View style={styles.exBlockHalf}>
+                  <Text style={styles.exValueMed}>{summary?.calories ?? 0}</Text>
+                  <Text style={styles.exLabel}>Kcal</Text>
+                </View>
+              </View>
             </View>
 
-            {/* Målresultat */}
+            {/* Målresultat — enkel rad utan box */}
             {(goalKmNum > 0 || goalMinNum > 0) && summary && (() => {
               const pct = goalKmNum > 0
                 ? summary.distanceKm / goalKmNum
                 : summary.elapsed / (goalMinNum * 60)
               const reached = pct >= 1
               return (
-                <View style={[styles.summaryGoal, reached && styles.summaryGoalReached]}>
+                <View style={styles.summaryGoalRow}>
                   <Ionicons
                     name={reached ? 'trophy' : 'flag-outline'}
                     size={16}
                     color={reached ? '#FFD54F' : 'rgba(255,255,255,0.6)'}
                   />
-                  <Text style={styles.summaryGoalText}>
+                  <Text style={[styles.summaryGoalText, reached && { color: '#FFD54F' }]}>
                     {reached
                       ? 'Mål uppnått!'
                       : `${Math.round(pct * 100)}% av målet (${goalKmNum > 0
@@ -1417,61 +1430,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 16,
   },
-  summaryGrid2: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    width: '100%',
-    marginBottom: 4,
+  summaryStack: {
+    alignSelf: 'stretch',
+    marginVertical: 4,
   },
-  summaryStatCard: {
-    flexBasis: '48%',
-    flexGrow: 1,
-    backgroundColor: '#1C1C1E',
-    borderWidth: 1,
-    borderColor: '#2C2C2E',
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    gap: 6,
-  },
-  summaryStatIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
-  },
-  summaryStatValue: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    fontVariant: ['tabular-nums'],
-  },
-  summaryStatLabel: {
-    color: '#666',
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  summaryGoal: {
+  summaryGoalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#1C1C1E',
-    borderWidth: 1,
-    borderColor: '#2C2C2E',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    width: '100%',
-  },
-  summaryGoalReached: {
-    borderColor: '#FFD54F55',
-    backgroundColor: '#2A230F',
+    marginTop: 4,
   },
   summaryGoalText: {
     color: '#ddd',
