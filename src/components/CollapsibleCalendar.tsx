@@ -7,6 +7,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import type { WorkoutSession } from '@/services/workoutSchedule'
@@ -122,6 +123,29 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
         runOnJS(setOpen)(false)
       }
     })
+
+  // Horisontellt svep: byter vecka i hopfällt läge, månad i utfällt
+  function swipeWeek(dir: number) {
+    Haptics.selectionAsync()
+    const d = new Date(selDate)
+    d.setDate(d.getDate() + dir * 7)
+    selectDate(d)
+  }
+  function swipeMonth(dir: number) {
+    Haptics.selectionAsync()
+    if (dir > 0) nextMonth()
+    else prevMonth()
+  }
+  const hSwipe = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-12, 12])
+    .onEnd(e => {
+      if (Math.abs(e.translationX) < 40 && Math.abs(e.velocityX) < 400) return
+      const dir = e.translationX < 0 ? 1 : -1
+      if (isOpen.value) runOnJS(swipeMonth)(dir)
+      else runOnJS(swipeWeek)(dir)
+    })
+  const gestures = Gesture.Race(pan, hSwipe)
 
   // ── Animated styles ───────────────────────────────────────────────────────
 
@@ -255,7 +279,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
   }
 
   return (
-    <GestureDetector gesture={pan}>
+    <GestureDetector gesture={gestures}>
     <Animated.View style={[s.wrapper, containerStyle]}>
 
       {/* Month header */}
