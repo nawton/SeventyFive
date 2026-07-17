@@ -10,6 +10,7 @@ import {
   Image,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -313,7 +314,13 @@ export default function CardioScreen() {
   const [hudHidden, setHudHidden] = useState(false)
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
   const [activeStyle, setActiveStyle] = useState<string>('standard')
-  const [summary, setSummary] = useState<{ distanceKm: number; elapsed: number; calories: number; route: Array<[number, number]> } | null>(null)
+  const [summary, setSummary] = useState<{
+    distanceKm: number
+    elapsed: number
+    calories: number
+    route: Array<[number, number]>
+    splits: { label: string; paceSec: number }[]
+  } | null>(null)
   const [saving, setSaving] = useState(false)
   const [distanceKm, setDistanceKm] = useState(0)
   const [elapsed, setElapsed] = useState(0)
@@ -327,6 +334,7 @@ export default function CardioScreen() {
   const distanceRef = useRef(0)
   const splitKm = useRef(1)
   const lastSplitElapsed = useRef(0)
+  const splitTimes = useRef<number[]>([]) // sekunder per avklarad kilometer
   const paceTs = useRef(0)
   const smoothedPaceRef = useRef(0)
   const splitToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -600,6 +608,7 @@ export default function CardioScreen() {
             setSplitToast(label)
             splitToastTimer.current = setTimeout(() => setSplitToast(null), 3500)
             speak(`Kilometer ${splitKm.current}. Total tid: ${spokenTime(elapsedRef.current)}. Senaste kilometern: ${spokenTime(splitTime)}.`)
+            splitTimes.current.push(splitTime)
             lastSplitElapsed.current = elapsedRef.current
             splitKm.current += 1
           }
@@ -644,7 +653,19 @@ export default function CardioScreen() {
     cleanup()
     closeStats()
     speak('Träning avslutad. Bra jobbat!')
-    setSummary({ distanceKm, elapsed, calories, route: routeCoords.current })
+
+    // Splittar: en rad per hel kilometer + ev. påbörjad sista bit
+    const splits = splitTimes.current.map((sec, i) => ({ label: `${i + 1} km`, paceSec: sec }))
+    const partialDist = distanceKm - splitTimes.current.length
+    const partialTime = elapsed - lastSplitElapsed.current
+    if (partialDist > 0.05 && partialTime > 3) {
+      splits.push({
+        label: `${partialDist.toFixed(1).replace('.', ',')} km`,
+        paceSec: Math.round(partialTime / partialDist),
+      })
+    }
+
+    setSummary({ distanceKm, elapsed, calories, route: routeCoords.current, splits })
     setStatus('idle')
   }
 
@@ -1100,6 +1121,27 @@ export default function CardioScreen() {
                 </View>
               </View>
             </View>
+
+            {/* Kilometersplittar med tempo-staplar */}
+            {summary && summary.splits.length > 0 && (() => {
+              const fastest = Math.min(...summary.splits.map(s => s.paceSec))
+              return (
+                <View style={styles.splitsWrap}>
+                  <Text style={styles.splitsTitle}>Splittar</Text>
+                  <ScrollView style={{ maxHeight: 150 }} showsVerticalScrollIndicator={false}>
+                    {summary.splits.map((sp, i) => (
+                      <View key={i} style={styles.splitRow}>
+                        <Text style={styles.splitKm}>{sp.label}</Text>
+                        <View style={styles.splitBarTrack}>
+                          <View style={[styles.splitBar, { width: `${Math.max(12, (fastest / sp.paceSec) * 100)}%` as never }]} />
+                        </View>
+                        <Text style={styles.splitPace}>{formatPace(1, sp.paceSec)}</Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )
+            })()}
 
             {/* Målresultat — en rad per mål */}
             {summary && goalKmNum > 0 && (() => {
@@ -1860,6 +1902,51 @@ const styles = StyleSheet.create({
   summaryStack: {
     alignSelf: 'stretch',
     marginVertical: 4,
+  },
+  splitsWrap: {
+    alignSelf: 'stretch',
+    marginTop: 2,
+  },
+  splitsTitle: {
+    color: '#666',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  splitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  splitKm: {
+    color: '#999',
+    fontSize: 13,
+    fontWeight: '600',
+    width: 52,
+    fontVariant: ['tabular-nums'],
+  },
+  splitBarTrack: {
+    flex: 1,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    overflow: 'hidden',
+  },
+  splitBar: {
+    height: '100%',
+    borderRadius: 7,
+    backgroundColor: ORANGE,
+  },
+  splitPace: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+    width: 44,
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
   summaryGoalRow: {
     flexDirection: 'row',
