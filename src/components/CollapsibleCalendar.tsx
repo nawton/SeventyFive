@@ -17,11 +17,12 @@ const CARDIO_BLUE = '#4AA8E0'
 const ROW_H   = 46    // height of one week row
 const HEADER_H = 38   // month title + nav
 const LABELS_H = 22   // day-of-week labels
+const LEGEND_H = 20   // förklaring av typprickarna (bara i utfällt läge)
 const HANDLE_H = 22   // drag handle area
 const WEEK_CONTENT_H  = ROW_H                  // 1 row
 const MONTH_CONTENT_H = ROW_H * 6              // max 6 rows
 const COLLAPSED_H = HEADER_H + LABELS_H + WEEK_CONTENT_H + HANDLE_H
-const EXPANDED_H  = HEADER_H + LABELS_H + MONTH_CONTENT_H + HANDLE_H
+const EXPANDED_H  = HEADER_H + LABELS_H + MONTH_CONTENT_H + LEGEND_H + HANDLE_H
 
 const SP = { damping: 28, stiffness: 280, mass: 1 } as const
 
@@ -287,6 +288,18 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
         ))}
       </Animated.View>
 
+      {/* Förklaring — vad prickarna betyder (syns i utfällt läge) */}
+      <Animated.View style={[s.legend, monthGridStyle]}>
+        <View style={s.legendItem}>
+          <View style={[s.dot, { backgroundColor: ORANGE }]} />
+          <Text style={s.legendText}>Gym</Text>
+        </View>
+        <View style={s.legendItem}>
+          <View style={[s.dot, { backgroundColor: CARDIO_BLUE }]} />
+          <Text style={s.legendText}>Kondition</Text>
+        </View>
+      </Animated.View>
+
       {/* Drag handle — visuell indikator; gesten gäller hela kalendern */}
       <View style={s.handleArea}>
         <View style={s.handle} />
@@ -393,6 +406,27 @@ const s = StyleSheet.create({
   },
   dateNumToday: { color: ORANGE, fontWeight: '700' },
   dateNumSel:   { color: '#000', fontWeight: '700' },
+
+  legend: {
+    position: 'absolute',
+    top: HEADER_H + LABELS_H + MONTH_CONTENT_H,
+    left: 0, right: 0,
+    height: LEGEND_H,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 18,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  legendText: {
+    color: TEXT_SECONDARY,
+    fontSize: 11,
+    fontWeight: '600',
+  },
 
   handleArea: {
     position: 'absolute',
