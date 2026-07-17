@@ -73,6 +73,12 @@ export async function getCardioWorkoutByDate(
   return match ?? workouts.find(w => w.data.type === type) ?? null
 }
 
+/** Cardio-pass loggade ett visst datum (matchar created_at:s lokala dag). */
+export async function getCardioWorkoutsForDate(userId: string, date: string): Promise<CardioWorkout[]> {
+  const all = await getCardioWorkouts(userId, 100)
+  return all.filter(w => w.created_at.slice(0, 10) === date)
+}
+
 export async function getCardioWorkouts(userId: string, limit = 30): Promise<CardioWorkout[]> {
   const { data, error } = await supabase
     .from('user_workouts')

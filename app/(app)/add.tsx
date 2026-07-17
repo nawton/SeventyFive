@@ -50,7 +50,7 @@ import { WorkoutSection } from '@/components/WorkoutSection'
 import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import { LogWorkoutSheet } from '@/components/LogWorkoutSheet'
-import { saveStrengthWorkout, getWorkoutsForDate, type StrengthWorkout } from '@/services/workouts'
+import { saveStrengthWorkout, getWorkoutsForDate, getCardioWorkoutsForDate, type StrengthWorkout, type CardioWorkout } from '@/services/workouts'
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
@@ -93,6 +93,7 @@ const EMPTY_CHECKED: Record<string, boolean> = {}
 const EMPTY_COMPLETED = new Set<string>()
 const EMPTY_CARDIO_STATS: Record<string, { distanceKm: number; durationSeconds: number }> = {}
 const EMPTY_LOGGED: StrengthWorkout[] = []
+const EMPTY_CARDIO_LOGS: CardioWorkout[] = []
 
 interface DayPageApi {
   toggleCheck:      (exId: string, date: string) => void
@@ -105,7 +106,7 @@ interface DayPageApi {
 }
 
 const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, cardioStats, logged, progress, userId, dayAnimStyle, api,
+  idx, sessions, exercises, checked, completed, cardioStats, logged, cardioLogs, progress, userId, dayAnimStyle, api,
 }: {
   idx: number
   sessions: WorkoutSession[]
@@ -115,6 +116,7 @@ const DayPage = React.memo(function DayPage({
   completed: Set<string>
   cardioStats: Record<string, { distanceKm: number; durationSeconds: number }>
   logged: StrengthWorkout[]
+  cardioLogs: CardioWorkout[]
   userId: string | null
   dayAnimStyle: AnimatedStyle<ViewStyle>
   api: DayPageApi
@@ -165,7 +167,7 @@ const DayPage = React.memo(function DayPage({
               </Animated.View>
 
               {/* Sessions */}
-              {sessions.filter(s => !s.name.startsWith('SKIP:')).length === 0 && logged.length === 0 ? (
+              {sessions.filter(s => !s.name.startsWith('SKIP:')).length === 0 && logged.length === 0 && cardioLogs.length === 0 ? (
                 <View style={styles.emptyState}>
                   <View style={styles.emptyIcon}>
                     <Ionicons name="barbell-outline" size={32} color={ORANGE} />
@@ -296,19 +298,23 @@ const DayPage = React.memo(function DayPage({
                     />
                   )}
 
-                  {/* Loggade gympass (via "Logga pass") */}
-                  {logged.length > 0 && (
-                    <View style={styles.loggedCard}>
+                  {/* Loggade gympass — ett kort per "Logga pass" (grupperat på log_id) */}
+                  {Object.values(logged.reduce((acc, w) => {
+                    const key = w.data.log_id ?? w.id
+                    ;(acc[key] ??= []).push(w)
+                    return acc
+                  }, {} as Record<string, StrengthWorkout[]>)).map((group, gi) => (
+                    <View key={`gym-${group[0].data.log_id ?? group[0].id}`} style={styles.loggedCard}>
                       <View style={styles.loggedHeader}>
                         <View style={styles.loggedIcon}>
                           <Ionicons name="checkmark" size={15} color="#fff" />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.loggedTitle}>Loggat gympass</Text>
-                          <Text style={styles.loggedSub}>{logged.length} {logged.length === 1 ? 'övning' : 'övningar'}</Text>
+                          <Text style={styles.loggedTitle}>Loggat gympass{gi > 0 ? ` ${gi + 1}` : ''}</Text>
+                          <Text style={styles.loggedSub}>{group.length} {group.length === 1 ? 'övning' : 'övningar'}</Text>
                         </View>
                       </View>
-                      {logged.map((w, i) => {
+                      {group.map((w, i) => {
                         const sets = w.data.sets ?? []
                         const topKg = sets.reduce((m, st) => Math.max(m, st.weight_kg || 0), 0)
                         const totalReps = sets.reduce((sum, st) => sum + (st.reps || 0), 0)
@@ -322,7 +328,28 @@ const DayPage = React.memo(function DayPage({
                         )
                       })}
                     </View>
-                  )}
+                  ))}
+
+                  {/* Loggade cardio-pass — ett kort per pass, tappbart till detaljvyn */}
+                  {cardioLogs.map(w => (
+                    <TouchableOpacity
+                      key={`cardio-${w.id}`}
+                      style={styles.cardioLogCard}
+                      activeOpacity={0.8}
+                      onPress={() => router.push({ pathname: '/cardio-summary', params: { name: w.name, cardioType: w.data.type, date: dateStr } })}
+                    >
+                      <View style={styles.cardioLogIcon}>
+                        <Ionicons name={cardioTypeForName(w.name) === 'cycling' ? 'bicycle' : 'fitness'} size={16} color="#fff" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.loggedTitle}>{w.name}</Text>
+                        <Text style={styles.loggedSub}>
+                          {w.data.distance_km.toFixed(2)} km · {Math.floor(w.data.duration_seconds / 60)} min
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+                    </TouchableOpacity>
+                  ))}
 
                   {isPast && (
                     <TouchableOpacity
@@ -355,6 +382,8 @@ export default function SchemaScreen() {
   const [cardioStatsByDate, setCardioStatsByDate] = useState<Record<string, Record<string, { distanceKm: number; durationSeconds: number }>>>({})
   // Loggade gympass (styrkepass) per datum
   const [loggedByDate, setLoggedByDate] = useState<Record<string, StrengthWorkout[]>>({})
+  // Loggade cardio-pass per datum
+  const [cardioLogsByDate, setCardioLogsByDate] = useState<Record<string, CardioWorkout[]>>({})
   const [pickerSession, setPickerSession]   = useState<WorkoutSession | null>(null)
   const [logSheetOpen, setLogSheetOpen]     = useState(false)
   const [wizardVisible, setWizardVisible]   = useState(false)
@@ -404,6 +433,7 @@ export default function SchemaScreen() {
       getCompletedExerciseIds(uid, date).catch(() => [] as string[]),
       getExerciseCompletionCounts(uid).catch(() => ({} as Record<string, number>)),
     ])
+    getCardioWorkoutsForDate(uid, date).then(cl => setCardioLogsByDate(prev => ({ ...prev, [date]: cl }))).catch(() => {})
     setExercises(exs)
     setSessions(sess)
     setExerciseProgress(progressCounts)
@@ -458,6 +488,7 @@ export default function SchemaScreen() {
         setLoggedByDate(prev => ({ ...prev, [date]: logged }))
         setCheckedByDate(prev => ({ ...prev, [date]: exChecked }))
       })
+      getCardioWorkoutsForDate(userId, date).then(cl => setCardioLogsByDate(prev => ({ ...prev, [date]: cl }))).catch(() => {})
     }, 250)
     return () => clearTimeout(timer)
   }, [selectedDate, userId])
@@ -759,6 +790,7 @@ export default function SchemaScreen() {
               completed={completedByDate[dateStr] ?? EMPTY_COMPLETED}
               cardioStats={cardioStatsByDate[dateStr] ?? EMPTY_CARDIO_STATS}
               logged={loggedByDate[dateStr] ?? EMPTY_LOGGED}
+              cardioLogs={cardioLogsByDate[dateStr] ?? EMPTY_CARDIO_LOGS}
               userId={userId}
               dayAnimStyle={dayAnimStyle}
               api={api}
@@ -802,12 +834,15 @@ export default function SchemaScreen() {
         exercises={exercises}
         onClose={() => setLogSheetOpen(false)}
         onPickCardio={(type, label) => {
+          // Stäng modalen FÖRST, navigera sen — annars krockar dismiss + push
           setLogSheetOpen(false)
-          router.push({ pathname: '/cardio-session', params: { name: label, cardioType: type } })
+          setTimeout(() => router.push({ pathname: '/cardio-session', params: { name: label, cardioType: type } }), 350)
         }}
         onSaveGym={async (items) => {
           if (!userId) { setLogSheetOpen(false); return }
           const date = isoDate(todayMidnight())
+          // Ett gemensamt log_id → alla övningar hamnar i SAMMA (nya) pass
+          const logId = `${Date.now()}`
           for (const it of items) {
             await saveStrengthWorkout({
               userId,
@@ -816,11 +851,12 @@ export default function SchemaScreen() {
               category: 'strength',
               sets: it.sets,
               workoutDate: date,
+              logId,
             }).catch(() => {})
           }
           setLogSheetOpen(false)
           loadData(userId)
-          Alert.alert('Pass loggat', `${items.length} ${items.length === 1 ? 'övning' : 'övningar'} sparade i dagens pass.`)
+          Alert.alert('Pass loggat', `${items.length} ${items.length === 1 ? 'övning' : 'övningar'} sparade som ett nytt pass.`)
         }}
       />
 
@@ -977,6 +1013,17 @@ const styles = StyleSheet.create({
   loggedRowBorder: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
   loggedExName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
   loggedExMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+
+  cardioLogCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#0F2027',
+    borderRadius: 18, borderWidth: 1, borderColor: '#4AA8E045',
+    padding: 16, marginBottom: 12,
+  },
+  cardioLogIcon: {
+    width: 34, height: 34, borderRadius: 10, backgroundColor: '#4AA8E0',
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   emptyState: { alignItems: 'center', paddingVertical: 52, paddingHorizontal: 32, gap: 8 },
   emptyIcon: {
