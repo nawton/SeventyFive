@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -8,8 +8,12 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  Dimensions,
 } from 'react-native'
 import * as Haptics from 'expo-haptics'
+
+const SCREEN_W = Dimensions.get('window').width
+const PAGE_W   = SCREEN_W - 40   // scroll-paddingen är 20 per sida
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -59,10 +63,18 @@ export default function RecordsScreen() {
     hasAvatar: false, hasProgressPhoto: false, hasSchedule: false, hasCustomRule: false,
   })
   const [selectedMedal, setSelectedMedal] = useState<MedalInfo | null>(null)
+  const [breakdownVisible, setBreakdownVisible] = useState(false)
+  const [earnTab, setEarnTab] = useState<0 | 1>(0)
+  const earnPagerRef = useRef<ScrollView>(null)
 
   function openMedal(info: MedalInfo) {
     Haptics.selectionAsync()
     setSelectedMedal(info)
+  }
+
+  function switchEarnTab(tab: 0 | 1) {
+    setEarnTab(tab)
+    earnPagerRef.current?.scrollTo({ x: tab * PAGE_W, animated: true })
   }
 
   useEffect(() => {
@@ -164,7 +176,14 @@ export default function RecordsScreen() {
               ? `${(level.next.threshold - points).toLocaleString('sv-SE')} p till ${level.next.name}`
               : 'Högsta nivån nådd!'}
           </Text>
-          <Text style={s.levelPtsTotal}>Totalt: {points.toLocaleString('sv-SE')} p</Text>
+          <TouchableOpacity
+            style={s.levelPtsTotalBtn}
+            onPress={() => setBreakdownVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={s.levelPtsTotal}>Totalt: {points.toLocaleString('sv-SE')} p</Text>
+            <Ionicons name="chevron-forward" size={13} color={TEXT_SECONDARY} />
+          </TouchableOpacity>
         </View>
 
         {/* Tier-rad */}
@@ -196,75 +215,74 @@ export default function RecordsScreen() {
           })}
         </ScrollView>
 
-        {/* Dina poäng — varifrån de kommer */}
-        {pointSources.length > 0 && (
-          <>
-            <View style={s.sectionRow}>
-              <Text style={s.sectionTitle}>DINA POÄNG</Text>
-              <Text style={s.sectionCount}>{points.toLocaleString('sv-SE')} p</Text>
-            </View>
-            <View style={s.recordCard}>
-              {pointSources.map((src, i) => (
-                <View key={src.label} style={[s.recordRow, i < pointSources.length - 1 && s.recordBorder]}>
-                  <View style={s.ruleIcon}>
-                    <Ionicons name={src.icon} size={16} color={ORANGE} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.ruleLabel}>{src.label}</Text>
-                    <Text style={s.ruleCap}>{src.detail}</Text>
-                  </View>
-                  <Text style={s.rulePts}>+{src.pts.toLocaleString('sv-SE')} p</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-
-        {/* Engångsmål */}
+        {/* Tjäna poäng — svep mellan återkommande och engångsmål */}
         <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>ENGÅNGSMÅL</Text>
-          <Text style={s.sectionCount}>
-            {ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/{ONE_TIME_RULES.length}
-          </Text>
+          <Text style={s.sectionTitle}>TJÄNA POÄNG</Text>
         </View>
-        <View style={s.recordCard}>
-          {ONE_TIME_RULES.map((rule, i) => {
-            const earned = oneTime[rule.id]
-            return (
-              <View key={rule.id} style={[s.recordRow, i < ONE_TIME_RULES.length - 1 && s.recordBorder, !earned && { opacity: 0.55 }]}>
-                <View style={s.ruleIcon}>
-                  <Ionicons name={rule.icon} size={16} color={earned ? '#4CAF50' : ORANGE} />
-                </View>
-                <Text style={[s.ruleLabel, { flex: 1 }]}>{rule.label}</Text>
-                <Text style={s.rulePts}>{rule.pts} p</Text>
-                <Ionicons
-                  name={earned ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={18}
-                  color={earned ? '#4CAF50' : 'rgba(255,255,255,0.2)'}
-                />
-              </View>
-            )
-          })}
-        </View>
-
-        {/* Så tjänar du poäng */}
-        <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>SÅ TJÄNAR DU POÄNG</Text>
-        </View>
-        <View style={s.recordCard}>
-          {POINT_RULES.map((rule, i) => (
-            <View key={rule.label} style={[s.recordRow, i < POINT_RULES.length - 1 && s.recordBorder]}>
-              <View style={s.ruleIcon}>
-                <Ionicons name={rule.icon} size={16} color={ORANGE} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.ruleLabel}>{rule.label}</Text>
-                <Text style={s.ruleCap}>{rule.cap}</Text>
-              </View>
-              <Text style={s.rulePts}>{rule.pts} p</Text>
-            </View>
+        <View style={s.earnTabs}>
+          {(['Återkommande', 'Engångs'] as const).map((label, i) => (
+            <TouchableOpacity
+              key={label}
+              style={[s.earnTab, earnTab === i && s.earnTabActive]}
+              onPress={() => switchEarnTab(i as 0 | 1)}
+              activeOpacity={0.75}
+            >
+              <Text style={[s.earnTabText, earnTab === i && s.earnTabTextActive]}>
+                {label}{i === 1 ? ` ${ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/${ONE_TIME_RULES.length}` : ''}
+              </Text>
+            </TouchableOpacity>
           ))}
         </View>
+        <ScrollView
+          ref={earnPagerRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={e => {
+            setEarnTab(Math.round(e.nativeEvent.contentOffset.x / PAGE_W) as 0 | 1)
+          }}
+          style={{ marginHorizontal: -20 }}
+          contentContainerStyle={{ paddingHorizontal: 20 }}
+          snapToInterval={PAGE_W}
+          decelerationRate="fast"
+        >
+          {/* Sida 1: återkommande */}
+          <View style={[s.recordCard, { width: PAGE_W }]}>
+            {POINT_RULES.map((rule, i) => (
+              <View key={rule.label} style={[s.recordRow, i < POINT_RULES.length - 1 && s.recordBorder]}>
+                <View style={s.ruleIcon}>
+                  <Ionicons name={rule.icon} size={16} color={ORANGE} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.ruleLabel}>{rule.label}</Text>
+                  <Text style={s.ruleCap}>{rule.cap}</Text>
+                </View>
+                <Text style={s.rulePts}>{rule.pts} p</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Sida 2: engångsmål */}
+          <View style={[s.recordCard, { width: PAGE_W }]}>
+            {ONE_TIME_RULES.map((rule, i) => {
+              const earned = oneTime[rule.id]
+              return (
+                <View key={rule.id} style={[s.recordRow, i < ONE_TIME_RULES.length - 1 && s.recordBorder, !earned && { opacity: 0.55 }]}>
+                  <View style={s.ruleIcon}>
+                    <Ionicons name={rule.icon} size={16} color={earned ? '#4CAF50' : ORANGE} />
+                  </View>
+                  <Text style={[s.ruleLabel, { flex: 1 }]}>{rule.label}</Text>
+                  <Text style={s.rulePts}>{rule.pts} p</Text>
+                  <Ionicons
+                    name={earned ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={18}
+                    color={earned ? '#4CAF50' : 'rgba(255,255,255,0.2)'}
+                  />
+                </View>
+              )
+            })}
+          </View>
+        </ScrollView>
 
         {/* ── Medaljer ── */}
         <View style={s.sectionRow}>
@@ -334,6 +352,43 @@ export default function RecordsScreen() {
         )}
 
       </ScrollView>
+
+      {/* ── Poäng-breakdown ── */}
+      <Modal
+        visible={breakdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBreakdownVisible(false)}
+      >
+        <Pressable style={s.modalBackdrop} onPress={() => setBreakdownVisible(false)}>
+          <Pressable style={s.modalCard} onPress={() => {}}>
+            <Text style={s.modalTitle}>Dina poäng</Text>
+            <Text style={s.modalSubtitle}>Totalt {points.toLocaleString('sv-SE')} p</Text>
+
+            <View style={{ alignSelf: 'stretch', marginTop: 10 }}>
+              {pointSources.map((src, i) => (
+                <View key={src.label} style={[s.recordRow, i < pointSources.length - 1 && s.recordBorder]}>
+                  <View style={s.ruleIcon}>
+                    <Ionicons name={src.icon} size={16} color={ORANGE} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.ruleLabel}>{src.label}</Text>
+                    <Text style={s.ruleCap}>{src.detail}</Text>
+                  </View>
+                  <Text style={s.rulePts}>+{src.pts.toLocaleString('sv-SE')} p</Text>
+                </View>
+              ))}
+              {pointSources.length === 0 && (
+                <Text style={s.modalDesc}>Inga poäng ännu — kom igång med dagens uppgifter!</Text>
+              )}
+            </View>
+
+            <TouchableOpacity style={s.modalClose} onPress={() => setBreakdownVisible(false)} activeOpacity={0.85}>
+              <Text style={s.modalCloseText}>Stäng</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Medaljinfo-modal ── */}
       <Modal
@@ -409,7 +464,19 @@ const s = StyleSheet.create({
   levelProgressFill: { height: '100%', backgroundColor: GOLD, borderRadius: 4 },
   levelPtsRow:   { alignItems: 'flex-end', gap: 2 },
   levelPtsBig:   { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+  levelPtsTotalBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 2 },
   levelPtsTotal: { color: TEXT_SECONDARY, fontSize: 13 },
+
+  // Tjäna poäng-flikar
+  earnTabs: {
+    flexDirection: 'row', gap: 4,
+    backgroundColor: CARD, borderRadius: 14, padding: 4,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  earnTab:       { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10 },
+  earnTabActive: { backgroundColor: ORANGE },
+  earnTabText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  earnTabTextActive: { color: '#000', fontWeight: '700' },
   tierRow:  { gap: 14, paddingVertical: 8 },
   tierItem: { alignItems: 'center', gap: 4, width: 72 },
   tierName: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '700' },
