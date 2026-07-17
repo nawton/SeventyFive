@@ -4,6 +4,7 @@ import {
   ActionSheetIOS, Platform, Alert, Dimensions,
 } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { LinearGradient } from 'expo-linear-gradient'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -20,6 +21,8 @@ import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/th
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
 
 const GREEN    = '#4CAF50'
+// Kondition har egen accentfärg så gym- och cardiopass skiljer sig direkt
+const CARDIO_BLUE = '#4AA8E0'
 const SCREEN_W = Dimensions.get('window').width
 
 const GPS_KEYWORDS = ['löpning', 'running', 'jogging', 'cykling', 'cycling', 'promenad', 'walking', 'spring', 'intervallspring', 'gång']
@@ -526,13 +529,16 @@ export function WorkoutSection({
     backgroundColor: interpolateColor(completedV.value, [0, 1], [CARD, '#0A2416']),
   }))
 
+  // Typfärgen genomsyrar kortet: accentlinje, ikon, progress och gradient-wash
+  const typeColor = isCardio ? CARDIO_BLUE : ORANGE
+
   const accentBarStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(completedV.value, [0, 1], [ORANGE, GREEN]),
+    backgroundColor: interpolateColor(completedV.value, [0, 1], [typeColor, GREEN]),
   }))
 
   const progressFillStyle = useAnimatedStyle(() => ({
     width:           `${(isCompleted ? 1 : pct) * 100}%` as any,
-    backgroundColor: interpolateColor(completedV.value, [0, 1], [ORANGE, GREEN]),
+    backgroundColor: interpolateColor(completedV.value, [0, 1], [typeColor, GREEN]),
   }))
 
   function handleComplete() {
@@ -552,13 +558,23 @@ export function WorkoutSection({
 
       {/* ── Session header ── */}
       <View style={s.header}>
+        {/* Subtil typfärgad wash från vänster — skiljer gym/kondition i en blick */}
+        {!isCompleted && (
+          <LinearGradient
+            colors={[typeColor + '1E', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.75, y: 0 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+        )}
         <Animated.View style={[s.headerAccent, accentBarStyle]} />
 
-        <View style={[s.headerIcon, isCompleted && s.headerIconDone]}>
+        <View style={[s.headerIcon, { backgroundColor: typeColor + '22' }, isCompleted && s.headerIconDone]}>
           <Ionicons
             name={isCompleted ? 'checkmark' : isCardio ? cardioIcon(session.cardio_type) : 'barbell-outline'}
             size={16}
-            color={isCompleted ? '#fff' : ORANGE}
+            color={isCompleted ? '#fff' : typeColor}
           />
         </View>
 
@@ -644,8 +660,8 @@ export function WorkoutSection({
           onPress={onStartCardioSession}
           activeOpacity={0.8}
         >
-          <Ionicons name={cardioIcon(session.cardio_type)} size={18} color={ORANGE} />
-          <Text style={s.cardioStartText}>STARTA {cardioLabel(session.cardio_type).toUpperCase()}</Text>
+          <Ionicons name={cardioIcon(session.cardio_type)} size={18} color={CARDIO_BLUE} />
+          <Text style={[s.cardioStartText, { color: CARDIO_BLUE }]}>STARTA {cardioLabel(session.cardio_type).toUpperCase()}</Text>
           <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
         </TouchableOpacity>
       )}
