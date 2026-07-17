@@ -12,6 +12,7 @@ import Animated, {
   interpolate,
   interpolateColor,
   runOnJS,
+  Easing,
 } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -487,6 +488,31 @@ export function WorkoutSection({
   const doneCount = isCardio ? 0 : session.exercises.filter(e => checked[e.id]).length
   const pct       = total > 0 ? doneCount / total : 0
 
+  // ── Collapse: tryck på rubriken fäller ihop kortet till rubrik + progress ──
+  const hasBody =
+    (!isCardio && (total > 0 || !!onAddExercise)) ||
+    (isCardio && !isCompleted)
+  const [collapsed, setCollapsed] = useState(false)
+  const [bodyH, setBodyH]         = useState(0)
+  const collapseV = useSharedValue(1)   // 1 = utfälld
+
+  function toggleCollapse() {
+    if (!hasBody) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    collapseV.value = withTiming(collapsed ? 1 : 0, { duration: 260, easing: Easing.inOut(Easing.quad) })
+    setCollapsed(!collapsed)
+  }
+
+  const bodyStyle = useAnimatedStyle(() => ({
+    height:   bodyH === 0 ? undefined : collapseV.value * bodyH,
+    opacity:  interpolate(collapseV.value, [0, 0.6], [0, 1]),
+    overflow: 'hidden' as const,
+  }))
+
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${interpolate(collapseV.value, [0, 1], [-90, 0])}deg` }],
+  }))
+
   const completedV = useSharedValue(isCompleted ? 1 : 0)
   useEffect(() => {
     completedV.value = withSpring(isCompleted ? 1 : 0, { damping: 18, stiffness: 140 })
@@ -536,12 +562,19 @@ export function WorkoutSection({
 
         <TouchableOpacity
           style={{ flex: 1 }}
-          activeOpacity={onLongPress ? 0.7 : 1}
+          activeOpacity={0.7}
+          onPress={toggleCollapse}
           onLongPress={onLongPress}
           delayLongPress={400}
-          disabled={!onLongPress}
         >
-          <Text style={s.sessionName}>{session.name}</Text>
+          <View style={s.nameRow}>
+            <Text style={s.sessionName}>{session.name}</Text>
+            {hasBody && (
+              <Animated.View style={chevronStyle}>
+                <Ionicons name="chevron-down" size={14} color={TEXT_SECONDARY} />
+              </Animated.View>
+            )}
+          </View>
           <Text style={s.sessionMeta}>
             {isCompleted
               ? (isCardio ? 'Pass avklarat' : 'Alla övningar klara')
@@ -594,6 +627,10 @@ export function WorkoutSection({
         </View>
       )}
 
+      {/* ── Kollapsbar kropp: allt under rubrik + progress ── */}
+      <Animated.View style={bodyStyle}>
+      <View onLayout={e => setBodyH(e.nativeEvent.layout.height)}>
+
       {/* ── Cardio start row ── */}
       {isCardio && !isCompleted && (
         <TouchableOpacity
@@ -633,6 +670,9 @@ export function WorkoutSection({
         </TouchableOpacity>
       )}
 
+      </View>
+      </Animated.View>
+
       </Animated.View>
     </View>
   )
@@ -667,6 +707,7 @@ const s = StyleSheet.create({
     justifyContent:  'center',
   },
   headerIconDone:  { backgroundColor: GREEN },
+  nameRow:         { flexDirection: 'row', alignItems: 'center', gap: 6 },
   sessionName:     { color: TEXT_PRIMARY,   fontSize: 16, fontWeight: '700' },
   sessionMeta:     { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   notesRow:        { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
