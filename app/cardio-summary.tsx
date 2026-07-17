@@ -275,12 +275,12 @@ export default function CardioSummaryScreen() {
               </View>
             </View>
 
-            {/* Statistik — 2×2 med lika stora rutor */}
+            {/* Statistik — 2×2 direkt på bakgrunden, etikett ovanför värdet */}
             <View style={s.statsGrid}>
-              {stats.map((st, i) => (
-                <View key={st.label} style={[s.statCell, i % 2 === 0 && s.statCellLeft, i >= 2 && s.statCellTop]}>
-                  <Text style={s.statValue}>{st.value}</Text>
+              {stats.map((st) => (
+                <View key={st.label} style={s.statCell}>
                   <Text style={s.statLabel}>{st.label}</Text>
+                  <Text style={s.statValue}>{st.value}</Text>
                 </View>
               ))}
             </View>
@@ -404,18 +404,14 @@ const s = StyleSheet.create({
   },
   donePillText: { color: GREEN, fontSize: 12, fontWeight: '700' },
 
-  // Statistik — 2×2
+  // Statistik — 2×2 direkt på bakgrunden
   statsGrid: {
     flexDirection: 'row', flexWrap: 'wrap',
-    backgroundColor: CARD,
-    borderRadius: 20,
-    borderWidth: 1, borderColor: BORDER,
-    overflow: 'hidden',
+    rowGap: 20,
+    paddingHorizontal: 4,
   },
-  statCell: { width: '50%', paddingVertical: 20, paddingHorizontal: 20, gap: 4 },
-  statCellLeft: { borderRightWidth: 1, borderRightColor: BORDER },
-  statCellTop:  { borderTopWidth: 1, borderTopColor: BORDER },
-  statValue: { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
+  statCell: { width: '50%', gap: 3, paddingRight: 12 },
+  statValue: { color: TEXT_PRIMARY, fontSize: 30, fontWeight: '800', letterSpacing: -0.8, fontVariant: ['tabular-nums'] },
   statLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Kilometersplittar
