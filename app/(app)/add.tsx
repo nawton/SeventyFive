@@ -394,6 +394,27 @@ export default function SchemaScreen() {
     setEditorVisible(true)
   }
 
+  function handleRecordWorkout() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    const types = [
+      { label: 'Löpning',     name: 'running' },
+      { label: 'Cykling',     name: 'cycling' },
+      { label: 'Promenad',    name: 'walking' },
+      { label: 'Intervaller', name: 'interval' },
+    ]
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { title: 'Spela in pass', options: ['Avbryt', ...types.map(t => t.label)], cancelButtonIndex: 0 },
+        i => { if (i > 0) router.push({ pathname: '/cardio', params: { name: types[i - 1].name } }) },
+      )
+    } else {
+      Alert.alert('Spela in pass', 'Välj aktivitet', [
+        ...types.map(t => ({ text: t.label, onPress: () => router.push({ pathname: '/cardio', params: { name: t.name } }) })),
+        { text: 'Avbryt', style: 'cancel' as const },
+      ])
+    }
+  }
+
   function toggleCheck(exId: string, date: string) {
     if (!userId) return
     const wasChecked = !!(checkedByDate[date]?.[exId])
@@ -759,6 +780,14 @@ export default function SchemaScreen() {
         }}
       />
 
+      {/* ── Spela in pass — fast knapp längst ner (à la Runna) ── */}
+      <View style={styles.recordWrap} pointerEvents="box-none">
+        <TouchableOpacity style={styles.recordBtn} onPress={handleRecordWorkout} activeOpacity={0.9}>
+          <Ionicons name="play" size={18} color="#000" />
+          <Text style={styles.recordBtnText}>Spela in pass</Text>
+        </TouchableOpacity>
+      </View>
+
     </SafeAreaView>
   )
 }
@@ -766,7 +795,20 @@ export default function SchemaScreen() {
 const styles = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: BG },
   centered: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' },
-  scroll:   { paddingBottom: 80 },
+  scroll:   { paddingBottom: 150 },
+
+  // Spela in pass-knappen
+  recordWrap: {
+    position: 'absolute', left: 0, right: 0, bottom: 14,
+    paddingHorizontal: 16,
+  },
+  recordBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#F2F2F5', borderRadius: 28, paddingVertical: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4, shadowRadius: 14, elevation: 8,
+  },
+  recordBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 
   wizardBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
