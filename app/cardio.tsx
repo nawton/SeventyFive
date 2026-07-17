@@ -261,6 +261,8 @@ export default function CardioScreen() {
   // Fullskärms-stats: dra ner på statskortet för att dölja kartan
   const [statsExpanded, setStatsExpanded] = useState(false)
   const expandV = useSharedValue(0)
+  // Dölj statskortet till en liten tidspill när man vill se kartan
+  const [hudHidden, setHudHidden] = useState(false)
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
   const [activeStyle, setActiveStyle] = useState<string>('standard')
   const [summary, setSummary] = useState<{ distanceKm: number; elapsed: number; calories: number; route: Array<[number, number]> } | null>(null)
@@ -687,10 +689,29 @@ export default function CardioScreen() {
       </Modal>
 
       {/* ── Stats overlay — syns även innan start ── */}
-      {(
+      {hudHidden ? (
+        <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
+          <TouchableOpacity
+            style={[styles.hudMini, lightCard && styles.statsCardLight]}
+            onPress={() => setHudHidden(false)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.hudMiniTime, lightCard && { color: '#000' }]}>{formatTime(elapsed)}</Text>
+            <Ionicons name="eye-outline" size={15} color={lightCard ? '#555' : '#999'} />
+          </TouchableOpacity>
+        </SafeAreaView>
+      ) : (
         <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
           <GestureDetector gesture={expandGesture}>
           <View style={[styles.statsCard, lightCard && styles.statsCardLight]}>
+            {/* Dölj-knapp — krymper kortet så kartan syns */}
+            <TouchableOpacity
+              style={styles.hudHideBtn}
+              onPress={() => setHudHidden(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="eye-off-outline" size={16} color={lightCard ? '#999' : '#666'} />
+            </TouchableOpacity>
             <View style={styles.timerRow}>
               <Text style={[styles.timerText, lightCard && { color: '#000' }]}>{formatTime(elapsed)}</Text>
               {status === 'paused' && (
@@ -1157,6 +1178,31 @@ const styles = StyleSheet.create({
   statsCardLight: {
     backgroundColor: 'rgba(255,255,255,0.92)',
     shadowOpacity: 0.12,
+  },
+  hudHideBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    zIndex: 2,
+  },
+  hudMini: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(20,20,22,0.94)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  hudMiniTime: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
   timerRow: {
     flexDirection: 'row',
