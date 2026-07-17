@@ -28,10 +28,12 @@ const CARDIO_BLUE = '#4AA8E0'
 const { height: SCREEN_H } = Dimensions.get('window')
 
 const TILE_URLS: Record<string, { url: string; opts: object }> = {
-  standard:  { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',    opts: { maxZoom:19, subdomains:'abcd' } },
-  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opts: { maxZoom:19 } },
-  terrain:   { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                           opts: { maxZoom:17, subdomains:'abc' } },
-  dark:      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',              opts: { maxZoom:19, subdomains:'abcd' } },
+  standard:  { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',    opts: { maxZoom:20, subdomains:'abcd' } },
+  // Esri saknar foto på högsta zoom i glesbygd → skala upp från maxNativeZoom
+  // istället för att be om saknade tiles ("map data not yet available")
+  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opts: { maxZoom:20, maxNativeZoom:18 } },
+  terrain:   { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                           opts: { maxZoom:20, maxNativeZoom:17, subdomains:'abc' } },
+  dark:      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',              opts: { maxZoom:20, subdomains:'abcd' } },
 }
 const MAP_STYLES = [
   { key: 'standard',  label: 'Karta' },
@@ -77,9 +79,10 @@ function formatPace(secs: number): string {
  * (uppe till höger, ej klickbar) och byte av bakgrundskarta via meddelanden.
  * bottomPad = hur mycket detalj-arket täcker nederkanten så rutten hålls synlig.
  */
-function mapHtml(route: Array<[number, number]>, o: { compassTop: number; topPad: number; bottomPad: number }): string {
+function mapHtml(route: Array<[number, number]>, o: { compassTop: number; topPad: number; bottomPad: number; style: string }): string {
   const step = Math.max(1, Math.floor(route.length / 800))
   const pts = route.filter((_, i) => i % step === 0 || i === route.length - 1)
+  const tile = TILE_URLS[o.style] ?? TILE_URLS.standard
   return `<!DOCTYPE html><html><head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -99,7 +102,7 @@ function mapHtml(route: Array<[number, number]>, o: { compassTop: number; topPad
     var pts = ${JSON.stringify(pts)};
     var map = L.map('map',{zoomControl:false,attributionControl:false,rotate:true,touchRotate:true,
       rotateControl:{closeOnZeroBearing:false, position:'topright'}});
-    var tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
+    var tileLayer = L.tileLayer(${JSON.stringify(tile.url)}, ${JSON.stringify(tile.opts)}).addTo(map);
     var glow  = L.polyline(pts,{color:'#FF6A00',weight:9,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(map);
     var line  = L.polyline(pts,{color:'#FC4C02',weight:5,lineCap:'round',lineJoin:'round'}).addTo(map);
     var startM = L.circleMarker(pts[0],{radius:7,color:'#fff',weight:3,fillColor:'#22C55E',fillOpacity:1}).addTo(map);
@@ -131,9 +134,10 @@ export default function CardioSummaryScreen() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Kartstil + slide-up-väljare
+  // Kartstil + slide-up-väljare — satellit är standard i pass-vyn
   const webRef = useRef<InstanceType<typeof WebView>>(null)
-  const [activeStyle, setActiveStyle] = useState('standard')
+  const startStyle = useRef('satellite')   // stabil initialstil så kartan inte laddas om
+  const [activeStyle, setActiveStyle] = useState('satellite')
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
   const styleY = useSharedValue(420)
   function openStyleSheet() { setStyleMenuOpen(true); styleY.value = 420; styleY.value = withTiming(0, { duration: 260 }) }
@@ -220,7 +224,7 @@ export default function CardioSummaryScreen() {
         <WebView
           ref={webRef}
           style={StyleSheet.absoluteFill}
-          source={{ html: mapHtml(route, { compassTop: insets.top + 68, topPad: insets.top + 70, bottomPad: SCREEN_H - MID }) }}
+          source={{ html: mapHtml(route, { compassTop: insets.top + 68, topPad: insets.top + 70, bottomPad: SCREEN_H - MID, style: startStyle.current }) }}
           javaScriptEnabled
           originWhitelist={['*']}
         />
