@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -7,15 +7,19 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Image,
   Modal,
+  Pressable,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import WebView from 'react-native-webview'
 import { supabase } from '@/lib/supabase'
 import { getCardioWorkoutByDate, type CardioWorkout } from '@/services/workouts'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, GREEN } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, GREEN } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import {
   getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem,
@@ -25,6 +29,27 @@ const CARDIO_BLUE = '#4AA8E0'
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window')
 const MAP_H = Math.round(SCREEN_H * 0.56)   // kartbakgrundens höjd
 const PEEK  = Math.round(SCREEN_H * 0.42)   // synlig del innan arket börjar
+
+const TILE_URLS: Record<string, { url: string; opts: object }> = {
+  standard:  { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',    opts: { maxZoom:19, subdomains:'abcd' } },
+  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opts: { maxZoom:19 } },
+  terrain:   { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                           opts: { maxZoom:17, subdomains:'abc' } },
+  dark:      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',              opts: { maxZoom:19, subdomains:'abcd' } },
+}
+const MAP_STYLES = [
+  { key: 'standard',  label: 'Karta' },
+  { key: 'satellite', label: 'Satellit' },
+  { key: 'terrain',   label: 'Terräng' },
+  { key: 'dark',      label: 'Natt' },
+]
+const PREVIEW_TILE = { z: 13, x: 4506, y: 2409 }
+function previewUrl(key: string): string {
+  return TILE_URLS[key].url
+    .replace('{s}', 'a').replace('{r}', '')
+    .replace('{z}', String(PREVIEW_TILE.z))
+    .replace('{x}', String(PREVIEW_TILE.x))
+    .replace('{y}', String(PREVIEW_TILE.y))
+}
 
 const TYPE_META: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
   running:  { label: 'Löpning',    icon: 'fitness-outline' },
@@ -78,8 +103,52 @@ function routeMapHtml(route: Array<[number, number]>, opts: { interactive: boole
   </script></body></html>`
 }
 
+/** Interaktiv helskärmskarta: pan/zoom + tvåfingersrotation, roterande kompass
+ *  (ej klickbar) och möjlighet att byta bakgrundskarta via injicerade meddelanden. */
+function fsMapHtml(route: Array<[number, number]>): string {
+  const step = Math.max(1, Math.floor(route.length / 800))
+  const pts = route.filter((_, i) => i % step === 0 || i === route.length - 1)
+  return `<!DOCTYPE html><html><head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
+  <style>
+    *{margin:0;padding:0}#map{width:100vw;height:100vh;background:#e6e3dd}
+    .leaflet-control-attribution{display:none}
+    /* Kompass: svart, rund, nere till vänster — visuell, ej klickbar */
+    .leaflet-bottom.leaflet-left{ bottom:34px; left:16px; }
+    .leaflet-control-rotate{ margin:0!important; border:none!important; border-radius:50%!important;
+      overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.35); pointer-events:none!important; }
+    .leaflet-control-rotate .leaflet-control-rotate-toggle{ display:block; width:48px!important; height:48px!important;
+      background:#161618!important; border:none!important; border-radius:50%!important; }
+    .leaflet-control-rotate-arrow{ background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10.5 14l4-8 4 8h-8z' fill='%23FF453A'/%3E%3Cpath d='M10.5 16l4 8 4-8h-8z' fill='%23fff'/%3E%3C/svg%3E")!important; }
+  </style>
+  </head><body><div id="map"></div><script>
+    var pts = ${JSON.stringify(pts)};
+    var map = L.map('map',{zoomControl:false,attributionControl:false,rotate:true,touchRotate:true,
+      rotateControl:{closeOnZeroBearing:false, position:'bottomleft'}});
+    var tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
+    L.polyline(pts,{color:'#FF6A00',weight:9,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(map);
+    var line = L.polyline(pts,{color:'#FC4C02',weight:5,lineCap:'round',lineJoin:'round'}).addTo(map);
+    L.circleMarker(pts[0],{radius:7,color:'#fff',weight:3,fillColor:'#22C55E',fillOpacity:1}).addTo(map);
+    L.circleMarker(pts[pts.length-1],{radius:7,color:'#fff',weight:3,fillColor:'#EF4444',fillOpacity:1}).addTo(map);
+    map.fitBounds(line.getBounds(),{paddingTopLeft:[40,110],paddingBottomRight:[40,60]});
+    window.addEventListener('message', function(e){
+      try { var msg = JSON.parse(e.data);
+        if (msg.type === 'style') {
+          map.removeLayer(tileLayer);
+          tileLayer = L.tileLayer(msg.url, msg.opts).addTo(map);
+          tileLayer.bringToBack();
+        }
+      } catch(err){}
+    });
+  </script></body></html>`
+}
+
 export default function CardioSummaryScreen() {
   const params = useLocalSearchParams<{ name?: string; cardioType?: string; date?: string }>()
+  const insets = useSafeAreaInsets()
   const type = params.cardioType ?? 'running'
   const meta = TYPE_META[type] ?? TYPE_META.running
 
@@ -87,6 +156,39 @@ export default function CardioSummaryScreen() {
   const [workout, setWorkout] = useState<CardioWorkout | null>(null)
   const [loading, setLoading] = useState(true)
   const [fullscreen, setFullscreen] = useState(false)
+
+  // Helskärmskartans bakgrundsstil + slide-up-väljare
+  const fsWebRef = useRef<InstanceType<typeof WebView>>(null)
+  const [activeStyle, setActiveStyle] = useState('standard')
+  const [styleMenuOpen, setStyleMenuOpen] = useState(false)
+  const styleY = useSharedValue(420)
+  function openStyleSheet() {
+    setStyleMenuOpen(true)
+    styleY.value = 420
+    styleY.value = withTiming(0, { duration: 260 })
+  }
+  function closeStyleSheet() {
+    styleY.value = withTiming(420, { duration: 200 }, (fin) => { if (fin) runOnJS(setStyleMenuOpen)(false) })
+  }
+  const styleDrag = Gesture.Pan()
+    .onUpdate(e => { styleY.value = e.translationY > 0 ? e.translationY : e.translationY * 0.15 })
+    .onEnd(e => {
+      if (e.translationY > 90 || e.velocityY > 600) {
+        styleY.value = withTiming(420, { duration: 200 }, (fin) => { if (fin) runOnJS(setStyleMenuOpen)(false) })
+      } else {
+        styleY.value = withTiming(0, { duration: 180 })
+      }
+    })
+  const styleSheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: styleY.value }] }))
+  function changeStyle(key: string) {
+    const st = TILE_URLS[key]
+    if (!st) return
+    setActiveStyle(key)
+    closeStyleSheet()
+    fsWebRef.current?.injectJavaScript(
+      `window.dispatchEvent(new MessageEvent('message',{data:JSON.stringify({type:'style',url:${JSON.stringify(st.url)},opts:${JSON.stringify(st.opts)}})}));true;`
+    )
+  }
 
   const unitLabel = distanceUnitLabel(unit)
 
@@ -210,17 +312,59 @@ export default function CardioSummaryScreen() {
         <View style={{ flex: 1, backgroundColor: '#e6e3dd' }}>
           {hasRoute && (
             <WebView
+              ref={fsWebRef}
               style={{ flex: 1 }}
-              source={{ html: routeMapHtml(route, { interactive: true, overlapBottom: 0, topInset: 100 }) }}
+              source={{ html: fsMapHtml(route) }}
               javaScriptEnabled
               originWhitelist={['*']}
             />
           )}
-          <SafeAreaView style={s.fsClose} edges={['top']} pointerEvents="box-none">
-            <TouchableOpacity onPress={() => setFullscreen(false)} style={s.circleBtn} activeOpacity={0.8}>
-              <Ionicons name="close" size={22} color="#fff" />
+
+          {/* Stäng + lager — flyttade ner under statusfältet så de går att nå */}
+          <View style={[s.fsControls, { top: insets.top + 12 }]} pointerEvents="box-none">
+            <TouchableOpacity onPress={() => setFullscreen(false)} style={s.circleBtnLight} activeOpacity={0.85}>
+              <Ionicons name="close" size={22} color="#000" />
             </TouchableOpacity>
-          </SafeAreaView>
+            <TouchableOpacity onPress={openStyleSheet} style={s.circleBtnLight} activeOpacity={0.85}>
+              <Ionicons name="layers-outline" size={20} color="#000" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Kartväljare — slide-up med förhandsbilder */}
+          {styleMenuOpen && (
+            <>
+              <Pressable style={StyleSheet.absoluteFill} onPress={closeStyleSheet} />
+              <Animated.View style={[s.styleSheet, styleSheetStyle]}>
+                <GestureDetector gesture={styleDrag}>
+                  <View style={s.styleGrip}>
+                    <View style={s.sheetHandle} />
+                    <Text style={s.sheetTitle}>Välj karta</Text>
+                  </View>
+                </GestureDetector>
+                <SafeAreaView edges={['bottom']}>
+                  <View style={s.mapGrid}>
+                    {MAP_STYLES.map(ms => {
+                      const active = activeStyle === ms.key
+                      return (
+                        <TouchableOpacity
+                          key={ms.key}
+                          style={[s.mapCard, active && s.mapCardActive]}
+                          onPress={() => changeStyle(ms.key)}
+                          activeOpacity={0.85}
+                        >
+                          <Image source={{ uri: previewUrl(ms.key) }} style={s.mapPreview} />
+                          <View style={s.mapCardLabelRow}>
+                            <Text style={[s.mapCardLabel, active && { color: ORANGE }]}>{ms.label}</Text>
+                            {active && <Ionicons name="checkmark-circle" size={15} color={ORANGE} />}
+                          </View>
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </View>
+                </SafeAreaView>
+              </Animated.View>
+            </>
+          )}
         </View>
       </Modal>
     </View>
@@ -311,10 +455,53 @@ const s = StyleSheet.create({
   statValue: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
   statLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  fsClose: {
+  fsControls: {
     position: 'absolute',
-    top: 0, left: 0, right: 0,
-    alignItems: 'flex-end',
-    paddingHorizontal: 16, paddingTop: 6,
+    left: 0, right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    zIndex: 10,
   },
+  circleBtnLight: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25, shadowRadius: 6,
+  },
+
+  // Kartväljare
+  styleSheet: {
+    position: 'absolute',
+    left: 0, right: 0, bottom: 0,
+    backgroundColor: '#1C1C1E',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 16, paddingBottom: 12,
+    zIndex: 40,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.35, shadowRadius: 16,
+  },
+  styleGrip: { paddingTop: 10, paddingBottom: 4 },
+  sheetHandle: {
+    alignSelf: 'center', width: 40, height: 4, borderRadius: 2,
+    backgroundColor: '#3A3A3C',
+  },
+  sheetTitle: {
+    color: '#fff', fontSize: 18, fontWeight: '800',
+    textAlign: 'center', marginTop: 14, marginBottom: 6,
+  },
+  mapGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingTop: 6 },
+  mapCard: {
+    flexBasis: '48%', flexGrow: 1,
+    borderRadius: 16, borderWidth: 2, borderColor: 'transparent',
+    backgroundColor: '#242426', overflow: 'hidden',
+  },
+  mapCardActive: { borderColor: ORANGE },
+  mapPreview: { width: '100%', height: 96, backgroundColor: '#2C2C2E' },
+  mapCardLabelRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 9,
+  },
+  mapCardLabel: { color: '#ccc', fontSize: 13, fontWeight: '700' },
 })
