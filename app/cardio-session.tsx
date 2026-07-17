@@ -26,7 +26,7 @@ import {
   getUnitSystem, setUnitSystem, toDisplayDistance, fromDisplayDistance,
   distanceUnitLabel, paceForUnit, type UnitSystem,
 } from '@/lib/units'
-import { getCardioStatsTheme, setCardioStatsTheme, type CardioStatsTheme } from '@/lib/prefs'
+import { getCardioStatsTheme, setCardioStatsTheme, getVoiceCues, setVoiceCues, type CardioStatsTheme } from '@/lib/prefs'
 
 const CARDIO_BLUE = '#4AA8E0'
 const SCREEN_W    = Dimensions.get('window').width
@@ -121,6 +121,7 @@ export default function CardioSessionScreen() {
   const [last, setLast]       = useState<CardioWorkout | null>(null)
   const [unit, setUnit]       = useState<UnitSystem>('metric')
   const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
+  const [voiceOn, setVoiceOn] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Egen inmatning: vilken siffra som redigeras + fältets text
   const [editTarget, setEditTarget] = useState<'dist' | 'time' | null>(null)
@@ -129,6 +130,7 @@ export default function CardioSessionScreen() {
   useEffect(() => {
     getUnitSystem().then(setUnit)
     getCardioStatsTheme().then(setStatsTheme)
+    getVoiceCues().then(setVoiceOn)
   }, [])
 
   const unitLabel = distanceUnitLabel(unit)
@@ -162,6 +164,12 @@ export default function CardioSessionScreen() {
     Haptics.selectionAsync()
     setStatsTheme(t)
     await setCardioStatsTheme(t)
+  }
+
+  async function chooseVoice(on: boolean) {
+    Haptics.selectionAsync()
+    setVoiceOn(on)
+    await setVoiceCues(on)
   }
 
   useEffect(() => {
@@ -432,6 +440,25 @@ export default function CardioSessionScreen() {
                     color={statsTheme === key ? CARDIO_BLUE : TEXT_SECONDARY}
                   />
                   <Text style={[s.unitBtnText, statsTheme === key && s.unitBtnTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={s.settingLabel}>RÖSTGUIDNING</Text>
+            <View style={s.unitRow}>
+              {([[true, 'På'], [false, 'Av']] as const).map(([key, label]) => (
+                <TouchableOpacity
+                  key={label}
+                  style={[s.unitBtn, { flexDirection: 'row', justifyContent: 'center', gap: 6 }, voiceOn === key && s.unitBtnActive]}
+                  onPress={() => chooseVoice(key)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={key ? 'volume-high-outline' : 'volume-mute-outline'}
+                    size={15}
+                    color={voiceOn === key ? CARDIO_BLUE : TEXT_SECONDARY}
+                  />
+                  <Text style={[s.unitBtnText, voiceOn === key && s.unitBtnTextActive]}>{label}</Text>
                 </TouchableOpacity>
               ))}
             </View>

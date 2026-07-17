@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics'
 import * as Location from 'expo-location'
+import * as Speech from 'expo-speech'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -24,7 +25,7 @@ import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
-import { getCardioStatsTheme, type CardioStatsTheme } from '@/lib/prefs'
+import { getCardioStatsTheme, getVoiceCues, type CardioStatsTheme } from '@/lib/prefs'
 
 type Coord = { latitude: number; longitude: number }
 type Status = 'idle' | 'running' | 'paused'
@@ -57,6 +58,18 @@ function formatTime(seconds: number): string {
   const m = Math.floor((seconds % 3600) / 60)
   const s = seconds % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+/** Tid i talad form, t.ex. "25 minuter och 30 sekunder" */
+function spokenTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  const parts: string[] = []
+  if (h > 0) parts.push(`${h} ${h === 1 ? 'timme' : 'timmar'}`)
+  if (m > 0) parts.push(`${m} ${m === 1 ? 'minut' : 'minuter'}`)
+  if (s > 0 || parts.length === 0) parts.push(`${s} sekunder`)
+  return parts.join(' och ')
 }
 
 function formatPace(distanceKm: number, seconds: number): string {
@@ -215,6 +228,19 @@ export default function CardioScreen() {
   const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
   useEffect(() => { getCardioStatsTheme().then(setStatsTheme) }, [])
   const lightCard = statsTheme === 'light'
+
+  // Röstguidning — talade besked om splittar och mål
+  const voiceRef = useRef(true)
+  useEffect(() => {
+    getVoiceCues().then(on => { voiceRef.current = on })
+    return () => { Speech.stop() }
+  }, [])
+  function speak(text: string) {
+    if (!voiceRef.current) return
+    Speech.speak(text, { language: 'sv-SE' })
+  }
+  const goalKmSaid = useRef(false)
+  const goalMinSaid = useRef(false)
 
   const webRef = useRef<InstanceType<typeof WebView>>(null)
   const locationSub = useRef<Location.LocationSubscription | null>(null)
@@ -452,6 +478,20 @@ export default function CardioScreen() {
   }
 
   async function startTracking() {
+    // Talat besked vid start (med mål) respektive återupptagning
+    if (elapsedRef.current === 0) {
+      const kmTxt = goalKmNum > 0
+        ? `${(goalKmNum % 1 === 0 ? String(goalKmNum) : goalKmNum.toFixed(1).replace('.', ','))} kilometer`
+        : ''
+      const minTxt = goalMinNum > 0 ? `${goalMinNum} minuter` : ''
+      const goalTxt = kmTxt && minTxt
+        ? ` Mål: ${kmTxt} på ${minTxt}.`
+        : kmTxt ? ` Mål: ${kmTxt}.` : minTxt ? ` Mål: ${minTxt}.` : ''
+      speak(`${selectedExercise.label} startad.${goalTxt}`)
+    } else {
+      speak('Återupptar.')
+    }
+
     setStatus('running')
     paceTs.current = 0
     timerRef.current = setInterval(() => {
@@ -460,6 +500,12 @@ export default function CardioScreen() {
         elapsedRef.current = v
         return v
       })
+      // Tidsmål uppnått — säg till en gång
+      if (goalMinNum > 0 && !goalMinSaid.current && elapsedRef.current >= goalMinNum * 60) {
+        goalMinSaid.current = true
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        speak(`${goalMinNum} minuter. Tidsmålet är uppnått!`)
+      }
       // Nollställ nu/km om ingen GPS-rörelse på 5 sekunder
       if (paceTs.current > 0 && Date.now() - paceTs.current > 5000) {
         smoothedPaceRef.current = 0
@@ -503,8 +549,16 @@ export default function CardioScreen() {
             if (splitToastTimer.current) clearTimeout(splitToastTimer.current)
             setSplitToast(label)
             splitToastTimer.current = setTimeout(() => setSplitToast(null), 3500)
+            speak(`Kilometer ${splitKm.current}. Total tid: ${spokenTime(elapsedRef.current)}. Senaste kilometern: ${spokenTime(splitTime)}.`)
             lastSplitElapsed.current = elapsedRef.current
             splitKm.current += 1
+          }
+
+          // Distansmål uppnått — säg till en gång
+          if (goalKmNum > 0 && !goalKmSaid.current && newKm >= goalKmNum) {
+            goalKmSaid.current = true
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+            speak('Bra jobbat! Distansmålet är uppnått!')
           }
 
           distanceRef.current = newKm
@@ -520,6 +574,7 @@ export default function CardioScreen() {
   }
 
   function pauseTracking() {
+    speak('Pausat.')
     setStatus('paused')
     locationSub.current?.remove()
     locationSub.current = null
@@ -537,6 +592,7 @@ export default function CardioScreen() {
   function handleFinish() {
     cleanup()
     closeStats()
+    speak('Träning avslutad. Bra jobbat!')
     setSummary({ distanceKm, elapsed, calories, route: routeCoords.current })
     setStatus('idle')
   }
@@ -643,24 +699,39 @@ export default function CardioScreen() {
                 </View>
               )}
             </View>
-            {/* Mål från passdetaljen — live-progress under passet */}
+            {/* Mål från passdetaljen — live-progress, en rad per mål */}
             {(goalKmNum > 0 || goalMinNum > 0) && (
               <View style={styles.goalTrackWrap}>
-                <View style={styles.goalTextRow}>
-                  <Text style={[styles.goalText, lightCard && { color: '#555' }]}>
-                    Mål: {goalKmNum > 0 ? `${toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} ${unitLabel}` : `${goalMinNum} min`}
-                  </Text>
-                  <Text style={styles.goalPct}>
-                    {Math.min(100, Math.round(
-                      goalKmNum > 0 ? (distanceKm / goalKmNum) * 100 : (elapsed / (goalMinNum * 60)) * 100
-                    ))}%
-                  </Text>
-                </View>
-                <View style={[styles.goalTrack, lightCard && { backgroundColor: 'rgba(0,0,0,0.08)' }]}>
-                  <View style={[styles.goalFill, { width: `${Math.min(100,
-                    goalKmNum > 0 ? (distanceKm / goalKmNum) * 100 : (elapsed / (goalMinNum * 60)) * 100
-                  )}%` as never }]} />
-                </View>
+                {goalKmNum > 0 && (
+                  <View style={styles.goalOne}>
+                    <View style={styles.goalTextRow}>
+                      <Text style={[styles.goalText, lightCard && { color: '#555' }]}>
+                        Mål: {toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} {unitLabel}
+                      </Text>
+                      <Text style={styles.goalPct}>
+                        {Math.min(100, Math.round((distanceKm / goalKmNum) * 100))}%
+                      </Text>
+                    </View>
+                    <View style={[styles.goalTrack, lightCard && { backgroundColor: 'rgba(0,0,0,0.08)' }]}>
+                      <View style={[styles.goalFill, { width: `${Math.min(100, (distanceKm / goalKmNum) * 100)}%` as never }]} />
+                    </View>
+                  </View>
+                )}
+                {goalMinNum > 0 && (
+                  <View style={styles.goalOne}>
+                    <View style={styles.goalTextRow}>
+                      <Text style={[styles.goalText, lightCard && { color: '#555' }]}>
+                        Mål: {goalMinNum} min
+                      </Text>
+                      <Text style={[styles.goalPct, { color: ORANGE }]}>
+                        {Math.min(100, Math.round((elapsed / (goalMinNum * 60)) * 100))}%
+                      </Text>
+                    </View>
+                    <View style={[styles.goalTrack, lightCard && { backgroundColor: 'rgba(0,0,0,0.08)' }]}>
+                      <View style={[styles.goalFill, { backgroundColor: ORANGE, width: `${Math.min(100, (elapsed / (goalMinNum * 60)) * 100)}%` as never }]} />
+                    </View>
+                  </View>
+                )}
               </View>
             )}
 
@@ -747,21 +818,34 @@ export default function CardioScreen() {
 
               {(goalKmNum > 0 || goalMinNum > 0) && (
                 <View style={styles.expandedGoal}>
-                  <View style={styles.goalTextRow}>
-                    <Text style={styles.goalText}>
-                      Mål: {goalKmNum > 0 ? `${toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} ${unitLabel}` : `${goalMinNum} min`}
-                    </Text>
-                    <Text style={styles.goalPct}>
-                      {Math.min(100, Math.round(
-                        goalKmNum > 0 ? (distanceKm / goalKmNum) * 100 : (elapsed / (goalMinNum * 60)) * 100
-                      ))}%
-                    </Text>
-                  </View>
-                  <View style={styles.goalTrack}>
-                    <View style={[styles.goalFill, { width: `${Math.min(100,
-                      goalKmNum > 0 ? (distanceKm / goalKmNum) * 100 : (elapsed / (goalMinNum * 60)) * 100
-                    )}%` as never }]} />
-                  </View>
+                  {goalKmNum > 0 && (
+                    <View style={styles.goalOne}>
+                      <View style={styles.goalTextRow}>
+                        <Text style={styles.goalText}>
+                          Mål: {toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} {unitLabel}
+                        </Text>
+                        <Text style={styles.goalPct}>
+                          {Math.min(100, Math.round((distanceKm / goalKmNum) * 100))}%
+                        </Text>
+                      </View>
+                      <View style={styles.goalTrack}>
+                        <View style={[styles.goalFill, { width: `${Math.min(100, (distanceKm / goalKmNum) * 100)}%` as never }]} />
+                      </View>
+                    </View>
+                  )}
+                  {goalMinNum > 0 && (
+                    <View style={styles.goalOne}>
+                      <View style={styles.goalTextRow}>
+                        <Text style={styles.goalText}>Mål: {goalMinNum} min</Text>
+                        <Text style={[styles.goalPct, { color: ORANGE }]}>
+                          {Math.min(100, Math.round((elapsed / (goalMinNum * 60)) * 100))}%
+                        </Text>
+                      </View>
+                      <View style={styles.goalTrack}>
+                        <View style={[styles.goalFill, { backgroundColor: ORANGE, width: `${Math.min(100, (elapsed / (goalMinNum * 60)) * 100)}%` as never }]} />
+                      </View>
+                    </View>
+                  )}
                 </View>
               )}
 
@@ -935,25 +1019,31 @@ export default function CardioScreen() {
               </View>
             </View>
 
-            {/* Målresultat — enkel rad utan box */}
-            {(goalKmNum > 0 || goalMinNum > 0) && summary && (() => {
-              const pct = goalKmNum > 0
-                ? summary.distanceKm / goalKmNum
-                : summary.elapsed / (goalMinNum * 60)
+            {/* Målresultat — en rad per mål */}
+            {summary && goalKmNum > 0 && (() => {
+              const pct = summary.distanceKm / goalKmNum
               const reached = pct >= 1
               return (
                 <View style={styles.summaryGoalRow}>
-                  <Ionicons
-                    name={reached ? 'trophy' : 'flag-outline'}
-                    size={16}
-                    color={reached ? '#FFD54F' : 'rgba(255,255,255,0.6)'}
-                  />
+                  <Ionicons name={reached ? 'trophy' : 'flag-outline'} size={16} color={reached ? '#FFD54F' : 'rgba(255,255,255,0.6)'} />
                   <Text style={[styles.summaryGoalText, reached && { color: '#FFD54F' }]}>
                     {reached
-                      ? 'Mål uppnått!'
-                      : `${Math.round(pct * 100)}% av målet (${goalKmNum > 0
-                          ? `${toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} ${unitLabel}`
-                          : `${goalMinNum} min`})`}
+                      ? 'Distansmål uppnått!'
+                      : `${Math.round(pct * 100)}% av distansmålet (${toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} ${unitLabel})`}
+                  </Text>
+                </View>
+              )
+            })()}
+            {summary && goalMinNum > 0 && (() => {
+              const pct = summary.elapsed / (goalMinNum * 60)
+              const reached = pct >= 1
+              return (
+                <View style={styles.summaryGoalRow}>
+                  <Ionicons name={reached ? 'trophy' : 'flag-outline'} size={16} color={reached ? '#FFD54F' : 'rgba(255,255,255,0.6)'} />
+                  <Text style={[styles.summaryGoalText, reached && { color: '#FFD54F' }]}>
+                    {reached
+                      ? 'Tidsmål uppnått!'
+                      : `${Math.round(pct * 100)}% av tidsmålet (${goalMinNum} min)`}
                   </Text>
                 </View>
               )
@@ -1093,7 +1183,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   // Målprogress
-  goalTrackWrap: { marginBottom: 12, gap: 5 },
+  goalTrackWrap: { alignSelf: 'stretch', marginBottom: 12, gap: 10 },
+  goalOne: { gap: 5 },
   goalTextRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   goalText:      { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600' },
   goalPct:       { color: '#4AA8E0', fontSize: 12, fontWeight: '800' },
@@ -1430,7 +1521,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   expandedGoal: {
-    gap: 5,
+    gap: 10,
     marginTop: 8,
   },
   // Staplade storvärden i fullskärm (inga boxar)

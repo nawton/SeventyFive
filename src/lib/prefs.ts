@@ -21,3 +21,18 @@ export async function getCardioStatsTheme(): Promise<CardioStatsTheme> {
 export async function setCardioStatsTheme(theme: CardioStatsTheme): Promise<void> {
   await AsyncStorage.setItem(THEME_KEY, theme).catch(() => {})
 }
+
+// Röstguidning under passet (talade kilometersplittar, mål m.m.) — på som standard
+const VOICE_KEY = 'cardioVoiceCues'
+
+export async function getVoiceCues(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(VOICE_KEY)) !== 'off'
+  } catch {
+    return true
+  }
+}
+
+export async function setVoiceCues(on: boolean): Promise<void> {
+  await AsyncStorage.setItem(VOICE_KEY, on ? 'on' : 'off').catch(() => {})
+}
