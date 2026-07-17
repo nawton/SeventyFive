@@ -6,6 +6,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Dimensions,
+  Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
@@ -20,6 +22,9 @@ import {
 } from '@/lib/units'
 
 const CARDIO_BLUE = '#4AA8E0'
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window')
+const MAP_H = Math.round(SCREEN_H * 0.56)   // kartbakgrundens höjd
+const PEEK  = Math.round(SCREEN_H * 0.42)   // synlig del innan arket börjar
 
 const TYPE_META: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
   running:  { label: 'Löpning',    icon: 'fitness-outline' },
@@ -45,23 +50,31 @@ function formatPace(secs: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-/** Statisk ruttkarta: mörka plattor, orange linje, grön start / röd mål */
-function routeMapHtml(route: Array<[number, number]>): string {
-  const step = Math.max(1, Math.floor(route.length / 600))
+/**
+ * Ljus, Strava-lik ruttkarta. `overlapBottom` = hur många pixlar arket täcker
+ * kartans nederkant, så rutten hålls i den synliga delen. interactive=true ger
+ * pan/zoom (helskärm), annars låst.
+ */
+function routeMapHtml(route: Array<[number, number]>, opts: { interactive: boolean; overlapBottom: number; topInset: number }): string {
+  const step = Math.max(1, Math.floor(route.length / 800))
   const pts = route.filter((_, i) => i % step === 0 || i === route.length - 1)
+  const locked = opts.interactive
+    ? ''
+    : 'dragging:false,touchZoom:false,doubleClickZoom:false,scrollWheelZoom:false,boxZoom:false,keyboard:false,tap:false,'
   return `<!DOCTYPE html><html><head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>*{margin:0;padding:0}#map{width:100vw;height:100vh;background:#111}.leaflet-control-attribution{display:none}</style>
+  <style>*{margin:0;padding:0}#map{width:100vw;height:100vh;background:#e6e3dd}.leaflet-control-attribution{display:none}</style>
   </head><body><div id="map"></div><script>
     var pts = ${JSON.stringify(pts)};
-    var map = L.map('map',{zoomControl:false,attributionControl:false,dragging:false,touchZoom:false,doubleClickZoom:false,scrollWheelZoom:false,boxZoom:false,keyboard:false});
-    L.tileLayer('https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-    var line = L.polyline(pts,{color:'#FF8F00',weight:4,lineCap:'round',lineJoin:'round'}).addTo(map);
-    L.circleMarker(pts[0],{radius:5,color:'#fff',weight:2,fillColor:'#4CAF50',fillOpacity:1}).addTo(map);
-    L.circleMarker(pts[pts.length-1],{radius:5,color:'#fff',weight:2,fillColor:'#FF453A',fillOpacity:1}).addTo(map);
-    map.fitBounds(line.getBounds(),{padding:[24,24]});
+    var map = L.map('map',{zoomControl:false,attributionControl:false,${locked}});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
+    var glow = L.polyline(pts,{color:'#FF6A00',weight:9,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(map);
+    var line = L.polyline(pts,{color:'#FC4C02',weight:5,lineCap:'round',lineJoin:'round'}).addTo(map);
+    L.circleMarker(pts[0],{radius:7,color:'#fff',weight:3,fillColor:'#22C55E',fillOpacity:1}).addTo(map);
+    L.circleMarker(pts[pts.length-1],{radius:7,color:'#fff',weight:3,fillColor:'#EF4444',fillOpacity:1}).addTo(map);
+    map.fitBounds(line.getBounds(),{paddingTopLeft:[36,${opts.topInset}],paddingBottomRight:[36,${opts.overlapBottom + 24}]});
   </script></body></html>`
 }
 
@@ -73,12 +86,11 @@ export default function CardioSummaryScreen() {
   const [unit, setUnit] = useState<UnitSystem>('metric')
   const [workout, setWorkout] = useState<CardioWorkout | null>(null)
   const [loading, setLoading] = useState(true)
+  const [fullscreen, setFullscreen] = useState(false)
 
   const unitLabel = distanceUnitLabel(unit)
 
-  useEffect(() => {
-    getUnitSystem().then(setUnit)
-  }, [])
+  useEffect(() => { getUnitSystem().then(setUnit) }, [])
 
   useEffect(() => {
     async function load() {
@@ -99,131 +111,210 @@ export default function CardioSummaryScreen() {
   const distKm = d?.distance_km ?? 0
   const dur = d?.duration_seconds ?? 0
   const route = d?.route ?? []
+  const hasRoute = route.length > 1
   const avgPaceSec = distKm > 0.01 ? paceForUnit(dur / distKm, unit) : 0
+  const overlap = MAP_H - PEEK
+
+  const stats: { label: string; value: string }[] = [
+    { label: `Distans (${unitLabel})`, value: toDisplayDistance(distKm, unit).toFixed(2) },
+    { label: 'Tid',                    value: formatTime(dur) },
+    { label: `Snitt /${unitLabel}`,    value: formatPace(avgPaceSec) },
+    { label: 'Kcal',                   value: String(d?.calories ?? 0) },
+  ]
 
   return (
     <View style={s.root}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* ── Header ── */}
-        <View style={s.header}>
-          <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
-          </TouchableOpacity>
-          <Text style={s.headerTitle}>{params.name ?? meta.label}</Text>
-          <View style={s.iconBtn} />
+      {/* ── Kartbakgrund högst upp ── */}
+      {hasRoute && (
+        <View style={s.mapBg} pointerEvents="none">
+          <WebView
+            style={{ flex: 1, backgroundColor: '#e6e3dd' }}
+            source={{ html: routeMapHtml(route, { interactive: false, overlapBottom: overlap, topInset: 96 }) }}
+            scrollEnabled={false}
+            javaScriptEnabled
+            originWhitelist={['*']}
+          />
         </View>
+      )}
 
-        {loading ? (
-          <View style={s.center}>
-            <ActivityIndicator color={CARDIO_BLUE} />
-          </View>
-        ) : !workout ? (
-          <View style={s.center}>
-            <Ionicons name="cloud-offline-outline" size={40} color={TEXT_SECONDARY} />
-            <Text style={s.emptyText}>Kunde inte hitta det sparade passet.</Text>
-          </View>
-        ) : (
-          <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }} showsVerticalScrollIndicator={false}>
-            {/* Hero */}
-            <View style={s.hero}>
-              <View style={s.heroIcon}>
-                <Ionicons name={meta.icon} size={26} color={CARDIO_BLUE} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={s.donePill}>
-                  <Ionicons name="checkmark-circle" size={13} color={GREEN} />
-                  <Text style={s.donePillText}>Avklarat</Text>
-                </View>
-                {dateLabel && <Text style={s.heroDate}>{dateLabel}</Text>}
-              </View>
-            </View>
-
-            {/* Ruttkarta */}
-            {route.length > 1 && (
-              <View style={s.mapWrap} pointerEvents="none">
-                <WebView
-                  style={{ flex: 1, backgroundColor: '#111' }}
-                  source={{ html: routeMapHtml(route) }}
-                  scrollEnabled={false}
-                  javaScriptEnabled
-                  originWhitelist={['*']}
-                />
-              </View>
-            )}
-
-            {/* Statistik */}
-            <View style={s.statsCard}>
-              <View style={s.statRow}>
-                <View style={s.stat}>
-                  <Text style={s.statValue}>{toDisplayDistance(distKm, unit).toFixed(2)}</Text>
-                  <Text style={s.statLabel}>Distans ({unitLabel})</Text>
-                </View>
-                <View style={s.statDivider} />
-                <View style={s.stat}>
-                  <Text style={s.statValue}>{formatTime(dur)}</Text>
-                  <Text style={s.statLabel}>Tid</Text>
-                </View>
-              </View>
-              <View style={s.statRowDivider} />
-              <View style={s.statRow}>
-                <View style={s.stat}>
-                  <Text style={s.statValue}>{formatPace(avgPaceSec)}</Text>
-                  <Text style={s.statLabel}>Snitt /{unitLabel}</Text>
-                </View>
-                <View style={s.statDivider} />
-                <View style={s.stat}>
-                  <Text style={s.statValue}>{d?.calories ?? 0}</Text>
-                  <Text style={s.statLabel}>Kcal</Text>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
+      {/* ── Header-overlay (tillbaka + helskärm) ── */}
+      <SafeAreaView style={s.headerOverlay} edges={['top']} pointerEvents="box-none">
+        <TouchableOpacity onPress={() => router.back()} style={s.circleBtn} activeOpacity={0.8}>
+          <Ionicons name="chevron-back" size={22} color="#fff" />
+        </TouchableOpacity>
+        {hasRoute && (
+          <TouchableOpacity onPress={() => setFullscreen(true)} style={s.circleBtn} activeOpacity={0.8}>
+            <Ionicons name="expand-outline" size={20} color="#fff" />
+          </TouchableOpacity>
         )}
       </SafeAreaView>
+
+      {loading ? (
+        <View style={s.center}><ActivityIndicator color={CARDIO_BLUE} /></View>
+      ) : !workout ? (
+        <View style={s.center}>
+          <Ionicons name="cloud-offline-outline" size={40} color={TEXT_SECONDARY} />
+          <Text style={s.emptyText}>Kunde inte hitta det sparade passet.</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={s.scroll}
+          contentContainerStyle={{ minHeight: SCREEN_H + MAP_H * 0.4 }}
+          showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+        >
+          {/* Genomskinlig yta över kartan — tryck för helskärm */}
+          {hasRoute ? (
+            <TouchableOpacity
+              style={{ height: PEEK }}
+              activeOpacity={1}
+              onPress={() => setFullscreen(true)}
+            />
+          ) : (
+            <View style={{ height: 90 }} />
+          )}
+
+          {/* ── Innehålls-ark som glider över kartan ── */}
+          <View style={s.sheet}>
+            <View style={s.grip} />
+
+            <View style={s.hero}>
+              <View style={s.heroIcon}>
+                <Ionicons name={meta.icon} size={24} color={CARDIO_BLUE} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.heroTitle}>{params.name ?? meta.label}</Text>
+                {dateLabel && <Text style={s.heroDate}>{dateLabel}</Text>}
+              </View>
+              <View style={s.donePill}>
+                <Ionicons name="checkmark-circle" size={13} color={GREEN} />
+                <Text style={s.donePillText}>Avklarat</Text>
+              </View>
+            </View>
+
+            {/* Stats i 2×2 rutnät */}
+            <View style={s.statsGrid}>
+              {stats.map((st, i) => (
+                <View key={st.label} style={[s.statCell, i % 2 === 0 && s.statCellLeft, i >= 2 && s.statCellTop]}>
+                  <Text style={s.statValue}>{st.value}</Text>
+                  <Text style={s.statLabel}>{st.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ── Helskärmskarta ── */}
+      <Modal visible={fullscreen} animationType="fade" onRequestClose={() => setFullscreen(false)}>
+        <View style={{ flex: 1, backgroundColor: '#e6e3dd' }}>
+          {hasRoute && (
+            <WebView
+              style={{ flex: 1 }}
+              source={{ html: routeMapHtml(route, { interactive: true, overlapBottom: 0, topInset: 100 }) }}
+              javaScriptEnabled
+              originWhitelist={['*']}
+            />
+          )}
+          <SafeAreaView style={s.fsClose} edges={['top']} pointerEvents="box-none">
+            <TouchableOpacity onPress={() => setFullscreen(false)} style={s.circleBtn} activeOpacity={0.8}>
+              <Ionicons name="close" size={22} color="#fff" />
+            </TouchableOpacity>
+          </SafeAreaView>
+        </View>
+      </Modal>
     </View>
   )
 }
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 12, paddingVertical: 8,
+
+  mapBg: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: MAP_H,
+    backgroundColor: '#e6e3dd',
   },
-  iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800', flex: 1, textAlign: 'center' },
+
+  headerOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    zIndex: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 6,
+  },
+  circleBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 40 },
   emptyText: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center' },
 
+  scroll: { flex: 1, backgroundColor: 'transparent' },
+
+  sheet: {
+    backgroundColor: BG,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 40,
+    minHeight: SCREEN_H,
+    gap: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+  },
+  grip: {
+    alignSelf: 'center',
+    width: 40, height: 5, borderRadius: 3,
+    backgroundColor: '#3A3A3C',
+    marginBottom: 8,
+  },
+
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   heroIcon: {
-    width: 54, height: 54, borderRadius: 27,
+    width: 52, height: 52, borderRadius: 26,
     backgroundColor: CARDIO_BLUE + '22',
     alignItems: 'center', justifyContent: 'center',
   },
+  heroTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4 },
+  heroDate: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500', marginTop: 3, textTransform: 'capitalize' },
   donePill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-start',
     backgroundColor: GREEN + '1E', borderRadius: 10,
-    paddingHorizontal: 9, paddingVertical: 4,
+    paddingHorizontal: 9, paddingVertical: 5,
   },
   donePillText: { color: GREEN, fontSize: 12, fontWeight: '700' },
-  heroDate: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500', marginTop: 5, textTransform: 'capitalize' },
 
-  mapWrap: {
-    height: 220, borderRadius: 20, overflow: 'hidden',
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
-  },
-
-  statsCard: {
-    backgroundColor: CARD, borderRadius: 20,
+  statsGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    backgroundColor: CARD,
+    borderRadius: 20,
     borderWidth: 1, borderColor: BORDER,
-    paddingVertical: 8,
+    overflow: 'hidden',
   },
-  statRow: { flexDirection: 'row', alignItems: 'center' },
-  stat: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 18 },
-  statValue: { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
-  statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  statDivider: { width: 1, height: 40, backgroundColor: BORDER },
-  statRowDivider: { height: 1, backgroundColor: BORDER, marginHorizontal: 20 },
+  statCell: {
+    width: '50%',
+    paddingVertical: 22,
+    paddingHorizontal: 20,
+    gap: 4,
+  },
+  statCellLeft: { borderRightWidth: 1, borderRightColor: BORDER },
+  statCellTop:  { borderTopWidth: 1, borderTopColor: BORDER },
+  statValue: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
+  statLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  fsClose: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    alignItems: 'flex-end',
+    paddingHorizontal: 16, paddingTop: 6,
+  },
 })
