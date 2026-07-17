@@ -495,10 +495,13 @@ export default function SchemaScreen() {
     pagerRef.current?.scrollToIndex({ index: idx, animated: true })
   }, [selectedDate])
 
-  // Day header fade+slide animation on date change
+  // Day header fade+slide animation — bara vid kalendertryck (innehållet byts
+  // på plats). Vid swipe är sidglidningen själva övergången; att då även blinka
+  // rubriken ser ut som en extra omladdning.
   const dayFade  = useSharedValue(1)
   const daySlide = useSharedValue(0)
   useEffect(() => {
+    if (isSwiping.current) return
     runOnUI(() => {
       'worklet'
       dayFade.value  = 0
