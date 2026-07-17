@@ -11,7 +11,8 @@ import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/th
 import { toLocalDateString } from '@/lib/date'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 
-const GREEN   = '#4CAF50'
+const GREEN       = '#4CAF50'
+const CARDIO_BLUE = '#4AA8E0'
 // Kompakta höjder — kalendern ska ta så lite plats som möjligt från passlistan
 const ROW_H   = 46    // height of one week row
 const HEADER_H = 38   // month title + nav
@@ -148,14 +149,19 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     const daySess = sessions.filter(s =>
       !s.name.startsWith('SKIP:') &&
       !skipIds.includes(s.id) &&
-      s.weekdays.includes(wd)
+      (s.weekdays.includes(wd) ||
+        // Engångspass (t.ex. via "Logga pass") räknas på sin dag
+        (s.weekdays.length === 0 && s.name.startsWith(`ONCE:${dateStr}:`)))
     )
-    if (daySess.length === 0) return { pct: -1, allDone: false }
+    if (daySess.length === 0) return { pct: -1, allDone: false, hasGym: false, hasCardio: false }
     const done      = completedByDate[dateStr] ?? new Set<string>()
     const doneCount = daySess.filter(s => done.has(s.id)).length
     const pct       = doneCount / daySess.length
     const allDone   = doneCount === daySess.length
-    return { pct, allDone }
+    // Typindikatorer under datumet — orange = gym, blå = kondition
+    const hasGym    = daySess.some(s => s.session_type !== 'cardio')
+    const hasCardio = daySess.some(s => s.session_type === 'cardio')
+    return { pct, allDone, hasGym, hasCardio }
   }
 
   // ── Selection ─────────────────────────────────────────────────────────────
@@ -204,7 +210,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     if (!date) return <View style={s.cell} />
     const isTod   = sameDay(date, today)
     const isSel   = sameDay(date, selDate)
-    const { pct, allDone } = sessionInfo(date)
+    const { pct, allDone, hasGym, hasCardio } = sessionInfo(date)
     const hasSession = pct >= 0
     const arcColor   = allDone ? GREEN : ORANGE
     const R    = 15
@@ -253,6 +259,13 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
             </Text>
           </View>
         </View>
+        {/* Typindikatorer (Runna-stil): orange = gym, blå = kondition */}
+        {(hasGym || hasCardio) && (
+          <View style={s.dotRow}>
+            {hasGym    && <View style={[s.dot, { backgroundColor: ORANGE }]} />}
+            {hasCardio && <View style={[s.dot, { backgroundColor: CARDIO_BLUE }]} />}
+          </View>
+        )}
       </TouchableOpacity>
     )
   }
@@ -382,6 +395,18 @@ const s = StyleSheet.create({
     color: TEXT_PRIMARY,
     fontSize: 14,
     fontWeight: '500',
+  },
+  dotRow: {
+    position: 'absolute',
+    bottom: 1,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 3,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 1.5,
   },
   dateNumToday: { color: ORANGE, fontWeight: '700' },
   dateNumSel:   { color: '#000', fontWeight: '700' },
