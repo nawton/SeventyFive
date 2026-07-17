@@ -9,6 +9,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle, interpolate, runOnJS, Extrapolation,
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import * as Haptics from 'expo-haptics'
 import Svg, { Circle, Text as SvgText } from 'react-native-svg'
 import { useFocusEffect } from 'expo-router'
 import Body from 'react-native-body-highlighter'
@@ -237,6 +238,20 @@ export default function StatsScreen() {
     const key = TABS[Math.min(2, Math.max(0, idx))]?.key
     if (key) switchTab(key)
   }
+
+  // Svep på kroppsfiguren växlar fram/bak — gesten vinner över sid-pagern
+  // inom figurens yta, resten av sidan sveper mellan flikar som vanligt
+  function toggleBodyView() {
+    Haptics.selectionAsync()
+    setBodyView(v => (v === 'front' ? 'back' : 'front'))
+  }
+  const bodyFlip = Gesture.Pan()
+    .activeOffsetX([-15, 15])
+    .onEnd(e => {
+      if (Math.abs(e.translationX) > 40 || Math.abs(e.velocityX) > 500) {
+        runOnJS(toggleBodyView)()
+      }
+    })
 
   // Håll och dra i flikraden — pagern följer fingret, släpp snäpper till närmsta flik
   const tabPan = Gesture.Pan()
@@ -672,17 +687,19 @@ export default function StatsScreen() {
                 <View style={s.bodyWrap}><ActivityIndicator color={ORANGE} /></View>
               ) : (
                 <>
-                  <View style={s.bodyWrap}>
-                    <Body
-                      data={weekMuscleData}
-                      side={bodyView}
-                      gender="male"
-                      scale={1.6}
-                      colors={[BLUE, YELLOW, ORANGE]}
-                      defaultFill="#2A2A2C"
-                      border="rgba(255,255,255,0.10)"
-                    />
-                  </View>
+                  <GestureDetector gesture={bodyFlip}>
+                    <View style={s.bodyWrap}>
+                      <Body
+                        data={weekMuscleData}
+                        side={bodyView}
+                        gender="male"
+                        scale={1.6}
+                        colors={[BLUE, YELLOW, ORANGE]}
+                        defaultFill="#2A2A2C"
+                        border="rgba(255,255,255,0.10)"
+                      />
+                    </View>
+                  </GestureDetector>
                   {weekMuscleData.length > 0 && (
                     <View style={s.legend}>
                       {([
