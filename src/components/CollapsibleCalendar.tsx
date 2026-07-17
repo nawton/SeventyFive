@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native'
 import Svg, { Circle as SvgCircle } from 'react-native-svg'
 import Animated, {
@@ -70,6 +70,61 @@ function buildMonthGrid(year: number, month: number): Array<Array<Date | null>> 
   return rows
 }
 
+// ── Dagcell — memoiserad med primitiva props så att ett dagbyte bara ritar om
+//    de två celler som faktiskt ändrats (gamla + nya valet), inte alla ~150 ──
+
+const CalDayCell = memo(function CalDayCell({
+  dateMs, dayNum, isToday, isSel, allDone, hasGym, hasCardio, onPressDate,
+}: {
+  dateMs: number
+  dayNum: number
+  isToday: boolean
+  isSel: boolean
+  allDone: boolean
+  hasGym: boolean
+  hasCardio: boolean
+  onPressDate: (ms: number) => void
+}) {
+  return (
+    <TouchableOpacity style={s.cell} onPress={() => onPressDate(dateMs)} activeOpacity={0.7}>
+      <View style={s.cellInner}>
+        {/* Bara den gröna klart-ringen visas — ingen orange progress-ring */}
+        {allDone && (
+          <Svg width={36} height={36} style={StyleSheet.absoluteFillObject}>
+            <SvgCircle
+              cx={18} cy={18} r={15}
+              stroke={isSel ? '#fff' : GREEN}
+              strokeWidth={2.5}
+              fill="none"
+            />
+          </Svg>
+        )}
+        <View style={[
+          s.circle,
+          // Dagens orange ring döljs när dagen är klar — då är den bara grön
+          isToday && !isSel && !allDone && s.circleToday,
+          isSel && s.circleSel,
+        ]}>
+          <Text style={[
+            s.dateNum,
+            isToday && !isSel && s.dateNumToday,
+            isSel && s.dateNumSel,
+          ]}>
+            {dayNum}
+          </Text>
+        </View>
+      </View>
+      {/* Typindikatorer (Runna-stil): orange = gym, blå = kondition */}
+      {(hasGym || hasCardio) && (
+        <View style={s.dotRow}>
+          {hasGym    && <View style={[s.dot, { backgroundColor: ORANGE }]} />}
+          {hasCardio && <View style={[s.dot, { backgroundColor: CARDIO_BLUE }]} />}
+        </View>
+      )}
+    </TouchableOpacity>
+  )
+})
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 // React.memo: kalendern gör sessionsfiltrering per cell (42 st) — den ska inte
@@ -107,10 +162,24 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
 
   function setOpen(v: boolean) { isOpen.value = v }
 
+  // Månadsrutnätet (126 celler) monteras först när användaren börjar öppna
+  // kalendern — annars betalar varje dagbyte för celler som inte syns
+  const [monthUI, setMonthUI] = useState(false)
+  const monthUIRef = useRef(false)
+  function mountMonth() {
+    if (!monthUIRef.current) {
+      monthUIRef.current = true
+      setMonthUI(true)
+    }
+  }
+
   const pan = Gesture.Pan()
     .activeOffsetY([-8, 8])
     .failOffsetX([-15, 15])
-    .onBegin(() => { startProg.value = progress.value })
+    .onBegin(() => {
+      startProg.value = progress.value
+      runOnJS(mountMonth)()
+    })
     .onUpdate(e => {
       const delta = e.translationY / (MONTH_CONTENT_H - WEEK_CONTENT_H)
       progress.value = Math.min(1, Math.max(0, startProg.value + delta))
@@ -298,52 +367,28 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     buildMonthGrid(nextYM.y, nextYM.m),
   ]
 
-  // ── Day cell ─────────────────────────────────────────────────────────────
+  // ── Day cell rendering ───────────────────────────────────────────────────
 
-  function DayCell({ date }: { date: Date | null }) {
-    if (!date) return <View style={s.cell} />
-    const isTod   = sameDay(date, today)
-    const isSel   = sameDay(date, selDate)
-    const { allDone, hasGym, hasCardio } = sessionInfo(date)
-    const R = 15
+  // Stabil callback så CalDayCell:s memo håller mellan renders
+  const selectDateRef = useRef(selectDate)
+  selectDateRef.current = selectDate
+  const onPressDate = useCallback((ms: number) => selectDateRef.current(new Date(ms)), [])
 
+  function renderCell(date: Date | null, key: number) {
+    if (!date) return <View key={key} style={s.cell} />
+    const info = sessionInfo(date)
     return (
-      <TouchableOpacity style={s.cell} onPress={() => selectDate(date)} activeOpacity={0.7}>
-        <View style={s.cellInner}>
-          {/* Bara den gröna klart-ringen visas — ingen orange progress-ring */}
-          {allDone && (
-            <Svg width={36} height={36} style={StyleSheet.absoluteFillObject}>
-              <SvgCircle
-                cx={18} cy={18} r={R}
-                stroke={isSel ? '#fff' : GREEN}
-                strokeWidth={2.5}
-                fill="none"
-              />
-            </Svg>
-          )}
-          <View style={[
-            s.circle,
-            // Dagens orange ring döljs när dagen är klar — då är den bara grön
-            isTod && !isSel && !allDone && s.circleToday,
-            isSel && s.circleSel,
-          ]}>
-            <Text style={[
-              s.dateNum,
-              isTod && !isSel && s.dateNumToday,
-              isSel && s.dateNumSel,
-            ]}>
-              {date.getDate()}
-            </Text>
-          </View>
-        </View>
-        {/* Typindikatorer (Runna-stil): orange = gym, blå = kondition */}
-        {(hasGym || hasCardio) && (
-          <View style={s.dotRow}>
-            {hasGym    && <View style={[s.dot, { backgroundColor: ORANGE }]} />}
-            {hasCardio && <View style={[s.dot, { backgroundColor: CARDIO_BLUE }]} />}
-          </View>
-        )}
-      </TouchableOpacity>
+      <CalDayCell
+        key={key}
+        dateMs={date.getTime()}
+        dayNum={date.getDate()}
+        isToday={sameDay(date, today)}
+        isSel={sameDay(date, selDate)}
+        allDone={info.allDone}
+        hasGym={info.hasGym}
+        hasCardio={info.hasCardio}
+        onPressDate={onPressDate}
+      />
     )
   }
 
@@ -371,18 +416,19 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
       <Animated.View style={[s.weekRowWrap, weekRowStyle]}>
         {weekPages.map((wk, pi) => (
           <View key={pi} style={s.weekPage}>
-            {wk.map((d, i) => <DayCell key={i} date={d} />)}
+            {wk.map((d, i) => renderCell(d, i))}
           </View>
         ))}
       </Animated.View>
 
-      {/* Month grid (expanded view) — karusell: förra/nuvarande/nästa månad */}
+      {/* Month grid (expanded view) — karusell: förra/nuvarande/nästa månad.
+          Monteras först när kalendern öppnas (126 celler är dyrt i onödan) */}
       <Animated.View style={[s.monthGrid, monthGridStyle]}>
-        {monthPages.map((grid, pi) => (
+        {monthUI && monthPages.map((grid, pi) => (
           <View key={pi} style={s.monthPage}>
             {grid.map((row, ri) => (
               <View key={ri} style={s.gridRow}>
-                {row.map((d, di) => <DayCell key={di} date={d} />)}
+                {row.map((d, di) => renderCell(d, di))}
               </View>
             ))}
           </View>
