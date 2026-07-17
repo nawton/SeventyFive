@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ActionSheetIOS, Platform, Alert, Dimensions,
-  Modal, KeyboardAvoidingView, TextInput, InputAccessoryView,
 } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, {
@@ -21,7 +20,6 @@ import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule
 
 const GREEN    = '#4CAF50'
 const SCREEN_W = Dimensions.get('window').width
-const SCREEN_H = Dimensions.get('window').height
 
 const GPS_KEYWORDS = ['löpning', 'running', 'jogging', 'cykling', 'cycling', 'promenad', 'walking', 'spring', 'intervallspring', 'gång']
 function isGPS(name: string) {
@@ -74,7 +72,6 @@ function ExerciseRow({
   progressed,
   onToggle,
   onDelete,
-  onEditExercise,
   onStartCardio,
   onCardPress,
 }: {
@@ -85,28 +82,10 @@ function ExerciseRow({
   progressed?:     boolean
   onToggle:        () => void
   onDelete:        () => void
-  onEditExercise:  (sets: number | null, reps: string | null) => void
   onStartCardio:   (name: string) => void
   onCardPress:     (ex: SessionExercise) => void
 }) {
-  // ── Exercise editor state ─────────────────────────────────────────────────
-
-  const [editOpen, setEditOpen] = useState(false)
-  const [editSets, setEditSets] = useState('')
-  const [editReps, setEditReps] = useState('')
-
-  function openExerciseEdit() {
-    setEditSets(ex.sets != null ? String(ex.sets) : '')
-    setEditReps(ex.reps ?? '')
-    setEditOpen(true)
-  }
-
-  function saveExerciseEdit() {
-    const sets = editSets.trim() ? parseInt(editSets) : null
-    const reps = editReps.trim() || null
-    onEditExercise(sets, reps)
-    setEditOpen(false)
-  }
+  // Set/reps redigeras via passets ···-meny (SessionEditor) — raden har ingen egen editor
 
   // ── Shared values ─────────────────────────────────────────────────────────
 
@@ -151,25 +130,22 @@ function ExerciseRow({
     const gps = isGPS(ex.exercise_name)
     if (Platform.OS === 'ios') {
       const options = gps
-        ? ['Avbryt', 'Starta löpning', 'Ändra övning', 'Ta bort övning']
-        : ['Avbryt', 'Ändra övning', 'Ta bort övning']
+        ? ['Avbryt', 'Starta löpning', 'Ta bort övning']
+        : ['Avbryt', 'Ta bort övning']
       ActionSheetIOS.showActionSheetWithOptions(
         { title: ex.exercise_name, options, destructiveButtonIndex: options.length - 1, cancelButtonIndex: 0 },
         (i) => {
           if (gps) {
             if (i === 1) onStartCardio(ex.exercise_name)
-            if (i === 2) openExerciseEdit()
-            if (i === 3) setTimeout(handleDelete, 60)
-          } else {
-            if (i === 1) openExerciseEdit()
             if (i === 2) setTimeout(handleDelete, 60)
+          } else {
+            if (i === 1) setTimeout(handleDelete, 60)
           }
         },
       )
     } else {
       Alert.alert(ex.exercise_name, undefined, [
         ...(gps ? [{ text: 'Starta löpning', onPress: () => onStartCardio(ex.exercise_name) }] : []),
-        { text: 'Ändra övning', onPress: openExerciseEdit },
         { text: 'Ta bort',      style: 'destructive' as const, onPress: handleDelete },
         { text: 'Avbryt',       style: 'cancel' as const },
       ])
@@ -332,69 +308,6 @@ function ExerciseRow({
   return (
     <Animated.View style={wrapStyle}>
 
-      {/* ── Exercise editor sheet ── */}
-      <Modal
-        visible={editOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setEditOpen(false)}
-      >
-        <KeyboardAvoidingView
-          style={ee.overlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            onPress={() => setEditOpen(false)}
-            activeOpacity={1}
-          />
-          <View style={ee.sheet}>
-            <View style={ee.header}>
-              <TouchableOpacity onPress={() => setEditOpen(false)} style={ee.closeBtn}>
-                <Ionicons name="close" size={20} color={TEXT_PRIMARY} />
-              </TouchableOpacity>
-              <Text style={ee.title} numberOfLines={1}>{ex.exercise_name}</Text>
-              <View style={{ width: 36 }} />
-            </View>
-
-            <View style={ee.body}>
-              <View style={ee.fieldRow}>
-                <Text style={ee.fieldLabel}>SET</Text>
-                <TextInput
-                  style={ee.input}
-                  value={editSets}
-                  onChangeText={setEditSets}
-                  placeholder="—"
-                  placeholderTextColor={TEXT_SECONDARY}
-                  keyboardType="number-pad"
-                  inputAccessoryViewID={Platform.OS === 'ios' ? 'ex-editor-kb' : undefined}
-                />
-              </View>
-              <View style={ee.fieldRow}>
-                <Text style={ee.fieldLabel}>REPS</Text>
-                <TextInput
-                  style={ee.input}
-                  value={editReps}
-                  onChangeText={setEditReps}
-                  placeholder="—"
-                  placeholderTextColor={TEXT_SECONDARY}
-                  keyboardType="number-pad"
-                  inputAccessoryViewID={Platform.OS === 'ios' ? 'ex-editor-kb' : undefined}
-                />
-              </View>
-              <TouchableOpacity style={ee.saveBtn} onPress={saveExerciseEdit} activeOpacity={0.85}>
-                <Text style={ee.saveBtnText}>Spara</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-        {Platform.OS === 'ios' && (
-          <InputAccessoryView nativeID="ex-editor-kb">
-            <View style={{ height: 0 }} />
-          </InputAccessoryView>
-        )}
-      </Modal>
-
       {/*
         Container: overflow hidden — clips left side of card during swipe.
         Action button lives here absolutely at right, revealed as card moves.
@@ -529,49 +442,6 @@ const r = StyleSheet.create({
   },
 })
 
-// ─── Exercise editor styles ───────────────────────────────────────────────────
-
-const ee = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: BG,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    minHeight: Math.round(SCREEN_H * 0.56),
-    paddingBottom: 36,
-  },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
-  },
-  closeBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
-  },
-  title: {
-    flex: 1, textAlign: 'center',
-    color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700',
-  },
-  body:      { padding: 20, gap: 14 },
-  fieldRow:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  fieldLabel: {
-    width: 48, color: TEXT_SECONDARY,
-    fontSize: 12, fontWeight: '700', letterSpacing: 1.5,
-  },
-  input: {
-    flex: 1, backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER,
-    color: TEXT_PRIMARY, fontSize: 16,
-    paddingHorizontal: 14, paddingVertical: 12,
-  },
-  saveBtn: {
-    backgroundColor: ORANGE, borderRadius: 14,
-    paddingVertical: 14, alignItems: 'center', marginTop: 4,
-  },
-  saveBtnText: { color: '#000', fontSize: 15, fontWeight: '700' },
-})
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface WorkoutSectionProps {
@@ -580,7 +450,6 @@ export interface WorkoutSectionProps {
   isCompleted:       boolean
   onToggleExercise:  (exId: string) => void
   onDeleteExercise:  (exId: string) => void
-  onEditExercise:    (exId: string, sets: number | null, reps: string | null) => void
   onStartCardio:         (name: string) => void
   onStartCardioSession?: () => void
   onCardPress:           (ex: SessionExercise) => void
@@ -602,7 +471,6 @@ export function WorkoutSection({
   isCompleted,
   onToggleExercise,
   onDeleteExercise,
-  onEditExercise,
   onStartCardio,
   onStartCardioSession,
   onCardPress,
@@ -751,7 +619,6 @@ export function WorkoutSection({
               done={isCompleted || !!checked[ex.id]}
               onToggle={() => onToggleExercise(ex.id)}
               onDelete={() => onDeleteExercise(ex.id)}
-              onEditExercise={(sets, reps) => onEditExercise(ex.id, sets, reps)}
               onStartCardio={onStartCardio}
               onCardPress={onCardPress}
             />

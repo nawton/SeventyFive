@@ -29,7 +29,6 @@ import { getProfile } from '@/services/profile'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import {
   getWorkoutSessions,
-  updateSessionExercise,
   deleteSessionExercise,
   deleteWorkoutSession,
   skipExerciseForDay,
@@ -84,7 +83,6 @@ const EMPTY_COMPLETED = new Set<string>()
 interface DayPageApi {
   toggleCheck:      (exId: string, date: string) => void
   deleteExercise:   (sessionId: string, exId: string, date: string) => void
-  editExercise:     (exId: string, sets: number | null, reps: string | null) => void
   sessionLongPress: (s: WorkoutSession, displayName: string) => void
   setPickerSession: (s: WorkoutSession) => void
   complete:         (sessionId: string, date: string) => void
@@ -191,7 +189,6 @@ const DayPage = React.memo(function DayPage({
                       isCompleted={isCompleted}
                       onToggleExercise={(exId) => api.toggleCheck(exId, dateStr)}
                       onDeleteExercise={(exId) => api.deleteExercise(s.id, exId, dateStr)}
-                      onEditExercise={(exId, sets, reps) => api.editExercise(exId, sets, reps)}
                       onLongPress={() => api.sessionLongPress(s, sessionDisplayName(s))}
                       onAddExercise={!isPast ? () => api.setPickerSession(s) : undefined}
                       onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
@@ -239,7 +236,6 @@ const DayPage = React.memo(function DayPage({
                       isQuickLog
                       onToggleExercise={(exId) => api.toggleCheck(exId, dateStr)}
                       onDeleteExercise={(exId) => api.deleteExercise(quickLogSession.id, exId, dateStr)}
-                      onEditExercise={(exId, sets, reps) => api.editExercise(exId, sets, reps)}
                       onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
                       onCardPress={(sessionEx) => {
                         const name   = sessionEx.exercise_name
@@ -518,14 +514,6 @@ export default function SchemaScreen() {
     }
   }
 
-  function handleEditExercise(exId: string, sets: number | null, reps: string | null) {
-    setSessions(prev => prev.map(s => ({
-      ...s,
-      exercises: s.exercises.map(e => e.id === exId ? { ...e, sets, reps } : e),
-    })))
-    updateSessionExercise(exId, sets, reps).catch(() => { if (userId) loadData(userId) })
-  }
-
   // Scroll pager when calendar tap changes date
   useEffect(() => {
     if (isSwiping.current) return
@@ -559,7 +547,6 @@ export default function SchemaScreen() {
   apiFnsRef.current = {
     toggleCheck,
     deleteExercise: handleDeleteExercise,
-    editExercise: handleEditExercise,
     sessionLongPress: handleSessionLongPress,
     setPickerSession,
     complete: handleComplete,
@@ -569,7 +556,6 @@ export default function SchemaScreen() {
   const api = useMemo<DayPageApi>(() => ({
     toggleCheck:      (...a) => apiFnsRef.current.toggleCheck(...a),
     deleteExercise:   (...a) => apiFnsRef.current.deleteExercise(...a),
-    editExercise:     (...a) => apiFnsRef.current.editExercise(...a),
     sessionLongPress: (...a) => apiFnsRef.current.sessionLongPress(...a),
     setPickerSession: (...a) => apiFnsRef.current.setPickerSession(...a),
     complete:         (...a) => apiFnsRef.current.complete(...a),
