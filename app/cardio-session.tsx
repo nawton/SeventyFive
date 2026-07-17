@@ -219,7 +219,10 @@ export default function CardioSessionScreen() {
         </View>
 
         {/* ── Mål för passet: en tile i taget, svep mellan distans och tid ── */}
-        <Text style={s.sectionTitle}>MÅL FÖR PASSET</Text>
+        <View style={s.sectionRow}>
+          <Text style={s.sectionTitle}>MÅL FÖR PASSET</Text>
+          <Text style={s.sectionOptional}>Valfritt</Text>
+        </View>
         <GHScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -403,7 +406,11 @@ export default function CardioSessionScreen() {
               ))}
             </View>
 
-            <TouchableOpacity style={s.editSaveBtn} onPress={() => { Haptics.selectionAsync(); setSettingsOpen(false) }} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={[s.editSaveBtn, { flex: 0, alignSelf: 'stretch' }]}
+              onPress={() => { Haptics.selectionAsync(); setSettingsOpen(false) }}
+              activeOpacity={0.85}
+            >
               <Ionicons name="checkmark" size={17} color="#fff" />
               <Text style={s.editSaveText}>Spara</Text>
             </TouchableOpacity>
@@ -454,6 +461,12 @@ const s = StyleSheet.create({
   sectionTitle: {
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
     letterSpacing: 1.5, marginTop: 8,
+  },
+  sectionRow: {
+    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
+  },
+  sectionOptional: {
+    color: 'rgba(255,255,255,0.35)', fontSize: 11, fontStyle: 'italic',
   },
   card: {
     backgroundColor: CARD, borderRadius: 18,
