@@ -749,6 +749,7 @@ export default function SchemaScreen() {
       <ExercisePickerSheet
         visible={pickerSession !== null}
         exercises={exercises}
+        gymOnly={pickerSession?.session_type !== 'cardio'}
         onClose={() => setPickerSession(null)}
         onSelect={async (ex, sets, reps) => {
           if (!pickerSession || !userId) return

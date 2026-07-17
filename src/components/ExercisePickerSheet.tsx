@@ -42,14 +42,19 @@ export function ExercisePickerSheet({
   exercises,
   onSelect,
   onClose,
+  gymOnly = false,
 }: {
   visible:   boolean
   exercises: Exercise[]
   onSelect:  (ex: Exercise, sets: number | null, reps: string | null) => void
   onClose:   () => void
+  /** Gym-pass innehåller bara gym-övningar — hoppa förbi landing och cardio */
+  gymOnly?:  boolean
 }) {
   const insets = useSafeAreaInsets()
-  const [page, setPage]                   = useState<Page>('landing')
+  // Gym-pass startar direkt på muskelgrupperna; annars på typvalet
+  const startPage: Page = gymOnly ? 'gym' : 'landing'
+  const [page, setPage]                   = useState<Page>(startPage)
   const [selectedGroup, setSelectedGroup] = useState('')
   const [search, setSearch]               = useState('')
   const [pendingEx, setPendingEx]         = useState<Exercise | null>(null)
@@ -58,19 +63,19 @@ export function ExercisePickerSheet({
 
   useEffect(() => {
     if (!visible) {
-      setPage('landing')
+      setPage(startPage)
       setSelectedGroup('')
       setSearch('')
       setPendingEx(null)
     }
-  }, [visible])
+  }, [visible, startPage])
 
   const unique       = [...new Map(exercises.map(e => [e.name.toLowerCase(), e])).values()]
   const strengthExes = unique.filter(e => e.category === 'strength')
   const otherExes    = unique.filter(e => e.category !== 'strength')
 
   function handleClose() {
-    setPage('landing')
+    setPage(startPage)
     setSelectedGroup('')
     setSearch('')
     setPendingEx(null)
@@ -79,6 +84,8 @@ export function ExercisePickerSheet({
 
   function handleBack() {
     if (page === 'exercises') { setPage('gym'); setSearch('') }
+    // I gym-only-läget finns ingen landing att backa till → stäng istället
+    else if (page === 'gym' && gymOnly) handleClose()
     else if (page === 'gym' || page === 'cardio') setPage('landing')
   }
 
@@ -113,8 +120,9 @@ export function ExercisePickerSheet({
     : groupExercises
 
   const gymGroupLabel = GYM_GROUPS.find(g => g.key === selectedGroup)?.label ?? ''
-  const showBack      = page !== 'landing'
-  const headerTitle   = page === 'gym' ? 'Gym'
+  // I gym-only-läget är gym-sidan roten → visa stäng-ikon, inte bakåtpil
+  const showBack      = page !== 'landing' && !(gymOnly && page === 'gym')
+  const headerTitle   = page === 'gym' ? (gymOnly ? 'Lägg till övning' : 'Gym')
     : page === 'cardio'    ? 'Cardio'
     : page === 'exercises' ? gymGroupLabel
     : 'Lägg till övning'

@@ -70,17 +70,15 @@ const CATEGORY_ICONS: Record<ExerciseCategory, React.ComponentProps<typeof Ionic
   hiit:     'flash-outline',
 }
 
+// Gym-pass innehåller bara styrkeövningar — cardio/rörlighet/HIIT är egna pass
 const PICKER_FILTERS = [
   { key: 'all',       label: 'Alla' },
-  { key: 'cardio',    label: 'Cardio' },
   { key: 'legs',      label: 'Ben' },
   { key: 'chest',     label: 'Bröst' },
   { key: 'back',      label: 'Rygg' },
   { key: 'shoulders', label: 'Axlar' },
   { key: 'arms',      label: 'Armar' },
   { key: 'core',      label: 'Mage' },
-  { key: 'mobility',  label: 'Rörlighet' },
-  { key: 'hiit',      label: 'HIIT' },
 ]
 
 interface DraftExercise {
@@ -320,11 +318,11 @@ export function SessionEditor({
   // ── Picker ───────────────────────────────────────────────────────────────────
   const uniqueExercises = [...new Map(exercises.map(e => [e.name.toLowerCase(), e])).values()]
   const pickerExercises = uniqueExercises.filter(e => {
+    // Bara styrkeövningar i gym-passets väljare
+    if (e.category !== 'strength') return false
     const matchesFilter = pickerFilter === 'all'
       ? true
-      : ['cardio', 'mobility', 'hiit'].includes(pickerFilter)
-        ? e.category === pickerFilter
-        : e.category === 'strength' && getExerciseMuscleGroup(e.name) === pickerFilter
+      : getExerciseMuscleGroup(e.name) === pickerFilter
     const matchesSearch = pickerSearch.trim() === '' || e.name.toLowerCase().includes(pickerSearch.toLowerCase())
     return matchesFilter && matchesSearch
   })
