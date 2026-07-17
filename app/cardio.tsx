@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
+  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -75,6 +76,24 @@ const TILE_URLS: Record<string, { url: string; opts: object }> = {
   satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opts: { maxZoom:19 } },
   terrain:   { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                           opts: { maxZoom:17, subdomains:'abc' } },
   dark:      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',              opts: { maxZoom:19, subdomains:'abcd' } },
+}
+
+const MAP_STYLES = [
+  { key: 'standard',  label: 'Karta' },
+  { key: 'satellite', label: 'Satellit' },
+  { key: 'terrain',   label: 'Terräng' },
+  { key: 'dark',      label: 'Natt' },
+]
+
+// Förhandsvisning: en riktig kartruta från respektive leverantör (Stockholm)
+const PREVIEW_TILE = { z: 13, x: 4506, y: 2409 }
+function previewUrl(key: string): string {
+  return TILE_URLS[key].url
+    .replace('{s}', 'a')
+    .replace('{r}', '')
+    .replace('{z}', String(PREVIEW_TILE.z))
+    .replace('{x}', String(PREVIEW_TILE.x))
+    .replace('{y}', String(PREVIEW_TILE.y))
 }
 
 const MAP_HTML = `<!DOCTYPE html>
@@ -276,6 +295,35 @@ export default function CardioScreen() {
     transform: [{ translateY: sheetY.value }],
   }))
 
+  // Kartvals-sheeten: samma beteende som aktivitetsväljaren
+  const styleY = useSharedValue(420)
+  function openStyleSheet() {
+    setStyleMenuOpen(true)
+    styleY.value = 420
+    styleY.value = withTiming(0, { duration: 260 })
+  }
+  function closeStyleSheet() {
+    styleY.value = withTiming(420, { duration: 200 }, (finished) => {
+      if (finished) runOnJS(setStyleMenuOpen)(false)
+    })
+  }
+  const styleDrag = Gesture.Pan()
+    .onUpdate(e => {
+      styleY.value = e.translationY > 0 ? e.translationY : e.translationY * 0.15
+    })
+    .onEnd(e => {
+      if (e.translationY > 90 || e.velocityY > 600) {
+        styleY.value = withTiming(420, { duration: 200 }, (finished) => {
+          if (finished) runOnJS(setStyleMenuOpen)(false)
+        })
+      } else {
+        styleY.value = withTiming(0, { duration: 180 })
+      }
+    })
+  const styleSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: styleY.value }],
+  }))
+
   useEffect(() => {
     initLocation()
     return () => cleanup()
@@ -323,7 +371,7 @@ export default function CardioScreen() {
     const s = TILE_URLS[key]
     if (!s) return
     setActiveStyle(key)
-    setStyleMenuOpen(false)
+    closeStyleSheet()
     webRef.current?.injectJavaScript(
       `window.dispatchEvent(new MessageEvent('message', {
         data: JSON.stringify({ type:'style', url:${JSON.stringify(s.url)}, opts:${JSON.stringify(s.opts)} })
@@ -482,8 +530,8 @@ export default function CardioScreen() {
         onLoadEnd={() => { mapReady.current = true }}
       />
 
-      {/* ── Stats overlay (only while active) ── */}
-      {status !== 'idle' && (
+      {/* ── Stats overlay — syns även innan start ── */}
+      {(
         <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
           <GestureDetector gesture={expandGesture}>
           <View style={[styles.statsCard, lightCard && styles.statsCardLight]}>
@@ -555,33 +603,13 @@ export default function CardioScreen() {
         </View>
       )}
 
-      {/* ── Style menu ── */}
-      {styleMenuOpen && (
-        <View style={styles.styleMenu}>
-          {[
-            { key: 'standard',  label: 'Karta',    icon: 'map-outline' },
-            { key: 'satellite', label: 'Satellit',  icon: 'earth-outline' },
-            { key: 'terrain',   label: 'Terräng',   icon: 'triangle-outline' },
-            { key: 'dark',      label: 'Natt',      icon: 'moon-outline' },
-          ].map(s => (
-            <TouchableOpacity
-              key={s.key}
-              style={[styles.styleItem, activeStyle === s.key && styles.styleItemActive]}
-              onPress={() => changeStyle(s.key)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name={s.icon as any} size={18} color={activeStyle === s.key ? '#fff' : '#333'} />
-              <Text style={[styles.styleItemText, activeStyle === s.key && styles.styleItemTextActive]}>
-                {s.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
       {/* ── Right-side buttons ── */}
       <View style={styles.rightBtns}>
-        <TouchableOpacity style={styles.mapBtn} onPress={() => setStyleMenuOpen(o => !o)} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.mapBtn}
+          onPress={() => (styleMenuOpen ? closeStyleSheet() : openStyleSheet())}
+          activeOpacity={0.8}
+        >
           <Ionicons name="layers-outline" size={20} color="#000" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.mapBtn} onPress={centerOnUser} activeOpacity={0.8}>
@@ -599,8 +627,8 @@ export default function CardioScreen() {
         </TouchableOpacity>
       </SafeAreaView>
 
-      {/* ── Fullskärms-stats (kartan dold) ── */}
-      {status !== 'idle' && (
+      {/* ── Fullskärms-stats (kartan dold) — går att öppna även innan start ── */}
+      {(
         <Animated.View
           style={[styles.expandedStats, expandedStyle]}
           pointerEvents={statsExpanded ? 'auto' : 'none'}
@@ -717,6 +745,42 @@ export default function CardioScreen() {
                   </TouchableOpacity>
                 )
               })}
+            </SafeAreaView>
+          </Animated.View>
+        </>
+      )}
+
+      {/* ── Kartval — slide-up med förhandsbilder ── */}
+      {styleMenuOpen && (
+        <>
+          <Pressable style={styles.sheetDismiss} onPress={closeStyleSheet} />
+          <Animated.View style={[styles.sheetWrap, styleSheetStyle]}>
+            <GestureDetector gesture={styleDrag}>
+              <View style={styles.sheetGrip}>
+                <View style={styles.sheetHandle} />
+                <Text style={styles.sheetTitle}>Välj karta</Text>
+              </View>
+            </GestureDetector>
+            <SafeAreaView edges={['bottom']}>
+              <View style={styles.mapGrid}>
+                {MAP_STYLES.map(ms => {
+                  const active = activeStyle === ms.key
+                  return (
+                    <TouchableOpacity
+                      key={ms.key}
+                      style={[styles.mapCard, active && styles.mapCardActive]}
+                      onPress={() => changeStyle(ms.key)}
+                      activeOpacity={0.85}
+                    >
+                      <Image source={{ uri: previewUrl(ms.key) }} style={styles.mapPreview} />
+                      <View style={styles.mapCardLabelRow}>
+                        <Text style={[styles.mapCardLabel, active && { color: ORANGE }]}>{ms.label}</Text>
+                        {active && <Ionicons name="checkmark-circle" size={15} color={ORANGE} />}
+                      </View>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
             </SafeAreaView>
           </Animated.View>
         </>
@@ -979,7 +1043,7 @@ const styles = StyleSheet.create({
   rightBtns: {
     position: 'absolute',
     right: 16,
-    bottom: 160,
+    bottom: 235,
     gap: 10,
     zIndex: 10,
   },
@@ -996,40 +1060,40 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
 
-  // ── Style menu ──
-  styleMenu: {
-    position: 'absolute',
-    right: 68,
-    bottom: 200,
-    backgroundColor: 'rgba(255,255,255,0.97)',
-    borderRadius: 16,
-    paddingVertical: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    zIndex: 20,
-    minWidth: 140,
+  // ── Kartval — grid med förhandsbilder ──
+  mapGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingTop: 6,
   },
-  styleItem: {
+  mapCard: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: '#242426',
+    overflow: 'hidden',
+  },
+  mapCardActive: {
+    borderColor: ORANGE,
+  },
+  mapPreview: {
+    width: '100%',
+    height: 96,
+    backgroundColor: '#2C2C2E',
+  },
+  mapCardLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
   },
-  styleItemActive: {
-    backgroundColor: ORANGE,
-    marginHorizontal: 6,
-    borderRadius: 10,
-  },
-  styleItemText: {
-    color: '#333',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  styleItemTextActive: {
-    color: '#fff',
+  mapCardLabel: {
+    color: '#ccc',
+    fontSize: 13,
     fontWeight: '700',
   },
 
