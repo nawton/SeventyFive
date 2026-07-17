@@ -22,7 +22,11 @@ import { getPersonalRecords, type ExerciseRecord } from '@/services/personalReco
 import { computeAchievements, type Achievement } from '@/lib/achievements'
 import { MedalBadge } from '@/components/MedalBadge'
 import { MEDAL_IMAGES } from '@/lib/medalImages'
-import { LEVEL_TIERS, POINT_RULES, computePoints, levelFor } from '@/lib/levels'
+import { LEVEL_TIERS, POINT_RULES, ONE_TIME_RULES, computePoints, levelFor, type PointSource, type OneTimeInput } from '@/lib/levels'
+import { getProfile } from '@/services/profile'
+import { getProgressPhotos } from '@/services/progressPhotos'
+import { getWorkoutSessions } from '@/services/workoutSchedule'
+import { getCustomRules } from '@/services/rules'
 import type { MedalTier } from '@/components/MedalBadge'
 
 const TIER_NAMES: Record<MedalTier, string> = {
@@ -50,6 +54,10 @@ export default function RecordsScreen() {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [records, setRecords]           = useState<ExerciseRecord[]>([])
   const [points, setPoints]             = useState(0)
+  const [pointSources, setPointSources] = useState<PointSource[]>([])
+  const [oneTime, setOneTime]           = useState<OneTimeInput>({
+    hasAvatar: false, hasProgressPhoto: false, hasSchedule: false, hasCustomRule: false,
+  })
   const [selectedMedal, setSelectedMedal] = useState<MedalInfo | null>(null)
 
   function openMedal(info: MedalInfo) {
@@ -64,13 +72,19 @@ export default function RecordsScreen() {
         if (!session?.user) return
         const uid = session.user.id
 
-        const [challenge, cardio, strength, sessionHistory, prs] = await Promise.all([
+        const [challenge, cardio, strength, sessionHistory, prs, profile, photos, allSessions] = await Promise.all([
           getActiveChallenge(uid).catch(() => null),
           getCardioWorkouts(uid, 500).catch(() => []),
           getStrengthWorkouts(uid).catch(() => []),
           getCompletedSessionsHistory(uid).catch(() => []),
           getPersonalRecords(uid).catch(() => [] as ExerciseRecord[]),
+          getProfile(uid).catch(() => null),
+          getProgressPhotos(uid).catch(() => []),
+          getWorkoutSessions(uid).catch(() => []),
         ])
+        const customRules = challenge
+          ? await getCustomRules(uid, challenge.id).catch(() => [])
+          : []
         const [completedDays, streak] = challenge
           ? await Promise.all([
               countCompletedDays(challenge.id).catch(() => 0),
@@ -88,14 +102,23 @@ export default function RecordsScreen() {
           prCount: prs.length,
         })
         setAchievements(medals)
-        setPoints(computePoints({
+        const oneTimeInput: OneTimeInput = {
+          hasAvatar: !!profile?.avatar_url,
+          hasProgressPhoto: photos.length > 0,
+          hasSchedule: allSessions.some(sess => sess.weekdays.length > 0),
+          hasCustomRule: customRules.length > 0,
+        }
+        setOneTime(oneTimeInput)
+        const result = computePoints({
           completedDays,
           sessionDates: sessionHistory.map(c => c.completedDate),
           cardioDates: cardio.map(w => w.created_at.slice(0, 10)),
           strengthDates: strength.map(w => w.data.workout_date ?? w.created_at.slice(0, 10)),
           prDates: prs.map(r => r.date),
           medalsUnlocked: medals.filter(m => m.unlocked).length,
-        }))
+        }, oneTimeInput)
+        setPoints(result.total)
+        setPointSources(result.sources)
       } finally {
         setLoading(false)
       }
@@ -172,6 +195,57 @@ export default function RecordsScreen() {
             )
           })}
         </ScrollView>
+
+        {/* Dina poäng — varifrån de kommer */}
+        {pointSources.length > 0 && (
+          <>
+            <View style={s.sectionRow}>
+              <Text style={s.sectionTitle}>DINA POÄNG</Text>
+              <Text style={s.sectionCount}>{points.toLocaleString('sv-SE')} p</Text>
+            </View>
+            <View style={s.recordCard}>
+              {pointSources.map((src, i) => (
+                <View key={src.label} style={[s.recordRow, i < pointSources.length - 1 && s.recordBorder]}>
+                  <View style={s.ruleIcon}>
+                    <Ionicons name={src.icon} size={16} color={ORANGE} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.ruleLabel}>{src.label}</Text>
+                    <Text style={s.ruleCap}>{src.detail}</Text>
+                  </View>
+                  <Text style={s.rulePts}>+{src.pts.toLocaleString('sv-SE')} p</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Engångsmål */}
+        <View style={s.sectionRow}>
+          <Text style={s.sectionTitle}>ENGÅNGSMÅL</Text>
+          <Text style={s.sectionCount}>
+            {ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/{ONE_TIME_RULES.length}
+          </Text>
+        </View>
+        <View style={s.recordCard}>
+          {ONE_TIME_RULES.map((rule, i) => {
+            const earned = oneTime[rule.id]
+            return (
+              <View key={rule.id} style={[s.recordRow, i < ONE_TIME_RULES.length - 1 && s.recordBorder, !earned && { opacity: 0.55 }]}>
+                <View style={s.ruleIcon}>
+                  <Ionicons name={rule.icon} size={16} color={earned ? '#4CAF50' : ORANGE} />
+                </View>
+                <Text style={[s.ruleLabel, { flex: 1 }]}>{rule.label}</Text>
+                <Text style={s.rulePts}>{rule.pts} p</Text>
+                <Ionicons
+                  name={earned ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={18}
+                  color={earned ? '#4CAF50' : 'rgba(255,255,255,0.2)'}
+                />
+              </View>
+            )
+          })}
+        </View>
 
         {/* Så tjänar du poäng */}
         <View style={s.sectionRow}>

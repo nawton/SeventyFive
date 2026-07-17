@@ -57,6 +57,27 @@ export const POINT_RULES: Array<{
   { label: 'Upplåst medalj',        pts: PTS.medal,    cap: 'Engångs',          icon: 'ribbon-outline' },
 ]
 
+// ─── Engångspoäng ────────────────────────────────────────────────────────────
+
+export const ONE_TIME_RULES: Array<{
+  id: keyof OneTimeInput
+  label: string
+  pts: number
+  icon: React.ComponentProps<typeof Ionicons>['name']
+}> = [
+  { id: 'hasAvatar',        label: 'Lägg till en profilbild',            pts: 50,  icon: 'person-circle-outline' },
+  { id: 'hasProgressPhoto', label: 'Ladda upp ditt första framstegsfoto', pts: 50,  icon: 'camera-outline' },
+  { id: 'hasSchedule',      label: 'Skapa ett träningsschema',           pts: 100, icon: 'calendar-outline' },
+  { id: 'hasCustomRule',    label: 'Lägg till en egen regel',            pts: 50,  icon: 'create-outline' },
+]
+
+export interface OneTimeInput {
+  hasAvatar: boolean
+  hasProgressPhoto: boolean
+  hasSchedule: boolean
+  hasCustomRule: boolean
+}
+
 // ─── Beräkning ───────────────────────────────────────────────────────────────
 
 export interface PointsEvents {
@@ -66,6 +87,14 @@ export interface PointsEvents {
   strengthDates: string[]   // datum per loggat styrkepass
   prDates: string[]         // datum per personligt rekord
   medalsUnlocked: number
+}
+
+/** En rad i "Dina poäng"-breakdownen. */
+export interface PointSource {
+  label: string
+  detail: string
+  pts: number
+  icon: React.ComponentProps<typeof Ionicons>['name']
 }
 
 /** Summerar antal händelser med tak per kalenderdag. */
@@ -85,15 +114,30 @@ function countCappedPerWeek(dates: string[], maxPerWeek: number): number {
   return Object.values(byWeek).reduce((sum, n) => sum + Math.min(n, maxPerWeek), 0)
 }
 
-export function computePoints(e: PointsEvents): number {
-  return (
-    e.completedDays * PTS.day +
-    countCappedPerDay(e.sessionDates, CAPS.sessionsPerDay)   * PTS.session +
-    countCappedPerDay(e.cardioDates, CAPS.cardioPerDay)      * PTS.cardio +
-    countCappedPerWeek(e.strengthDates, CAPS.strengthPerWeek) * PTS.strength +
-    countCappedPerWeek(e.prDates, CAPS.prPerWeek)            * PTS.pr +
-    e.medalsUnlocked * PTS.medal
-  )
+export function computePoints(e: PointsEvents, one: OneTimeInput): {
+  total: number
+  sources: PointSource[]
+} {
+  const sessions = countCappedPerDay(e.sessionDates, CAPS.sessionsPerDay)
+  const cardio   = countCappedPerDay(e.cardioDates, CAPS.cardioPerDay)
+  const strength = countCappedPerWeek(e.strengthDates, CAPS.strengthPerWeek)
+  const prs      = countCappedPerWeek(e.prDates, CAPS.prPerWeek)
+  const oneTimePts = ONE_TIME_RULES.reduce((sum, r) => sum + (one[r.id] ? r.pts : 0), 0)
+
+  const sources: PointSource[] = [
+    { label: 'Klarade dagar',    detail: `${e.completedDays} dagar`,  pts: e.completedDays * PTS.day,   icon: 'checkmark-circle-outline' },
+    { label: 'Schemapass',       detail: `${sessions} pass`,          pts: sessions * PTS.session,      icon: 'barbell-outline' },
+    { label: 'Cardiopass',       detail: `${cardio} pass`,            pts: cardio * PTS.cardio,         icon: 'walk-outline' },
+    { label: 'Styrkepass',       detail: `${strength} pass`,          pts: strength * PTS.strength,     icon: 'fitness-outline' },
+    { label: 'Personliga rekord', detail: `${prs} rekord`,            pts: prs * PTS.pr,                icon: 'trophy-outline' },
+    { label: 'Medaljer',         detail: `${e.medalsUnlocked} upplåsta`, pts: e.medalsUnlocked * PTS.medal, icon: 'ribbon-outline' },
+    { label: 'Engångsmål',       detail: `${ONE_TIME_RULES.filter(r => one[r.id]).length} av ${ONE_TIME_RULES.length}`, pts: oneTimePts, icon: 'star-outline' },
+  ].filter(sr => sr.pts > 0)
+
+  return {
+    total: sources.reduce((sum, sr) => sum + sr.pts, 0),
+    sources,
+  }
 }
 
 export function levelFor(points: number): {
