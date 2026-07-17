@@ -503,10 +503,12 @@ export function WorkoutSection({
     setCollapsed(!collapsed)
   }
 
+  // maxHeight (inte height) — annars kan en 0-mätning i hopfällt läge låsa
+  // kortet stängt; fallback 1200 garanterar att expandering alltid fungerar
   const bodyStyle = useAnimatedStyle(() => ({
-    height:   bodyH === 0 ? undefined : collapseV.value * bodyH,
-    opacity:  interpolate(collapseV.value, [0, 0.6], [0, 1]),
-    overflow: 'hidden' as const,
+    maxHeight: interpolate(collapseV.value, [0, 1], [0, bodyH > 0 ? bodyH : 1200]),
+    opacity:   interpolate(collapseV.value, [0, 0.6], [0, 1]),
+    overflow:  'hidden' as const,
   }))
 
   const chevronStyle = useAnimatedStyle(() => ({
@@ -629,7 +631,11 @@ export function WorkoutSection({
 
       {/* ── Kollapsbar kropp: allt under rubrik + progress ── */}
       <Animated.View style={bodyStyle}>
-      <View onLayout={e => setBodyH(e.nativeEvent.layout.height)}>
+      <View onLayout={e => {
+        const h = e.nativeEvent.layout.height
+        // Spara bara riktiga mätningar — 0/krympta värden under hopfällning ignoreras
+        if (h > 0 && (bodyH === 0 || !collapsed)) setBodyH(h)
+      }}>
 
       {/* ── Cardio start row ── */}
       {isCardio && !isCompleted && (
