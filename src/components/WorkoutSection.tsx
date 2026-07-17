@@ -473,6 +473,7 @@ export interface WorkoutSectionProps {
   onStartCardio:         (name: string) => void
   onStartCardioSession?: () => void
   onViewCardioSummary?:  () => void
+  onOpenFullscreen?:     () => void
   onCardPress:           (ex: SessionExercise) => void
   onComplete:            () => void
   onUncomplete:          () => void
@@ -497,6 +498,7 @@ export function WorkoutSection({
   onStartCardio,
   onStartCardioSession,
   onViewCardioSummary,
+  onOpenFullscreen,
   onCardPress,
   onComplete,
   onUncomplete,
@@ -641,6 +643,12 @@ export function WorkoutSection({
           <TouchableOpacity onPress={handleUncomplete} style={s.doneBadge} activeOpacity={0.7}>
             <Ionicons name="checkmark-circle" size={13} color={GREEN} />
             <Text style={s.doneBadgeText}>Klar</Text>
+          </TouchableOpacity>
+        ) : (!isCardio && onOpenFullscreen) ? (
+          // Gympass: öppna hela passet i helskärm (istället för snabb-Klar)
+          <TouchableOpacity onPress={onOpenFullscreen} style={s.openBtn} activeOpacity={0.8}>
+            <Ionicons name="expand-outline" size={14} color={ORANGE} />
+            <Text style={s.openBtnText}>Öppna</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -820,6 +828,13 @@ const s = StyleSheet.create({
   completeBtnHot:     { borderColor: ORANGE + '80', backgroundColor: ORANGE + '15' },
   completeBtnText:    { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   completeBtnTextHot: { color: ORANGE },
+
+  openBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
+    borderWidth: 1, borderColor: ORANGE + '80', backgroundColor: ORANGE + '15',
+  },
+  openBtnText: { color: ORANGE, fontSize: 13, fontWeight: '700' },
 
   editBtn: {
     width:           30,

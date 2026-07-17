@@ -51,6 +51,7 @@ import { WorkoutSection } from '@/components/WorkoutSection'
 import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import { LogWorkoutSheet } from '@/components/LogWorkoutSheet'
+import { SessionFullscreen } from '@/components/SessionFullscreen'
 import { getWorkoutsForDate, getCardioWorkoutsForDate, type StrengthWorkout, type CardioWorkout } from '@/services/workouts'
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
@@ -104,6 +105,7 @@ interface DayPageApi {
   complete:         (sessionId: string, date: string) => void
   uncomplete:       (sessionId: string, date: string) => void
   openEditor:       (s: WorkoutSession | null) => void
+  openFullscreen:   (s: WorkoutSession, date: string) => void
 }
 
 const DayPage = React.memo(function DayPage({
@@ -199,10 +201,11 @@ const DayPage = React.memo(function DayPage({
                       const { reps, progressed } = scaledReps(ex.reps, progress[ex.id] ?? 0)
                       return { ex: progressed ? { ...ex, reps } : ex, progressed }
                     })
+                    const displaySession = { ...s, name: sessionDisplayName(s), exercises: scaled.map(x => x.ex) }
                     return (
                     <WorkoutSection
                       key={s.id}
-                      session={{ ...s, name: sessionDisplayName(s), exercises: scaled.map(x => x.ex) }}
+                      session={displaySession}
                       progressedIds={new Set(scaled.filter(x => x.progressed).map(x => x.ex.id))}
                       checked={checked}
                       isCompleted={isCompleted}
@@ -210,6 +213,7 @@ const DayPage = React.memo(function DayPage({
                       onDeleteExercise={(exId) => api.deleteExercise(s.id, exId, dateStr)}
                       onLongPress={() => api.sessionLongPress(s, sessionDisplayName(s))}
                       onAddExercise={!isPast ? () => api.setPickerSession(s) : undefined}
+                      onOpenFullscreen={s.session_type !== 'cardio' ? () => api.openFullscreen(displaySession, dateStr) : undefined}
                       onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
                       onStartCardioSession={s.session_type === 'cardio'
                         ? () => router.push({ pathname: '/cardio-session', params: {
@@ -355,6 +359,7 @@ export default function SchemaScreen() {
   const [cardioLogsByDate, setCardioLogsByDate] = useState<Record<string, CardioWorkout[]>>({})
   const [pickerSession, setPickerSession]   = useState<WorkoutSession | null>(null)
   const [logSheetOpen, setLogSheetOpen]     = useState(false)
+  const [fullscreenTarget, setFullscreenTarget] = useState<{ session: WorkoutSession; date: string } | null>(null)
   const [wizardVisible, setWizardVisible]   = useState(false)
   // null = inte inläst än (rendera inte bannern förrän vi vet, undviker blink)
   const [wizardBannerDismissed, setWizardBannerDismissed] = useState<boolean | null>(null)
@@ -623,6 +628,7 @@ export default function SchemaScreen() {
     complete: handleComplete,
     uncomplete: handleUncomplete,
     openEditor,
+    openFullscreen: (s, date) => setFullscreenTarget({ session: s, date }),
   }
   const api = useMemo<DayPageApi>(() => ({
     toggleCheck:      (...a) => apiFnsRef.current.toggleCheck(...a),
@@ -632,6 +638,7 @@ export default function SchemaScreen() {
     complete:         (...a) => apiFnsRef.current.complete(...a),
     uncomplete:       (...a) => apiFnsRef.current.uncomplete(...a),
     openEditor:       (...a) => apiFnsRef.current.openEditor(...a),
+    openFullscreen:   (...a) => apiFnsRef.current.openFullscreen(...a),
   }), [])
 
   if (loading) {
@@ -796,6 +803,34 @@ export default function SchemaScreen() {
           }
           loadData(userId)
         }}
+      />
+
+      <SessionFullscreen
+        visible={fullscreenTarget !== null}
+        session={fullscreenTarget?.session ?? null}
+        checked={fullscreenTarget ? (checkedByDate[fullscreenTarget.date] ?? EMPTY_CHECKED) : EMPTY_CHECKED}
+        isCompleted={!!fullscreenTarget && (completedByDate[fullscreenTarget.date]?.has(fullscreenTarget.session.id) ?? false)}
+        onToggle={(exId) => fullscreenTarget && toggleCheck(exId, fullscreenTarget.date)}
+        onComplete={() => { if (fullscreenTarget) handleComplete(fullscreenTarget.session.id, fullscreenTarget.date) }}
+        onUncomplete={() => { if (fullscreenTarget) handleUncomplete(fullscreenTarget.session.id, fullscreenTarget.date) }}
+        onOpenExercise={(ex) => {
+          const exInfo = exercises.find(e => e.name === ex.exercise_name)
+          if (!exInfo || !fullscreenTarget) return
+          const date = fullscreenTarget.date
+          setFullscreenTarget(null)
+          router.push({
+            pathname: '/exercise/[id]',
+            params: {
+              id: exInfo.id, name: exInfo.name,
+              description: exInfo.description ?? '',
+              category: exInfo.category, difficulty: exInfo.difficulty,
+              initialSets: ex.sets != null ? String(ex.sets) : '',
+              initialReps: ex.reps ?? '',
+              sessionExId: ex.id, sessionDate: date,
+            },
+          })
+        }}
+        onClose={() => setFullscreenTarget(null)}
       />
 
       <LogWorkoutSheet
