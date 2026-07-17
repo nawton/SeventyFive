@@ -13,6 +13,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
@@ -344,6 +345,8 @@ export default function CardioScreen() {
     splits: { label: string; paceSec: number }[]
   } | null>(null)
   const [saving, setSaving] = useState(false)
+  // Namn på passet — anges i sammanfattningen när aktiviteten är klar
+  const [workoutName, setWorkoutName] = useState('')
   const [distanceKm, setDistanceKm] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const [currentPaceSec, setCurrentPaceSec] = useState(0)
@@ -704,7 +707,7 @@ export default function CardioScreen() {
       // 1) Spara själva passet (måste lyckas)
       await saveCardioWorkout({
         userId: session.user.id,
-        name: selectedExercise.label,
+        name: workoutName.trim() || selectedExercise.label,
         type: exercise,
         distanceKm: summary.distanceKm,
         durationSeconds: summary.elapsed,
@@ -1133,7 +1136,22 @@ export default function CardioScreen() {
               style={{ alignSelf: 'stretch', flex: 1 }}
               contentContainerStyle={{ alignItems: 'center', gap: 12, paddingBottom: 8 }}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
+
+            {/* Namnge passet */}
+            <View style={styles.nameField}>
+              <Text style={styles.nameFieldLabel}>PASSNAMN</Text>
+              <TextInput
+                style={styles.nameFieldInput}
+                value={workoutName}
+                onChangeText={setWorkoutName}
+                placeholder={`T.ex. Morgonrunda (annars "${selectedExercise.label}")`}
+                placeholderTextColor="rgba(255,255,255,0.25)"
+                autoCorrect={false}
+                returnKeyType="done"
+              />
+            </View>
 
             {/* Rutten på karta */}
             {summary && summary.route.length > 1 && (
@@ -1955,6 +1973,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     marginBottom: 16,
+  },
+  nameField: {
+    alignSelf: 'stretch',
+    gap: 6,
+  },
+  nameFieldLabel: {
+    color: '#666',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  nameFieldInput: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2C2C2E',
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    paddingHorizontal: 14,
+    paddingVertical: 13,
   },
   summaryMapWrap: {
     alignSelf: 'stretch',

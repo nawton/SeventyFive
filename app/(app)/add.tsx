@@ -301,25 +301,29 @@ const DayPage = React.memo(function DayPage({
                     />
                   )}
 
-                  {/* Loggade cardio-pass — ett kort per pass, tappbart till detaljvyn */}
+                  {/* Loggade cardio-pass — samma kortdesign som schemalagda pass
+                      (namn + collapse + statistik + Visa pass) */}
                   {cardioLogs.map(w => (
-                    <TouchableOpacity
+                    <WorkoutSection
                       key={`cardio-${w.id}`}
-                      style={styles.cardioLogCard}
-                      activeOpacity={0.8}
-                      onPress={() => router.push({ pathname: '/cardio-summary', params: { name: w.name, cardioType: w.data.type, date: dateStr } })}
-                    >
-                      <View style={styles.cardioLogIcon}>
-                        <Ionicons name={cardioTypeForName(w.name) === 'cycling' ? 'bicycle' : 'fitness'} size={16} color="#fff" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.loggedTitle}>{w.name}</Text>
-                        <Text style={styles.loggedSub}>
-                          {w.data.distance_km.toFixed(2)} km · {Math.floor(w.data.duration_seconds / 60)} min
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
-                    </TouchableOpacity>
+                      session={{
+                        id: `cardiolog:${w.id}`, user_id: userId ?? '',
+                        name: w.name, weekdays: [], sort_order: 0,
+                        created_at: w.created_at, notes: null,
+                        session_type: 'cardio', cardio_type: w.data.type,
+                        exercises: [],
+                      }}
+                      checked={EMPTY_CHECKED}
+                      isCompleted
+                      cardioStats={{ distanceKm: w.data.distance_km, durationSeconds: w.data.duration_seconds }}
+                      onViewCardioSummary={() => router.push({ pathname: '/cardio-summary', params: { name: w.name, cardioType: w.data.type, date: dateStr } })}
+                      onToggleExercise={() => {}}
+                      onDeleteExercise={() => {}}
+                      onStartCardio={() => {}}
+                      onCardPress={() => {}}
+                      onComplete={() => {}}
+                      onUncomplete={() => {}}
+                    />
                   ))}
 
                   {isPast && (
@@ -973,35 +977,6 @@ const styles = StyleSheet.create({
     borderColor: ORANGE + '40', borderStyle: 'dashed',
   },
   quickAddText: { color: ORANGE, fontSize: 15, fontWeight: '600' },
-
-  // Loggat gympass-kort
-  loggedCard: {
-    backgroundColor: '#0A2416',
-    borderRadius: 18, borderWidth: 1, borderColor: '#4CAF5045',
-    padding: 16, marginBottom: 12,
-  },
-  loggedHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  loggedIcon: {
-    width: 34, height: 34, borderRadius: 10, backgroundColor: '#4CAF50',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  loggedTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
-  loggedSub: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 1 },
-  loggedRow: { paddingVertical: 10 },
-  loggedRowBorder: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
-  loggedExName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
-  loggedExMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
-
-  cardioLogCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#0F2027',
-    borderRadius: 18, borderWidth: 1, borderColor: '#4AA8E045',
-    padding: 16, marginBottom: 12,
-  },
-  cardioLogIcon: {
-    width: 34, height: 34, borderRadius: 10, backgroundColor: '#4AA8E0',
-    alignItems: 'center', justifyContent: 'center',
-  },
 
   emptyState: { alignItems: 'center', paddingVertical: 52, paddingHorizontal: 32, gap: 8 },
   emptyIcon: {
