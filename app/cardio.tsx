@@ -216,6 +216,27 @@ const MAP_HTML = `<!DOCTYPE html>
 </body>
 </html>`
 
+/** Liten statisk ruttkarta till sammanfattningen: mörka plattor, orange linje, start/mål-prickar */
+function routeMapHtml(route: Array<[number, number]>): string {
+  // Glesa ut långa rutter så HTML-strängen hålls rimlig
+  const step = Math.max(1, Math.floor(route.length / 600))
+  const pts = route.filter((_, i) => i % step === 0 || i === route.length - 1)
+  return `<!DOCTYPE html><html><head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>*{margin:0;padding:0}#map{width:100vw;height:100vh;background:#111}.leaflet-control-attribution{display:none}</style>
+  </head><body><div id="map"></div><script>
+    var pts = ${JSON.stringify(pts)};
+    var map = L.map('map',{zoomControl:false,attributionControl:false,dragging:false,touchZoom:false,doubleClickZoom:false,scrollWheelZoom:false,boxZoom:false,keyboard:false});
+    L.tileLayer('https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+    var line = L.polyline(pts,{color:'#FF8F00',weight:4,lineCap:'round',lineJoin:'round'}).addTo(map);
+    L.circleMarker(pts[0],{radius:5,color:'#fff',weight:2,fillColor:'#4CAF50',fillOpacity:1}).addTo(map);
+    L.circleMarker(pts[pts.length-1],{radius:5,color:'#fff',weight:2,fillColor:'#FF453A',fillOpacity:1}).addTo(map);
+    map.fitBounds(line.getBounds(),{padding:[24,24]});
+  </script></body></html>`
+}
+
 export default function CardioScreen() {
   // Skärmen släcks inte medan GPS-skärmen är öppen (som Strava under pass)
   useKeepAwake()
@@ -1091,6 +1112,25 @@ export default function CardioScreen() {
               {selectedExercise.label} · {new Date().toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}
             </Text>
 
+            <ScrollView
+              style={{ alignSelf: 'stretch', flex: 1 }}
+              contentContainerStyle={{ alignItems: 'center', gap: 12, paddingBottom: 8 }}
+              showsVerticalScrollIndicator={false}
+            >
+
+            {/* Rutten på karta */}
+            {summary && summary.route.length > 1 && (
+              <View style={styles.summaryMapWrap} pointerEvents="none">
+                <WebView
+                  style={{ flex: 1, backgroundColor: '#111' }}
+                  source={{ html: routeMapHtml(summary.route) }}
+                  scrollEnabled={false}
+                  javaScriptEnabled
+                  originWhitelist={['*']}
+                />
+              </View>
+            )}
+
             {/* Staplade värden — samma stil som fullskärms-statsen */}
             <View style={styles.summaryStack}>
               <View style={styles.exBlock}>
@@ -1128,17 +1168,15 @@ export default function CardioScreen() {
               return (
                 <View style={styles.splitsWrap}>
                   <Text style={styles.splitsTitle}>Splittar</Text>
-                  <ScrollView style={{ maxHeight: 150 }} showsVerticalScrollIndicator={false}>
-                    {summary.splits.map((sp, i) => (
-                      <View key={i} style={styles.splitRow}>
-                        <Text style={styles.splitKm}>{sp.label}</Text>
-                        <View style={styles.splitBarTrack}>
-                          <View style={[styles.splitBar, { width: `${Math.max(12, (fastest / sp.paceSec) * 100)}%` as never }]} />
-                        </View>
-                        <Text style={styles.splitPace}>{formatPace(1, sp.paceSec)}</Text>
+                  {summary.splits.map((sp, i) => (
+                    <View key={i} style={styles.splitRow}>
+                      <Text style={styles.splitKm}>{sp.label}</Text>
+                      <View style={styles.splitBarTrack}>
+                        <View style={[styles.splitBar, { width: `${Math.max(12, (fastest / sp.paceSec) * 100)}%` as never }]} />
                       </View>
-                    ))}
-                  </ScrollView>
+                      <Text style={styles.splitPace}>{formatPace(1, sp.paceSec)}</Text>
+                    </View>
+                  ))}
                 </View>
               )
             })()}
@@ -1178,6 +1216,8 @@ export default function CardioScreen() {
               <Ionicons name="star" size={13} color={ORANGE} />
               <Text style={styles.summaryPointsText}>+30 p mot din nästa nivå</Text>
             </View>
+
+            </ScrollView>
 
             <TouchableOpacity
               style={[styles.summaryBtn, saving && { opacity: 0.6 }]}
@@ -1898,6 +1938,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     marginBottom: 16,
+  },
+  summaryMapWrap: {
+    alignSelf: 'stretch',
+    height: 150,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#1C1C1E',
+    marginTop: 4,
   },
   summaryStack: {
     alignSelf: 'stretch',
