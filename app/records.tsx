@@ -11,6 +11,7 @@ import {
   Dimensions,
 } from 'react-native'
 import * as Haptics from 'expo-haptics'
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated'
 
 const SCREEN_W = Dimensions.get('window').width
 const PAGE_W   = SCREEN_W - 40   // scroll-paddingen är 20 per sida
@@ -67,6 +68,11 @@ export default function RecordsScreen() {
   const [breakdownVisible, setBreakdownVisible] = useState(false)
   const [earnTab, setEarnTab] = useState<0 | 1>(0)
   const earnPagerRef = useRef<ScrollView>(null)
+  // Indikatorlinjen följer svepet i realtid (halva banans bredd per flik)
+  const earnScrollX = useSharedValue(0)
+  const earnIndicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: (earnScrollX.value / PAGE_W) * (PAGE_W / 2) }],
+  }))
 
   function openMedal(info: MedalInfo) {
     Haptics.selectionAsync()
@@ -220,11 +226,11 @@ export default function RecordsScreen() {
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>TJÄNA POÄNG</Text>
         </View>
-        <View style={s.earnTabs}>
+        <View style={s.earnTabsRow}>
           {(['Återkommande', 'Engångs'] as const).map((label, i) => (
             <TouchableOpacity
               key={label}
-              style={[s.earnTab, earnTab === i && s.earnTabActive]}
+              style={s.earnTabBtn}
               onPress={() => switchEarnTab(i as 0 | 1)}
               activeOpacity={0.75}
             >
@@ -234,11 +240,16 @@ export default function RecordsScreen() {
             </TouchableOpacity>
           ))}
         </View>
+        <View style={s.earnTrack}>
+          <Animated.View style={[s.earnIndicator, earnIndicatorStyle]} />
+        </View>
         <ScrollView
           ref={earnPagerRef}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
+          onScroll={e => { earnScrollX.value = e.nativeEvent.contentOffset.x }}
           onMomentumScrollEnd={e => {
             setEarnTab(Math.round(e.nativeEvent.contentOffset.x / PAGE_W) as 0 | 1)
           }}
@@ -485,16 +496,16 @@ const s = StyleSheet.create({
   },
   historyBtnText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
 
-  // Tjäna poäng-flikar
-  earnTabs: {
-    flexDirection: 'row', gap: 4,
-    backgroundColor: CARD, borderRadius: 14, padding: 4,
-    borderWidth: 1, borderColor: BORDER,
+  // Tjäna poäng-flikar (Runna-stil: text + tunn glidande indikatorlinje)
+  earnTabsRow: { flexDirection: 'row' },
+  earnTabBtn:  { flex: 1, alignItems: 'center', paddingVertical: 8 },
+  earnTabText:       { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
+  earnTabTextActive: { color: TEXT_PRIMARY, fontWeight: '700' },
+  earnTrack: {
+    height: 3, borderRadius: 2, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  earnTab:       { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10 },
-  earnTabActive: { backgroundColor: ORANGE },
-  earnTabText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  earnTabTextActive: { color: '#000', fontWeight: '700' },
+  earnIndicator: { width: '50%', height: '100%', backgroundColor: TEXT_PRIMARY, borderRadius: 2 },
 
   // Poängregler
   ruleIcon: {
