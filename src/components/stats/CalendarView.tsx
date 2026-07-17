@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ScrollView } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Gesture, GestureDetector, type GestureType } from 'react-native-gesture-handler'
-import { runOnJS } from 'react-native-reanimated'
+import Animated, {
+  runOnJS, useSharedValue, useAnimatedStyle, withTiming, interpolate, Extrapolation, Easing,
+} from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
@@ -84,9 +86,45 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
   const cells = buildCalendarCells(yr, mo)
   const today = new Date()
 
+  const [yearOpen, setYearOpen] = useState(false)
+
+  // Mjuk övergång: rutnätet glider ut åt svepets håll, månaden byts, glider in
+  const slide = useSharedValue(0)
+  const gridAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: slide.value }],
+    opacity: interpolate(Math.abs(slide.value), [0, 40], [1, 0.2], Extrapolation.CLAMP),
+  }))
+
+  function applyMonth(dir: number) {
+    setView(v => new Date(v.getFullYear(), v.getMonth() + dir, 1))
+  }
+
   function changeMonth(dir: number) {
     Haptics.selectionAsync()
-    setView(v => new Date(v.getFullYear(), v.getMonth() + dir, 1))
+    slide.value = withTiming(-dir * 40, { duration: 110, easing: Easing.in(Easing.quad) }, finished => {
+      if (finished) {
+        runOnJS(applyMonth)(dir)
+        slide.value = dir * 40
+        slide.value = withTiming(0, { duration: 150, easing: Easing.out(Easing.quad) })
+      }
+    })
+  }
+
+  function pickMonth(year: number, month: number) {
+    setView(new Date(year, month, 1))
+    setYearOpen(false)
+  }
+
+  // Alla månader som utmaningen spänner över (start → dag 75)
+  const challengeMonths: Array<{ year: number; month: number }> = []
+  if (startDate) {
+    const start = parseLocalDate(startDate)
+    const end   = new Date(start); end.setDate(end.getDate() + 74)
+    const cur   = new Date(start.getFullYear(), start.getMonth(), 1)
+    while (cur <= end) {
+      challengeMonths.push({ year: cur.getFullYear(), month: cur.getMonth() })
+      cur.setMonth(cur.getMonth() + 1)
+    }
   }
 
   // Svep vänster = nästa månad, höger = föregående
@@ -107,7 +145,14 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
         <TouchableOpacity style={s.calNavBtn} onPress={() => setView(new Date(yr, mo - 1, 1))} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={TEXT_PRIMARY} />
         </TouchableOpacity>
-        <Text style={s.calMonthLabel}>{MONTHS_SV[mo]} {yr}</Text>
+        <TouchableOpacity
+          style={s.calMonthBtn}
+          onPress={() => { Haptics.selectionAsync(); setYearOpen(true) }}
+          activeOpacity={0.7}
+        >
+          <Text style={s.calMonthLabel}>{MONTHS_SV[mo]} {yr}</Text>
+          <Ionicons name="chevron-down" size={14} color={TEXT_SECONDARY} />
+        </TouchableOpacity>
         <TouchableOpacity style={s.calNavBtn} onPress={() => setView(new Date(yr, mo + 1, 1))} activeOpacity={0.7}>
           <Ionicons name="chevron-forward" size={20} color={TEXT_PRIMARY} />
         </TouchableOpacity>
@@ -121,7 +166,7 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
         ))}
       </View>
 
-      <View style={s.calGrid}>
+      <Animated.View style={[s.calGrid, gridAnimStyle]}>
         {cells.map((date, i) => {
           if (!date) return <View key={i} style={s.calDay} />
           const challengeDay = startDate ? getChallengeDay(date, startDate) : null
@@ -158,9 +203,51 @@ export function CalendarView({ days, startDate, currentDay, onPressDay, gestureR
             </TouchableOpacity>
           )
         })}
-      </View>
+      </Animated.View>
 
       <Legend />
+
+      {/* ── Årsöversikt: alla utmaningens månader i miniatyr ── */}
+      <Modal visible={yearOpen} transparent animationType="fade" onRequestClose={() => setYearOpen(false)}>
+        <View style={s.yearBackdrop}>
+          <View style={s.yearSheet}>
+            <View style={s.yearHeader}>
+              <Text style={s.yearTitle}>Hela utmaningen</Text>
+              <TouchableOpacity style={s.yearClose} onPress={() => setYearOpen(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={20} color={TEXT_PRIMARY} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.yearScroll}>
+              <View style={s.yearGrid}>
+                {challengeMonths.map(({ year, month }) => (
+                  <TouchableOpacity
+                    key={`${year}-${month}`}
+                    style={[s.miniCard, year === yr && month === mo && s.miniCardActive]}
+                    onPress={() => pickMonth(year, month)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={s.miniTitle}>{MONTHS_SV[month]} {year}</Text>
+                    <View style={s.miniGrid}>
+                      {buildCalendarCells(year, month).map((date, i) => {
+                        if (!date) return <View key={i} style={s.miniCell} />
+                        const cd  = startDate ? getChallengeDay(date, startDate) : null
+                        const sum = cd ? days[cd - 1] : null
+                        const color = sum
+                          ? sum.status === 'pending'
+                            ? ORANGE
+                            : DAY_COLORS[sum.status]
+                          : 'rgba(255,255,255,0.05)'
+                        return <View key={i} style={[s.miniCell, { backgroundColor: color }]} />
+                      })}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Legend />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
     </GestureDetector>
   )
@@ -178,7 +265,41 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center',
   },
+  calMonthBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4, paddingHorizontal: 8 },
   calMonthLabel: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
+
+  // Årsöversikt
+  yearBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center', padding: 16,
+  },
+  yearSheet: {
+    backgroundColor: CARD, borderRadius: 24,
+    borderWidth: 1, borderColor: BORDER,
+    padding: 20, maxHeight: '85%',
+  },
+  yearHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  yearTitle:  { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
+  yearClose: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  yearScroll: { gap: 16 },
+  yearGrid:   { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  miniCard: {
+    width: '47.5%', flexGrow: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14,
+    borderWidth: 1, borderColor: BORDER,
+    padding: 10, gap: 8,
+  },
+  miniCardActive: { borderColor: ORANGE },
+  miniTitle: { color: TEXT_PRIMARY, fontSize: 12, fontWeight: '700' },
+  miniGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
+  miniCell: {
+    width: `${100 / 7 - 1.6}%` as never, aspectRatio: 1,
+    borderRadius: 3,
+  },
   calWeekRow:    { flexDirection: 'row', justifyContent: 'space-between' },
   calWeekCell:   { width: CAL_SIZE, alignItems: 'center' },
   calWeekLabel:  { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
