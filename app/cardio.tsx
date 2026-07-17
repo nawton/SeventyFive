@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Modal,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -243,6 +244,36 @@ export default function CardioScreen() {
   const expandedStyle = useAnimatedStyle(() => ({
     opacity: expandV.value,
     transform: [{ translateY: interpolate(expandV.value, [0, 1], [-50, 0]) }],
+  }))
+
+  // Aktivitetsväljaren: inline-sheet utan mörk overlay, dras i handtaget
+  const sheetY = useSharedValue(420)
+  function openPicker() {
+    setPickerOpen(true)
+    sheetY.value = 420
+    sheetY.value = withTiming(0, { duration: 260 })
+  }
+  function closePicker() {
+    sheetY.value = withTiming(420, { duration: 200 }, (finished) => {
+      if (finished) runOnJS(setPickerOpen)(false)
+    })
+  }
+  const sheetDrag = Gesture.Pan()
+    .onUpdate(e => {
+      // Nedåt följer fingret, uppåt bara ett litet gummibandsmotstånd
+      sheetY.value = e.translationY > 0 ? e.translationY : e.translationY * 0.15
+    })
+    .onEnd(e => {
+      if (e.translationY > 90 || e.velocityY > 600) {
+        sheetY.value = withTiming(420, { duration: 200 }, (finished) => {
+          if (finished) runOnJS(setPickerOpen)(false)
+        })
+      } else {
+        sheetY.value = withTiming(0, { duration: 180 })
+      }
+    })
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: sheetY.value }],
   }))
 
   useEffect(() => {
@@ -652,37 +683,44 @@ export default function CardioScreen() {
         </Animated.View>
       )}
 
-      {/* ── Aktivitetsväljare — slide-up ── */}
-      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
-        <View style={styles.sheetRoot}>
-          <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setPickerOpen(false)} />
-          <SafeAreaView style={styles.sheet} edges={['bottom']}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Välj aktivitet</Text>
-            {EXERCISES.map((ex) => {
-              const active = exercise === ex.key
-              return (
-                <TouchableOpacity
-                  key={ex.key}
-                  style={[styles.sheetItem, active && styles.sheetItemActive]}
-                  onPress={() => {
-                    setExercise(ex.key)
-                    Haptics.selectionAsync()
-                    setPickerOpen(false)
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.sheetItemIcon, active && { backgroundColor: ORANGE + '2E' }]}>
-                    <Ionicons name={ex.icon} size={22} color={active ? ORANGE : '#999'} />
-                  </View>
-                  <Text style={[styles.sheetItemText, active && styles.sheetItemTextActive]}>{ex.label}</Text>
-                  {active && <Ionicons name="checkmark-circle" size={22} color={ORANGE} style={{ marginLeft: 'auto' }} />}
-                </TouchableOpacity>
-              )
-            })}
-          </SafeAreaView>
-        </View>
-      </Modal>
+      {/* ── Aktivitetsväljare — inline-sheet utan overlay ── */}
+      {pickerOpen && (
+        <>
+          {/* Osynlig yta bakom sheeten: tryck utanför stänger, utan att mörka kartan */}
+          <Pressable style={styles.sheetDismiss} onPress={closePicker} />
+          <Animated.View style={[styles.sheetWrap, sheetStyle]}>
+            <GestureDetector gesture={sheetDrag}>
+              <View style={styles.sheetGrip}>
+                <View style={styles.sheetHandle} />
+                <Text style={styles.sheetTitle}>Välj aktivitet</Text>
+              </View>
+            </GestureDetector>
+            <SafeAreaView edges={['bottom']}>
+              {EXERCISES.map((ex) => {
+                const active = exercise === ex.key
+                return (
+                  <TouchableOpacity
+                    key={ex.key}
+                    style={[styles.sheetItem, active && styles.sheetItemActive]}
+                    onPress={() => {
+                      setExercise(ex.key)
+                      Haptics.selectionAsync()
+                      closePicker()
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.sheetItemIcon, active && { backgroundColor: ORANGE + '2E' }]}>
+                      <Ionicons name={ex.icon} size={22} color={active ? ORANGE : '#999'} />
+                    </View>
+                    <Text style={[styles.sheetItemText, active && styles.sheetItemTextActive]}>{ex.label}</Text>
+                    {active && <Ionicons name="checkmark-circle" size={22} color={ORANGE} style={{ marginLeft: 'auto' }} />}
+                  </TouchableOpacity>
+                )
+              })}
+            </SafeAreaView>
+          </Animated.View>
+        </>
+      )}
 
       {/* ── Workout summary modal ── */}
       <Modal visible={!!summary} animationType="slide" transparent>
@@ -770,7 +808,7 @@ export default function CardioScreen() {
             <>
               <TouchableOpacity
                 style={styles.idleCol}
-                onPress={() => setPickerOpen(true)}
+                onPress={openPicker}
                 activeOpacity={0.8}
               >
                 <View style={styles.typeCircle}>
@@ -1043,21 +1081,30 @@ const styles = StyleSheet.create({
   },
 
   // ── Aktivitetsväljare (slide-up) ──
-  sheetRoot: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  sheetDismiss: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 39,
   },
-  sheetBackdrop: {
-    flex: 1,
-  },
-  sheet: {
+  sheetWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#1C1C1E',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
-    paddingTop: 10,
     paddingBottom: 12,
+    zIndex: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  sheetGrip: {
+    paddingTop: 10,
+    paddingBottom: 4,
   },
   sheetHandle: {
     alignSelf: 'center',
@@ -1072,7 +1119,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
     marginTop: 14,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   sheetItem: {
     flexDirection: 'row',
