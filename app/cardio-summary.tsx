@@ -410,9 +410,9 @@ const s = StyleSheet.create({
     rowGap: 20,
     paddingHorizontal: 4,
   },
-  statCell: { width: '50%', gap: 3, paddingRight: 12 },
-  statValue: { color: TEXT_PRIMARY, fontSize: 30, fontWeight: '800', letterSpacing: -0.8, fontVariant: ['tabular-nums'] },
-  statLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  statCell: { width: '50%', gap: 3, alignItems: 'center' },
+  statValue: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
+  statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Kilometersplittar
   splitsCard: {
