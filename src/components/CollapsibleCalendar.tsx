@@ -210,44 +210,27 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     if (!date) return <View style={s.cell} />
     const isTod   = sameDay(date, today)
     const isSel   = sameDay(date, selDate)
-    const { pct, allDone, hasGym, hasCardio } = sessionInfo(date)
-    const hasSession = pct >= 0
-    const arcColor   = allDone ? GREEN : ORANGE
-    const R    = 15
-    const CIRC = 2 * Math.PI * R
+    const { allDone, hasGym, hasCardio } = sessionInfo(date)
+    const R = 15
 
     return (
       <TouchableOpacity style={s.cell} onPress={() => selectDate(date)} activeOpacity={0.7}>
         <View style={s.cellInner}>
-          {hasSession && (
+          {/* Bara den gröna klart-ringen visas — ingen orange progress-ring */}
+          {allDone && (
             <Svg width={36} height={36} style={StyleSheet.absoluteFillObject}>
-              {/* Track */}
               <SvgCircle
                 cx={18} cy={18} r={R}
-                stroke={isSel ? 'rgba(255,255,255,0.3)' : arcColor + '28'}
-                strokeWidth={2}
+                stroke={isSel ? '#fff' : GREEN}
+                strokeWidth={2.5}
                 fill="none"
               />
-              {/* Progress */}
-              {pct > 0 && (
-                <SvgCircle
-                  cx={18} cy={18} r={R}
-                  stroke={isSel ? '#fff' : arcColor}
-                  strokeWidth={2.5}
-                  fill="none"
-                  strokeDasharray={CIRC}
-                  strokeDashoffset={CIRC * (1 - pct)}
-                  strokeLinecap="round"
-                  rotation={-90}
-                  originX={18}
-                  originY={18}
-                />
-              )}
             </Svg>
           )}
           <View style={[
             s.circle,
-            isTod && !isSel && s.circleToday,
+            // Dagens orange ring döljs när dagen är klar — då är den bara grön
+            isTod && !isSel && !allDone && s.circleToday,
             isSel && s.circleSel,
           ]}>
             <Text style={[
