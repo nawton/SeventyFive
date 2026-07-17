@@ -105,7 +105,7 @@ function routeMapHtml(route: Array<[number, number]>, opts: { interactive: boole
 
 /** Interaktiv helskärmskarta: pan/zoom + tvåfingersrotation, roterande kompass
  *  (ej klickbar) och möjlighet att byta bakgrundskarta via injicerade meddelanden. */
-function fsMapHtml(route: Array<[number, number]>): string {
+function fsMapHtml(route: Array<[number, number]>, compassTop: number): string {
   const step = Math.max(1, Math.floor(route.length / 800))
   const pts = route.filter((_, i) => i % step === 0 || i === route.length - 1)
   return `<!DOCTYPE html><html><head>
@@ -116,18 +116,18 @@ function fsMapHtml(route: Array<[number, number]>): string {
   <style>
     *{margin:0;padding:0}#map{width:100vw;height:100vh;background:#e6e3dd}
     .leaflet-control-attribution{display:none}
-    /* Kompass: svart, rund, nere till vänster — visuell, ej klickbar */
-    .leaflet-bottom.leaflet-left{ bottom:34px; left:16px; }
+    /* Kompass: svart, rund, uppe till höger under lager-knappen — visuell, ej klickbar */
+    .leaflet-top.leaflet-right{ top:${compassTop}px; right:16px; }
     .leaflet-control-rotate{ margin:0!important; border:none!important; border-radius:50%!important;
       overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.35); pointer-events:none!important; }
-    .leaflet-control-rotate .leaflet-control-rotate-toggle{ display:block; width:48px!important; height:48px!important;
+    .leaflet-control-rotate .leaflet-control-rotate-toggle{ display:block; width:44px!important; height:44px!important;
       background:#161618!important; border:none!important; border-radius:50%!important; }
     .leaflet-control-rotate-arrow{ background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10.5 14l4-8 4 8h-8z' fill='%23FF453A'/%3E%3Cpath d='M10.5 16l4 8 4-8h-8z' fill='%23fff'/%3E%3C/svg%3E")!important; }
   </style>
   </head><body><div id="map"></div><script>
     var pts = ${JSON.stringify(pts)};
     var map = L.map('map',{zoomControl:false,attributionControl:false,rotate:true,touchRotate:true,
-      rotateControl:{closeOnZeroBearing:false, position:'bottomleft'}});
+      rotateControl:{closeOnZeroBearing:false, position:'topright'}});
     var tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
     L.polyline(pts,{color:'#FF6A00',weight:9,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(map);
     var line = L.polyline(pts,{color:'#FC4C02',weight:5,lineCap:'round',lineJoin:'round'}).addTo(map);
@@ -264,6 +264,12 @@ export default function CardioSummaryScreen() {
           contentContainerStyle={{ minHeight: SCREEN_H + MAP_H * 0.4 }}
           showsVerticalScrollIndicator={false}
           scrollEventThrottle={16}
+          onScrollEndDrag={(e) => {
+            // Dra ner arket förbi toppen → hoppa direkt in i helskärmskartan
+            if (hasRoute && !fullscreen && e.nativeEvent.contentOffset.y < -70) {
+              setFullscreen(true)
+            }
+          }}
         >
           {/* Genomskinlig yta över kartan — tryck för helskärm */}
           {hasRoute ? (
@@ -279,6 +285,12 @@ export default function CardioSummaryScreen() {
           {/* ── Innehålls-ark som glider över kartan ── */}
           <View style={s.sheet}>
             <View style={s.grip} />
+            {hasRoute && (
+              <View style={s.pullHint}>
+                <Ionicons name="chevron-down" size={13} color={TEXT_SECONDARY} />
+                <Text style={s.pullHintText}>Dra ner för karta</Text>
+              </View>
+            )}
 
             <View style={s.hero}>
               <View style={s.heroIcon}>
@@ -314,7 +326,7 @@ export default function CardioSummaryScreen() {
             <WebView
               ref={fsWebRef}
               style={{ flex: 1 }}
-              source={{ html: fsMapHtml(route) }}
+              source={{ html: fsMapHtml(route, insets.top + 68) }}
               javaScriptEnabled
               originWhitelist={['*']}
             />
@@ -421,6 +433,11 @@ const s = StyleSheet.create({
     backgroundColor: '#3A3A3C',
     marginBottom: 8,
   },
+  pullHint: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 4, marginTop: -2, marginBottom: 2,
+  },
+  pullHintText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
 
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   heroIcon: {
