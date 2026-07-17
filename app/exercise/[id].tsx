@@ -18,7 +18,9 @@ import { Ionicons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
 import Body from 'react-native-body-highlighter'
 import { getMusclesForName, bestSideForMuscles, SLUG_LABELS } from '@/lib/muscles'
+import * as Haptics from 'expo-haptics'
 import { saveStrengthWorkout, deleteWorkout } from '@/services/workouts'
+import { getPersonalRecords, findNewPR } from '@/services/personalRecords'
 import { dateForWeekday } from '@/services/workoutSchedule'
 import { supabase } from '@/lib/supabase'
 import { toLocalDateString } from '@/lib/date'
@@ -239,6 +241,9 @@ export default function ExerciseDetailScreen() {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         const userId = session.user.id
+        // Hämta rekordet FÖRE sparandet så det nya passet inte jämförs med sig självt
+        const prevRecord = (await getPersonalRecords(userId).catch(() => []))
+          .find(r => r.exerciseName === name)
         const ok = await saveStrengthWorkout({
           userId,
           exerciseId: id,
@@ -252,9 +257,19 @@ export default function ExerciseDetailScreen() {
             await deleteWorkout(params.loggedWorkoutId)
           }
           await markScheduleComplete(userId)
-          Alert.alert('Sparat!', `${name} loggat.`, [
-            { text: 'OK', onPress: () => dismiss() },
-          ])
+          const pr = findNewPR(prevRecord, validSets)
+          if (pr) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+            Alert.alert(
+              '🏆 Nytt personligt rekord!',
+              `${name}: ${pr.weightKg} kg × ${pr.reps}\nEst. 1RM ${Math.round(pr.e1rm)} kg — se alla rekord i profilen.`,
+              [{ text: 'Grymt!', onPress: () => dismiss() }]
+            )
+          } else {
+            Alert.alert('Sparat!', `${name} loggat.`, [
+              { text: 'OK', onPress: () => dismiss() },
+            ])
+          }
         }
       }
     } finally {

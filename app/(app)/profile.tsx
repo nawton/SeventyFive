@@ -261,6 +261,22 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
         </TouchableOpacity>
 
+        {/* Rekord & medaljer */}
+        <TouchableOpacity
+          style={s.recordsRow}
+          onPress={() => router.push('/records')}
+          activeOpacity={0.8}
+        >
+          <View style={s.recordsIcon}>
+            <Ionicons name="trophy" size={18} color="#FFD54F" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.recordsTitle}>Rekord & medaljer</Text>
+            <Text style={s.recordsSub}>Dina personliga rekord och upplåsta mål</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+        </TouchableOpacity>
+
         {/* Lägg till foto */}
         {challenge && (
           <TouchableOpacity style={s.addButton} onPress={handleAddPhoto} activeOpacity={0.85}>
@@ -396,6 +412,20 @@ const s = StyleSheet.create({
   avatarInitial: { color: '#000', fontWeight: '700' },
 
   // Add button
+  recordsRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: CARD, borderRadius: 16,
+    borderWidth: 1, borderColor: BORDER,
+    padding: 14, marginBottom: 12,
+  },
+  recordsIcon: {
+    width: 38, height: 38, borderRadius: 11,
+    backgroundColor: '#FFD54F1E',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  recordsTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
+  recordsSub:   { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
