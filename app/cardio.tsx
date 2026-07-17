@@ -697,7 +697,10 @@ export default function CardioScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.hudMiniTime, lightCard && { color: '#000' }]}>{formatTime(elapsed)}</Text>
-            <Ionicons name="eye-outline" size={15} color={lightCard ? '#555' : '#999'} />
+            <View style={styles.hudMiniShow}>
+              <Text style={styles.hudMiniShowText}>Visa statistik</Text>
+              <Ionicons name="chevron-down" size={13} color="#fff" />
+            </View>
           </TouchableOpacity>
         </SafeAreaView>
       ) : (
@@ -706,11 +709,12 @@ export default function CardioScreen() {
           <View style={[styles.statsCard, lightCard && styles.statsCardLight]}>
             {/* Dölj-knapp — krymper kortet så kartan syns */}
             <TouchableOpacity
-              style={styles.hudHideBtn}
+              style={[styles.hudHideBtn, lightCard && { backgroundColor: 'rgba(0,0,0,0.07)' }]}
               onPress={() => setHudHidden(true)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="eye-off-outline" size={16} color={lightCard ? '#999' : '#666'} />
+              <Ionicons name="eye-off-outline" size={13} color={lightCard ? '#555' : '#bbb'} />
+              <Text style={[styles.hudHideText, lightCard && { color: '#555' }]}>Dölj</Text>
             </TouchableOpacity>
             <View style={styles.timerRow}>
               <Text style={[styles.timerText, lightCard && { color: '#000' }]}>{formatTime(elapsed)}</Text>
@@ -1184,11 +1188,23 @@ const styles = StyleSheet.create({
     top: 10,
     right: 12,
     zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  hudHideText: {
+    color: '#bbb',
+    fontSize: 12,
+    fontWeight: '700',
   },
   hudMini: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     backgroundColor: 'rgba(20,20,22,0.94)',
     borderRadius: 20,
     paddingHorizontal: 14,
@@ -1203,6 +1219,20 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
+  },
+  hudMiniShow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: ORANGE,
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  hudMiniShowText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   timerRow: {
     flexDirection: 'row',
