@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
-  ActivityIndicator, TouchableOpacity, Modal, Dimensions,
+  ActivityIndicator, TouchableOpacity, Modal, Dimensions, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -22,7 +22,11 @@ import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type Streng
 import { getCompletedExerciseNamesForWeek, getCompletedSessionsHistory, type CompletedSessionItem } from '@/services/workoutSchedule'
 import { CalendarView } from '@/components/stats/CalendarView'
 import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
-import { WorkoutDetail, WorkoutRow } from '@/components/stats/WorkoutDetail'
+import { WorkoutRow } from '@/components/stats/WorkoutDetail'
+import { CardioSummaryView } from '@/components/CardioSummaryView'
+import { getProfile } from '@/services/profile'
+import { getUnitSystem, type UnitSystem } from '@/lib/units'
+import { deleteCardioWorkout } from '@/services/workouts'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
 
@@ -218,7 +222,29 @@ export default function StatsScreen() {
   const [selectedWorkout, setSelectedWorkout]   = useState<CardioWorkout | null>(null)
   const [selectedDay, setSelectedDay]           = useState<DaySummary | null>(null)
   const [activeTab, setActiveTab]               = useState<StatsTab>('overview')
+  const [unit, setUnit]                         = useState<UnitSystem>('metric')
+  const [avatarUrl, setAvatarUrl]               = useState<string | null>(null)
   const pagerRef = useRef<ScrollView>(null)
+
+  useEffect(() => {
+    getUnitSystem().then(setUnit)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) getProfile(session.user.id).then(p => setAvatarUrl(p?.avatar_url ?? null)).catch(() => {})
+    })
+  }, [])
+
+  function deleteSelectedWorkout() {
+    const w = selectedWorkout
+    if (!w) return
+    Alert.alert('Radera träning', 'Det här går inte att ångra.', [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Radera', style: 'destructive', onPress: async () => {
+        await deleteCardioWorkout(w.id).catch(() => {})
+        setWorkouts(prev => prev.filter(x => x.id !== w.id))
+        setSelectedWorkout(null)
+      } },
+    ])
+  }
 
   function switchTab(key: StatsTab) {
     setActiveTab(key)
@@ -804,13 +830,16 @@ export default function StatsScreen() {
         )}
       </Modal>
 
-      <Modal visible={!!selectedWorkout} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedWorkout(null)}>
+      <Modal visible={!!selectedWorkout} animationType="slide" onRequestClose={() => setSelectedWorkout(null)}>
         {selectedWorkout && (
-          <WorkoutDetail
+          <CardioSummaryView
             workout={selectedWorkout}
-            allWorkouts={workouts}
+            title={selectedWorkout.name}
+            dateLabel={new Date(selectedWorkout.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            avatarUrl={avatarUrl}
+            unit={unit}
             onClose={() => setSelectedWorkout(null)}
-            onDeleted={id => setWorkouts(prev => prev.filter(w => w.id !== id))}
+            onDelete={deleteSelectedWorkout}
           />
         )}
       </Modal>

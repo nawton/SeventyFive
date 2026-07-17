@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native'
 import Animated, {
   useSharedValue, useAnimatedStyle,
@@ -7,15 +7,17 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ORANGE, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, GREEN, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
+const SCREEN_WIDTH  = Dimensions.get('window').width
 const SHEET_PARTIAL = SCREEN_HEIGHT * 0.44
 const SHEET_SP      = { damping: 26, stiffness: 260, mass: 1 } as const
+const CARDIO_BLUE   = '#4AA8E0'
 
 const EXERCISE_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   running:  'fitness-outline',
@@ -58,6 +60,8 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, c
   const snapState    = useSharedValue(0)
   const sheetTop     = useSharedValue(SCREEN_HEIGHT)
   const backdropAnim = useSharedValue(0)
+  const pagerRef  = useRef<ScrollView>(null)
+  const [page, setPage] = useState(0)
 
   useEffect(() => {
     sheetTop.value     = withSpring(SHEET_PARTIAL, SHEET_SP)
@@ -109,12 +113,21 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, c
     const wd = w.data.workout_date
     return wd ? wd === dateIso : sameDay(new Date(w.created_at), date)
   })
-  // Avbockade schemapass. GPS-avbockade cardiopass (med distans) hoppas över —
-  // de visas redan som tappbara pass i Cardio-sektionen.
-  const daySessions = (completedSessions ?? []).filter(c =>
-    c.completedDate === dateIso && !(c.sessionType === 'cardio' && c.distanceKm != null)
-  )
-  const hasAny = dayCardio.length > 0 || dayStrength.length > 0 || daySessions.length > 0
+  const daySessions = (completedSessions ?? []).filter(c => c.completedDate === dateIso)
+  // Cardio-schemapass avbockade utan GPS (de med distans visas redan som tappbara pass)
+  const cardioSessions = daySessions.filter(c => c.sessionType === 'cardio' && c.distanceKm == null)
+  const gymSessions    = daySessions.filter(c => c.sessionType === 'gym')
+
+  // Uppdelat i löpar-/cardiopass och gympass — swipa mellan dem
+  const pages: { key: 'cardio' | 'gym'; label: string; count: number }[] = []
+  if (dayCardio.length > 0 || cardioSessions.length > 0) pages.push({ key: 'cardio', label: 'Cardio', count: dayCardio.length + cardioSessions.length })
+  if (dayStrength.length > 0 || gymSessions.length > 0)  pages.push({ key: 'gym',    label: 'Gym',    count: dayStrength.length + gymSessions.length })
+  const hasAny = pages.length > 0
+
+  function goToPage(i: number) {
+    setPage(i)
+    pagerRef.current?.scrollTo({ x: i * SCREEN_WIDTH, animated: true })
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -131,111 +144,122 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, c
           </View>
         </GestureDetector>
 
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-          {!hasAny ? (
-            <View style={s.empty}>
-              <Ionicons name="fitness-outline" size={28} color="rgba(255,255,255,0.2)" />
-              <Text style={s.emptyText}>Inga träningar sparade</Text>
-            </View>
-          ) : (
-            <>
-              {daySessions.length > 0 && (
-                <>
-                  {(dayStrength.length > 0 || dayCardio.length > 0) && <Text style={s.section}>Schemapass</Text>}
-                  {daySessions.map((c, i) => {
-                    const last = i === daySessions.length - 1 && dayStrength.length === 0 && dayCardio.length === 0
-                    return (
-                      <View key={c.id} style={[s.item, !last && s.itemBorder]}>
-                        <View style={s.itemIcon}>
-                          <Ionicons
-                            name={c.sessionType === 'cardio'
-                              ? (EXERCISE_ICONS[c.cardioType ?? ''] ?? 'fitness-outline')
-                              : 'barbell-outline'}
-                            size={18}
-                            color={ORANGE}
-                          />
-                        </View>
-                        <View style={s.itemBody}>
-                          <Text style={s.itemName}>{c.name}</Text>
-                          <View style={s.itemMeta}>
-                            {c.sessionType === 'gym' && c.exerciseNames.length > 0 ? (
-                              <Text style={s.itemStat} numberOfLines={1}>
-                                {c.exerciseNames.length} övningar · {c.exerciseNames.slice(0, 3).join(', ')}{c.exerciseNames.length > 3 ? ' …' : ''}
-                              </Text>
-                            ) : (
-                              <Text style={s.itemStat}>Avklarat pass</Text>
-                            )}
-                          </View>
-                        </View>
-                        <Ionicons name="checkmark-circle" size={18} color="#4CAF50" style={{ alignSelf: 'center' }} />
-                      </View>
-                    )
-                  })}
-                </>
-              )}
-
-              {dayStrength.length > 0 && (
-                <>
-                  {(dayCardio.length > 0 || daySessions.length > 0) && (
-                    <Text style={[s.section, daySessions.length > 0 && { marginTop: 12 }]}>Styrka</Text>
-                  )}
-                  {dayStrength.map((w, i) => {
-                    const totalReps = w.data.sets.reduce((sum, r) => sum + r.reps, 0)
-                    const last = i === dayStrength.length - 1 && dayCardio.length === 0
-                    return (
-                      <View key={w.id} style={[s.item, !last && s.itemBorder]}>
-                        <View style={s.itemIcon}>
-                          <Ionicons name="barbell-outline" size={18} color={ORANGE} />
-                        </View>
-                        <View style={s.itemBody}>
-                          <Text style={s.itemName}>{w.name}</Text>
-                          <View style={s.itemMeta}>
-                            <Text style={s.itemStat}>{w.data.sets.length} set</Text>
-                            {totalReps > 0 && (
-                              <>
-                                <Text style={s.itemDot}>·</Text>
-                                <Text style={s.itemStat}>{totalReps} reps</Text>
-                              </>
-                            )}
-                          </View>
+        {!hasAny ? (
+          <View style={s.empty}>
+            <Ionicons name="fitness-outline" size={28} color="rgba(255,255,255,0.2)" />
+            <Text style={s.emptyText}>Inga träningar sparade</Text>
+          </View>
+        ) : (
+          <>
+            {/* Flikar — Cardio / Gym (swipa eller tryck) */}
+            {pages.length > 1 && (
+              <View style={s.tabBar}>
+                {pages.map((p, i) => {
+                  const active = page === i
+                  const accent = p.key === 'cardio' ? CARDIO_BLUE : ORANGE
+                  return (
+                    <TouchableOpacity key={p.key} style={s.tabBtn} onPress={() => goToPage(i)} activeOpacity={0.7}>
+                      <View style={s.tabLabelRow}>
+                        <Text style={[s.tabLabel, active && { color: TEXT_PRIMARY }]}>{p.label}</Text>
+                        <View style={[s.tabCount, active && { backgroundColor: accent + '2A' }]}>
+                          <Text style={[s.tabCountText, active && { color: accent }]}>{p.count}</Text>
                         </View>
                       </View>
-                    )
-                  })}
-                </>
-              )}
-
-              {dayCardio.length > 0 && (
-                <>
-                  {(dayStrength.length > 0 || daySessions.length > 0) && (
-                    <Text style={[s.section, { marginTop: 12 }]}>Cardio</Text>
-                  )}
-                  {dayCardio.map((w, i) => (
-                    <TouchableOpacity
-                      key={w.id}
-                      style={[s.item, i < dayCardio.length - 1 && s.itemBorder]}
-                      onPress={() => { dismiss(); setTimeout(() => onSelectWorkout(w), 300) }}
-                      activeOpacity={0.7}
-                    >
-                      <View style={s.itemIcon}>
-                        <Ionicons name={EXERCISE_ICONS[w.data.type] ?? 'fitness-outline'} size={18} color={ORANGE} />
-                      </View>
-                      <View style={s.itemBody}>
-                        <Text style={s.itemName}>{w.name}</Text>
-                        <View style={s.itemMeta}>
-                          <Text style={s.itemStat}>{w.data.distance_km.toFixed(2)} km</Text>
-                          <Text style={s.itemDot}>·</Text>
-                          <Text style={s.itemStat}>{fmtTime(w.data.duration_seconds)}</Text>
-                        </View>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.25)" style={{ alignSelf: 'center' }} />
+                      {active && <View style={[s.tabUnderline, { backgroundColor: accent }]} />}
                     </TouchableOpacity>
-                  ))}
-                </>
-              )}
-            </>
-          )}
-        </ScrollView>
+                  )
+                })}
+              </View>
+            )}
+
+            <ScrollView
+              ref={pagerRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              style={{ flex: 1 }}
+              onMomentumScrollEnd={e => setPage(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH))}
+            >
+              {pages.map(p => (
+                <ScrollView key={p.key} style={{ width: SCREEN_WIDTH }} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+                  {p.key === 'cardio' ? (
+                    <>
+                      {dayCardio.map((w, i) => (
+                        <TouchableOpacity
+                          key={w.id}
+                          style={[s.item, (i < dayCardio.length - 1 || cardioSessions.length > 0) && s.itemBorder]}
+                          onPress={() => { dismiss(); setTimeout(() => onSelectWorkout(w), 300) }}
+                          activeOpacity={0.7}
+                        >
+                          <View style={[s.itemIcon, { backgroundColor: CARDIO_BLUE + '22' }]}>
+                            <Ionicons name={EXERCISE_ICONS[w.data.type] ?? 'fitness-outline'} size={18} color={CARDIO_BLUE} />
+                          </View>
+                          <View style={s.itemBody}>
+                            <Text style={s.itemName}>{w.name}</Text>
+                            <View style={s.itemMeta}>
+                              <Text style={s.itemStat}>{w.data.distance_km.toFixed(2)} km</Text>
+                              <Text style={s.itemDot}>·</Text>
+                              <Text style={s.itemStat}>{fmtTime(w.data.duration_seconds)}</Text>
+                            </View>
+                          </View>
+                          <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.25)" style={{ alignSelf: 'center' }} />
+                        </TouchableOpacity>
+                      ))}
+                      {cardioSessions.map((c, i) => (
+                        <View key={c.id} style={[s.item, i < cardioSessions.length - 1 && s.itemBorder]}>
+                          <View style={[s.itemIcon, { backgroundColor: CARDIO_BLUE + '22' }]}>
+                            <Ionicons name={EXERCISE_ICONS[c.cardioType ?? ''] ?? 'fitness-outline'} size={18} color={CARDIO_BLUE} />
+                          </View>
+                          <View style={s.itemBody}>
+                            <Text style={s.itemName}>{c.name}</Text>
+                            <View style={s.itemMeta}><Text style={s.itemStat}>Avklarat pass</Text></View>
+                          </View>
+                          <Ionicons name="checkmark-circle" size={18} color={GREEN} style={{ alignSelf: 'center' }} />
+                        </View>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {gymSessions.map((c, i) => (
+                        <View key={c.id} style={[s.item, (i < gymSessions.length - 1 || dayStrength.length > 0) && s.itemBorder]}>
+                          <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ORANGE} /></View>
+                          <View style={s.itemBody}>
+                            <Text style={s.itemName}>{c.name}</Text>
+                            <View style={s.itemMeta}>
+                              {c.exerciseNames.length > 0 ? (
+                                <Text style={s.itemStat} numberOfLines={1}>
+                                  {c.exerciseNames.length} övningar · {c.exerciseNames.slice(0, 3).join(', ')}{c.exerciseNames.length > 3 ? ' …' : ''}
+                                </Text>
+                              ) : (
+                                <Text style={s.itemStat}>Avklarat pass</Text>
+                              )}
+                            </View>
+                          </View>
+                          <Ionicons name="checkmark-circle" size={18} color={GREEN} style={{ alignSelf: 'center' }} />
+                        </View>
+                      ))}
+                      {dayStrength.map((w, i) => {
+                        const totalReps = w.data.sets.reduce((sum, r) => sum + r.reps, 0)
+                        return (
+                          <View key={w.id} style={[s.item, i < dayStrength.length - 1 && s.itemBorder]}>
+                            <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ORANGE} /></View>
+                            <View style={s.itemBody}>
+                              <Text style={s.itemName}>{w.name}</Text>
+                              <View style={s.itemMeta}>
+                                <Text style={s.itemStat}>{w.data.sets.length} set</Text>
+                                {totalReps > 0 && (<><Text style={s.itemDot}>·</Text><Text style={s.itemStat}>{totalReps} reps</Text></>)}
+                              </View>
+                            </View>
+                          </View>
+                        )
+                      })}
+                    </>
+                  )}
+                </ScrollView>
+              ))}
+            </ScrollView>
+          </>
+        )}
       </Animated.View>
     </View>
   )
@@ -255,6 +279,24 @@ const s = StyleSheet.create({
   sub:      { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
   scroll:   { paddingHorizontal: 20, paddingBottom: 40 },
   section:  { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  tabBtn: { marginRight: 24, paddingBottom: 10, alignItems: 'flex-start' },
+  tabLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  tabLabel: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '700' },
+  tabCount: {
+    minWidth: 20, paddingHorizontal: 6, height: 20, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center',
+  },
+  tabCountText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  tabUnderline: {
+    position: 'absolute', left: 0, bottom: -1, height: 2.5, borderRadius: 2,
+    width: '100%',
+  },
   empty:    { alignItems: 'center', paddingVertical: 24, gap: 10 },
   emptyText:{ color: TEXT_SECONDARY, fontSize: 14 },
   item:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
