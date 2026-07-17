@@ -710,6 +710,7 @@ export default function CardioScreen() {
         durationSeconds: summary.elapsed,
         calories: summary.calories,
         route: summary.route,
+        splits: summary.splits,
       })
 
       // 2) Markera det schemalagda passet som klart (om vi kom från ett sådant).

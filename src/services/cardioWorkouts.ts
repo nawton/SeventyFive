@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabase'
 import { deleteWorkout } from './strengthWorkouts'
 
+export interface CardioSplit {
+  label: string    // "1 km", "0,4 km"
+  paceSec: number  // sekunder för den kilometern (= tid för full km)
+}
+
 export interface CardioData {
   category: 'cardio'
   type: string
@@ -8,6 +13,7 @@ export interface CardioData {
   duration_seconds: number
   calories: number
   route?: Array<[number, number]>
+  splits?: CardioSplit[]
 }
 
 export interface CardioWorkout {
@@ -25,6 +31,7 @@ export async function saveCardioWorkout(params: {
   durationSeconds: number
   calories: number
   route?: Array<[number, number]>
+  splits?: CardioSplit[]
 }): Promise<void> {
   const entry: CardioData = {
     category: 'cardio',
@@ -33,6 +40,7 @@ export async function saveCardioWorkout(params: {
     duration_seconds: params.durationSeconds,
     calories: params.calories,
     route: params.route,
+    splits: params.splits,
   }
   const { error } = await supabase.from('user_workouts').insert({
     user_id: params.userId,
@@ -90,6 +98,7 @@ export async function getCardioWorkouts(userId: string, limit = 30): Promise<Car
           duration_seconds: raw.duration_seconds ?? 0,
           calories:         raw.calories         ?? 0,
           route:            raw.route,
+          splits:           raw.splits,
         } satisfies CardioData,
       }
     })

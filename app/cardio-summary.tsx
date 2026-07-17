@@ -210,11 +210,14 @@ export default function CardioSummaryScreen() {
   const hasRoute = route.length > 1
   const avgPaceSec = distKm > 0.01 ? paceForUnit(dur / distKm, unit) : 0
 
-  const secondary: { icon: React.ComponentProps<typeof Ionicons>['name']; value: string; label: string; color: string }[] = [
-    { icon: 'time-outline',        value: formatTime(dur),            label: 'Tid',              color: CARDIO_BLUE },
-    { icon: 'speedometer-outline', value: formatPace(avgPaceSec),     label: `Snitt /${unitLabel}`, color: GREEN },
-    { icon: 'flame-outline',       value: String(d?.calories ?? 0),   label: 'Kcal',             color: ORANGE },
+  const stats: { label: string; value: string }[] = [
+    { label: `Distans (${unitLabel})`, value: toDisplayDistance(distKm, unit).toFixed(2) },
+    { label: 'Tid',                    value: formatTime(dur) },
+    { label: `Snitt /${unitLabel}`,    value: formatPace(avgPaceSec) },
+    { label: 'Kcal',                   value: String(d?.calories ?? 0) },
   ]
+  const splits = d?.splits ?? []
+  const fastestSplit = splits.length ? Math.min(...splits.map(sp => sp.paceSec)) : 0
 
   return (
     <View style={s.root}>
@@ -272,27 +275,31 @@ export default function CardioSummaryScreen() {
               </View>
             </View>
 
-            {/* Primär statistik: distansen stor och prominent */}
-            <View style={s.primaryStat}>
-              <View style={s.primaryValueRow}>
-                <Text style={s.primaryValue}>{toDisplayDistance(distKm, unit).toFixed(2)}</Text>
-                <Text style={s.primaryUnit}>{unitLabel}</Text>
-              </View>
-              <Text style={s.primaryLabel}>Distans</Text>
-            </View>
-
-            {/* Sekundär statistik med ikoner */}
-            <View style={s.secondaryRow}>
-              {secondary.map((st, i) => (
-                <View key={st.label} style={[s.secondaryItem, i > 0 && s.secondaryDivider]}>
-                  <View style={[s.secondaryIcon, { backgroundColor: st.color + '1F' }]}>
-                    <Ionicons name={st.icon} size={16} color={st.color} />
-                  </View>
-                  <Text style={s.secondaryValue}>{st.value}</Text>
-                  <Text style={s.secondaryLabel}>{st.label}</Text>
+            {/* Statistik — 2×2 med lika stora rutor */}
+            <View style={s.statsGrid}>
+              {stats.map((st, i) => (
+                <View key={st.label} style={[s.statCell, i % 2 === 0 && s.statCellLeft, i >= 2 && s.statCellTop]}>
+                  <Text style={s.statValue}>{st.value}</Text>
+                  <Text style={s.statLabel}>{st.label}</Text>
                 </View>
               ))}
             </View>
+
+            {/* Kilometersplittar */}
+            {splits.length > 0 && (
+              <View style={s.splitsCard}>
+                <Text style={s.splitsTitle}>Kilometersplittar</Text>
+                {splits.map((sp, i) => (
+                  <View key={i} style={s.splitRow}>
+                    <Text style={s.splitKm}>{sp.label}</Text>
+                    <View style={s.splitBarTrack}>
+                      <View style={[s.splitBar, { width: `${Math.max(10, (fastestSplit / sp.paceSec) * 100)}%` as never }]} />
+                    </View>
+                    <Text style={s.splitPace}>{formatPace(sp.paceSec)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </Animated.View>
         </GestureDetector>
       )}
@@ -397,39 +404,40 @@ const s = StyleSheet.create({
   },
   donePillText: { color: GREEN, fontSize: 12, fontWeight: '700' },
 
-  // Primär statistik
-  primaryStat: {
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  primaryValueRow: { flexDirection: 'row', alignItems: 'baseline' },
-  primaryValue: {
-    color: TEXT_PRIMARY, fontSize: 56, fontWeight: '900',
-    letterSpacing: -2, fontVariant: ['tabular-nums'],
-  },
-  primaryUnit: {
-    color: TEXT_SECONDARY, fontSize: 22, fontWeight: '700', marginLeft: 6,
-  },
-  primaryLabel: {
-    color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700',
-    textTransform: 'uppercase', letterSpacing: 1.5, marginTop: -2,
-  },
-  // Sekundär statistik
-  secondaryRow: {
-    flexDirection: 'row',
+  // Statistik — 2×2
+  statsGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
     backgroundColor: CARD,
     borderRadius: 20,
     borderWidth: 1, borderColor: BORDER,
-    paddingVertical: 16,
+    overflow: 'hidden',
   },
-  secondaryItem: { flex: 1, alignItems: 'center', gap: 6 },
-  secondaryDivider: { borderLeftWidth: 1, borderLeftColor: BORDER },
-  secondaryIcon: {
-    width: 32, height: 32, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 2,
+  statCell: { width: '50%', paddingVertical: 20, paddingHorizontal: 20, gap: 4 },
+  statCellLeft: { borderRightWidth: 1, borderRightColor: BORDER },
+  statCellTop:  { borderTopWidth: 1, borderTopColor: BORDER },
+  statValue: { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
+  statLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // Kilometersplittar
+  splitsCard: {
+    backgroundColor: CARD,
+    borderRadius: 20,
+    borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 18, paddingVertical: 16,
+    gap: 4,
   },
-  secondaryValue: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  secondaryLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 },
+  splitsTitle: {
+    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
+    textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8,
+  },
+  splitRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  splitKm: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600', width: 56, fontVariant: ['tabular-nums'] },
+  splitBarTrack: {
+    flex: 1, height: 16, borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden',
+  },
+  splitBar: { height: '100%', borderRadius: 8, backgroundColor: ORANGE },
+  splitPace: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700', width: 48, textAlign: 'right', fontVariant: ['tabular-nums'] },
 
   // Kartväljare
   styleSheet: {
