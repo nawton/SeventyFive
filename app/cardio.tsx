@@ -183,6 +183,9 @@ export default function CardioScreen() {
 
   const [status, setStatus] = useState<Status>('idle')
   const [exercise, setExercise] = useState<ExerciseType>(() => nameToType(name ?? ''))
+  // Kom man hit med en vald aktivitet (från passdetaljen/schemat) är valet
+  // redan gjort — då visas ingen aktivitetsväljare
+  const typeLocked = !!name
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
   const [activeStyle, setActiveStyle] = useState<string>('standard')
@@ -528,8 +531,8 @@ export default function CardioScreen() {
       </SafeAreaView>
 
       {/* ── Bottom bar ── */}
-      {/* Dropdown menu — visas ovanför bottom-baren */}
-      {dropdownOpen && (
+      {/* Dropdown menu — visas ovanför bottom-baren (bara när typen inte är låst) */}
+      {dropdownOpen && !typeLocked && (
         <View style={styles.dropdown}>
           {EXERCISES.map((ex) => {
             const active = exercise === ex.key
@@ -564,26 +567,52 @@ export default function CardioScreen() {
               {selectedExercise.label} · {new Date().toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}
             </Text>
 
-            <View style={styles.summaryGrid}>
-              <View style={styles.summaryCell}>
-                <Text style={styles.summaryCellValue}>{formatTime(summary?.elapsed ?? 0)}</Text>
-                <Text style={styles.summaryCellLabel}>Tid</Text>
-              </View>
-              <View style={styles.summaryCellDivider} />
-              <View style={styles.summaryCell}>
-                <Text style={styles.summaryCellValue}>{(summary?.distanceKm ?? 0).toFixed(2)}</Text>
-                <Text style={styles.summaryCellLabel}>Kilometer</Text>
-              </View>
-              <View style={styles.summaryCellDivider} />
-              <View style={styles.summaryCell}>
-                <Text style={styles.summaryCellValue}>{formatPace(summary?.distanceKm ?? 0, summary?.elapsed ?? 0)}</Text>
-                <Text style={styles.summaryCellLabel}>min/km</Text>
-              </View>
-              <View style={styles.summaryCellDivider} />
-              <View style={styles.summaryCell}>
-                <Text style={styles.summaryCellValue}>{summary?.calories ?? 0}</Text>
-                <Text style={styles.summaryCellLabel}>kcal</Text>
-              </View>
+            {/* 2×2 statskort med typfärgade ikoner */}
+            <View style={styles.summaryGrid2}>
+              {([
+                { icon: 'time-outline' as const,       value: formatTime(summary?.elapsed ?? 0),                                              label: 'Tid',              color: '#4AA8E0' },
+                { icon: 'map-outline' as const,        value: toDisplayDistance(summary?.distanceKm ?? 0, unit).toFixed(2),                   label: unitLabel,          color: ORANGE },
+                { icon: 'speedometer-outline' as const, value: (summary?.distanceKm ?? 0) > 0.01 ? formatPace(1, paceForUnit((summary!.elapsed) / (summary!.distanceKm), unit)) : '--:--', label: `min/${unitLabel}`, color: '#4CAF50' },
+                { icon: 'flash-outline' as const,      value: String(summary?.calories ?? 0),                                                 label: 'kcal',             color: '#9B6DFF' },
+              ]).map(stat => (
+                <View key={stat.label} style={styles.summaryStatCard}>
+                  <View style={[styles.summaryStatIcon, { backgroundColor: stat.color + '22' }]}>
+                    <Ionicons name={stat.icon} size={17} color={stat.color} />
+                  </View>
+                  <Text style={styles.summaryStatValue}>{stat.value}</Text>
+                  <Text style={styles.summaryStatLabel}>{stat.label}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Målresultat */}
+            {(goalKmNum > 0 || goalMinNum > 0) && summary && (() => {
+              const pct = goalKmNum > 0
+                ? summary.distanceKm / goalKmNum
+                : summary.elapsed / (goalMinNum * 60)
+              const reached = pct >= 1
+              return (
+                <View style={[styles.summaryGoal, reached && styles.summaryGoalReached]}>
+                  <Ionicons
+                    name={reached ? 'trophy' : 'flag-outline'}
+                    size={16}
+                    color={reached ? '#FFD54F' : 'rgba(255,255,255,0.6)'}
+                  />
+                  <Text style={styles.summaryGoalText}>
+                    {reached
+                      ? 'Mål uppnått!'
+                      : `${Math.round(pct * 100)}% av målet (${goalKmNum > 0
+                          ? `${toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} ${unitLabel}`
+                          : `${goalMinNum} min`})`}
+                  </Text>
+                </View>
+              )
+            })()}
+
+            {/* Poäng-hint */}
+            <View style={styles.summaryPoints}>
+              <Ionicons name="star" size={13} color={ORANGE} />
+              <Text style={styles.summaryPointsText}>+30 p mot din nästa nivå</Text>
             </View>
 
             <TouchableOpacity
@@ -609,14 +638,21 @@ export default function CardioScreen() {
 
           {status === 'idle' ? (
             <>
-              {/* Dropdown trigger — cirkel */}
-              <TouchableOpacity
-                style={styles.dropdownTrigger}
-                onPress={() => setDropdownOpen(o => !o)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name={selectedExercise.icon} size={26} color={dropdownOpen ? '#fff' : ORANGE} />
-              </TouchableOpacity>
+              {typeLocked ? (
+                // Aktiviteten är redan vald — visa den bara, inget att ändra
+                <View style={styles.exerciseActive}>
+                  <Ionicons name={selectedExercise.icon} size={20} color={ORANGE} />
+                  <Text style={styles.exerciseActiveLabel}>{selectedExercise.label}</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.dropdownTrigger}
+                  onPress={() => setDropdownOpen(o => !o)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name={selectedExercise.icon} size={26} color={dropdownOpen ? '#fff' : ORANGE} />
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity style={styles.startBtn} onPress={startTracking} activeOpacity={0.85}>
                 <Ionicons name="play" size={30} color="#000" />
@@ -994,36 +1030,77 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 16,
   },
-  summaryGrid: {
+  summaryGrid2: {
     flexDirection: 'row',
-    backgroundColor: '#1C1C1E',
-    borderRadius: 20,
-    paddingVertical: 24,
-    paddingHorizontal: 8,
+    flexWrap: 'wrap',
+    gap: 10,
     width: '100%',
-    marginBottom: 16,
+    marginBottom: 4,
   },
-  summaryCell: {
-    flex: 1,
+  summaryStatCard: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    backgroundColor: '#1C1C1E',
+    borderWidth: 1,
+    borderColor: '#2C2C2E',
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  summaryStatIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    marginBottom: 2,
   },
-  summaryCellDivider: {
-    width: 1,
-    backgroundColor: '#2C2C2E',
-    marginVertical: 4,
-  },
-  summaryCellValue: {
+  summaryStatValue: {
     color: '#fff',
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    fontVariant: ['tabular-nums'],
   },
-  summaryCellLabel: {
+  summaryStatLabel: {
     color: '#666',
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  summaryGoal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#1C1C1E',
+    borderWidth: 1,
+    borderColor: '#2C2C2E',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    width: '100%',
+  },
+  summaryGoalReached: {
+    borderColor: '#FFD54F55',
+    backgroundColor: '#2A230F',
+  },
+  summaryGoalText: {
+    color: '#ddd',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  summaryPoints: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  summaryPointsText: {
+    color: '#888',
+    fontSize: 13,
+    fontWeight: '500',
   },
   summaryBtn: {
     flexDirection: 'row',
