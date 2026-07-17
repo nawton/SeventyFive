@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase'
 import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
+import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 
 type Coord = { latitude: number; longitude: number }
 type Status = 'idle' | 'running' | 'paused'
@@ -170,6 +171,11 @@ export default function CardioScreen() {
   const { name, sessionId, sessionDate, goalKm, goalMin } = useLocalSearchParams<{ name?: string; sessionId?: string; sessionDate?: string; goalKm?: string; goalMin?: string }>()
   const goalKmNum  = goalKm  ? parseFloat(goalKm)  : 0
   const goalMinNum = goalMin ? parseInt(goalMin, 10) : 0
+
+  // Enhetsval (km/miles) — lagring sker alltid i km, bara visningen konverteras
+  const [unit, setUnit] = useState<UnitSystem>('metric')
+  useEffect(() => { getUnitSystem().then(setUnit) }, [])
+  const unitLabel = distanceUnitLabel(unit)
 
   const webRef = useRef<InstanceType<typeof WebView>>(null)
   const locationSub = useRef<Location.LocationSubscription | null>(null)
@@ -424,7 +430,7 @@ export default function CardioScreen() {
               <View style={styles.goalTrackWrap}>
                 <View style={styles.goalTextRow}>
                   <Text style={styles.goalText}>
-                    Mål: {goalKmNum > 0 ? `${goalKmNum.toFixed(1).replace('.', ',')} km` : `${goalMinNum} min`}
+                    Mål: {goalKmNum > 0 ? `${toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} ${unitLabel}` : `${goalMinNum} min`}
                   </Text>
                   <Text style={styles.goalPct}>
                     {Math.min(100, Math.round(
@@ -442,20 +448,22 @@ export default function CardioScreen() {
 
             <View style={styles.statsRow}>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>{distanceKm.toFixed(2)}</Text>
-                <Text style={styles.statLabel}>km</Text>
+                <Text style={styles.statValue}>{toDisplayDistance(distanceKm, unit).toFixed(2)}</Text>
+                <Text style={styles.statLabel}>{unitLabel}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.stat}>
-                <Text style={styles.statValue}>{pace}</Text>
-                <Text style={styles.statLabel}>snitt /km</Text>
+                <Text style={styles.statValue}>
+                  {distanceKm > 0.01 ? formatPace(1, paceForUnit(elapsed / distanceKm, unit)) : '--:--'}
+                </Text>
+                <Text style={styles.statLabel}>snitt /{unitLabel}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.stat}>
                 <Text style={[styles.statValue, currentPaceSec > 0 && { color: ORANGE }]}>
-                  {currentPaceSec > 0 ? formatPace(1, currentPaceSec) : '--:--'}
+                  {currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '--:--'}
                 </Text>
-                <Text style={styles.statLabel}>nu /km</Text>
+                <Text style={styles.statLabel}>nu /{unitLabel}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.stat}>

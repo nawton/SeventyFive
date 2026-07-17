@@ -6,6 +6,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
@@ -17,6 +22,10 @@ import { supabase } from '@/lib/supabase'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/workouts'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
+import {
+  getUnitSystem, setUnitSystem, toDisplayDistance, fromDisplayDistance,
+  distanceUnitLabel, paceForUnit, type UnitSystem,
+} from '@/lib/units'
 
 const CARDIO_BLUE = '#4AA8E0'
 const SCREEN_W    = Dimensions.get('window').width
@@ -106,9 +115,43 @@ export default function CardioSessionScreen() {
   const type = params.cardioType ?? 'running'
   const meta = TYPE_META[type] ?? TYPE_META.running
 
-  const [goalKm, setGoalKm]   = useState(0)
+  const [goalKm, setGoalKm]   = useState(0)   // lagras alltid i km
   const [goalMin, setGoalMin] = useState(0)
   const [last, setLast]       = useState<CardioWorkout | null>(null)
+  const [unit, setUnit]       = useState<UnitSystem>('metric')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  // Egen inmatning: vilken siffra som redigeras + fältets text
+  const [editTarget, setEditTarget] = useState<'dist' | 'time' | null>(null)
+  const [editValue, setEditValue]   = useState('')
+
+  useEffect(() => { getUnitSystem().then(setUnit) }, [])
+
+  const unitLabel = distanceUnitLabel(unit)
+  const goalDist  = toDisplayDistance(goalKm, unit)   // visningsvärde i vald enhet
+
+  function openEdit(target: 'dist' | 'time') {
+    Haptics.selectionAsync()
+    setEditValue(target === 'dist'
+      ? (goalDist > 0 ? goalDist.toFixed(1).replace('.', ',') : '')
+      : (goalMin > 0 ? String(goalMin) : ''))
+    setEditTarget(target)
+  }
+
+  function saveEdit() {
+    const num = parseFloat(editValue.replace(',', '.'))
+    if (editTarget === 'dist') {
+      setGoalKm(Number.isFinite(num) && num > 0 ? fromDisplayDistance(num, unit) : 0)
+    } else if (editTarget === 'time') {
+      setGoalMin(Number.isFinite(num) && num > 0 ? Math.round(num) : 0)
+    }
+    setEditTarget(null)
+  }
+
+  async function chooseUnit(u: UnitSystem) {
+    Haptics.selectionAsync()
+    setUnit(u)
+    await setUnitSystem(u)
+  }
 
   useEffect(() => {
     async function loadLast() {
@@ -124,8 +167,10 @@ export default function CardioSessionScreen() {
     ? parseLocalDate(params.date).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
     : null
 
-  const KM_PRESETS  = [3, 5, 10]
-  const MIN_PRESETS = [20, 30, 60]
+  // Förval i visningsenheten
+  const DIST_PRESETS = unit === 'imperial' ? [2, 3, 5] : [3, 5, 10]
+  const MIN_PRESETS  = [20, 30, 60]
+  const SLIDER_MAX   = unit === 'imperial' ? 10 : 15
 
   const [goalPage, setGoalPage] = useState(0)
   const kmSliderRef  = useRef<GestureType | undefined>(undefined)
@@ -138,7 +183,7 @@ export default function CardioSessionScreen() {
       params: {
         name: type,
         ...(params.sessionId ? { sessionId: params.sessionId, sessionDate: params.date } : {}),
-        ...(goalKm > 0 ? { goalKm: String(goalKm) } : {}),
+        ...(goalKm > 0 ? { goalKm: goalKm.toFixed(2) } : {}),
         ...(goalMin > 0 ? { goalMin: String(goalMin) } : {}),
       },
     })
@@ -154,7 +199,9 @@ export default function CardioSessionScreen() {
             <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
           </TouchableOpacity>
           {dateLabel && <Text style={s.dateLabel}>{dateLabel}</Text>}
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setSettingsOpen(true)} style={s.iconBtn} activeOpacity={0.7}>
+            <Ionicons name="settings-outline" size={20} color={TEXT_PRIMARY} />
+          </TouchableOpacity>
         </View>
 
         {/* ── Hero ── */}
@@ -186,30 +233,42 @@ export default function CardioSessionScreen() {
         >
           <View style={[s.goalTile, { width: GOAL_PAGE_W }, goalKm > 0 && s.goalTileActive]}>
             <Text style={s.goalTileLabel}>DISTANS</Text>
-            <TouchableOpacity onPress={() => { if (goalKm > 0) { Haptics.selectionAsync(); setGoalKm(0) } }} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => openEdit('dist')} activeOpacity={0.7}>
               <Text style={[s.goalTileValue, goalKm > 0 && { color: CARDIO_BLUE }]}>
-                {goalKm > 0 ? goalKm.toFixed(1).replace('.', ',') : '—'}
+                {goalDist > 0 ? goalDist.toFixed(1).replace('.', ',') : '—'}
               </Text>
-              <Text style={s.goalTileUnit}>km</Text>
+              <Text style={s.goalTileUnit}>{unitLabel}</Text>
             </TouchableOpacity>
             <View style={s.presetRow}>
-              {KM_PRESETS.map(km => (
-                <TouchableOpacity
-                  key={km}
-                  style={[s.presetChip, goalKm === km && s.presetChipActive]}
-                  onPress={() => { Haptics.selectionAsync(); setGoalKm(goalKm === km ? 0 : km) }}
-                  activeOpacity={0.75}
-                >
-                  <Text style={[s.presetText, goalKm === km && s.presetTextActive]}>{km}</Text>
-                </TouchableOpacity>
-              ))}
+              {DIST_PRESETS.map(d => {
+                const active = Math.abs(goalDist - d) < 0.05
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    style={[s.presetChip, active && s.presetChipActive]}
+                    onPress={() => {
+                      Haptics.selectionAsync()
+                      setGoalKm(active ? 0 : fromDisplayDistance(d, unit))
+                    }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[s.presetText, active && s.presetTextActive]}>{d}</Text>
+                  </TouchableOpacity>
+                )
+              })}
             </View>
-            <GoalSlider value={goalKm} max={15} step={0.5} onChange={setGoalKm} gestureRef={kmSliderRef} />
+            <GoalSlider
+              value={goalDist}
+              max={SLIDER_MAX}
+              step={0.5}
+              onChange={v => setGoalKm(fromDisplayDistance(v, unit))}
+              gestureRef={kmSliderRef}
+            />
           </View>
 
           <View style={[s.goalTile, { width: GOAL_PAGE_W }, goalMin > 0 && s.goalTileActive]}>
             <Text style={s.goalTileLabel}>TID</Text>
-            <TouchableOpacity onPress={() => { if (goalMin > 0) { Haptics.selectionAsync(); setGoalMin(0) } }} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => openEdit('time')} activeOpacity={0.7}>
               <Text style={[s.goalTileValue, goalMin > 0 && { color: CARDIO_BLUE }]}>
                 {goalMin > 0 ? goalMin : '—'}
               </Text>
@@ -237,11 +296,6 @@ export default function CardioSessionScreen() {
             <View key={i} style={[s.goalDot, goalPage === i && s.goalDotActive]} />
           ))}
         </View>
-        <Text style={s.goalHint}>
-          {goalKm > 0 || goalMin > 0
-            ? 'Målet visas live under passet · tryck på siffran för att rensa'
-            : 'Valfritt — välj ett förval eller dra i reglaget för att sätta ett mål'}
-        </Text>
 
         {/* ── Senast ── */}
         <Text style={s.sectionTitle}>SENAST DU {meta.label === 'Cykling' ? 'CYKLADE' : meta.label === 'Promenad' ? 'PROMENERADE' : 'SPRANG'}</Text>
@@ -249,8 +303,8 @@ export default function CardioSessionScreen() {
           {last ? (
             <View style={s.lastRow}>
               <View style={s.lastStat}>
-                <Text style={s.lastValue}>{last.data.distance_km.toFixed(2)}</Text>
-                <Text style={s.lastLabel}>km</Text>
+                <Text style={s.lastValue}>{toDisplayDistance(last.data.distance_km, unit).toFixed(2)}</Text>
+                <Text style={s.lastLabel}>{unitLabel}</Text>
               </View>
               <View style={s.lastDivider} />
               <View style={s.lastStat}>
@@ -260,9 +314,11 @@ export default function CardioSessionScreen() {
               <View style={s.lastDivider} />
               <View style={s.lastStat}>
                 <Text style={s.lastValue}>
-                  {last.data.distance_km > 0.1 ? fmtTime(Math.round(last.data.duration_seconds / last.data.distance_km)) : '--:--'}
+                  {last.data.distance_km > 0.1
+                    ? fmtTime(Math.round(paceForUnit(last.data.duration_seconds / last.data.distance_km, unit)))
+                    : '--:--'}
                 </Text>
-                <Text style={s.lastLabel}>/km</Text>
+                <Text style={s.lastLabel}>/{unitLabel}</Text>
               </View>
             </View>
           ) : (
@@ -277,6 +333,66 @@ export default function CardioSessionScreen() {
         </View>
 
       </ScrollView>
+
+      {/* ── Egen inmatning av distans/tid ── */}
+      <Modal visible={editTarget !== null} transparent animationType="fade" onRequestClose={() => setEditTarget(null)}>
+        <KeyboardAvoidingView style={s.editBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditTarget(null)} />
+          <View style={s.editCard}>
+            <Text style={s.editTitle}>{editTarget === 'dist' ? `Distans (${unitLabel})` : 'Tid (min)'}</Text>
+            <TextInput
+              style={s.editInput}
+              value={editValue}
+              onChangeText={setEditValue}
+              placeholder={editTarget === 'dist' ? `t.ex. 7,5` : 't.ex. 45'}
+              placeholderTextColor={TEXT_SECONDARY}
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              onSubmitEditing={saveEdit}
+              autoFocus
+            />
+            <View style={s.editBtnRow}>
+              <TouchableOpacity
+                style={s.editClearBtn}
+                onPress={() => { setEditValue(''); Haptics.selectionAsync() }}
+                activeOpacity={0.75}
+              >
+                <Text style={s.editClearText}>Rensa</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.editSaveBtn} onPress={saveEdit} activeOpacity={0.85}>
+                <Text style={s.editSaveText}>Spara</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Inställningar ── */}
+      <Modal visible={settingsOpen} transparent animationType="fade" onRequestClose={() => setSettingsOpen(false)}>
+        <Pressable style={s.editBackdrop} onPress={() => setSettingsOpen(false)}>
+          <Pressable style={s.editCard} onPress={() => {}}>
+            <Text style={s.editTitle}>Inställningar</Text>
+
+            <Text style={s.settingLabel}>ENHET</Text>
+            <View style={s.unitRow}>
+              {([['metric', 'Kilometer'], ['imperial', 'Miles']] as const).map(([key, label]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[s.unitBtn, unit === key && s.unitBtnActive]}
+                  onPress={() => chooseUnit(key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[s.unitBtnText, unit === key && s.unitBtnTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={s.editSaveBtn} onPress={() => setSettingsOpen(false)} activeOpacity={0.85}>
+              <Text style={s.editSaveText}>Klar</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Starta — fastnålad ── */}
       <View style={s.startWrap} pointerEvents="box-none">
@@ -348,6 +464,46 @@ const s = StyleSheet.create({
   presetText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
   presetTextActive: { color: CARDIO_BLUE },
 
+  // Inmatnings- och inställningsmodal
+  editBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center', justifyContent: 'center', padding: 32,
+  },
+  editCard: {
+    width: '100%', maxWidth: 320,
+    backgroundColor: CARD, borderRadius: 22,
+    borderWidth: 1, borderColor: BORDER,
+    padding: 22, gap: 14,
+  },
+  editTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800', textAlign: 'center' },
+  editInput: {
+    backgroundColor: BG, borderRadius: 14,
+    borderWidth: 1, borderColor: CARDIO_BLUE + '55',
+    color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800', textAlign: 'center',
+    paddingVertical: 14,
+  },
+  editBtnRow:   { flexDirection: 'row', gap: 10 },
+  editClearBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 13,
+    borderRadius: 14, borderWidth: 1, borderColor: BORDER,
+  },
+  editClearText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
+  editSaveBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 13,
+    borderRadius: 14, backgroundColor: CARDIO_BLUE,
+  },
+  editSaveText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+
+  settingLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
+  unitRow: { flexDirection: 'row', gap: 8 },
+  unitBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 12,
+    borderRadius: 14, borderWidth: 1.5, borderColor: BORDER,
+  },
+  unitBtnActive:     { borderColor: CARDIO_BLUE, backgroundColor: CARDIO_BLUE + '18' },
+  unitBtnText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
+  unitBtnTextActive: { color: CARDIO_BLUE, fontWeight: '700' },
+
   goalDots: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginTop: 2 },
   goalDot: {
     width: 6, height: 6, borderRadius: 3,
@@ -355,7 +511,6 @@ const s = StyleSheet.create({
   },
   goalDotActive: { backgroundColor: CARDIO_BLUE, width: 16 },
 
-  goalHint: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17, textAlign: 'center' },
 
   lastRow:     { flexDirection: 'row', alignItems: 'center' },
   lastStat:    { flex: 1, alignItems: 'center', gap: 2 },
