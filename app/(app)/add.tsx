@@ -53,7 +53,7 @@ import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import { LogWorkoutSheet } from '@/components/LogWorkoutSheet'
 import { SessionFullscreen } from '@/components/SessionFullscreen'
-import { getCardioWorkoutsForDate, type CardioWorkout } from '@/services/workouts'
+import { getCardioWorkoutsForDate, getWorkoutsForDate, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
@@ -96,6 +96,7 @@ const EMPTY_CHECKED: Record<string, boolean> = {}
 const EMPTY_COMPLETED = new Set<string>()
 const EMPTY_CARDIO_STATS: Record<string, { distanceKm: number; durationSeconds: number }> = {}
 const EMPTY_CARDIO_LOGS: CardioWorkout[] = []
+const EMPTY_LOGGED: StrengthWorkout[] = []
 
 interface DayPageApi {
   toggleCheck:      (exId: string, date: string) => void
@@ -109,7 +110,7 @@ interface DayPageApi {
 }
 
 const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, progress, userId, dayAnimStyle, api,
+  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, progress, userId, dayAnimStyle, api,
 }: {
   idx: number
   sessions: WorkoutSession[]
@@ -119,6 +120,7 @@ const DayPage = React.memo(function DayPage({
   completed: Set<string>
   cardioStats: Record<string, { distanceKm: number; durationSeconds: number }>
   cardioLogs: CardioWorkout[]
+  logged: StrengthWorkout[]
   userId: string | null
   dayAnimStyle: AnimatedStyle<ViewStyle>
   api: DayPageApi
@@ -212,6 +214,15 @@ const DayPage = React.memo(function DayPage({
                       return { ex: progressed ? { ...ex, reps } : ex, progressed }
                     })
                     const displaySession = { ...s, name: sessionDisplayName(s), exercises: scaled.map(x => x.ex) }
+                    // Faktisk statistik för avklarade gympass (från loggade set)
+                    const gymStats = (s.session_type !== 'cardio' && isCompleted) ? (() => {
+                      const names = new Set(s.exercises.map(ex => ex.exercise_name))
+                      const wos = logged.filter(w => names.has(w.data.exercise_name))
+                      if (wos.length === 0) return undefined
+                      const setCount = wos.reduce((a, w) => a + w.data.sets.length, 0)
+                      const volumeKg = wos.reduce((a, w) => a + w.data.sets.reduce((x, st) => x + (st.weight_kg || 0) * (st.reps || 0), 0), 0)
+                      return { sets: setCount, volumeKg }
+                    })() : undefined
                     return (
                     <WorkoutSection
                       key={s.id}
@@ -224,6 +235,7 @@ const DayPage = React.memo(function DayPage({
                       onLongPress={() => api.sessionLongPress(s, sessionDisplayName(s))}
                       onAddExercise={!isPast ? () => api.setPickerSession(s) : undefined}
                       onOpenFullscreen={s.session_type !== 'cardio' ? () => api.openFullscreen(displaySession, dateStr) : undefined}
+                      gymStats={gymStats}
                       onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
                       onStartCardioSession={s.session_type === 'cardio'
                         ? () => router.push({ pathname: '/cardio-session', params: {
@@ -354,6 +366,8 @@ export default function SchemaScreen() {
   const [cardioStatsByDate, setCardioStatsByDate] = useState<Record<string, Record<string, { distanceKm: number; durationSeconds: number }>>>({})
   // Loggade cardio-pass per datum
   const [cardioLogsByDate, setCardioLogsByDate] = useState<Record<string, CardioWorkout[]>>({})
+  // Loggade styrkepass per datum — statraden på avklarade gympass
+  const [loggedByDate, setLoggedByDate] = useState<Record<string, StrengthWorkout[]>>({})
   const [pickerSession, setPickerSession]   = useState<WorkoutSession | null>(null)
   const [logSheetOpen, setLogSheetOpen]     = useState(false)
   const [fullscreenTarget, setFullscreenTarget] = useState<{ session: WorkoutSession; date: string } | null>(null)
@@ -404,6 +418,7 @@ export default function SchemaScreen() {
       getExerciseCompletionCounts(uid).catch(() => ({} as Record<string, number>)),
     ])
     getCardioWorkoutsForDate(uid, date).then(cl => setCardioLogsByDate(prev => ({ ...prev, [date]: cl }))).catch(() => {})
+    getWorkoutsForDate(uid, date).then(lw => setLoggedByDate(prev => ({ ...prev, [date]: lw }))).catch(() => {})
     setExercises(exs)
     setSessions(sess)
     setExerciseProgress(progressCounts)
@@ -462,6 +477,7 @@ export default function SchemaScreen() {
         setCheckedByDate(prev => ({ ...prev, [date]: exChecked }))
       })
       getCardioWorkoutsForDate(userId, date).then(cl => setCardioLogsByDate(prev => ({ ...prev, [date]: cl }))).catch(() => {})
+      getWorkoutsForDate(userId, date).then(lw => setLoggedByDate(prev => ({ ...prev, [date]: lw }))).catch(() => {})
     }, 250)
     return () => clearTimeout(timer)
   }, [selectedDate, userId])
@@ -741,6 +757,7 @@ export default function SchemaScreen() {
               completed={completedByDate[dateStr] ?? EMPTY_COMPLETED}
               cardioStats={cardioStatsByDate[dateStr] ?? EMPTY_CARDIO_STATS}
               cardioLogs={cardioLogsByDate[dateStr] ?? EMPTY_CARDIO_LOGS}
+              logged={loggedByDate[dateStr] ?? EMPTY_LOGGED}
               userId={userId}
               dayAnimStyle={dayAnimStyle}
               api={api}

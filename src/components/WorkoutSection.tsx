@@ -319,6 +319,8 @@ export interface WorkoutSectionProps {
   isQuickLog?:           boolean
   /** Distans/tid för ett avklarat cardio-pass — visas i kroppen när klart */
   cardioStats?:          { distanceKm: number; durationSeconds: number }
+  /** Loggad statistik för ett avklarat gympass — visas i kroppen när klart */
+  gymStats?:             { sets: number; volumeKg: number }
   /** Övnings-id:n vars reps skalats upp av progressionen — visar ↑-indikator */
   progressedIds?:        Set<string>
 }
@@ -343,6 +345,7 @@ export function WorkoutSection({
   onEdit,
   isQuickLog,
   cardioStats,
+  gymStats,
   progressedIds,
 }: WorkoutSectionProps) {
   const isCardio  = session.session_type === 'cardio'
@@ -479,18 +482,18 @@ export function WorkoutSection({
           )}
         </TouchableOpacity>
 
-        {/* Cardio-pass har ingen Klar-knapp när de är gjorda — statistiken i
-            kroppen visar att passet är avklarat, och man ska inte råka av-markera. */}
-        {isCardio && isCompleted ? null : greenComplete ? (
-          <TouchableOpacity onPress={handleUncomplete} style={s.doneBadge} activeOpacity={0.7}>
-            <Ionicons name="checkmark-circle" size={13} color={GREEN} />
-            <Text style={s.doneBadgeText}>Klar</Text>
-          </TouchableOpacity>
-        ) : (!isCardio && onOpenFullscreen) ? (
-          // Gympass: öppna hela passet i helskärm (istället för snabb-Klar)
+        {/* Avklarade pass har ingen snabb-avbockning — ett tryck ska inte kunna
+            radera passets status. Ångra görs i passvyn (gym) / detaljvyn (cardio). */}
+        {isCardio && isCompleted ? null : (!isCardio && onOpenFullscreen) ? (
+          // Gympass: alltid Öppna — även avklarade (info + Spara finns därinne)
           <TouchableOpacity onPress={onOpenFullscreen} style={s.openBtn} activeOpacity={0.8}>
             <Ionicons name="expand-outline" size={14} color={ORANGE} />
             <Text style={s.openBtnText}>Öppna</Text>
+          </TouchableOpacity>
+        ) : greenComplete ? (
+          <TouchableOpacity onPress={handleUncomplete} style={s.doneBadge} activeOpacity={0.7}>
+            <Ionicons name="checkmark-circle" size={13} color={GREEN} />
+            <Text style={s.doneBadgeText}>Klar</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -572,6 +575,39 @@ export function WorkoutSection({
       )}
 
       {/* ── Exercise rows — inbäddade i passkortet ── */}
+      {/* ── Gym summary (avklarat pass — som cardio-kortets statrad) ── */}
+      {!isCardio && isCompleted && (
+        <View style={s.cardioSummary}>
+          <View style={s.cardioSummaryStats}>
+            <View style={s.cardioSummaryStat}>
+              <Text style={s.cardioSummaryValue}>{total}</Text>
+              <Text style={s.cardioSummaryLabel}>övningar</Text>
+            </View>
+            <View style={s.cardioSummaryDivider} />
+            <View style={s.cardioSummaryStat}>
+              <Text style={s.cardioSummaryValue}>{gymStats ? gymStats.sets : '–'}</Text>
+              <Text style={s.cardioSummaryLabel}>set</Text>
+            </View>
+            <View style={s.cardioSummaryDivider} />
+            <View style={s.cardioSummaryStat}>
+              <Text style={s.cardioSummaryValue}>{gymStats && gymStats.volumeKg > 0 ? Math.round(gymStats.volumeKg) : '–'}</Text>
+              <Text style={s.cardioSummaryLabel}>kg volym</Text>
+            </View>
+          </View>
+          {onOpenFullscreen && (
+            <TouchableOpacity
+              style={[s.cardioSummaryLink, { backgroundColor: ORANGE + '18' }]}
+              onPress={onOpenFullscreen}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="barbell-outline" size={15} color={ORANGE} />
+              <Text style={[s.cardioSummaryLinkText, { color: ORANGE }]}>Visa pass</Text>
+              <Ionicons name="chevron-forward" size={15} color={ORANGE} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {!isCardio && total > 0 && (
         <View style={s.exList}>
           {session.exercises.map((ex, i) => (
