@@ -26,8 +26,13 @@ import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as Haptics from 'expo-haptics'
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
+import { GlassView } from 'expo-glass-effect'
+import { LIQUID_GLASS } from '@/lib/glass'
 import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+
+// Glaset måste animeras direkt på den nativa vyn för att linsen ska följa med
+const AnimatedGlassView = Animated.createAnimatedComponent(GlassView)
 import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -96,10 +101,10 @@ export default function SettingsScreen() {
   const [unit, setUnit]             = useState<UnitSystem>('metric')
   const [segW, setSegW]             = useState(0)
 
-  // Animerad tumme i enhetsväljaren
+  // Animerad tumme i enhetsväljaren — fjädrar mellan lägena
   const segPos = useSharedValue(0)
   useEffect(() => {
-    segPos.value = withTiming(unit === 'imperial' ? 1 : 0, { duration: 220 })
+    segPos.value = withSpring(unit === 'imperial' ? 1 : 0, { damping: 17, stiffness: 240, mass: 0.8 })
   }, [unit])
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: segPos.value * (segW / 2) }],
@@ -386,9 +391,16 @@ export default function SettingsScreen() {
               style={styles.segTrack}
               onLayout={e => setSegW(e.nativeEvent.layout.width - 6)}
             >
-              {segW > 0 && (
+              {segW > 0 && (LIQUID_GLASS ? (
+                // Liquid glass-tumme med orange ton som glider mellan lägena
+                <AnimatedGlassView
+                  glassEffectStyle="regular"
+                  tintColor={ORANGE}
+                  style={[styles.segThumb, styles.segThumbGlass, { width: segW / 2 }, thumbStyle]}
+                />
+              ) : (
                 <Animated.View style={[styles.segThumb, { width: segW / 2 }, thumbStyle]} />
-              )}
+              ))}
               {([
                 { key: 'metric',   label: 'Kilometer' },
                 { key: 'imperial', label: 'Miles' },
@@ -399,7 +411,10 @@ export default function SettingsScreen() {
                   onPress={() => chooseUnit(key)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.segText, unit === key && styles.segTextActive]}>
+                  <Text style={[
+                    styles.segText,
+                    unit === key && (LIQUID_GLASS ? styles.segTextActiveGlass : styles.segTextActive),
+                  ]}>
                     {label}
                   </Text>
                 </TouchableOpacity>
@@ -639,6 +654,15 @@ const styles = StyleSheet.create({
   },
   segTextActive: {
     color: '#000',
+    fontWeight: '700',
+  },
+  segThumbGlass: {
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+    shadowOpacity: 0,
+  },
+  segTextActiveGlass: {
+    color: '#fff',
     fontWeight: '700',
   },
   unitHint: {
