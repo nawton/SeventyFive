@@ -17,7 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import WebView from 'react-native-webview'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
@@ -219,30 +219,12 @@ const MAP_HTML = `<!DOCTYPE html>
 </body>
 </html>`
 
-/** Liten statisk ruttkarta till sammanfattningen: mörka plattor, orange linje, start/mål-prickar */
-function routeMapHtml(route: Array<[number, number]>): string {
-  // Glesa ut långa rutter så HTML-strängen hålls rimlig
-  const step = Math.max(1, Math.floor(route.length / 600))
-  const pts = route.filter((_, i) => i % step === 0 || i === route.length - 1)
-  return `<!DOCTYPE html><html><head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>*{margin:0;padding:0}#map{width:100vw;height:100vh;background:#111}.leaflet-control-attribution{display:none}</style>
-  </head><body><div id="map"></div><script>
-    var pts = ${JSON.stringify(pts)};
-    var map = L.map('map',{zoomControl:false,attributionControl:false,dragging:false,touchZoom:false,doubleClickZoom:false,scrollWheelZoom:false,boxZoom:false,keyboard:false});
-    L.tileLayer('https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-    var line = L.polyline(pts,{color:'#FFA817',weight:4,lineCap:'round',lineJoin:'round'}).addTo(map);
-    L.circleMarker(pts[0],{radius:5,color:'#fff',weight:2,fillColor:'#3BE862',fillOpacity:1}).addTo(map);
-    L.circleMarker(pts[pts.length-1],{radius:5,color:'#fff',weight:2,fillColor:'#FF3B4A',fillOpacity:1}).addTo(map);
-    map.fitBounds(line.getBounds(),{padding:[24,24]});
-  </script></body></html>`
-}
 
 export default function CardioScreen() {
   // Skärmen släcks inte medan GPS-skärmen är öppen (som Strava under pass)
   useKeepAwake()
+  // SafeAreaView får noll-insets inne i modaler på iOS — padda explicit
+  const insets = useSafeAreaInsets()
 
   const { name, sessionId, sessionDate, goalKm, goalMin } = useLocalSearchParams<{ name?: string; sessionId?: string; sessionDate?: string; goalKm?: string; goalMin?: string }>()
   const goalKmNum  = goalKm  ? parseFloat(goalKm)  : 0
@@ -1169,7 +1151,7 @@ export default function CardioScreen() {
       {/* ── Workout summary modal ── */}
       <Modal visible={!!summary} animationType="slide" transparent>
         <View style={styles.summaryOverlay}>
-          <SafeAreaView style={styles.summaryContainer} edges={['top', 'bottom']}>
+          <View style={[styles.summaryContainer, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 8 }]}>
 
             <View style={styles.summaryCheck}>
               <Ionicons name="checkmark" size={36} color="#fff" />
@@ -1199,19 +1181,6 @@ export default function CardioScreen() {
                 returnKeyType="done"
               />
             </View>
-
-            {/* Rutten på karta */}
-            {summary && summary.route.length > 1 && (
-              <View style={styles.summaryMapWrap} pointerEvents="none">
-                <WebView
-                  style={{ flex: 1, backgroundColor: '#111' }}
-                  source={{ html: routeMapHtml(summary.route) }}
-                  scrollEnabled={false}
-                  javaScriptEnabled
-                  originWhitelist={['*']}
-                />
-              </View>
-            )}
 
             {/* Staplade värden — samma stil som fullskärms-statsen */}
             <View style={styles.summaryStack}>
@@ -1333,7 +1302,7 @@ export default function CardioScreen() {
               <Text style={styles.summaryDiscardText}>Kasta träningen</Text>
             </TouchableOpacity>
 
-          </SafeAreaView>
+          </View>
 
           {/* Betygsätt ansträngning — lager över sammanfattningen */}
           <EffortRating
@@ -2077,14 +2046,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     paddingHorizontal: 14,
     paddingVertical: 13,
-  },
-  summaryMapWrap: {
-    alignSelf: 'stretch',
-    height: 150,
-    borderRadius: 18,
-    overflow: 'hidden',
-    backgroundColor: '#1C1C1E',
-    marginTop: 4,
   },
   summaryStack: {
     alignSelf: 'stretch',
