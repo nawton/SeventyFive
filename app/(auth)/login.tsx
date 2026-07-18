@@ -95,10 +95,21 @@ export default function LoginScreen() {
         if (data.user) {
           try { await updateProfile(data.user.id, { name: trimmedName }) } catch { /* non-blocking */ }
         }
-        setName('')
-        setPassword('')
-        setMode('login')
-        Alert.alert('Konto skapat!', 'Logga in med dina uppgifter för att fortsätta.')
+        if (data.session) {
+          // Ingen e-postbekräftelse krävs — hoppa direkt in i onboardingen
+          router.replace({
+            pathname: '/(auth)/quiz',
+            params: startDay ? { startDay } : {},
+          })
+        } else {
+          setName('')
+          setPassword('')
+          setMode('login')
+          Alert.alert(
+            'Bekräfta din e-post',
+            'Vi har skickat en länk till din inkorg. Klicka på den och logga sedan in här.'
+          )
+        }
       }
     }
 
