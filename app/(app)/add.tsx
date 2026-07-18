@@ -91,6 +91,8 @@ export default function SchemaScreen() {
   // Genomföranden per övning — underlag för progressionsskalning av reps
   const [exerciseProgress, setExerciseProgress] = useState<Record<string, number>>({})
   const pagerRef    = useRef<FlatList<number>>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const refreshingRef = useRef(false)
   const isSwiping   = useRef(false)
 
   const selectedDateRef = useRef(selectedDate)
@@ -315,10 +317,29 @@ export default function SchemaScreen() {
   // Ingen animation på dagrubriken — den hoppade till vid varje dagbyte
   const dayAnimStyle = useAnimatedStyle(() => ({}))
 
+  // Dra-ner på en dagsida → hämta om hela schemat; spinnern ligger mellan
+  // kalendern och veckodagen och står kvar minst 1,2 s så den hinner uppfattas
+  function handlePullRefresh() {
+    const uid = userIdRef.current
+    if (refreshingRef.current || !uid) return
+    refreshingRef.current = true
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    setRefreshing(true)
+    const started = Date.now()
+    loadData(uid).catch(() => {}).finally(() => {
+      const wait = Math.max(0, 1200 - (Date.now() - started))
+      setTimeout(() => {
+        setRefreshing(false)
+        refreshingRef.current = false
+      }, wait)
+    })
+  }
+
   // Stabilt API-objekt till de memoiserade dagsidorna: identiteten ändras aldrig,
   // men anropen delegeras alltid till senaste renderns handlers via ref:en
   const apiFnsRef = useRef<DayPageApi>(null as unknown as DayPageApi)
   apiFnsRef.current = {
+    pullRefresh: handlePullRefresh,
     toggleCheck,
     deleteExercise: handleDeleteExercise,
     sessionLongPress: handleSessionLongPress,
@@ -329,6 +350,7 @@ export default function SchemaScreen() {
     openFullscreen: (s, date) => setFullscreenTarget({ session: s, date }),
   }
   const api = useMemo<DayPageApi>(() => ({
+    pullRefresh:      () => apiFnsRef.current.pullRefresh(),
     toggleCheck:      (...a) => apiFnsRef.current.toggleCheck(...a),
     deleteExercise:   (...a) => apiFnsRef.current.deleteExercise(...a),
     sessionLongPress: (...a) => apiFnsRef.current.sessionLongPress(...a),
@@ -431,6 +453,8 @@ export default function SchemaScreen() {
         <Ionicons name="chevron-forward" size={13} color={TEXT_SECONDARY} />
       </TouchableOpacity>
 
+      {/* Uppdaterings-snurra: under kalendern, ovanför veckodagen */}
+      {refreshing && <ActivityIndicator color={ORANGE} style={styles.refreshSpinner} />}
 
       {/* Horizontal day pager — one page per calendar date */}
       <FlatList
@@ -681,6 +705,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: BORDER,
   },
   manageLinkText: { flex: 1, color: TEXT_SECONDARY, fontSize: 12 },
+  refreshSpinner: { marginTop: 10, marginBottom: 2 },
 
 
 

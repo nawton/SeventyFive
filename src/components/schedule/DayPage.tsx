@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Dimensions,
   type ViewStyle,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native'
 import Animated, { type AnimatedStyle } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
@@ -33,6 +35,8 @@ export const EMPTY_CARDIO_LOGS: CardioWorkout[] = []
 export const EMPTY_LOGGED: StrengthWorkout[] = []
 
 export interface DayPageApi {
+  /** Dra-ner på dagsidan → hämta om schemat (spinnern visas ovanför pagern) */
+  pullRefresh:      () => void
   toggleCheck:      (exId: string, date: string) => void
   deleteExercise:   (sessionId: string, exId: string, date: string) => void
   sessionLongPress: (s: WorkoutSession, displayName: string) => void
@@ -64,6 +68,16 @@ export const DayPage = React.memo(function DayPage({
   api: DayPageApi
 }) {
           const onScrollShrink = useTabBarShrinkOnScroll()
+          const pullArmed = useRef(true)
+          function onPageScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+            onScrollShrink(e)
+            const y = e.nativeEvent.contentOffset.y
+            if (y >= 0) pullArmed.current = true
+            if (y < -70 && pullArmed.current) {
+              pullArmed.current = false
+              api.pullRefresh()
+            }
+          }
 
           const date       = indexToDate(idx)
           const weekday    = weekdayOf(date)
@@ -108,7 +122,7 @@ export const DayPage = React.memo(function DayPage({
               style={{ width: SCREEN_W }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scroll}
-              onScroll={onScrollShrink}
+              onScroll={onPageScroll}
               scrollEventThrottle={16}
             >
               {/* Day header */}
