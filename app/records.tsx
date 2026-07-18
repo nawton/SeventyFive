@@ -24,7 +24,8 @@ import { supabase } from '@/lib/supabase'
 import { getActiveChallenge } from '@/services/challenge'
 import { countCompletedDays, getStreak } from '@/services/dailyLog'
 import Svg, { Polyline, Circle as SvgCircle, Line as SvgLine } from 'react-native-svg'
-import { getCardioWorkouts, getStrengthWorkouts, type StrengthWorkout } from '@/services/workouts'
+import { getCardioWorkouts, getStrengthWorkouts, type StrengthWorkout, type CardioWorkout } from '@/services/workouts'
+import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { getCompletedSessionsHistory } from '@/services/workoutSchedule'
 import { getPersonalRecords, epley1RM, type ExerciseRecord } from '@/services/personalRecords'
 import { computeAchievements, type Achievement } from '@/lib/achievements'
@@ -92,7 +93,7 @@ interface MedalInfo {
 }
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { LinearGradient } from 'expo-linear-gradient'
-import { GlassSegment } from '@/components/GlassSegment'
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -103,8 +104,11 @@ const LIME = '#BDFF3B'
 
 type CardioRecs = {
   longestKm: number
+  longestId: string | null
   bestPaceSec: number
+  bestPaceId: string | null
   fastestSplitSec: number
+  fastestSplitId: string | null
   biggestWeekKm: number
 }
 
@@ -125,6 +129,15 @@ export default function RecordsScreen() {
   const [selectedMedal, setSelectedMedal] = useState<MedalInfo | null>(null)
   const [cardioRecs, setCardioRecs]     = useState<CardioRecs | null>(null)
   const [unit, setUnit]                 = useState<UnitSystem>('metric')
+  const [avatarUrl, setAvatarUrl]       = useState<string | null>(null)
+  const [selectedCardio, setSelectedCardio] = useState<CardioWorkout | null>(null)
+  const cardioListRef = useRef<CardioWorkout[]>([])
+
+  function openCardioRecord(id: string | null) {
+    if (!id) return
+    const w = cardioListRef.current.find(x => x.id === id)
+    if (w) { Haptics.selectionAsync(); setSelectedCardio(w) }
+  }
   const [breakdownVisible, setBreakdownVisible] = useState(false)
   // Övningshistorik — öppnas från rekordraderna
   const [historyEx, setHistoryEx]   = useState<string | null>(null)
@@ -144,6 +157,11 @@ export default function RecordsScreen() {
   }
   const [earnTab, setEarnTab] = useState<0 | 1>(0)
   const earnPagerRef = useRef<ScrollView>(null)
+  // Underline-indikatorn följer kortsvepet i realtid, som flikarna på Framsteg
+  const earnScrollX = useSharedValue(0)
+  const earnIndicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: Math.min(PAGE_W / 2, Math.max(0, (earnScrollX.value / SNAP_W) * (PAGE_W / 2))) }],
+  }))
 
   function openMedal(info: MedalInfo) {
     Haptics.selectionAsync()
@@ -185,31 +203,32 @@ export default function RecordsScreen() {
         setRecords(prs)
         getUnitSystem().then(setUnit)
 
-        // Cardiorekord (all-time) från de hämtade passen
+        // Cardiorekord (all-time) från de hämtade passen — id:n sparas så
+        // raderna kan öppna just det passet
+        cardioListRef.current = cardio
         if (cardio.length > 0) {
-          const paced = cardio.filter(w => w.data.distance_km > 0.1)
-          const bestPaceSec = paced
-            .map(w => w.data.duration_seconds / w.data.distance_km)
-            .reduce((b2, p2) => p2 < b2 ? p2 : b2, Infinity)
-          const fastestSplitSec = cardio.reduce((best, w) => {
-            for (const sp of w.data.splits ?? []) {
-              if (/^\d+\s*(km|mi)$/.test(sp.label) && sp.paceSec > 0 && sp.paceSec < best) best = sp.paceSec
-            }
-            return best
-          }, Infinity)
+          let longestKm = 0, longestId: string | null = null
+          let bestPaceSec = Infinity, bestPaceId: string | null = null
+          let fastestSplitSec = Infinity, fastestSplitId: string | null = null
           const byWeek = new Map<string, number>()
           for (const w of cardio) {
+            if (w.data.distance_km > longestKm) { longestKm = w.data.distance_km; longestId = w.id }
+            if (w.data.distance_km > 0.1) {
+              const pace = w.data.duration_seconds / w.data.distance_km
+              if (pace < bestPaceSec) { bestPaceSec = pace; bestPaceId = w.id }
+            }
+            for (const sp of w.data.splits ?? []) {
+              if (/^\d+\s*(km|mi)$/.test(sp.label) && sp.paceSec > 0 && sp.paceSec < fastestSplitSec) {
+                fastestSplitSec = sp.paceSec
+                fastestSplitId = w.id
+              }
+            }
             const key = toLocalDateString(startOfWeek(new Date(w.created_at)))
             byWeek.set(key, (byWeek.get(key) ?? 0) + w.data.distance_km)
           }
           let biggestWeekKm = 0
           byWeek.forEach(v => { if (v > biggestWeekKm) biggestWeekKm = v })
-          setCardioRecs({
-            longestKm: cardio.reduce((b2, w) => Math.max(b2, w.data.distance_km), 0),
-            bestPaceSec,
-            fastestSplitSec,
-            biggestWeekKm,
-          })
+          setCardioRecs({ longestKm, longestId, bestPaceSec, bestPaceId, fastestSplitSec, fastestSplitId, biggestWeekKm })
         }
         const medals = computeAchievements({
           completedDays,
@@ -220,6 +239,7 @@ export default function RecordsScreen() {
           prCount: prs.length,
         })
         setAchievements(medals)
+        setAvatarUrl(profile?.avatar_url ?? null)
         const oneTimeInput: OneTimeInput = {
           hasAvatar: !!profile?.avatar_url,
           hasProgressPhoto: photos.length > 0,
@@ -330,21 +350,27 @@ export default function RecordsScreen() {
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>TJÄNA POÄNG</Text>
         </View>
-        <View style={s.earnSegWrap}>
-          <GlassSegment
-            value={earnTab === 0 ? 'recurring' : 'oneTime'}
-            options={[
-              { key: 'recurring', label: 'Återkommande' },
-              { key: 'oneTime',   label: `Engångs ${ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/${ONE_TIME_RULES.length}` },
-            ]}
-            onChange={k => switchEarnTab(k === 'recurring' ? 0 : 1)}
-          />
+        <View style={s.earnTabsRow}>
+          {(['Återkommande', `Engångs ${ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/${ONE_TIME_RULES.length}`]).map((label, i) => (
+            <TouchableOpacity
+              key={i}
+              style={s.earnTabBtn}
+              onPress={() => switchEarnTab(i as 0 | 1)}
+              activeOpacity={0.75}
+            >
+              <Text style={[s.earnTabText, earnTab === i && s.earnTabTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={s.earnTrack}>
+          <Animated.View style={[s.earnIndicator, earnIndicatorStyle]} />
         </View>
         <ScrollView
           ref={earnPagerRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
+          onScroll={e => { earnScrollX.value = e.nativeEvent.contentOffset.x }}
           onMomentumScrollEnd={e => {
             setEarnTab(Math.round(e.nativeEvent.contentOffset.x / SNAP_W) as 0 | 1)
           }}
@@ -484,40 +510,65 @@ export default function RecordsScreen() {
               {([
                 {
                   icon: 'map-outline' as const, color: CARDIO_BLUE, label: 'Längsta pass',
+                  id: cardioRecs.longestId,
                   value: cardioRecs.longestKm > 0
                     ? `${toDisplayDistance(cardioRecs.longestKm, unit).toFixed(2).replace('.', ',')} ${distanceUnitLabel(unit)}`
                     : '0',
                 },
                 {
                   icon: 'flash-outline' as const, color: LIME, label: 'Snabbaste km',
+                  id: cardioRecs.fastestSplitId,
                   value: fmtPaceStr(cardioRecs.fastestSplitSec),
                 },
                 {
                   icon: 'stopwatch-outline' as const, color: ORANGE, label: 'Bästa tempo',
+                  id: cardioRecs.bestPaceId,
                   value: cardioRecs.bestPaceSec === Infinity
                     ? '--:--'
                     : `${fmtPaceStr(paceForUnit(cardioRecs.bestPaceSec, unit))} /${distanceUnitLabel(unit)}`,
                 },
                 {
                   icon: 'trending-up-outline' as const, color: GOLD, label: 'Längsta vecka',
+                  id: null,
                   value: cardioRecs.biggestWeekKm > 0
                     ? `${toDisplayDistance(cardioRecs.biggestWeekKm, unit).toFixed(1).replace('.', ',')} ${distanceUnitLabel(unit)}`
                     : '0',
                 },
               ]).map((r, i, arr) => (
-                <View key={r.label} style={[s.recordRow, i < arr.length - 1 && s.recordBorder]}>
+                <TouchableOpacity
+                  key={r.label}
+                  style={[s.recordRow, i < arr.length - 1 && s.recordBorder]}
+                  onPress={() => openCardioRecord(r.id)}
+                  disabled={!r.id}
+                  activeOpacity={0.7}
+                >
                   <View style={[s.ruleIcon, { backgroundColor: r.color + '1A' }]}>
                     <Ionicons name={r.icon} size={16} color={r.color} />
                   </View>
                   <Text style={[s.ruleLabel, { flex: 1 }]}>{r.label}</Text>
                   <Text style={s.cardioRecVal}>{r.value}</Text>
-                </View>
+                  {r.id && <Ionicons name="chevron-forward" size={15} color="rgba(255,255,255,0.25)" />}
+                </TouchableOpacity>
               ))}
             </View>
           </>
         )}
 
       </ScrollView>
+
+      {/* ── Rekordpassets detaljvy ── */}
+      <Modal visible={!!selectedCardio} animationType="slide" onRequestClose={() => setSelectedCardio(null)}>
+        {selectedCardio && (
+          <CardioSummaryView
+            workout={selectedCardio}
+            title={selectedCardio.name}
+            dateLabel={new Date(selectedCardio.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            avatarUrl={avatarUrl}
+            unit={unit}
+            onClose={() => setSelectedCardio(null)}
+          />
+        )}
+      </Modal>
 
       {/* ── Övningshistorik — utveckling över tid ── */}
       <Modal
@@ -728,8 +779,16 @@ const s = StyleSheet.create({
   sectionRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
   sectionCount: { color: ORANGE, fontSize: 12, fontFamily: NUM_FONT },
-  earnSegWrap: { marginBottom: 12 },
   cardioRecVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
+  earnTabsRow: { flexDirection: 'row' },
+  earnTabBtn:  { flex: 1, alignItems: 'center', paddingVertical: 8 },
+  earnTabText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
+  earnTabTextActive: { color: ORANGE, fontWeight: '700' },
+  earnTrack: {
+    height: 3, borderRadius: 2, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 12,
+  },
+  earnIndicator: { width: '50%', height: '100%', backgroundColor: ORANGE, borderRadius: 2 },
 
   medalGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   medal: {
