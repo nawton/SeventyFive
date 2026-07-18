@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { WorkoutSession } from '@/services/workoutSchedule'
-import { completeExercise, updateSessionExercise, addSingleExerciseToSession } from '@/services/workoutSchedule'
+import { completeExercise, updateSessionExercise, addSingleExerciseToSession, deleteSessionExercise } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
 import { saveStrengthWorkout, getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
 import { getPersonalRecords, findNewPR } from '@/services/personalRecords'
@@ -16,6 +16,7 @@ import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import {
   getRestSeconds, setRestSeconds,
   getExerciseRestSeconds, setExerciseRestSeconds,
+  getOrInitPassStart, clearPassStart,
 } from '@/lib/prefs'
 
 type LogSet = { reps: string; weight: string; done: boolean }
@@ -65,10 +66,13 @@ export function SessionFullscreen({
     })
   }, [visible, exIdsKey])
 
+  // Starttiden sparas per pass + dag så räknaren överlever att vyn stängs/öppnas
   useEffect(() => {
-    if (!visible) return
-    setElapsed(0)
-    startTs.current = Date.now()
+    if (!visible || !session) return
+    getOrInitPassStart(`${session.id}:${date}`).then(ts => {
+      startTs.current = ts
+      setElapsed(Math.max(0, Math.floor((Date.now() - ts) / 1000)))
+    })
   }, [visible, session?.id])
 
   // Förra passets set per övning — visas i FÖRRA-kolumnen och som placeholders
@@ -185,6 +189,19 @@ export function SessionFullscreen({
 
   // ── Lägg till övning i passet — via den vanliga övningsväljaren ──
   const [addExOpen, setAddExOpen] = useState(false)
+
+  function removeExercise(exId: string, name: string) {
+    Alert.alert('Ta bort övning', `Ta bort ${name} från passet?`, [
+      { text: 'Avbryt', style: 'cancel' },
+      {
+        text: 'Ta bort', style: 'destructive',
+        onPress: async () => {
+          await deleteSessionExercise(exId).catch(() => {})
+          onSaved?.()
+        },
+      },
+    ])
+  }
   function addSet(exId: string) {
     setLogs(prev => {
       const rows = prev[exId] ?? []
@@ -214,6 +231,7 @@ export function SessionFullscreen({
     })
     const anySets = toSave.some(t => t.validSets.length > 0)
     if (!anySets) {
+      if (isCompleted) { onClose(); return }
       Alert.alert('Inga set ifyllda', 'Vill du markera passet som klart utan att logga set?', [
         { text: 'Avbryt', style: 'cancel' },
         { text: 'Markera klart', onPress: () => { onComplete(); onClose() } },
@@ -251,7 +269,8 @@ export function SessionFullscreen({
       }
 
       cancelRest()
-      onComplete()
+      clearPassStart(`${session.id}:${date}`).catch(() => {})
+      if (!isCompleted) onComplete()
       onSaved?.()
       onClose()
       if (prs.length > 0) {
@@ -272,16 +291,16 @@ export function SessionFullscreen({
             <Ionicons name="chevron-down" size={26} color={TEXT_PRIMARY} />
           </TouchableOpacity>
           <Text style={s.title} numberOfLines={1}>{session?.name}</Text>
-          {isCompleted ? (
+          {isCompleted && (
             <TouchableOpacity onPress={onUncomplete} style={s.doneBadge} activeOpacity={0.8}>
               <Ionicons name="checkmark-circle" size={14} color={GREEN} />
               <Text style={s.doneBadgeText}>Klar</Text>
             </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={finish} style={[s.finishBtn, saving && { opacity: 0.6 }]} disabled={saving} activeOpacity={0.85}>
-              {saving ? <ActivityIndicator size="small" color="#000" /> : <Text style={s.finishText}>Slutför</Text>}
-            </TouchableOpacity>
           )}
+          {/* Avklarat pass går fortfarande att komplettera — knappen blir Spara */}
+          <TouchableOpacity onPress={finish} style={[s.finishBtn, saving && { opacity: 0.6 }]} disabled={saving} activeOpacity={0.85}>
+            {saving ? <ActivityIndicator size="small" color="#000" /> : <Text style={s.finishText}>{isCompleted ? 'Spara' : 'Slutför'}</Text>}
+          </TouchableOpacity>
         </View>
 
         {/* ── Statistikrad: tid + vilotidsinställning ── */}
@@ -309,7 +328,16 @@ export function SessionFullscreen({
               const prev = prevByName[ex.exercise_name]
               return (
                 <View key={ex.id} style={s.exBlock}>
-                  <Text style={s.exName}>{ex.exercise_name}</Text>
+                  <View style={s.exNameRow}>
+                    <Text style={s.exName}>{ex.exercise_name}</Text>
+                    <TouchableOpacity
+                      onPress={() => removeExercise(ex.id, ex.exercise_name)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="trash-outline" size={17} color="rgba(255,255,255,0.3)" />
+                    </TouchableOpacity>
+                  </View>
 
                   <View style={s.tableHead}>
                     <Text style={[s.th, { width: 36 }]}>SET</Text>
@@ -503,7 +531,8 @@ const s = StyleSheet.create({
   statValue: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', fontVariant: ['tabular-nums'] },
 
   exBlock: { paddingTop: 18, paddingHorizontal: 16 },
-  exName: { color: ORANGE, fontSize: 17, fontWeight: '800', marginBottom: 10 },
+  exNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  exName: { color: ORANGE, fontSize: 17, fontWeight: '800', flex: 1, marginRight: 10 },
 
   tableHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 6 },
   th: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },

@@ -219,41 +219,67 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, c
                       ))}
                     </>
                   ) : (
-                    <>
-                      {gymSessions.map((c, i) => (
-                        <View key={c.id} style={[s.item, (i < gymSessions.length - 1 || dayStrength.length > 0) && s.itemBorder]}>
-                          <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ORANGE} /></View>
-                          <View style={s.itemBody}>
-                            <Text style={s.itemName}>{c.name}</Text>
-                            <View style={s.itemMeta}>
-                              {c.exerciseNames.length > 0 ? (
-                                <Text style={s.itemStat} numberOfLines={1}>
-                                  {c.exerciseNames.length} övningar · {c.exerciseNames.slice(0, 3).join(', ')}{c.exerciseNames.length > 3 ? ' …' : ''}
-                                </Text>
-                              ) : (
-                                <Text style={s.itemStat}>Avklarat pass</Text>
-                              )}
-                            </View>
-                          </View>
-                          <Ionicons name="checkmark-circle" size={18} color={GREEN} style={{ alignSelf: 'center' }} />
-                        </View>
-                      ))}
-                      {dayStrength.map((w, i) => {
-                        const totalReps = w.data.sets.reduce((sum, r) => sum + r.reps, 0)
-                        return (
-                          <View key={w.id} style={[s.item, i < dayStrength.length - 1 && s.itemBorder]}>
-                            <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ORANGE} /></View>
-                            <View style={s.itemBody}>
-                              <Text style={s.itemName}>{w.name}</Text>
-                              <View style={s.itemMeta}>
-                                <Text style={s.itemStat}>{w.data.sets.length} set</Text>
-                                {totalReps > 0 && (<><Text style={s.itemDot}>·</Text><Text style={s.itemStat}>{totalReps} reps</Text></>)}
-                              </View>
-                            </View>
-                          </View>
+                    (() => {
+                      // Gruppera: loggade övningar som hör till ett avklarat pass
+                      // visas UNDER passet — inte en gång till som egna rader
+                      const claimed = new Set<string>()
+                      const passBlocks = gymSessions.map(c => {
+                        const sub = dayStrength.filter(w =>
+                          !claimed.has(w.id) && c.exerciseNames.includes(w.data.exercise_name)
                         )
-                      })}
-                    </>
+                        sub.forEach(w => claimed.add(w.id))
+                        return { c, sub }
+                      })
+                      const loose = dayStrength.filter(w => !claimed.has(w.id))
+                      return (
+                        <>
+                          {passBlocks.map(({ c, sub }, i) => (
+                            <View key={c.id} style={[(i < passBlocks.length - 1 || loose.length > 0) && s.itemBorder, { paddingVertical: 6 }]}>
+                              <View style={s.item}>
+                                <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ORANGE} /></View>
+                                <View style={s.itemBody}>
+                                  <Text style={s.itemName}>{c.name}</Text>
+                                  <View style={s.itemMeta}>
+                                    <Text style={s.itemStat}>
+                                      {sub.length > 0 ? `${sub.length} loggade övningar` : c.exerciseNames.length > 0 ? `${c.exerciseNames.length} övningar` : 'Avklarat pass'}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <Ionicons name="checkmark-circle" size={18} color={GREEN} style={{ alignSelf: 'center' }} />
+                              </View>
+                              {sub.map(w => {
+                                const topKg = w.data.sets.reduce((m, r) => Math.max(m, r.weight_kg || 0), 0)
+                                const totalReps = w.data.sets.reduce((sum, r) => sum + r.reps, 0)
+                                return (
+                                  <View key={w.id} style={s.subRow}>
+                                    <View style={s.subDot} />
+                                    <Text style={s.subName} numberOfLines={1}>{w.data.exercise_name}</Text>
+                                    <Text style={s.subStat}>
+                                      {w.data.sets.length} set · {totalReps} reps{topKg > 0 ? ` · ${topKg} kg` : ''}
+                                    </Text>
+                                  </View>
+                                )
+                              })}
+                            </View>
+                          ))}
+                          {loose.map((w, i) => {
+                            const totalReps = w.data.sets.reduce((sum, r) => sum + r.reps, 0)
+                            return (
+                              <View key={w.id} style={[s.item, i < loose.length - 1 && s.itemBorder]}>
+                                <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ORANGE} /></View>
+                                <View style={s.itemBody}>
+                                  <Text style={s.itemName}>{w.name}</Text>
+                                  <View style={s.itemMeta}>
+                                    <Text style={s.itemStat}>{w.data.sets.length} set</Text>
+                                    {totalReps > 0 && (<><Text style={s.itemDot}>·</Text><Text style={s.itemStat}>{totalReps} reps</Text></>)}
+                                  </View>
+                                </View>
+                              </View>
+                            )
+                          })}
+                        </>
+                      )
+                    })()
                   )}
                 </ScrollView>
               ))}
@@ -307,4 +333,13 @@ const s = StyleSheet.create({
   itemMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   itemStat: { color: TEXT_SECONDARY, fontSize: 13 },
   itemDot:  { color: 'rgba(255,255,255,0.15)', fontSize: 13 },
+
+  // Övningar under ett grupperat pass
+  subRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingLeft: 50, paddingRight: 4, paddingVertical: 5,
+  },
+  subDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: ORANGE + '88' },
+  subName: { flex: 1, color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
+  subStat: { color: TEXT_SECONDARY, fontSize: 12, fontVariant: ['tabular-nums'] },
 })

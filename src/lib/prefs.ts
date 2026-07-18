@@ -68,3 +68,19 @@ export async function getExerciseRestSeconds(): Promise<number> {
 export async function setExerciseRestSeconds(secs: number): Promise<void> {
   await AsyncStorage.setItem(EXREST_KEY, String(secs)).catch(() => {})
 }
+
+// Passets starttid (per pass + dag) — så Tid-räknaren överlever att vyn stängs
+export async function getOrInitPassStart(id: string): Promise<number> {
+  const key = `passStart:${id}`
+  try {
+    const v = parseInt((await AsyncStorage.getItem(key)) ?? '', 10)
+    if (Number.isFinite(v) && v > 0) return v
+  } catch {}
+  const now = Date.now()
+  AsyncStorage.setItem(key, String(now)).catch(() => {})
+  return now
+}
+
+export async function clearPassStart(id: string): Promise<void> {
+  await AsyncStorage.removeItem(`passStart:${id}`).catch(() => {})
+}
