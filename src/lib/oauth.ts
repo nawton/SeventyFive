@@ -10,6 +10,8 @@ export async function signInWithGoogle(): Promise<boolean> {
   // OBS: URL:en måste vara tillåten under Supabase → Auth → URL Configuration,
   // annars skickas Safari till Site URL (ofta localhost) och "kan inte ansluta"
   const redirectTo = Linking.createURL('auth-callback')
+  // Felsökning: den här adressen MÅSTE finnas i Supabase → Auth → URL Configuration
+  console.log('[oauth] redirectTo:', redirectTo)
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
