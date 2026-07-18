@@ -22,7 +22,6 @@ import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type Streng
 import { getCompletedExerciseNamesForWeek, getCompletedSessionsHistory, type CompletedSessionItem } from '@/services/workoutSchedule'
 import { CalendarView } from '@/components/stats/CalendarView'
 import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
-import { WorkoutRow } from '@/components/stats/WorkoutDetail'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
@@ -133,6 +132,33 @@ function buildWeeklyBars(workouts: CardioWorkout[]): WeekBar[] {
     .sort(([a], [b]) => a.localeCompare(b))
     .slice(-6)
     .map(([, v]) => ({ ...v, paceSec: v.pacedKm > 0 ? v.pacedSecs / v.pacedKm : 0 }))
+}
+
+// ─── Sessioner-listan ──────────────────────────────────────────────────────────
+
+/** "0:01", "35:12" eller "1:02:45" — stor grön siffra i sessionslistan */
+function fmtSessTime(secs: number): string {
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function monthLabel(dateStr: string): string {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })
+}
+
+/** "idag", "igår", veckodag inom en vecka, annars datumet */
+function sessDateLabel(dateStr: string): string {
+  const today = toLocalDateString()
+  if (dateStr === today) return 'idag'
+  const diff = Math.round(
+    (new Date(today + 'T12:00:00').getTime() - new Date(dateStr + 'T12:00:00').getTime()) / 86400000,
+  )
+  if (diff === 1) return 'igår'
+  if (diff > 1 && diff < 7) return new Date(dateStr + 'T12:00:00').toLocaleDateString('sv-SE', { weekday: 'long' })
+  return dateStr
 }
 
 // ─── GymSession ────────────────────────────────────────────────────────────────
@@ -492,6 +518,67 @@ export default function StatsScreen() {
   // ── Tempoutveckling: veckosnitt (endast veckor med distanspass) ──
   const paceWeeks = weeklyBars.filter(b => b.paceSec > 0)
   const paceVals  = paceWeeks.map(b => paceForUnit(b.paceSec, unit))
+
+  // ── Sessioner: blandad lista av cardio-pass + avklarade schemapass ──
+  const CARDIO_META: Record<string, { icon: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
+    running:  { icon: 'fitness',  color: ORANGE },
+    cycling:  { icon: 'bicycle',  color: BLUE },
+    walking:  { icon: 'walk',     color: GREEN },
+    interval: { icon: 'flash',    color: YELLOW },
+  }
+  const rangeStartStr = rangeStart ? toLocalDateString(rangeStart) : null
+  type SessRow = {
+    key: string
+    name: string
+    value: string
+    icon: React.ComponentProps<typeof Ionicons>['name']
+    color: string
+    sortKey: number
+    dateStr: string
+    workout?: CardioWorkout
+  }
+  const sessionRows: SessRow[] = [
+    ...cardioW.map((w): SessRow => {
+      const meta = CARDIO_META[w.data.type] ?? { icon: 'fitness' as const, color: ORANGE }
+      return {
+        key: `c:${w.id}`,
+        name: w.name,
+        value: w.data.distance_km > 0.05
+          ? `${toDisplayDistance(w.data.distance_km, unit).toFixed(2).replace('.', ',')} ${unitLabel.toUpperCase()}`
+          : fmtSessTime(w.data.duration_seconds),
+        icon: meta.icon,
+        color: meta.color,
+        sortKey: new Date(w.created_at).getTime(),
+        dateStr: toLocalDateString(new Date(w.created_at)),
+        workout: w,
+      }
+    }),
+    // GPS-loggade cardiopass ligger redan i user_workouts — här tar vi gympass
+    // och manuellt avbockade cardiopass (utan sparad distans) från schemat
+    ...completedSessions
+      .filter(c =>
+        (c.sessionType === 'gym' || (c.sessionType === 'cardio' && c.distanceKm == null)) &&
+        (!rangeStartStr || c.completedDate >= rangeStartStr))
+      .map((c): SessRow => {
+        const isGym = c.sessionType === 'gym'
+        const meta = isGym
+          ? { icon: 'barbell' as const, color: ORANGE }
+          : (CARDIO_META[c.cardioType ?? ''] ?? { icon: 'fitness' as const, color: BLUE })
+        return {
+          key: `g:${c.id}`,
+          name: c.name,
+          value: c.durationSeconds
+            ? fmtSessTime(c.durationSeconds)
+            : isGym && c.exerciseNames.length > 0
+              ? `${c.exerciseNames.length} övningar`
+              : 'Klart',
+          icon: meta.icon,
+          color: meta.color,
+          sortKey: new Date(`${c.completedDate}T12:00:00`).getTime(),
+          dateStr: c.completedDate,
+        }
+      }),
+  ].sort((a, b) => b.sortKey - a.sortKey).slice(0, 30)
 
   if (loading) {
     return (
@@ -865,27 +952,39 @@ export default function StatsScreen() {
               </View>
             )}
 
-            {/* Recent workouts */}
-            {cardioW.length > 0 ? (
-              <View style={s.card}>
-                <Text style={s.cardTitle}>
-                  {cardioRange === 'all' ? 'Senaste pass' : cardioRange === 'week' ? 'Pass denna vecka' : 'Pass senaste månaden'}
-                </Text>
-                {cardioW.slice(0, 10).map((w, i) => (
-                  <WorkoutRow
-                    key={w.id}
-                    workout={w}
-                    unit={unit}
-                    last={i === Math.min(cardioW.length, 10) - 1}
-                    onPress={() => setSelectedWorkout(w)}
-                  />
-                ))}
+            {/* Sessioner — blandad lista i Apple Fitness-stil */}
+            {sessionRows.length > 0 ? (
+              <View style={{ gap: 10 }}>
+                {sessionRows.map((r, i) => {
+                  const m = monthLabel(r.dateStr)
+                  const showMonth = i === 0 || monthLabel(sessionRows[i - 1].dateStr) !== m
+                  return (
+                    <View key={r.key} style={{ gap: 10 }}>
+                      {showMonth && <Text style={s.sessMonth}>{m}</Text>}
+                      <TouchableOpacity
+                        style={s.sessRow}
+                        activeOpacity={0.7}
+                        onPress={r.workout ? () => setSelectedWorkout(r.workout!) : undefined}
+                        disabled={!r.workout}
+                      >
+                        <View style={[s.sessIcon, { backgroundColor: r.color + '1E' }]}>
+                          <Ionicons name={r.icon} size={20} color={r.color} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.sessName} numberOfLines={1}>{r.name}</Text>
+                          <Text style={s.sessValue}>{r.value}</Text>
+                        </View>
+                        <Text style={s.sessDate}>{sessDateLabel(r.dateStr)}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )
+                })}
               </View>
             ) : (
               <View style={s.empty}>
                 <Ionicons name="walk-outline" size={40} color="rgba(255,255,255,0.12)" />
                 <Text style={s.emptyText}>
-                  {workouts.length === 0 ? 'Inga cardio-pass sparade ännu' : 'Inga pass under vald period'}
+                  {workouts.length === 0 ? 'Inga pass sparade ännu' : 'Inga pass under vald period'}
                 </Text>
               </View>
             )}
@@ -1128,6 +1227,18 @@ const s = StyleSheet.create({
   paceAxisLbl:  { color: TEXT_SECONDARY, fontSize: 10, fontVariant: ['tabular-nums'] },
   paceWeekRow:  { flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 36 },
   paceWeekLbl:  { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
+
+  // Sessioner-listan (Apple Fitness-stil)
+  sessMonth: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800', marginTop: 8 },
+  sessRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER,
+    paddingVertical: 13, paddingHorizontal: 14,
+  },
+  sessIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  sessName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  sessValue: { color: GREEN, fontSize: 23, fontWeight: '800', fontVariant: ['tabular-nums'], marginTop: 1 },
+  sessDate: { color: TEXT_SECONDARY, fontSize: 13, alignSelf: 'flex-end', marginBottom: 4 },
 
   // Cardiorekord
   recGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 16 },
