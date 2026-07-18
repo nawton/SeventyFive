@@ -111,7 +111,7 @@ export default function QuizScreen() {
 
       {/* Question */}
       <View style={styles.body}>
-        <Text style={styles.stepLabel}>Fråga {step + 1} av {QUESTIONS.length}</Text>
+        <Text style={styles.stepLabel}>Steg {step + 1} av 5</Text>
         <Text style={styles.question}>{current.question}</Text>
 
         <View style={styles.options}>

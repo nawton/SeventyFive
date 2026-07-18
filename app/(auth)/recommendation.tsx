@@ -68,7 +68,7 @@ function getRecommendedLevel(pressure: string): Level {
   return 'normal'
 }
 
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -107,6 +107,7 @@ export default function RecommendationScreen() {
 
         {/* Label */}
         <View style={styles.top}>
+          <Text style={styles.stepLabel}>Steg 4 av 5</Text>
           <Text style={styles.recommendedLabel}>Din rekommenderade nivå</Text>
           <Text style={[styles.levelName, { color: level.color }]}>{level.name}</Text>
           <Text style={styles.tagline}>{level.tagline}</Text>
@@ -171,8 +172,8 @@ export default function RecommendationScreen() {
         </TouchableOpacity>
         <Text style={styles.disclaimer}>
           {params.startDay
-            ? `Du startar på dag ${params.startDay}. Du kan inte starta om utan att kontakta support.`
-            : 'Dag 1 börjar idag. Du kan inte starta om utan att kontakta support.'}
+            ? `Du startar på dag ${params.startDay}. Missar du en dag börjar utmaningen om från dag 1.`
+            : 'Dag 1 börjar idag. Missar du en dag börjar utmaningen om från dag 1.'}
         </Text>
       </View>
 
@@ -195,6 +196,14 @@ const styles = StyleSheet.create({
   },
   top: {
     gap: 6,
+  },
+  stepLabel: {
+    color: ORANGE,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 2,
   },
   recommendedLabel: {
     color: TEXT_SECONDARY,
