@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { getCardioWorkoutByDate, getCardioWorkoutById, type CardioWorkout } from '@/services/workouts'
+import { getCardioWorkoutByDate, getCardioWorkoutById, deleteCardioWorkout, type CardioWorkout } from '@/services/workouts'
 import { getProfile } from '@/services/profile'
 import { BG, TEXT_SECONDARY } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
@@ -66,6 +66,18 @@ export default function CardioSummaryScreen() {
       avatarUrl={avatarUrl}
       unit={unit}
       onClose={() => router.back()}
+      onDelete={() => {
+        Alert.alert('Radera träning', 'Det här går inte att ångra.', [
+          { text: 'Avbryt', style: 'cancel' },
+          {
+            text: 'Radera', style: 'destructive',
+            onPress: async () => {
+              await deleteCardioWorkout(workout.id).catch(() => {})
+              router.back()
+            },
+          },
+        ])
+      }}
     />
   )
 }
