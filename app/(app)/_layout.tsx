@@ -4,20 +4,22 @@ import { Ionicons } from '@expo/vector-icons'
 import { GlassView } from 'expo-glass-effect'
 import { LIQUID_GLASS } from '@/lib/glass'
 
-const ORANGE   = '#FFA817'
-const TAB_BG   = '#1C1C1E'
-const INACTIVE = '#555555'
-
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
 
-function TabIcon({ name, color }: { name: IoniconName; color: string }) {
-  return <Ionicons name={name} size={24} color={color} />
-}
-
-function SchemaIcon({ color }: { color: string }) {
+// Instagram-stil: flytande glaspill med en ljus bubbla bakom aktiv flik.
+// Aktiv ikon = fylld variant i vitt, inaktiv = outline i dämpat vitt.
+function TabBubble({ icon, iconActive, focused }: {
+  icon: IoniconName
+  iconActive: IoniconName
+  focused: boolean
+}) {
   return (
-    <View style={styles.addButton}>
-      <Ionicons name="barbell-outline" size={24} color="#000000" />
+    <View style={[styles.bubble, focused && styles.bubbleActive]}>
+      <Ionicons
+        name={focused ? iconActive : icon}
+        size={24}
+        color={focused ? '#fff' : 'rgba(255,255,255,0.55)'}
+      />
     </View>
   )
 }
@@ -27,22 +29,22 @@ export default function AppLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: LIQUID_GLASS ? styles.tabBarGlass : styles.tabBar,
-        tabBarActiveTintColor: ORANGE,
-        tabBarInactiveTintColor: LIQUID_GLASS ? 'rgba(255,255,255,0.6)' : INACTIVE,
+        tabBarStyle: styles.tabBar,
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
-        ...(LIQUID_GLASS && {
-          // Äkta liquid glass — innehållet scrollar bakom och bryts i glaset
-          tabBarBackground: () => (
-            <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />
+        tabBarItemStyle: styles.tabItem,
+        tabBarBackground: () =>
+          LIQUID_GLASS ? (
+            // Äkta liquid glass — innehållet scrollar bakom och bryts i pillen
+            <GlassView glassEffectStyle="regular" style={styles.barBg} />
+          ) : (
+            <View style={[styles.barBg, styles.barBgFallback]} />
           ),
-        }),
       }}
     >
       <Tabs.Screen
         name="dashboard"
-        options={{ tabBarIcon: ({ color }) => <TabIcon name="home" color={color} /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabBubble icon="home-outline" iconActive="home" focused={focused} /> }}
       />
       <Tabs.Screen
         name="activity"
@@ -50,15 +52,15 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="add"
-        options={{ tabBarIcon: ({ color }) => <SchemaIcon color={color} /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabBubble icon="barbell-outline" iconActive="barbell" focused={focused} /> }}
       />
       <Tabs.Screen
         name="stats"
-        options={{ tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabBubble icon="bar-chart-outline" iconActive="bar-chart" focused={focused} /> }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ tabBarIcon: ({ color }) => <TabIcon name="person-outline" color={color} /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabBubble icon="person-outline" iconActive="person" focused={focused} /> }}
       />
       <Tabs.Screen
         name="settings"
@@ -77,29 +79,41 @@ export default function AppLayout() {
 }
 
 const styles = StyleSheet.create({
+  // Flytande pill à la Instagram
   tabBar: {
-    backgroundColor: TAB_BG,
-    borderTopWidth: 0,
-    height: 80,
-    paddingBottom: 20,
-    paddingTop: 12,
-  },
-  tabBarGlass: {
     position: 'absolute',
-    backgroundColor: 'transparent',
+    left: 20,
+    right: 20,
+    bottom: 28,
+    height: 64,
+    borderRadius: 32,
     borderTopWidth: 0,
-    height: 80,
-    paddingBottom: 20,
-    paddingTop: 12,
+    backgroundColor: 'transparent',
     elevation: 0,
+    overflow: 'hidden',
   },
-  addButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: ORANGE,
+  tabItem: {
+    height: 64,
+    justifyContent: 'center',
+  },
+  barBg: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 32,
+    overflow: 'hidden',
+  },
+  barBgFallback: {
+    backgroundColor: 'rgba(22,22,24,0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  bubble: {
+    width: 62,
+    height: 46,
+    borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+  },
+  bubbleActive: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
   },
 })
