@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import Animated, { FadeIn } from 'react-native-reanimated'
+import Animated, { FadeIn, runOnJS } from 'react-native-reanimated'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { BG, GREEN, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 
@@ -41,22 +43,44 @@ interface Props {
 
 export function EffortRating({ visible, initial, onDone }: Props) {
   const [sel, setSel] = useState<number | null>(initial ?? null)
+  const lastSel = useRef<number | null>(initial ?? null)
+  const rowW = useRef(0)
 
   useEffect(() => {
-    if (visible) setSel(initial ?? null)
+    if (visible) {
+      setSel(initial ?? null)
+      lastSel.current = initial ?? null
+    }
   }, [visible])
+
+  // Dra fingret över staplarna för att öka/minska — tap fungerar också
+  function slideTo(x: number) {
+    if (rowW.current <= 0) return
+    const n = Math.min(10, Math.max(1, Math.ceil((x / rowW.current) * 10)))
+    if (n !== lastSel.current) {
+      lastSel.current = n
+      Haptics.selectionAsync()
+      setSel(n)
+    }
+  }
+  const slide = Gesture.Pan()
+    .minDistance(0)
+    .onBegin(e => { runOnJS(slideTo)(e.x) })
+    .onUpdate(e => { runOnJS(slideTo)(e.x) })
 
   if (!visible) return null
 
   const accent = sel ? effortColor(sel) : ORANGE
 
-  function pick(n: number) {
-    Haptics.selectionAsync()
-    setSel(n)
-  }
-
   return (
     <Animated.View entering={FadeIn.duration(200)} style={s.root}>
+      {/* Hela bakgrunden tonas i betygets färg */}
+      <LinearGradient
+        colors={sel ? [accent + '8C', accent + '26', BG] : [BG, BG]}
+        locations={sel ? [0, 0.55, 1] : [0, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
       <Text style={s.title}>Betygsätt din{'\n'}ansträngning</Text>
       <Text style={s.sub}>Hur kändes passet?</Text>
 
@@ -69,34 +93,34 @@ export function EffortRating({ visible, initial, onDone }: Props) {
             <Text style={s.readoutLabel}>{effortLabel(sel)}</Text>
           </>
         ) : (
-          <Text style={s.readoutHint}>Tryck på en stapel</Text>
+          <Text style={s.readoutHint}>Dra eller tryck på staplarna</Text>
         )}
       </View>
 
-      <View style={s.barRow}>
-        {BARS.map(n => {
-          const h = BAR_MIN_H + ((n - 1) / 9) * (BAR_MAX_H - BAR_MIN_H)
-          const filled = sel !== null && n <= sel
-          return (
-            <TouchableOpacity
-              key={n}
-              style={s.barHit}
-              onPress={() => pick(n)}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  s.bar,
-                  { height: h },
-                  filled
-                    ? { backgroundColor: accent }
-                    : { backgroundColor: 'rgba(255,255,255,0.10)' },
-                ]}
-              />
-            </TouchableOpacity>
-          )
-        })}
-      </View>
+      <GestureDetector gesture={slide}>
+        <View
+          style={s.barRow}
+          onLayout={e => { rowW.current = e.nativeEvent.layout.width }}
+        >
+          {BARS.map(n => {
+            const h = BAR_MIN_H + ((n - 1) / 9) * (BAR_MAX_H - BAR_MIN_H)
+            const filled = sel !== null && n <= sel
+            return (
+              <View key={n} style={s.barHit} pointerEvents="none">
+                <View
+                  style={[
+                    s.bar,
+                    { height: h },
+                    filled
+                      ? { backgroundColor: accent }
+                      : { backgroundColor: 'rgba(255,255,255,0.14)' },
+                  ]}
+                />
+              </View>
+            )
+          })}
+        </View>
+      </GestureDetector>
 
       <View style={s.btnRow}>
         <TouchableOpacity style={s.skipBtn} onPress={() => onDone(null)} activeOpacity={0.7}>
