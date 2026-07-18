@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router'
 import { View, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { GlassView } from 'expo-glass-effect'
+import { LIQUID_GLASS } from '@/lib/glass'
 
 const ORANGE   = '#FFA817'
 const TAB_BG   = '#1C1C1E'
@@ -25,11 +27,17 @@ export default function AppLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: LIQUID_GLASS ? styles.tabBarGlass : styles.tabBar,
         tabBarActiveTintColor: ORANGE,
-        tabBarInactiveTintColor: INACTIVE,
+        tabBarInactiveTintColor: LIQUID_GLASS ? 'rgba(255,255,255,0.6)' : INACTIVE,
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
+        ...(LIQUID_GLASS && {
+          // Äkta liquid glass — innehållet scrollar bakom och bryts i glaset
+          tabBarBackground: () => (
+            <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />
+          ),
+        }),
       }}
     >
       <Tabs.Screen
@@ -75,6 +83,15 @@ const styles = StyleSheet.create({
     height: 80,
     paddingBottom: 20,
     paddingTop: 12,
+  },
+  tabBarGlass: {
+    position: 'absolute',
+    backgroundColor: 'transparent',
+    borderTopWidth: 0,
+    height: 80,
+    paddingBottom: 20,
+    paddingTop: 12,
+    elevation: 0,
   },
   addButton: {
     width: 52,

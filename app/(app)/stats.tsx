@@ -28,6 +28,7 @@ import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type 
 import { deleteCardioWorkout } from '@/services/workouts'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
+import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 const GRID_PADDING = 20
 const STATS_SCREEN_W = Dimensions.get('window').width
@@ -1159,7 +1160,7 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   retryBtnText: { color: '#000', fontSize: 14, fontWeight: '700' },
-  scroll:   { paddingHorizontal: GRID_PADDING, paddingTop: 16, paddingBottom: 40, gap: 16 },
+  scroll:   { paddingHorizontal: GRID_PADDING, paddingTop: 16, paddingBottom: 40 + TAB_CONTENT_PAD, gap: 16 },
   header:   { paddingHorizontal: GRID_PADDING, paddingTop: 16, paddingBottom: 12 },
   title:    { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '700' },
   subtitle: { color: TEXT_SECONDARY, fontSize: 14 },

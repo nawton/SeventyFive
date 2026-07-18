@@ -58,6 +58,7 @@ import { TaskGridCard, TASK_COLORS, TASK_GAP } from '@/components/TaskGridCard'
 import { AddRuleSheet } from '@/components/AddRuleSheet'
 import type { UserChallengeWithLevel } from '@/types/database'
 import { getGreetingSubtitle } from '@/lib/getGreetingSubtitle'
+import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 const ORANGE    = '#FFA817'
 const NUM_FONT  = 'Nunito_700Bold'
@@ -763,7 +764,7 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   retryBtnText: { color: '#000', fontSize: 14, fontWeight: '700' },
-  scroll:   { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 56, gap: 20 },
+  scroll:   { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 56 + TAB_CONTENT_PAD, gap: 20 },
 
   // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

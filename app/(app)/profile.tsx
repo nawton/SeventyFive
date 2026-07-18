@@ -33,6 +33,7 @@ import {
 } from '@/services/progressPhotos'
 import { PhotoComposer } from '@/components/PhotoComposer'
 import { ORANGE, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { TAB_CONTENT_PAD } from '@/lib/glass'
 import type { UserChallengeWithLevel } from '@/types/database'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -376,7 +377,7 @@ export default function ProfileScreen() {
 const s = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: BG },
   centered: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' },
-  scroll:   { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40, gap: 16 },
+  scroll:   { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 + TAB_CONTENT_PAD, gap: 16 },
 
   headerWrap: { gap: 16 },
   topRow: {

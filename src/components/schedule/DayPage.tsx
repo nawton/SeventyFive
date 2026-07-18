@@ -20,6 +20,7 @@ import { ORANGE, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
+import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 const SCREEN_W = Dimensions.get('window').width
 
@@ -239,7 +240,7 @@ export const DayPage = React.memo(function DayPage({
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 150 },
+  scroll: { paddingBottom: 150 + TAB_CONTENT_PAD },
 
   dayHeader: {
     paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
