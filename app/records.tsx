@@ -110,6 +110,7 @@ type CardioRecs = {
   fastestSplitSec: number
   fastestSplitId: string | null
   biggestWeekKm: number
+  biggestWeekBestId: string | null
 }
 
 function fmtPaceStr(secs: number): string {
@@ -206,16 +207,19 @@ export default function RecordsScreen() {
         // Cardiorekord (all-time) från de hämtade passen — id:n sparas så
         // raderna kan öppna just det passet
         cardioListRef.current = cardio
+        let longestKm = 0, longestId: string | null = null
+        let bestPaceSec = Infinity, bestPaceId: string | null = null
+        let fastestSplitSec = Infinity, fastestSplitId: string | null = null
+        let bestPace3kSec = Infinity
+        let biggestWeekKm = 0, biggestWeekKey = ''
         if (cardio.length > 0) {
-          let longestKm = 0, longestId: string | null = null
-          let bestPaceSec = Infinity, bestPaceId: string | null = null
-          let fastestSplitSec = Infinity, fastestSplitId: string | null = null
           const byWeek = new Map<string, number>()
           for (const w of cardio) {
             if (w.data.distance_km > longestKm) { longestKm = w.data.distance_km; longestId = w.id }
             if (w.data.distance_km > 0.1) {
               const pace = w.data.duration_seconds / w.data.distance_km
-              if (pace < bestPaceSec) { bestPaceSec = pace; bestPaceId = w.id }
+              if (pace > 0 && pace < bestPaceSec) { bestPaceSec = pace; bestPaceId = w.id }
+              if (w.data.distance_km >= 3 && pace > 0 && pace < bestPace3kSec) bestPace3kSec = pace
             }
             for (const sp of w.data.splits ?? []) {
               if (/^\d+\s*(km|mi)$/.test(sp.label) && sp.paceSec > 0 && sp.paceSec < fastestSplitSec) {
@@ -226,9 +230,15 @@ export default function RecordsScreen() {
             const key = toLocalDateString(startOfWeek(new Date(w.created_at)))
             byWeek.set(key, (byWeek.get(key) ?? 0) + w.data.distance_km)
           }
-          let biggestWeekKm = 0
-          byWeek.forEach(v => { if (v > biggestWeekKm) biggestWeekKm = v })
-          setCardioRecs({ longestKm, longestId, bestPaceSec, bestPaceId, fastestSplitSec, fastestSplitId, biggestWeekKm })
+          byWeek.forEach((v, k) => { if (v > biggestWeekKm) { biggestWeekKm = v; biggestWeekKey = k } })
+          // Längsta vecka pekar på veckans längsta pass
+          let biggestWeekBestId: string | null = null
+          let bestInWeek = 0
+          for (const w of cardio) {
+            if (toLocalDateString(startOfWeek(new Date(w.created_at))) !== biggestWeekKey) continue
+            if (w.data.distance_km > bestInWeek) { bestInWeek = w.data.distance_km; biggestWeekBestId = w.id }
+          }
+          setCardioRecs({ longestKm, longestId, bestPaceSec, bestPaceId, fastestSplitSec, fastestSplitId, biggestWeekKm, biggestWeekBestId })
         }
         const medals = computeAchievements({
           completedDays,
@@ -237,6 +247,9 @@ export default function RecordsScreen() {
           totalCardio: cardio.length,
           totalKm: cardio.reduce((sum, w) => sum + w.data.distance_km, 0),
           prCount: prs.length,
+          longestRunKm: longestKm,
+          bestPace3kSec,
+          biggestWeekKm,
         })
         setAchievements(medals)
         setAvatarUrl(profile?.avatar_url ?? null)
@@ -517,8 +530,12 @@ export default function RecordsScreen() {
                 },
                 {
                   icon: 'flash-outline' as const, color: LIME, label: 'Snabbaste km',
-                  id: cardioRecs.fastestSplitId,
-                  value: fmtPaceStr(cardioRecs.fastestSplitSec),
+                  id: cardioRecs.fastestSplitId ?? cardioRecs.bestPaceId,
+                  value: cardioRecs.fastestSplitSec !== Infinity
+                    ? fmtPaceStr(cardioRecs.fastestSplitSec)
+                    : cardioRecs.bestPaceSec !== Infinity
+                      ? fmtPaceStr(cardioRecs.bestPaceSec)
+                      : '--:--',
                 },
                 {
                   icon: 'stopwatch-outline' as const, color: ORANGE, label: 'Bästa tempo',
@@ -529,7 +546,7 @@ export default function RecordsScreen() {
                 },
                 {
                   icon: 'trending-up-outline' as const, color: GOLD, label: 'Längsta vecka',
-                  id: null,
+                  id: cardioRecs.biggestWeekBestId,
                   value: cardioRecs.biggestWeekKm > 0
                     ? `${toDisplayDistance(cardioRecs.biggestWeekKm, unit).toFixed(1).replace('.', ',')} ${distanceUnitLabel(unit)}`
                     : '0',

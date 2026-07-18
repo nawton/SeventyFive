@@ -13,6 +13,9 @@ export interface AchievementInput {
   totalCardio: number       // antal GPS-cardiopass
   totalKm: number           // total GPS-distans
   prCount: number           // antal övningar med rekord
+  longestRunKm: number      // längsta enskilda cardiopass
+  bestPace3kSec: number     // bästa tempo (sek/km) på pass ≥ 3 km, Infinity om inget
+  biggestWeekKm: number     // mest distans under en och samma vecka
 }
 
 export interface Achievement {
@@ -27,7 +30,10 @@ export interface Achievement {
 }
 
 export function computeAchievements(input: AchievementInput): Achievement[] {
-  const { completedDays, streak, totalWorkouts, totalCardio, totalKm, prCount } = input
+  const {
+    completedDays, streak, totalWorkouts, totalCardio, totalKm, prCount,
+    longestRunKm, bestPace3kSec, biggestWeekKm,
+  } = input
 
   const days = (goal: number) =>
     completedDays >= goal ? undefined : `${completedDays}/${goal}`
@@ -48,5 +54,18 @@ export function computeAchievements(input: AchievementInput): Achievement[] {
     { id: 'km100',      title: '100 kilometer',   description: 'Nå 100 km total distans',           icon: 'map',       tier: 'gold',     unlocked: totalKm >= 100, progress: totalKm >= 100 ? undefined : `${Math.floor(totalKm)}/100 km` },
     { id: 'pr1',        title: 'Första rekordet', description: 'Sätt ditt första personliga rekord', icon: 'trophy',   tier: 'silver',   unlocked: prCount >= 1 },
     { id: 'pr5',        title: 'Rekordjägare',    description: 'Håll rekord i 5 olika övningar',    icon: 'trophy',    tier: 'gold',     unlocked: prCount >= 5, progress: prCount >= 5 ? undefined : `${prCount}/5` },
+
+    // ── Utökade medaljer ──
+    { id: 'streak3',    title: 'Tre i rad',       description: '3 dagars streak',                   icon: 'flame',     tier: 'bronze',   unlocked: streak >= 3,  progress: streak >= 3 ? undefined : `${streak}/3` },
+    { id: 'workout150', title: 'Maskinen',        description: 'Genomför 150 pass',                 icon: 'barbell',   tier: 'platinum', unlocked: totalWorkouts >= 150, progress: totalWorkouts >= 150 ? undefined : `${totalWorkouts}/150` },
+    { id: 'run10',      title: 'Tio rundor',      description: 'Spåra 10 cardiopass',               icon: 'walk',      tier: 'silver',   unlocked: totalCardio >= 10, progress: totalCardio >= 10 ? undefined : `${totalCardio}/10` },
+    { id: 'run50',      title: 'Vägslitaren',     description: 'Spåra 50 cardiopass',               icon: 'walk',      tier: 'gold',     unlocked: totalCardio >= 50, progress: totalCardio >= 50 ? undefined : `${totalCardio}/50` },
+    { id: 'km250',      title: '250 kilometer',   description: 'Nå 250 km total distans',           icon: 'map',       tier: 'platinum', unlocked: totalKm >= 250, progress: totalKm >= 250 ? undefined : `${Math.floor(totalKm)}/250 km` },
+    { id: 'km500',      title: '500 kilometer',   description: 'Nå 500 km total distans',           icon: 'map',       tier: 'diamond',  unlocked: totalKm >= 500, progress: totalKm >= 500 ? undefined : `${Math.floor(totalKm)}/500 km` },
+    { id: 'mil10',      title: 'Milen',           description: 'Spring 10 km i ett och samma pass', icon: 'fitness',   tier: 'gold',     unlocked: longestRunKm >= 10,   progress: longestRunKm >= 10 ? undefined : `${longestRunKm.toFixed(1)}/10 km` },
+    { id: 'halfmara',   title: 'Halvmara',        description: '21,1 km i ett och samma pass',      icon: 'fitness',   tier: 'platinum', unlocked: longestRunKm >= 21.1, progress: longestRunKm >= 21.1 ? undefined : `${longestRunKm.toFixed(1)}/21,1 km` },
+    { id: 'pace5',      title: 'Snabbfoting',     description: 'Tempo under 5:00 per km på minst 3 km', icon: 'flash', tier: 'gold',     unlocked: bestPace3kSec <= 300 },
+    { id: 'week30',     title: 'Storvecka',       description: '30 km under en och samma vecka',    icon: 'trending-up', tier: 'gold',   unlocked: biggestWeekKm >= 30, progress: biggestWeekKm >= 30 ? undefined : `${Math.floor(biggestWeekKm)}/30 km` },
+    { id: 'pr10',       title: 'Rekordsamlare',   description: 'Håll rekord i 10 olika övningar',   icon: 'trophy',    tier: 'platinum', unlocked: prCount >= 10, progress: prCount >= 10 ? undefined : `${prCount}/10` },
   ]
 }
