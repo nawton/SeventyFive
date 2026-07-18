@@ -17,7 +17,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
 
 const GREEN    = '#4CAF50'
@@ -84,29 +84,24 @@ const BTN_R_PAD = 12    // gap from right edge of container
 const SP = { damping: 22, stiffness: 180, mass: 1 } as const
 
 // ─── ExerciseRow ──────────────────────────────────────────────────────────────
+//
+// Förhandsvisningsrad: namn + set×reps (+ klar-bock). All träningsinteraktion
+// sker i passets helskärm (Öppna) — radens enda gest är svep för att TA BORT.
 
 function ExerciseRow({
   ex,
   done,
   divider,
   progressed,
-  onToggle,
   onDelete,
-  onStartCardio,
-  onCardPress,
 }: {
-  ex:              SessionExercise
-  done:            boolean
+  ex:          SessionExercise
+  done:        boolean
   /** Tunn linje ovanför raden — alla utom första i kortet */
-  divider?:        boolean
-  progressed?:     boolean
-  onToggle:        () => void
-  onDelete:        () => void
-  onStartCardio:   (name: string) => void
-  onCardPress:     (ex: SessionExercise) => void
+  divider?:    boolean
+  progressed?: boolean
+  onDelete:    () => void
 }) {
-  // Set/reps redigeras via passets ···-meny (SessionEditor) — raden har ingen egen editor
-
   // ── Shared values ─────────────────────────────────────────────────────────
 
   const tx       = useSharedValue(0)  // card X offset
@@ -117,26 +112,10 @@ function ExerciseRow({
   // Collapse (delete animation)
   const maxH = useSharedValue(200)
   const opac = useSharedValue(1)
-  const marg = useSharedValue(0)  // raderna sitter kant i kant i kortet, avdelare emellan
-
-  // Done visual (0 = undone, 1 = done)
-  const doneV = useSharedValue(done ? 1 : 0)
-  useEffect(() => {
-    // same tight spring as SP — no bounce on done/undone transition
-    doneV.value = withSpring(done ? 1 : 0, { damping: 22, stiffness: 180, mass: 1 })
-  }, [done])
-
-  // ── JS-thread callbacks (called via runOnJS) ──────────────────────────────
+  const marg = useSharedValue(0)
 
   function haptSnap()  { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }
   function haptFull()  { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium) }
-
-  function doToggle() {
-    Haptics.notificationAsync(
-      done ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success,
-    )
-    onToggle()
-  }
 
   function handleDelete() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
@@ -145,114 +124,42 @@ function ExerciseRow({
     marg.value = withTiming(0, { duration: 270 }, () => runOnJS(onDelete)())
   }
 
-  function showOptions() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    const gps = isGPS(ex.exercise_name)
-    if (Platform.OS === 'ios') {
-      const options = gps
-        ? ['Avbryt', 'Starta löpning', 'Ta bort övning']
-        : ['Avbryt', 'Ta bort övning']
-      ActionSheetIOS.showActionSheetWithOptions(
-        { title: ex.exercise_name, options, destructiveButtonIndex: options.length - 1, cancelButtonIndex: 0 },
-        (i) => {
-          if (gps) {
-            if (i === 1) onStartCardio(ex.exercise_name)
-            if (i === 2) setTimeout(handleDelete, 60)
-          } else {
-            if (i === 1) setTimeout(handleDelete, 60)
-          }
-        },
-      )
-    } else {
-      Alert.alert(ex.exercise_name, undefined, [
-        ...(gps ? [{ text: 'Starta löpning', onPress: () => onStartCardio(ex.exercise_name) }] : []),
-        { text: 'Ta bort',      style: 'destructive' as const, onPress: handleDelete },
-        { text: 'Avbryt',       style: 'cancel' as const },
-      ])
-    }
-  }
-
-  // Tapping the action button (circle/pill) when card is open → toggle + close
-  function handleBtnPress() {
-    Haptics.notificationAsync(
-      done ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success,
-    )
-    onToggle()
-    tx.value     = withSpring(0, SP)
-    isOpen.value = 0
-  }
-
-  // Tapping the card body → navigate to exercise detail
-  function handleCardPress() {
-    if (isOpen.value === 1) {
-      tx.value     = withSpring(0, SP)
-      isOpen.value = 0
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    onCardPress(ex)
-  }
-
-  // ── Pan gesture ───────────────────────────────────────────────────────────
+  // ── Pan gesture — två steg, action = ta bort ──────────────────────────────
 
   const panGesture = Gesture.Pan()
-    .activeOffsetX([-8, 8])   // ignore tiny jitter
-    .failOffsetY([-12, 12])   // yield to vertical scroll
-
-    // Remember where card sits at the start of this gesture — handles stage 2
-    // starting from the already-open position correctly
+    .activeOffsetX([-8, 8])
+    .failOffsetY([-12, 12])
     .onBegin(() => {
       startTx.value = tx.value
     })
-
     .onUpdate((e) => {
       const raw = startTx.value + e.translationX
-
-      // Never allow card to drift right of rest position
       if (raw >= 0) { tx.value = 0; return }
-
-      // Rubber-band resistance beyond FULL_THRESHOLD
       tx.value = raw < -FULL_THRESHOLD
         ? -FULL_THRESHOLD - (Math.abs(raw) - FULL_THRESHOLD) * 0.18
         : raw
-
-      // One-shot haptic when crossing the full-action threshold
       const nowOver = Math.abs(tx.value) >= FULL_THRESHOLD ? 1 : 0
       if (nowOver !== overFull.value) {
         overFull.value = nowOver
         if (nowOver === 1) runOnJS(haptFull)()
       }
     })
-
     .onEnd(() => {
       const absX = Math.abs(tx.value)
-
       if (absX >= FULL_THRESHOLD * 0.88) {
-        // ── Full swipe: fire action + close ───────────────────────────────
-        runOnJS(doToggle)()
-        tx.value     = withSpring(0, SP)
+        // Full swipe → radera
+        runOnJS(handleDelete)()
         isOpen.value = 0
-
       } else if (tx.value > -(SNAP_OPEN * 0.45)) {
-        // ── Swiped right from open, or didn't reach snap threshold: close ─
         tx.value     = withSpring(0, SP)
         isOpen.value = 0
-
       } else {
-        // ── Snap to open (stage 1) ────────────────────────────────────────
         if (isOpen.value === 0) runOnJS(haptSnap)()
         tx.value     = withSpring(-SNAP_OPEN, SP)
         isOpen.value = 1
       }
-
       overFull.value = 0
     })
-
-  const longPressGesture = Gesture.LongPress()
-    .minDuration(370)
-    .onStart(() => runOnJS(showOptions)())
-
-  // Pan wins on horizontal drag; long press wins on stationary hold
-  const gesture = Gesture.Race(panGesture, longPressGesture)
 
   // ── Animated styles ───────────────────────────────────────────────────────
 
@@ -264,51 +171,29 @@ function ExerciseRow({
   }))
 
   const cardStyle = useAnimatedStyle(() => ({
-    transform:       [{ translateX: tx.value }],
-    backgroundColor: interpolateColor(doneV.value, [0, 1], [CARD, '#0B2418']),
+    transform: [{ translateX: tx.value }],
   }))
 
-  const ringStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(doneV.value, [0, 1], ['transparent', GREEN]),
-    borderColor:     interpolateColor(doneV.value, [0, 1], [BORDER, GREEN]),
-    transform: [{ scale: interpolate(doneV.value, [0, 0.5, 1], [1, 1.14, 1], 'clamp') }],
-  }))
-
-  const checkStyle = useAnimatedStyle(() => ({
-    opacity:   doneV.value,
-    transform: [{ scale: interpolate(doneV.value, [0, 1], [0.3, 1], 'clamp') }],
-  }))
-
-  // ── Action button styles ──────────────────────────────────────────────────
-  //
-  // Stage 1 (0 → SNAP_OPEN):    width 0 → BTN_MIN_W  (circle emerges)
-  // Stage 2 (SNAP_OPEN → FULL): width BTN_MIN_W → BTN_MAX_W  (pill expands)
-  // Height: BTN_H always fixed
-  // borderRadius: BTN_H/2 always — ends stay fully rounded (pill, not oval)
-  //
   const btnStyle = useAnimatedStyle(() => {
     const dist = Math.abs(tx.value)
     const w = dist <= SNAP_OPEN
       ? interpolate(dist, [0, SNAP_OPEN], [0, BTN_MIN_W], 'clamp')
       : interpolate(dist, [SNAP_OPEN, FULL_THRESHOLD], [BTN_MIN_W, BTN_MAX_W], 'clamp')
-
     return {
       width:           w,
       height:          BTN_H,
       borderRadius:    BTN_H / 2,
       overflow:        'hidden' as const,
       opacity:         interpolate(dist, [0, SNAP_OPEN * 0.25], [0, 1], 'clamp'),
-      backgroundColor: done ? ORANGE : GREEN,
+      backgroundColor: RED,
     }
   })
 
-  // Label wrapper: width 0 in stage 1 (removes it from layout so icon stays
-  // perfectly centered in the circle), expands during stage 2 as pill grows.
   const labelWrapStyle = useAnimatedStyle(() => ({
     width: interpolate(
       Math.abs(tx.value),
       [SNAP_OPEN + 14, SNAP_OPEN + 60],
-      [0, 68],
+      [0, 78],
       'clamp',
     ),
     opacity: interpolate(
@@ -320,45 +205,28 @@ function ExerciseRow({
     overflow: 'hidden' as const,
   }))
 
-  const actionIcon  = done ? 'arrow-undo' : 'checkmark'
-  const actionLabel = done ? 'Ångra'      : 'Klar'
-
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <Animated.View style={wrapStyle}>
-
-      {/*
-        Container: overflow hidden — clips left side of card during swipe.
-        Action button lives here absolutely at right, revealed as card moves.
-      */}
       <View style={[r.container, divider && r.containerDivider]}>
 
-        {/* Action button — behind card, revealed by swipe */}
+        {/* Radera-knappen — bakom kortet, avslöjas av svepet */}
         <View style={r.btnArea}>
-          <TouchableOpacity onPress={handleBtnPress} activeOpacity={0.78}>
+          <TouchableOpacity onPress={handleDelete} activeOpacity={0.78}>
             <Animated.View style={[r.btn, btnStyle]}>
-              <Ionicons name={actionIcon} size={20} color="#fff" />
-              {/* Width-animated wrapper keeps icon centered in stage 1 circle */}
+              <Ionicons name="trash-outline" size={20} color="#fff" />
               <Animated.View style={labelWrapStyle}>
-                <Text style={r.btnLabel} numberOfLines={1}>
-                  {actionLabel}
-                </Text>
+                <Text style={r.btnLabel} numberOfLines={1}>Ta bort</Text>
               </Animated.View>
             </Animated.View>
           </TouchableOpacity>
         </View>
 
-        {/* Main card */}
-        <GestureDetector gesture={gesture}>
-          <Animated.View style={[r.row, cardStyle]}>
-
-            {/* Tapping the text area toggles completion */}
-            <TouchableOpacity
-              style={r.text}
-              onPress={handleCardPress}
-              activeOpacity={0.65}
-            >
+        {/* Förhandsvisning — ingen tap-interaktion */}
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[r.row, done && r.rowDone, cardStyle]}>
+            <View style={r.text}>
               <Text style={[r.name, done && r.nameDone]} numberOfLines={1}>
                 {ex.exercise_name}
               </Text>
@@ -372,35 +240,10 @@ function ExerciseRow({
                   )}
                 </Text>
               )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={showOptions}
-              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-              style={r.optBtn}
-            >
-              <Ionicons name="ellipsis-horizontal" size={15} color={TEXT_SECONDARY} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={r.ringWrap}
-              onPress={() => {
-                Haptics.notificationAsync(
-                  done
-                    ? Haptics.NotificationFeedbackType.Warning
-                    : Haptics.NotificationFeedbackType.Success,
-                )
-                onToggle()
-              }}
-              hitSlop={{ top: 10, bottom: 10, left: 6, right: 10 }}
-              activeOpacity={0.7}
-            >
-              <Animated.View style={[r.ring, ringStyle]}>
-                <Animated.View style={checkStyle}>
-                  <Ionicons name="checkmark" size={14} color="#fff" />
-                </Animated.View>
-              </Animated.View>
-            </TouchableOpacity>
+            </View>
+            {done && (
+              <Ionicons name="checkmark-circle" size={20} color={GREEN} style={r.doneIcon} />
+            )}
           </Animated.View>
         </GestureDetector>
 
@@ -445,21 +288,13 @@ const r = StyleSheet.create({
     minHeight:       62,
     backgroundColor: CARD,
   },
+  rowDone:  { backgroundColor: '#0B2418' },
   text:     { flex: 1, paddingVertical: 13, paddingHorizontal: 16 },
   name:     { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   nameDone: { color: TEXT_SECONDARY, textDecorationLine: 'line-through' },
   meta:     { color: TEXT_SECONDARY, fontSize: 12, marginTop: 3 },
   progressedMark: { color: ORANGE, fontSize: 12, fontWeight: '800' },
-  optBtn:   { paddingHorizontal: 6, paddingVertical: 10 },
-  ringWrap: { paddingRight: 14, paddingLeft: 4 },
-  ring: {
-    width:          34,
-    height:         34,
-    borderRadius:   17,
-    borderWidth:    2,
-    alignItems:     'center',
-    justifyContent: 'center',
-  },
+  doneIcon: { marginRight: 16 },
 })
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -746,10 +581,7 @@ export function WorkoutSection({
               divider={i > 0}
               progressed={progressedIds?.has(ex.id)}
               done={isCompleted || !!checked[ex.id]}
-              onToggle={() => onToggleExercise(ex.id)}
               onDelete={() => onDeleteExercise(ex.id)}
-              onStartCardio={onStartCardio}
-              onCardPress={onCardPress}
             />
           ))}
         </View>

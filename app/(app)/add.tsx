@@ -290,22 +290,8 @@ const DayPage = React.memo(function DayPage({
                       onToggleExercise={(exId) => api.toggleCheck(exId, dateStr)}
                       onDeleteExercise={(exId) => api.deleteExercise(quickLogSession.id, exId, dateStr)}
                       onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
-                      onCardPress={(sessionEx) => {
-                        const name   = sessionEx.exercise_name
-                        const exInfo = exercises.find(e => e.name === name)
-                        if (!exInfo) return
-                        router.push({
-                          pathname: '/exercise/[id]',
-                          params: {
-                            id: exInfo.id, name: exInfo.name,
-                            description: exInfo.description ?? '',
-                            category: exInfo.category, difficulty: exInfo.difficulty,
-                            initialSets: sessionEx.sets != null ? String(sessionEx.sets) : '',
-                            initialReps: sessionEx.reps ?? '',
-                            sessionExId: sessionEx.id, sessionDate: dateStr,
-                          },
-                        })
-                      }}
+                      onCardPress={() => {}}
+                      onOpenFullscreen={() => api.openFullscreen({ ...quickLogSession, name: 'Loggat idag' }, dateStr)}
                       onComplete={() => {}}
                       onUncomplete={() => {}}
                       onLongPress={() => api.sessionLongPress(quickLogSession, 'Loggat idag')}
