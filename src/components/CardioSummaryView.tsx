@@ -223,7 +223,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={s.heroTitle} numberOfLines={1}>{title}</Text>
+              <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{title}</Text>
               {dateLabel && <Text style={s.heroDate}>{dateLabel}</Text>}
             </View>
             <View style={s.donePill}>
@@ -338,7 +338,7 @@ const s = StyleSheet.create({
     width: 52, height: 52, borderRadius: 26,
     backgroundColor: CARD, borderWidth: 2, borderColor: CARDIO_BLUE + '55',
   },
-  heroTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4 },
+  heroTitle: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
   heroDate: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500', marginTop: 3, textTransform: 'capitalize' },
   donePill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -358,7 +358,7 @@ const s = StyleSheet.create({
   effortBadgeText: { fontSize: 12, fontWeight: '800' },
   effortText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   statCell: { width: '50%', gap: 3, alignItems: 'center' },
-  statValue: { color: TEXT_PRIMARY, fontSize: 22, fontFamily: NUM_FONT, letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
+  statValue: { color: TEXT_PRIMARY, fontSize: 20, fontFamily: NUM_FONT, letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
   statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   splitsCard: {
     backgroundColor: CARD, borderRadius: 20,
