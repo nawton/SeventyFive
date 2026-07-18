@@ -24,9 +24,10 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge } from '@/services/challenge'
 import { countCompletedDays, getStreak } from '@/services/dailyLog'
-import { getCardioWorkouts, getStrengthWorkouts } from '@/services/workouts'
+import Svg, { Polyline, Circle as SvgCircle, Line as SvgLine } from 'react-native-svg'
+import { getCardioWorkouts, getStrengthWorkouts, type StrengthWorkout } from '@/services/workouts'
 import { getCompletedSessionsHistory } from '@/services/workoutSchedule'
-import { getPersonalRecords, type ExerciseRecord } from '@/services/personalRecords'
+import { getPersonalRecords, epley1RM, type ExerciseRecord } from '@/services/personalRecords'
 import { computeAchievements, type Achievement } from '@/lib/achievements'
 import { MedalBadge } from '@/components/MedalBadge'
 import { MEDAL_IMAGES } from '@/lib/medalImages'
@@ -39,6 +40,34 @@ import type { MedalTier } from '@/components/MedalBadge'
 
 const TIER_NAMES: Record<MedalTier, string> = {
   bronze: 'Brons', silver: 'Silver', gold: 'Guld', platinum: 'Platina', diamond: 'Diamant',
+}
+
+// ── Övningshistorik ──────────────────────────────────────────────────────────
+
+type HistPoint = { date: string; topKg: number; topReps: number; e1rm: number; sets: number }
+
+/** Bästa set per dag för en övning, kronologiskt — underlag för utvecklingsgrafen */
+function buildHistory(workouts: StrengthWorkout[], name: string): HistPoint[] {
+  const byDate = new Map<string, HistPoint>()
+  for (const w of workouts) {
+    if (w.data.exercise_name !== name) continue
+    const date = w.data.workout_date ?? w.created_at.slice(0, 10)
+    let topKg = 0, topReps = 0, best = 0, sets = 0
+    for (const st of w.data.sets) {
+      sets++
+      const e = epley1RM(st.weight_kg, st.reps)
+      if (e > best) best = e
+      if (st.weight_kg > topKg) { topKg = st.weight_kg; topReps = st.reps }
+    }
+    if (best <= 0) continue
+    const prev = byDate.get(date)
+    if (!prev || best > prev.e1rm) {
+      byDate.set(date, { date, topKg, topReps, e1rm: best, sets: (prev?.sets ?? 0) + sets })
+    } else {
+      prev.sets += sets
+    }
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
 }
 
 /** Vart varje engångsmål tar dig — action-parametern får sidan att scrolla
@@ -77,6 +106,22 @@ export default function RecordsScreen() {
   })
   const [selectedMedal, setSelectedMedal] = useState<MedalInfo | null>(null)
   const [breakdownVisible, setBreakdownVisible] = useState(false)
+  // Övningshistorik — öppnas från rekordraderna
+  const [historyEx, setHistoryEx]   = useState<string | null>(null)
+  const [historyPts, setHistoryPts] = useState<HistPoint[]>([])
+  const allWorkoutsRef = useRef<StrengthWorkout[] | null>(null)
+
+  async function openHistory(name: string) {
+    Haptics.selectionAsync()
+    setHistoryPts([])
+    setHistoryEx(name)
+    if (!allWorkoutsRef.current) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      allWorkoutsRef.current = await getStrengthWorkouts(session.user.id, 200).catch(() => [])
+    }
+    setHistoryPts(buildHistory(allWorkoutsRef.current ?? [], name))
+  }
   const [earnTab, setEarnTab] = useState<0 | 1>(0)
   const earnPagerRef = useRef<ScrollView>(null)
   // Indikatorlinjen följer svepet i realtid (halva banans bredd per flik)
@@ -365,7 +410,12 @@ export default function RecordsScreen() {
         ) : (
           <View style={s.recordCard}>
             {records.map((r, i) => (
-              <View key={r.exerciseName} style={[s.recordRow, i < records.length - 1 && s.recordBorder]}>
+              <TouchableOpacity
+                key={r.exerciseName}
+                style={[s.recordRow, i < records.length - 1 && s.recordBorder]}
+                onPress={() => openHistory(r.exerciseName)}
+                activeOpacity={0.7}
+              >
                 <View style={s.recordIcon}>
                   <Ionicons name="trophy" size={16} color={GOLD} />
                 </View>
@@ -378,12 +428,76 @@ export default function RecordsScreen() {
                 <Text style={s.recordDate}>
                   {new Date(r.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
                 </Text>
-              </View>
+                <Ionicons name="chevron-forward" size={15} color="rgba(255,255,255,0.25)" />
+              </TouchableOpacity>
             ))}
           </View>
         )}
 
       </ScrollView>
+
+      {/* ── Övningshistorik — utveckling över tid ── */}
+      <Modal
+        visible={!!historyEx}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setHistoryEx(null)}
+      >
+        <Pressable style={s.modalBackdrop} onPress={() => setHistoryEx(null)}>
+          <Pressable style={s.modalCard} onPress={() => {}}>
+            <Text style={s.histTitle} numberOfLines={1}>{historyEx}</Text>
+            <Text style={s.histSub}>Utveckling · est. 1RM (kg)</Text>
+
+            {historyPts.length >= 2 ? (() => {
+              const CH_W = PAGE_W - 84
+              const CH_H = 130
+              const PADX = 8
+              const PADY = 14
+              const vals = historyPts.map(p => p.e1rm)
+              const min  = Math.min(...vals)
+              const max  = Math.max(...vals)
+              const span = max - min || 1
+              const px = (i: number) => PADX + (i / (historyPts.length - 1)) * (CH_W - PADX * 2)
+              const py = (v: number) => PADY + (1 - (v - min) / span) * (CH_H - PADY * 2)
+              const line = historyPts.map((p, i) => `${px(i)},${py(p.e1rm)}`).join(' ')
+              return (
+                <View style={s.histChartWrap}>
+                  <View style={s.histAxis}>
+                    <Text style={s.histAxisText}>{Math.round(max)}</Text>
+                    <Text style={s.histAxisText}>{Math.round(min)}</Text>
+                  </View>
+                  <Svg width={CH_W} height={CH_H}>
+                    <SvgLine x1={0} y1={py(max)} x2={CH_W} y2={py(max)} stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
+                    <SvgLine x1={0} y1={py(min)} x2={CH_W} y2={py(min)} stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
+                    <Polyline points={line} stroke={ORANGE} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+                    {historyPts.map((p, i) => (
+                      <SvgCircle key={i} cx={px(i)} cy={py(p.e1rm)} r={3.5} fill={ORANGE} />
+                    ))}
+                  </Svg>
+                </View>
+              )
+            })() : (
+              <Text style={s.histEmpty}>
+                {historyPts.length === 0
+                  ? 'Laddar…'
+                  : 'Logga övningen fler gånger så ritas utvecklingen här.'}
+              </Text>
+            )}
+
+            {/* Senaste passen */}
+            {historyPts.slice(-6).reverse().map((p, i, arr) => (
+              <View key={p.date} style={[s.histRow, i < arr.length - 1 && s.histRowBorder]}>
+                <Text style={s.histDate}>
+                  {new Date(p.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
+                </Text>
+                <Text style={s.histSets}>{p.sets} set</Text>
+                <Text style={s.histTop}>{p.topKg} kg × {p.topReps}</Text>
+                <Text style={s.histE1rm}>1RM {Math.round(p.e1rm)}</Text>
+              </View>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Poäng-breakdown ── */}
       <Modal
@@ -571,6 +685,23 @@ const s = StyleSheet.create({
   recordName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
   recordMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   recordDate: { color: TEXT_SECONDARY, fontSize: 11 },
+
+  // Övningshistorik
+  histTitle: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', alignSelf: 'stretch' },
+  histSub:   { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', alignSelf: 'stretch', marginTop: -4 },
+  histChartWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 8, alignSelf: 'stretch' },
+  histAxis: { height: 130, justifyContent: 'space-between', paddingVertical: 8 },
+  histAxisText: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontVariant: ['tabular-nums'] },
+  histEmpty: { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', marginVertical: 16 },
+  histRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    alignSelf: 'stretch', paddingVertical: 8,
+  },
+  histRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  histDate: { color: TEXT_SECONDARY, fontSize: 12, width: 52 },
+  histSets: { color: TEXT_SECONDARY, fontSize: 12, width: 40 },
+  histTop:  { flex: 1, color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  histE1rm: { color: ORANGE, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
 
   // Medaljinfo-modal
   modalBackdrop: {
