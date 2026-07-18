@@ -28,7 +28,7 @@ import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
-import { getCardioStatsTheme, getVoiceCues, type CardioStatsTheme } from '@/lib/prefs'
+import { getCardioStatsTheme, getVoiceCues, getDefaultMapStyle, type CardioStatsTheme } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -323,6 +323,22 @@ export default function CardioScreen() {
   const [hudHidden, setHudHidden] = useState(false)
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
   const [activeStyle, setActiveStyle] = useState<string>('satellite')
+  // Vald standardkarta appliceras när kartan laddat (satellit är html-default)
+  const desiredStyle = useRef<string>('satellite')
+  useEffect(() => {
+    getDefaultMapStyle().then(k => {
+      desiredStyle.current = k
+      if (k !== 'satellite') {
+        setActiveStyle(k)
+        const st = TILE_URLS[k]
+        if (st) setTimeout(() => webRef.current?.injectJavaScript(
+          `window.dispatchEvent(new MessageEvent('message', {
+            data: JSON.stringify({ type:'style', url:${'${JSON.stringify(st.url)}'}, opts:${'${JSON.stringify(st.opts)}'} })
+          })); true;`
+        ), 900)
+      }
+    })
+  }, [])
   const [summary, setSummary] = useState<{
     distanceKm: number
     elapsed: number
@@ -945,7 +961,7 @@ export default function CardioScreen() {
       {/* ── Km split toast ── */}
       {splitToast && (
         <View style={[styles.splitToast, LIQUID_GLASS && styles.glassSurface]} pointerEvents="none">
-          {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" style={StyleSheet.absoluteFill} />}
+          {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
           <Ionicons name="flag" size={16} color={ORANGE} />
           <Text style={styles.splitToastText}>{splitToast}</Text>
         </View>
@@ -1077,7 +1093,7 @@ export default function CardioScreen() {
           {/* Osynlig yta bakom sheeten: tryck utanför stänger, utan att mörka kartan */}
           <Pressable style={styles.sheetDismiss} onPress={closePicker} />
           <Animated.View style={[styles.sheetWrap, LIQUID_GLASS && styles.glassSurface, sheetStyle]}>
-            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" style={StyleSheet.absoluteFill} />}
+            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={sheetDrag}>
               <View style={styles.sheetGrip}>
                 <View style={styles.sheetHandle} />
@@ -1116,7 +1132,7 @@ export default function CardioScreen() {
         <>
           <Pressable style={styles.sheetDismiss} onPress={closeStyleSheet} />
           <Animated.View style={[styles.sheetWrap, LIQUID_GLASS && styles.glassSurface, styleSheetStyle]}>
-            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" style={StyleSheet.absoluteFill} />}
+            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={styleDrag}>
               <View style={styles.sheetGrip}>
                 <View style={styles.sheetHandle} />
@@ -1314,7 +1330,7 @@ export default function CardioScreen() {
       </Modal>
 
       <SafeAreaView style={[styles.bottomBar, LIQUID_GLASS && styles.glassSurface]} edges={['bottom']}>
-        {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" style={StyleSheet.absoluteFill} />}
+        {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
         <View style={styles.bottomInner}>
 
           {status === 'idle' ? (

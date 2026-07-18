@@ -68,8 +68,10 @@ function useGlassGesture(onPress?: () => void, draggable = false) {
   return { gesture, anim }
 }
 
+const DARK_TINT = 'rgba(12,12,14,0.5)'
+
 export function GlassCircleButton({
-  icon, size = 44, iconColor, onPress, draggable = false, style, fallbackStyle, children,
+  icon, size = 44, iconColor, onPress, draggable = false, style, fallbackStyle, children, tint = DARK_TINT,
 }: {
   icon?: React.ComponentProps<typeof Ionicons>['name']
   size?: number
@@ -83,6 +85,8 @@ export function GlassCircleButton({
   fallbackStyle?: StyleProp<ViewStyle>
   /** Eget innehåll istället för ikon (t.ex. kompassnålen) */
   children?: React.ReactNode
+  /** Ton i glaset — mörk som standard så vitt innehåll läses över ljusa kartor */
+  tint?: string
 }) {
   const { gesture, anim } = useGlassGesture(onPress, draggable)
   const circle = { width: size, height: size, borderRadius: size / 2 }
@@ -97,6 +101,7 @@ export function GlassCircleButton({
           isInteractive={!draggable}
           glassEffectStyle="regular"
           colorScheme="dark"
+          tintColor={tint}
           style={[s.center, circle, anim, style]}
         >
           {content}
@@ -112,7 +117,7 @@ export function GlassCircleButton({
 
 /** Glaspill med valfritt innehåll — t.ex. "Visa statistik"-kapseln över kartan */
 export function GlassPill({
-  children, onPress, draggable = false, style, fallbackStyle, tint,
+  children, onPress, draggable = false, style, fallbackStyle, tint = DARK_TINT,
 }: {
   children: React.ReactNode
   onPress?: () => void

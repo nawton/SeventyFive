@@ -128,3 +128,19 @@ export async function getPassEffort(id: string): Promise<number | null> {
     return null
   }
 }
+
+// Standardkarta för GPS-skärmen och passdetaljen — väljs under Anpassning
+export type MapStyleKey = 'standard' | 'satellite' | 'terrain' | 'dark'
+
+export async function getDefaultMapStyle(): Promise<MapStyleKey> {
+  try {
+    const v = await AsyncStorage.getItem('defaultMapStyle')
+    return (v === 'standard' || v === 'satellite' || v === 'terrain' || v === 'dark') ? v : 'satellite'
+  } catch {
+    return 'satellite'
+  }
+}
+
+export async function setDefaultMapStyle(v: MapStyleKey): Promise<void> {
+  await AsyncStorage.setItem('defaultMapStyle', v).catch(() => {})
+}

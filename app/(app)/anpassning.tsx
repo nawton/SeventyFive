@@ -13,6 +13,7 @@ import { getTabBarShrinkEnabled, setTabBarShrinkEnabled } from '@/lib/tabBar'
 import {
   getCardioStatsTheme, setCardioStatsTheme, type CardioStatsTheme,
   getVoiceCues, setVoiceCues,
+  getDefaultMapStyle, setDefaultMapStyle, type MapStyleKey,
 } from '@/lib/prefs'
 
 // =============================================================================
@@ -59,12 +60,14 @@ export default function AnpassningScreen() {
   const [unit, setUnit]             = useState<UnitSystem>('metric')
   const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
   const [voice, setVoice]           = useState(true)
+  const [mapStyle, setMapStyle]     = useState<MapStyleKey>('satellite')
 
   useEffect(() => {
     getTabBarShrinkEnabled().then(setNavShrink)
     getUnitSystem().then(setUnit)
     getCardioStatsTheme().then(setStatsTheme)
     getVoiceCues().then(setVoice)
+    getDefaultMapStyle().then(setMapStyle)
   }, [])
 
   return (
@@ -110,6 +113,23 @@ export default function AnpassningScreen() {
 
         {/* Cardio */}
         <Section title="Cardio">
+          <View style={[s.segBlock, s.rowBorder]}>
+            <View style={s.segLabelRow}>
+              <Ionicons name="map-outline" size={20} color={TEXT_SECONDARY} />
+              <Text style={s.rowLabel}>Standardkarta</Text>
+            </View>
+            <GlassSegment
+              value={mapStyle}
+              options={[
+                { key: 'standard',  label: 'Karta' },
+                { key: 'satellite', label: 'Satellit' },
+                { key: 'terrain',   label: 'Terräng' },
+                { key: 'dark',      label: 'Natt' },
+              ]}
+              onChange={m => { setMapStyle(m); setDefaultMapStyle(m).catch(() => {}) }}
+            />
+            <Text style={s.segHint}>Kartan som visas när du startar ett cardiopass</Text>
+          </View>
           <View style={[s.segBlock, s.rowBorder]}>
             <View style={s.segLabelRow}>
               <Ionicons name="contrast-outline" size={20} color={TEXT_SECONDARY} />

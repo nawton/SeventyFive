@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, Pressable,
 } from 'react-native'
@@ -11,6 +11,7 @@ import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
 import { effortColor, effortLabel } from '@/components/EffortRating'
+import { getDefaultMapStyle } from '@/lib/prefs'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
 import { LIQUID_GLASS } from '@/lib/glass'
@@ -114,10 +115,18 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   const d = workout.data
   const meta = TYPE_META[d.type] ?? TYPE_META.running
 
-  // Kartstil + slide-up-väljare
+  // Kartstil + slide-up-väljare — startar på användarens standardkarta
   const webRef = useRef<InstanceType<typeof WebView>>(null)
   const startStyle = useRef('satellite')
   const [activeStyle, setActiveStyle] = useState('satellite')
+  const [styleLoaded, setStyleLoaded] = useState(false)
+  useEffect(() => {
+    getDefaultMapStyle().then(k => {
+      startStyle.current = k
+      setActiveStyle(k)
+      setStyleLoaded(true)
+    })
+  }, [])
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
   const styleY = useSharedValue(420)
   function openStyleSheet() { setStyleMenuOpen(true); styleY.value = 420; styleY.value = withTiming(0, { duration: 260 }) }
@@ -179,7 +188,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
 
   return (
     <View style={s.root}>
-      {hasRoute && (
+      {hasRoute && styleLoaded && (
         <WebView
           ref={webRef}
           style={StyleSheet.absoluteFill}
