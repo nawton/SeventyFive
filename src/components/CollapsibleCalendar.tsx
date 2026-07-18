@@ -19,12 +19,13 @@ const SCREEN_W    = Dimensions.get('window').width
 const ROW_H   = 46    // height of one week row
 const HEADER_H = 38   // month title + nav
 const LABELS_H = 22   // day-of-week labels
+const SUMMARY_H = 24  // veckosammanfattning (bara i utfällt läge)
 const LEGEND_H = 20   // förklaring av typprickarna (bara i utfällt läge)
 const HANDLE_H = 22   // drag handle area
 const WEEK_CONTENT_H  = ROW_H                  // 1 row
 const MONTH_CONTENT_H = ROW_H * 6              // max 6 rows
 const COLLAPSED_H = HEADER_H + LABELS_H + WEEK_CONTENT_H + HANDLE_H
-const EXPANDED_H  = HEADER_H + LABELS_H + MONTH_CONTENT_H + LEGEND_H + HANDLE_H
+const EXPANDED_H  = HEADER_H + LABELS_H + MONTH_CONTENT_H + SUMMARY_H + LEGEND_H + HANDLE_H
 
 const SP = { damping: 28, stiffness: 280, mass: 1 } as const
 
@@ -300,6 +301,28 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     return { byWeekday, onceByDate, skipByDate }
   }, [sessions])
 
+  // Veckosammanfattning — visas när kalendern är utfälld
+  const weekSummary = useMemo(() => {
+    const start = mondayOf(selDate)
+    let total = 0
+    let done = 0
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      const ds = toLocalDateString(d)
+      const wd = toWeekday(d)
+      const skips = sessionIndex.skipByDate.get(ds)
+      const day = [
+        ...sessionIndex.byWeekday[wd].filter(sess => !skips?.has(sess.id)),
+        ...(sessionIndex.onceByDate.get(ds) ?? []),
+      ]
+      total += day.length
+      const comp = completedByDate[ds]
+      if (comp) done += day.filter(sess => comp.has(sess.id)).length
+    }
+    return { total, done }
+  }, [sessionIndex, completedByDate, selDate])
+
   function sessionInfo(date: Date) {
     const wd      = toWeekday(date)
     const dateStr = toLocalDateString(date)
@@ -435,6 +458,21 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
         ))}
       </Animated.View>
 
+      {/* Veckosammanfattning (syns i utfällt läge) */}
+      {weekSummary.total > 0 && (
+        <Animated.View style={[s.weekSummary, legendStyle]}>
+          <Text style={s.weekSummaryText}>
+            {weekSummary.done} av {weekSummary.total} pass klara denna vecka
+          </Text>
+          <View style={s.weekTrack}>
+            <View style={[s.weekFill, {
+              width: `${Math.min(100, (weekSummary.done / weekSummary.total) * 100)}%` as never,
+              backgroundColor: weekSummary.done >= weekSummary.total ? GREEN : ORANGE,
+            }]} />
+          </View>
+        </Animated.View>
+      )}
+
       {/* Förklaring — vad prickarna betyder (syns i utfällt läge) */}
       <Animated.View style={[s.legend, legendStyle]}>
         <View style={s.legendItem}>
@@ -565,9 +603,26 @@ const s = StyleSheet.create({
   dateNumToday: { color: ORANGE, fontWeight: '700' },
   dateNumSel:   { color: '#000', fontWeight: '700' },
 
-  legend: {
+  weekSummary: {
     position: 'absolute',
     top: HEADER_H + LABELS_H + MONTH_CONTENT_H,
+    left: 0, right: 0,
+    height: SUMMARY_H,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+  },
+  weekSummaryText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  weekTrack: {
+    flex: 1, height: 4, borderRadius: 2, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  weekFill: { height: '100%', borderRadius: 2 },
+
+  legend: {
+    position: 'absolute',
+    top: HEADER_H + LABELS_H + MONTH_CONTENT_H + SUMMARY_H,
     left: 0, right: 0,
     height: LEGEND_H,
     flexDirection: 'row',
