@@ -386,9 +386,9 @@ export function WorkoutSection({
     transform: [{ rotate: `${interpolate(collapseV.value, [0, 1], [-90, 0])}deg` }],
   }))
 
-  // Cardio-pass tonar INTE mot grönt när de är klara — statistiken (distans,
-  // tid, tempo) i kroppen är tecknet på att passet är gjort. Bara gympass blir gröna.
-  const greenComplete = isCompleted && !isCardio
+  // Inga pass tonar mot grönt längre — statraden i kroppen och bockarna på
+  // raderna räcker som klart-signal, den gröna infärgningen var störande
+  const greenComplete = false
 
   const completedV = useSharedValue(greenComplete ? 1 : 0)
   useEffect(() => {
@@ -587,11 +587,6 @@ export function WorkoutSection({
             <View style={s.cardioSummaryStat}>
               <Text style={s.cardioSummaryValue}>{gymStats ? gymStats.sets : '–'}</Text>
               <Text style={s.cardioSummaryLabel}>set</Text>
-            </View>
-            <View style={s.cardioSummaryDivider} />
-            <View style={s.cardioSummaryStat}>
-              <Text style={s.cardioSummaryValue}>{gymStats && gymStats.volumeKg > 0 ? Math.round(gymStats.volumeKg) : '–'}</Text>
-              <Text style={s.cardioSummaryLabel}>kg volym</Text>
             </View>
           </View>
           {onOpenFullscreen && (
