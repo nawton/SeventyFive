@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
-import Svg, { Circle, Text as SvgText } from 'react-native-svg'
+import Svg, { Circle, Text as SvgText, Polyline, Line as SvgLine } from 'react-native-svg'
 import { useFocusEffect } from 'expo-router'
 import Body from 'react-native-body-highlighter'
 import { supabase } from '@/lib/supabase'
@@ -87,6 +87,10 @@ interface WeekBar {
   walk:      number
   total:     number
   isCurrent: boolean
+  /** Snittempo (sek/km) för veckans pass med distans — 0 om inget */
+  paceSec:   number
+  pacedKm:   number
+  pacedSecs: number
 }
 
 function buildWeeklyBars(workouts: CardioWorkout[]): WeekBar[] {
@@ -108,6 +112,7 @@ function buildWeeklyBars(workouts: CardioWorkout[]): WeekBar[] {
         label: `V${wn}`,
         run: 0, cycle: 0, walk: 0, total: 0,
         isCurrent: key === todayMon,
+        paceSec: 0, pacedKm: 0, pacedSecs: 0,
       })
     }
     const entry = byWeek.get(key)!
@@ -117,12 +122,16 @@ function buildWeeklyBars(workouts: CardioWorkout[]): WeekBar[] {
     else if (type === 'walking')  entry.walk  += km
     else                          entry.run   += km
     entry.total += km
+    if (km > 0.1) {
+      entry.pacedKm   += km
+      entry.pacedSecs += w.data.duration_seconds
+    }
   }
 
   return Array.from(byWeek.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .slice(-6)
-    .map(([, v]) => v)
+    .map(([, v]) => ({ ...v, paceSec: v.pacedKm > 0 ? v.pacedSecs / v.pacedKm : 0 }))
 }
 
 // ─── GymSession ────────────────────────────────────────────────────────────────
@@ -223,6 +232,7 @@ export default function StatsScreen() {
   const [selectedDay, setSelectedDay]           = useState<DaySummary | null>(null)
   const [activeTab, setActiveTab]               = useState<StatsTab>('overview')
   const [unit, setUnit]                         = useState<UnitSystem>('metric')
+  const [cardioRange, setCardioRange]           = useState<'week' | 'month' | 'all'>('all')
   const [avatarUrl, setAvatarUrl]               = useState<string | null>(null)
   const pagerRef = useRef<ScrollView>(null)
 
@@ -418,10 +428,26 @@ export default function StatsScreen() {
   const missedDays    = days.filter(d => d.status === 'failed').length
 
   const unitLabel  = distanceUnitLabel(unit)
-  const totalKm    = workouts.reduce((sum, w) => sum + w.data.distance_km, 0)
-  const totalSecs  = workouts.reduce((sum, w) => sum + w.data.duration_seconds, 0)
-  const totalCals  = workouts.reduce((sum, w) => sum + w.data.calories, 0)
-  const pacedW     = workouts.filter(w => w.data.distance_km > 0.1)
+
+  // Periodfilter för cardio-fliken: vecka (denna vecka) / månad (30 dagar) / totalt
+  const rangeStart = (() => {
+    if (cardioRange === 'week') return startOfWeek()
+    if (cardioRange === 'month') {
+      const d = new Date()
+      d.setHours(0, 0, 0, 0)
+      d.setDate(d.getDate() - 29)
+      return d
+    }
+    return null
+  })()
+  const cardioW = rangeStart
+    ? workouts.filter(w => new Date(w.created_at) >= rangeStart)
+    : workouts
+
+  const totalKm    = cardioW.reduce((sum, w) => sum + w.data.distance_km, 0)
+  const totalSecs  = cardioW.reduce((sum, w) => sum + w.data.duration_seconds, 0)
+  const totalCals  = cardioW.reduce((sum, w) => sum + w.data.calories, 0)
+  const pacedW     = cardioW.filter(w => w.data.distance_km > 0.1)
   const bestPaceSec = pacedW
     .map(w => w.data.duration_seconds / w.data.distance_km)
     .reduce((b, p) => p < b ? p : b, Infinity)
@@ -433,8 +459,38 @@ export default function StatsScreen() {
 
   const milestone   = nextMilestone(currentDay)
   const isEarlyDays = currentDay <= 7
+  // Veckostaplar + rekord räknas alltid på ALLA pass, oavsett periodfilter
   const weeklyBars  = buildWeeklyBars(workouts)
   const maxBarKm   = Math.max(...weeklyBars.map(b => b.total), 0.1)
+
+  // ── Cardiorekord (all-time) ──
+  const allPaced = workouts.filter(w => w.data.distance_km > 0.1)
+  const recLongestKm = workouts.reduce((b, w) => Math.max(b, w.data.distance_km), 0)
+  const recBestPaceSec = allPaced
+    .map(w => w.data.duration_seconds / w.data.distance_km)
+    .reduce((b, p) => p < b ? p : b, Infinity)
+  // Snabbaste hela km från sparade splits ("1 km", "2 km" …)
+  const recFastestSplitSec = workouts.reduce((best, w) => {
+    for (const sp of w.data.splits ?? []) {
+      if (/^\d+\s*(km|mi)$/.test(sp.label) && sp.paceSec > 0 && sp.paceSec < best) best = sp.paceSec
+    }
+    return best
+  }, Infinity)
+  const recBiggestWeek = (() => {
+    const byWeek = new Map<string, number>()
+    for (const w of workouts) {
+      const key = toLocalDateString(startOfWeek(new Date(w.created_at)))
+      byWeek.set(key, (byWeek.get(key) ?? 0) + w.data.distance_km)
+    }
+    let max = 0
+    byWeek.forEach(v => { if (v > max) max = v })
+    return max
+  })()
+  const hasRecords = workouts.length > 0
+
+  // ── Tempoutveckling: veckosnitt (endast veckor med distanspass) ──
+  const paceWeeks = weeklyBars.filter(b => b.paceSec > 0)
+  const paceVals  = paceWeeks.map(b => paceForUnit(b.paceSec, unit))
 
   if (loading) {
     return (
@@ -604,11 +660,31 @@ export default function StatsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <>
+            {/* Periodfilter */}
+            <View style={s.rangeRow}>
+              {([
+                { key: 'week',  label: 'Vecka' },
+                { key: 'month', label: 'Månad' },
+                { key: 'all',   label: 'Totalt' },
+              ] as const).map(({ key, label }) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[s.rangePill, cardioRange === key && s.rangePillActive]}
+                  onPress={() => setCardioRange(key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[s.rangePillText, cardioRange === key && s.rangePillTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <View style={s.statsGrid}>
               <View style={s.statsRow}>
                 <StatCard label={`${unitLabel} totalt`} value={toDisplayDistance(totalKm, unit).toFixed(1)} icon="map-outline" color={ORANGE} />
                 <StatCard label="total tid"  value={fmtDuration(totalSecs)}    icon="time-outline"  color={BLUE} />
-                <StatCard label="pass"       value={workouts.length}           icon="walk-outline"  color={GREEN} />
+                <StatCard label="pass"       value={cardioW.length}            icon="walk-outline"  color={GREEN} />
               </View>
               <View style={s.statsRow}>
                 <StatCard label="snittempo"   value={avgPace}                          icon="speedometer-outline" color={YELLOW} />
@@ -616,6 +692,51 @@ export default function StatsScreen() {
                 <StatCard label="kcal"        value={totalCals.toLocaleString('sv-SE')} icon="flash-outline"      color={PURPLE} />
               </View>
             </View>
+
+            {/* Tempoutveckling */}
+            {paceWeeks.length >= 2 && (() => {
+              const CH_W = STATS_SCREEN_W - 84
+              const CH_H = 120
+              const minV = Math.min(...paceVals)
+              const maxV = Math.max(...paceVals)
+              const span = Math.max(maxV - minV, 1)
+              const px = (i: number) =>
+                paceWeeks.length === 1 ? CH_W / 2 : (i / (paceWeeks.length - 1)) * (CH_W - 16) + 8
+              // Lägre tempo = bättre → snabbast överst
+              const py = (v: number) => 12 + ((v - minV) / span) * (CH_H - 24)
+              const pts = paceVals.map((v, i) => `${px(i)},${py(v)}`).join(' ')
+              return (
+                <View style={s.card}>
+                  <Text style={s.cardTitle}>Tempoutveckling</Text>
+                  <Text style={s.cardSub}>snitt min/{unitLabel} per vecka · snabbare är högre upp</Text>
+                  <View style={s.paceChartRow}>
+                    <View style={s.paceAxis}>
+                      <Text style={s.paceAxisLbl}>{fmtPace(minV)}</Text>
+                      <Text style={s.paceAxisLbl}>{fmtPace(maxV)}</Text>
+                    </View>
+                    <Svg width={CH_W} height={CH_H}>
+                      {[0.25, 0.5, 0.75].map(f => (
+                        <SvgLine
+                          key={f}
+                          x1={0} x2={CH_W}
+                          y1={12 + f * (CH_H - 24)} y2={12 + f * (CH_H - 24)}
+                          stroke="rgba(255,255,255,0.06)" strokeWidth={1}
+                        />
+                      ))}
+                      <Polyline points={pts} fill="none" stroke={BLUE} strokeWidth={2.5} strokeLinejoin="round" />
+                      {paceVals.map((v, i) => (
+                        <Circle key={i} cx={px(i)} cy={py(v)} r={4} fill={BLUE} stroke={CARD} strokeWidth={2} />
+                      ))}
+                    </Svg>
+                  </View>
+                  <View style={s.paceWeekRow}>
+                    {paceWeeks.map((b, i) => (
+                      <Text key={i} style={[s.paceWeekLbl, b.isCurrent && { color: BLUE }]}>{b.label}</Text>
+                    ))}
+                  </View>
+                </View>
+              )
+            })()}
 
             {/* Stacked bar chart */}
             {weeklyBars.length > 0 && (
@@ -669,16 +790,55 @@ export default function StatsScreen() {
               </View>
             )}
 
-            {/* Recent workouts */}
-            {workouts.length > 0 ? (
+            {/* Cardiorekord (all-time) */}
+            {hasRecords && (
               <View style={s.card}>
-                <Text style={s.cardTitle}>Senaste pass</Text>
-                {workouts.slice(0, 10).map((w, i) => (
+                <Text style={s.cardTitle}>Cardiorekord</Text>
+                <View style={s.recGrid}>
+                  {([
+                    {
+                      icon: 'map-outline' as const, color: ORANGE, label: 'längsta pass',
+                      value: recLongestKm > 0 ? `${toDisplayDistance(recLongestKm, unit).toFixed(2)} ${unitLabel}` : '–',
+                    },
+                    {
+                      icon: 'flash-outline' as const, color: YELLOW, label: 'snabbaste km',
+                      value: recFastestSplitSec === Infinity ? '–' : fmtPace(recFastestSplitSec),
+                    },
+                    {
+                      icon: 'stopwatch-outline' as const, color: RED, label: `bästa tempo /${unitLabel}`,
+                      value: recBestPaceSec === Infinity ? '–' : fmtPace(paceForUnit(recBestPaceSec, unit)),
+                    },
+                    {
+                      icon: 'trending-up-outline' as const, color: GREEN, label: 'längsta vecka',
+                      value: recBiggestWeek > 0 ? `${toDisplayDistance(recBiggestWeek, unit).toFixed(1)} ${unitLabel}` : '–',
+                    },
+                  ]).map(r => (
+                    <View key={r.label} style={s.recCell}>
+                      <View style={[s.recIconWrap, { backgroundColor: r.color + '1A' }]}>
+                        <Ionicons name={r.icon} size={16} color={r.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.recVal} numberOfLines={1}>{r.value}</Text>
+                        <Text style={s.recLbl} numberOfLines={1}>{r.label}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Recent workouts */}
+            {cardioW.length > 0 ? (
+              <View style={s.card}>
+                <Text style={s.cardTitle}>
+                  {cardioRange === 'all' ? 'Senaste pass' : cardioRange === 'week' ? 'Pass denna vecka' : 'Pass senaste månaden'}
+                </Text>
+                {cardioW.slice(0, 10).map((w, i) => (
                   <WorkoutRow
                     key={w.id}
                     workout={w}
                     unit={unit}
-                    last={i === Math.min(workouts.length, 10) - 1}
+                    last={i === Math.min(cardioW.length, 10) - 1}
                     onPress={() => setSelectedWorkout(w)}
                   />
                 ))}
@@ -686,7 +846,9 @@ export default function StatsScreen() {
             ) : (
               <View style={s.empty}>
                 <Ionicons name="walk-outline" size={40} color="rgba(255,255,255,0.12)" />
-                <Text style={s.emptyText}>Inga cardio-pass sparade ännu</Text>
+                <Text style={s.emptyText}>
+                  {workouts.length === 0 ? 'Inga cardio-pass sparade ännu' : 'Inga pass under vald period'}
+                </Text>
               </View>
             )}
           </>
@@ -902,6 +1064,34 @@ const s = StyleSheet.create({
 
   card:      { backgroundColor: CARD, borderRadius: 20, borderWidth: 1, borderColor: BORDER, padding: 20, gap: 14 },
   cardTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
+  cardSub:   { color: TEXT_SECONDARY, fontSize: 12, marginTop: -8 },
+
+  // Periodfilter (cardio-fliken)
+  rangeRow: { flexDirection: 'row', gap: 8 },
+  rangePill: {
+    flex: 1, paddingVertical: 8, borderRadius: 18, alignItems: 'center',
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
+  rangePillActive:     { backgroundColor: BLUE + '22', borderColor: BLUE },
+  rangePillText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  rangePillTextActive: { color: BLUE },
+
+  // Tempoutveckling
+  paceChartRow: { flexDirection: 'row', alignItems: 'stretch', gap: 6 },
+  paceAxis:     { justifyContent: 'space-between', paddingVertical: 6 },
+  paceAxisLbl:  { color: TEXT_SECONDARY, fontSize: 10, fontVariant: ['tabular-nums'] },
+  paceWeekRow:  { flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 36 },
+  paceWeekLbl:  { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
+
+  // Cardiorekord
+  recGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 16 },
+  recCell: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 8 },
+  recIconWrap: {
+    width: 32, height: 32, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  recVal: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  recLbl: { color: TEXT_SECONDARY, fontSize: 11, marginTop: 1 },
 
   // Ring chart
   ringWrap: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 4 },
