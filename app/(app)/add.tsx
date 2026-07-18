@@ -55,7 +55,7 @@ import { getCardioWorkoutsForDate, getWorkoutsForDate, type CardioWorkout, type 
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { DayPage, EMPTY_CHECKED, EMPTY_COMPLETED, EMPTY_CARDIO_STATS, EMPTY_CARDIO_LOGS, EMPTY_LOGGED, type DayPageApi } from '@/components/schedule/DayPage'
 import { PAGER_DATA, CENTER_IDX, isoDate, todayMidnight, indexToDate, dateToIndex } from '@/lib/scheduleDates'
 
@@ -663,8 +663,8 @@ const styles = StyleSheet.create({
   dayCounter: {
     flexDirection: 'row', alignItems: 'baseline', gap: 1,
   },
-  dayCounterNum:   { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800' },
-  dayCounterSlash: { color: TEXT_SECONDARY, fontSize: 16, fontWeight: '600' },
+  dayCounterNum:   { color: TEXT_PRIMARY, fontSize: 26, fontFamily: NUM_FONT },
+  dayCounterSlash: { color: TEXT_SECONDARY, fontSize: 16, fontFamily: NUM_FONT_SEMI },
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: ORANGE, borderRadius: 20,

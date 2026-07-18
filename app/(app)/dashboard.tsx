@@ -60,6 +60,7 @@ import type { UserChallengeWithLevel } from '@/types/database'
 import { getGreetingSubtitle } from '@/lib/getGreetingSubtitle'
 
 const ORANGE    = '#FF8F00'
+const NUM_FONT  = 'Nunito_700Bold'
 const SCENE_BG  = '#0A0A0B'
 const CARD_BG   = '#131315'
 const CARD_BORDER = '#1E1E21'
@@ -811,7 +812,7 @@ const s = StyleSheet.create({
   levelBadgeText: { color: ORANGE, fontSize: 9, fontWeight: '800', letterSpacing: 1.8 },
   dayLabel: { color: '#3A3A40', fontSize: 10, fontWeight: '700', letterSpacing: 3 },
   dayRow:   { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
-  dayNum:   { color: '#FFFFFF', fontSize: 70, fontWeight: '800', lineHeight: 72, letterSpacing: -3 },
+  dayNum:   { color: '#FFFFFF', fontSize: 70, fontFamily: NUM_FONT, lineHeight: 72, letterSpacing: -3 },
   dayOf:    { color: '#3A3A40', fontSize: 22, fontWeight: '600', paddingBottom: 11 },
   heroPctRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   heroPct:      { color: ORANGE, fontSize: 13, fontWeight: '700' },
@@ -837,7 +838,7 @@ const s = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center', justifyContent: 'center',
   },
-  ringNum:   { fontSize: 26, fontWeight: '800', lineHeight: 30 },
+  ringNum:   { fontSize: 26, fontFamily: NUM_FONT, lineHeight: 30 },
   ringDenom: { color: '#3A3A40', fontSize: 12, fontWeight: '600' },
   ringLabel: { color: '#2E2E34', fontSize: 8, fontWeight: '700', letterSpacing: 1.5, marginTop: 2 },
 

@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons'
 import WebView from 'react-native-webview'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
-import { ORANGE } from '@/lib/theme'
+import { ORANGE, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
@@ -1463,7 +1463,7 @@ const styles = StyleSheet.create({
   hudMiniTime: {
     color: '#fff',
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: NUM_FONT,
     fontVariant: ['tabular-nums'],
   },
   hudMiniShow: {
@@ -1488,7 +1488,7 @@ const styles = StyleSheet.create({
   timerText: {
     color: '#fff',
     fontSize: 42,
-    fontWeight: '800',
+    fontFamily: NUM_FONT,
     letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
@@ -1540,7 +1540,7 @@ const styles = StyleSheet.create({
   statValue: {
     color: '#fff',
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: NUM_FONT,
     fontVariant: ['tabular-nums'],
   },
   statLabel: {
@@ -1577,7 +1577,7 @@ const styles = StyleSheet.create({
   splitToastText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: NUM_FONT,
     fontVariant: ['tabular-nums'],
   },
 
@@ -1613,7 +1613,7 @@ const styles = StyleSheet.create({
   countdownNum: {
     color: ORANGE,
     fontSize: 170,
-    fontWeight: '900',
+    fontFamily: NUM_FONT,
     fontVariant: ['tabular-nums'],
   },
   countdownHint: {
@@ -1671,7 +1671,7 @@ const styles = StyleSheet.create({
   dialNum: {
     color: '#8A8A8E',
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: NUM_FONT_SEMI,
     marginTop: 24,
     fontVariant: ['tabular-nums'],
   },
@@ -1689,7 +1689,7 @@ const styles = StyleSheet.create({
   compassDeg: {
     color: '#fff',
     fontSize: 58,
-    fontWeight: '800',
+    fontFamily: NUM_FONT,
     letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
@@ -1902,14 +1902,14 @@ const styles = StyleSheet.create({
   exValueBig: {
     color: '#fff',
     fontSize: 50,
-    fontWeight: '800',
+    fontFamily: NUM_FONT,
     letterSpacing: -1.5,
     fontVariant: ['tabular-nums'],
   },
   exValueMed: {
     color: '#fff',
     fontSize: 34,
-    fontWeight: '800',
+    fontFamily: NUM_FONT,
     letterSpacing: -0.5,
     fontVariant: ['tabular-nums'],
   },
@@ -2111,7 +2111,7 @@ const styles = StyleSheet.create({
   splitKm: {
     color: '#999',
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: NUM_FONT_SEMI,
     width: 52,
     fontVariant: ['tabular-nums'],
   },
@@ -2130,7 +2130,7 @@ const styles = StyleSheet.create({
   splitPace: {
     color: '#fff',
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: NUM_FONT,
     width: 44,
     textAlign: 'right',
     fontVariant: ['tabular-nums'],

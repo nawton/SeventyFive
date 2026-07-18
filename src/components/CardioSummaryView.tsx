@@ -7,7 +7,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { clamp, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import WebView from 'react-native-webview'
-import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, GREEN } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
 import { effortColor, effortLabel } from '@/components/EffortRating'
@@ -358,7 +358,7 @@ const s = StyleSheet.create({
   effortBadgeText: { fontSize: 12, fontWeight: '800' },
   effortText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   statCell: { width: '50%', gap: 3, alignItems: 'center' },
-  statValue: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
+  statValue: { color: TEXT_PRIMARY, fontSize: 22, fontFamily: NUM_FONT, letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
   statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   splitsCard: {
     backgroundColor: CARD, borderRadius: 20,
@@ -370,10 +370,10 @@ const s = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8,
   },
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
-  splitKm: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600', width: 56, fontVariant: ['tabular-nums'] },
+  splitKm: { color: TEXT_SECONDARY, fontSize: 14, fontFamily: NUM_FONT_SEMI, width: 56, fontVariant: ['tabular-nums'] },
   splitBarTrack: { flex: 1, height: 16, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
   splitBar: { height: '100%', borderRadius: 8, backgroundColor: ORANGE },
-  splitPace: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700', width: 48, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  splitPace: { color: TEXT_PRIMARY, fontSize: 14, fontFamily: NUM_FONT, width: 48, textAlign: 'right', fontVariant: ['tabular-nums'] },
   styleSheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: '#1C1C1E',

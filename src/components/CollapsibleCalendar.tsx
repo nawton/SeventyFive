@@ -8,7 +8,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 
@@ -548,7 +548,7 @@ const s = StyleSheet.create({
   dateNum: {
     color: TEXT_PRIMARY,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: NUM_FONT_SEMI,
   },
   dotRow: {
     position: 'absolute',

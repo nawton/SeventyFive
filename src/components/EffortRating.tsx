@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import Animated, { FadeIn } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { BG, GREEN, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, GREEN, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 
 // =============================================================================
 // BETYGSÄTT DIN ANSTRÄNGNING (RPE 1–10)
@@ -129,7 +129,7 @@ const s = StyleSheet.create({
 
   readout:      { height: 64, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 12, marginTop: 26 },
   numBadge:     { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  numText:      { fontSize: 20, fontWeight: '800' },
+  numText:      { fontSize: 20, fontFamily: NUM_FONT },
   readoutLabel: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '700' },
   readoutHint:  { color: TEXT_SECONDARY, fontSize: 15 },
 

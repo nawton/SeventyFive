@@ -20,7 +20,7 @@ import { runOnJS } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/workouts'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import {
   getUnitSystem, setUnitSystem, toDisplayDistance, fromDisplayDistance,
@@ -547,7 +547,7 @@ const s = StyleSheet.create({
   },
   goalTileActive: { borderColor: CARDIO_BLUE + '70', backgroundColor: CARDIO_BLUE + '0C' },
   goalTileLabel:  { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
-  goalTileValue:  { color: TEXT_SECONDARY, fontSize: 38, fontWeight: '800', textAlign: 'center', lineHeight: 42 },
+  goalTileValue:  { color: TEXT_SECONDARY, fontSize: 38, fontFamily: NUM_FONT, textAlign: 'center', lineHeight: 42 },
   goalTileUnit:   { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', marginTop: -2 },
   presetRow: { flexDirection: 'row', gap: 6 },
   presetChip: {
@@ -574,7 +574,7 @@ const s = StyleSheet.create({
   editInput: {
     backgroundColor: BG, borderRadius: 14,
     borderWidth: 1, borderColor: CARDIO_BLUE + '55',
-    color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800', textAlign: 'center',
+    color: TEXT_PRIMARY, fontSize: 26, fontFamily: NUM_FONT, textAlign: 'center',
     paddingVertical: 14,
   },
   editBtnRow:   { flexDirection: 'row', gap: 10 },
@@ -614,7 +614,7 @@ const s = StyleSheet.create({
 
   lastRow:     { flexDirection: 'row', alignItems: 'center' },
   lastStat:    { flex: 1, alignItems: 'center', gap: 2 },
-  lastValue:   { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800' },
+  lastValue:   { color: TEXT_PRIMARY, fontSize: 20, fontFamily: NUM_FONT },
   lastLabel:   { color: TEXT_SECONDARY, fontSize: 11 },
   lastDivider: { width: 1, height: 30, backgroundColor: BORDER },
   lastEmpty:   { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 19, textAlign: 'center' },

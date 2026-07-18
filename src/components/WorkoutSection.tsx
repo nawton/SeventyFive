@@ -17,7 +17,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
 
 const GREEN    = '#4CAF50'
@@ -753,7 +753,7 @@ const s = StyleSheet.create({
   },
   cardioSummaryStat: { flex: 1, alignItems: 'center', gap: 2 },
   cardioSummaryValue: {
-    color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800',
+    color: TEXT_PRIMARY, fontSize: 19, fontFamily: NUM_FONT,
     fontVariant: ['tabular-nums'],
   },
   cardioSummaryLabel: {

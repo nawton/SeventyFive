@@ -91,7 +91,7 @@ interface MedalInfo {
   unlocked: boolean
   progress?: string
 }
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 
 const GOLD = '#FFD54F'
 
@@ -683,7 +683,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   recordName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
-  recordMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+  recordMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2, fontFamily: NUM_FONT_SEMI },
   recordDate: { color: TEXT_SECONDARY, fontSize: 11 },
 
   // Övningshistorik
@@ -691,7 +691,7 @@ const s = StyleSheet.create({
   histSub:   { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', alignSelf: 'stretch', marginTop: -4 },
   histChartWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 8, alignSelf: 'stretch' },
   histAxis: { height: 130, justifyContent: 'space-between', paddingVertical: 8 },
-  histAxisText: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontVariant: ['tabular-nums'] },
+  histAxisText: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },
   histEmpty: { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', marginVertical: 16 },
   histRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
@@ -700,8 +700,8 @@ const s = StyleSheet.create({
   histRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
   histDate: { color: TEXT_SECONDARY, fontSize: 12, width: 52 },
   histSets: { color: TEXT_SECONDARY, fontSize: 12, width: 40 },
-  histTop:  { flex: 1, color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  histE1rm: { color: ORANGE, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  histTop:  { flex: 1, color: TEXT_PRIMARY, fontSize: 13, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },
+  histE1rm: { color: ORANGE, fontSize: 12, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
 
   // Medaljinfo-modal
   modalBackdrop: {

@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 import { completeExercise, updateSessionExercise, addSingleExerciseToSession, deleteSessionExercise } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
@@ -590,10 +590,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 12,
   },
-  restClockText: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  restClockText: { color: TEXT_SECONDARY, fontSize: 11, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },
   stat: { gap: 2 },
   statLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
-  statValue: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  statValue: { color: TEXT_PRIMARY, fontSize: 17, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
 
   exBlock: { paddingTop: 18, paddingHorizontal: 16 },
   exNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
@@ -607,12 +607,12 @@ const s = StyleSheet.create({
     paddingVertical: 5, borderRadius: 10, marginHorizontal: -6, paddingHorizontal: 6,
   },
   setRowDone: { backgroundColor: GREEN + '14' },
-  setNum: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', width: 36 },
+  setNum: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, width: 36 },
   input: {
     flex: 1, height: 38,
     backgroundColor: CARD, borderRadius: 10,
     borderWidth: 1, borderColor: BORDER,
-    color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700',
+    color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT,
     textAlign: 'center', fontVariant: ['tabular-nums'],
   },
   inputDone: { backgroundColor: GREEN + '22', borderColor: GREEN + '55' },
@@ -670,7 +670,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   restStepValue: {
-    color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800',
+    color: TEXT_PRIMARY, fontSize: 26, fontFamily: NUM_FONT,
     fontVariant: ['tabular-nums'], minWidth: 76, textAlign: 'center',
   },
   restSheetDone: {
@@ -686,7 +686,7 @@ const s = StyleSheet.create({
     backgroundColor: CARD, borderRadius: 14,
     borderWidth: 1, borderColor: ORANGE + '50',
   },
-  restBarTime: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'], minWidth: 46 },
+  restBarTime: { color: TEXT_PRIMARY, fontSize: 18, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'], minWidth: 46 },
   restBarTrack: { flex: 1, height: 5, borderRadius: 3, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.08)' },
   restBarFill: { height: '100%', borderRadius: 3, backgroundColor: ORANGE },
   restBarBtn: { paddingHorizontal: 6, paddingVertical: 4 },

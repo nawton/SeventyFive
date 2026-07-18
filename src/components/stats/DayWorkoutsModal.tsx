@@ -7,7 +7,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ORANGE, GREEN, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, GREEN, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import type { DaySummary } from '@/services/dailyLog'
@@ -320,7 +320,7 @@ const s = StyleSheet.create({
     minWidth: 20, paddingHorizontal: 6, height: 20, borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center',
   },
-  tabCountText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  tabCountText: { color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },
   tabUnderline: {
     position: 'absolute', left: 0, bottom: -1, height: 2.5, borderRadius: 2,
     width: '100%',
@@ -343,5 +343,5 @@ const s = StyleSheet.create({
   },
   subDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: ORANGE + '88' },
   subName: { flex: 1, color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
-  subStat: { color: TEXT_SECONDARY, fontSize: 12, fontVariant: ['tabular-nums'] },
+  subStat: { color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },
 })

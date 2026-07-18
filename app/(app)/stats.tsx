@@ -26,7 +26,7 @@ import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
-import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
 
 const GRID_PADDING = 20
@@ -1185,7 +1185,7 @@ const s = StyleSheet.create({
   statsRow:  { flexDirection: 'row', gap: 10 },
   statCard:  { flex: 1, backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 14, alignItems: 'center', gap: 6 },
   statIconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  statValue: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800' },
+  statValue: { color: TEXT_PRIMARY, fontSize: 22, fontFamily: NUM_FONT },
   statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '500', textAlign: 'center' },
 
   card:      { backgroundColor: CARD, borderRadius: 20, borderWidth: 1, borderColor: BORDER, padding: 20, gap: 14 },
@@ -1213,7 +1213,7 @@ const s = StyleSheet.create({
   // Tempoutveckling
   paceChartRow: { flexDirection: 'row', alignItems: 'stretch', gap: 6 },
   paceAxis:     { justifyContent: 'space-between', paddingVertical: 6 },
-  paceAxisLbl:  { color: TEXT_SECONDARY, fontSize: 10, fontVariant: ['tabular-nums'] },
+  paceAxisLbl:  { color: TEXT_SECONDARY, fontSize: 10, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },
   paceWeekRow:  { flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 36 },
   paceWeekLbl:  { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
 
@@ -1242,7 +1242,7 @@ const s = StyleSheet.create({
   // Ring chart
   ringWrap: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 4 },
   ringInfo: { flex: 1, gap: 12 },
-  ringDay:  { color: TEXT_PRIMARY, fontSize: 30, fontWeight: '900' },
+  ringDay:  { color: TEXT_PRIMARY, fontSize: 30, fontFamily: NUM_FONT },
   ringOfN:  { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
   ringRows: { gap: 8 },
   ringRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -1266,10 +1266,10 @@ const s = StyleSheet.create({
   // Bar chart
   barChart:  { gap: 8 },
   barRow:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  barWkLbl:  { width: 26, fontSize: 11, color: TEXT_SECONDARY, textAlign: 'right', fontVariant: ['tabular-nums'] as any },
+  barWkLbl:  { width: 26, fontSize: 11, color: TEXT_SECONDARY, textAlign: 'right', fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] as any },
   barTrack:  { flex: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 6, overflow: 'hidden', flexDirection: 'row' },
   barSeg:    { height: '100%' },
-  barKmLbl:  { width: 34, fontSize: 11, color: TEXT_SECONDARY, textAlign: 'right', fontVariant: ['tabular-nums'] as any },
+  barKmLbl:  { width: 34, fontSize: 11, color: TEXT_SECONDARY, textAlign: 'right', fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] as any },
   barLegend: { flexDirection: 'row', gap: 16 },
   legItem:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legDot:    { width: 8, height: 8, borderRadius: 2 },
