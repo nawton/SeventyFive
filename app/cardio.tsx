@@ -29,6 +29,7 @@ import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { getCardioStatsTheme, getVoiceCues, type CardioStatsTheme } from '@/lib/prefs'
+import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 
 type Coord = { latitude: number; longitude: number }
 type Status = 'idle' | 'running' | 'paused'
@@ -361,6 +362,8 @@ export default function CardioScreen() {
   }
   const [currentPaceSec, setCurrentPaceSec] = useState(0)
   const [splitToast, setSplitToast] = useState<string | null>(null)
+  const [effort, setEffort]         = useState<number | null>(null)
+  const [effortOpen, setEffortOpen] = useState(false)
   const lastCoord = useRef<Coord | null>(null)
   const latestCoord = useRef<Coord | null>(null)
   const routeCoords = useRef<Array<[number, number]>>([])
@@ -721,6 +724,9 @@ export default function CardioScreen() {
 
     setSummary({ distanceKm, elapsed, calories, route: routeCoords.current, splits })
     setStatus('idle')
+    // Betygsätt ansträngningen direkt efter passet (kan hoppas över)
+    setEffort(null)
+    setEffortOpen(true)
   }
 
   async function saveSummaryAndExit() {
@@ -743,6 +749,7 @@ export default function CardioScreen() {
         calories: summary.calories,
         route: summary.route,
         splits: summary.splits,
+        effort: effort ?? undefined,
       })
 
       // 2) Markera det schemalagda passet som klart (om vi kom från ett sådant).
@@ -1286,6 +1293,24 @@ export default function CardioScreen() {
               )
             })()}
 
+            {/* Ansträngningsbetyg — tryck för att ändra */}
+            <TouchableOpacity style={styles.effortRow} onPress={() => setEffortOpen(true)} activeOpacity={0.7}>
+              {effort ? (
+                <>
+                  <View style={[styles.effortBadge, { backgroundColor: effortColor(effort) + '26', borderColor: effortColor(effort) }]}>
+                    <Text style={[styles.effortBadgeText, { color: effortColor(effort) }]}>{effort}</Text>
+                  </View>
+                  <Text style={styles.effortRowText}>Ansträngning · {effortLabel(effort)}</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="pulse-outline" size={16} color="rgba(255,255,255,0.6)" />
+                  <Text style={styles.effortRowText}>Betygsätt din ansträngning</Text>
+                </>
+              )}
+              <Ionicons name="chevron-forward" size={15} color="rgba(255,255,255,0.35)" />
+            </TouchableOpacity>
+
             {/* Poäng-hint */}
             <View style={styles.summaryPoints}>
               <Ionicons name="star" size={13} color={ORANGE} />
@@ -1309,6 +1334,13 @@ export default function CardioScreen() {
             </TouchableOpacity>
 
           </SafeAreaView>
+
+          {/* Betygsätt ansträngning — lager över sammanfattningen */}
+          <EffortRating
+            visible={effortOpen}
+            initial={effort}
+            onDone={(e) => { setEffort(e); setEffortOpen(false) }}
+          />
         </View>
       </Modal>
 
@@ -2110,6 +2142,34 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   summaryGoalText: {
+    color: '#ddd',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  effortRow: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  effortBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  effortBadgeText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  effortRowText: {
+    flex: 1,
     color: '#ddd',
     fontSize: 14,
     fontWeight: '600',

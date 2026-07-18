@@ -15,6 +15,8 @@ export interface CardioData {
   calories: number
   route?: Array<[number, number]>
   splits?: CardioSplit[]
+  /** Upplevd ansträngning (RPE) 1–10 — sätts av användaren efter passet */
+  effort?: number
 }
 
 export interface CardioWorkout {
@@ -33,6 +35,7 @@ export async function saveCardioWorkout(params: {
   calories: number
   route?: Array<[number, number]>
   splits?: CardioSplit[]
+  effort?: number
 }): Promise<void> {
   const entry: CardioData = {
     category: 'cardio',
@@ -42,6 +45,7 @@ export async function saveCardioWorkout(params: {
     calories: params.calories,
     route: params.route,
     splits: params.splits,
+    effort: params.effort,
   }
   const { error } = await supabase.from('user_workouts').insert({
     user_id: params.userId,

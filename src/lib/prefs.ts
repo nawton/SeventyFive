@@ -114,3 +114,17 @@ export async function getPassDuration(id: string): Promise<number | null> {
     return null
   }
 }
+
+// Upplevd ansträngning (RPE 1–10) för ett avklarat gympass — id = `${sessionId}:${date}`
+export async function setPassEffort(id: string, effort: number): Promise<void> {
+  await AsyncStorage.setItem(`passEffort:${id}`, String(effort)).catch(() => {})
+}
+
+export async function getPassEffort(id: string): Promise<number | null> {
+  try {
+    const v = parseInt((await AsyncStorage.getItem(`passEffort:${id}`)) ?? '', 10)
+    return Number.isFinite(v) && v >= 1 && v <= 10 ? v : null
+  } catch {
+    return null
+  }
+}

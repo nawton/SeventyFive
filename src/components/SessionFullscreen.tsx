@@ -18,7 +18,9 @@ import {
   getExerciseRestSeconds, setExerciseRestSeconds,
   getOrInitPassStart, clearPassStart,
   setPassDuration, getPassDuration,
+  setPassEffort, getPassEffort,
 } from '@/lib/prefs'
+import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 
 type LogSet = { reps: string; weight: string; done: boolean }
 
@@ -70,13 +72,16 @@ export function SessionFullscreen({
   // Starttiden sparas per pass + dag så räknaren överlever att vyn stängs/öppnas.
   // Avklarade pass visar den sparade sluttiden statiskt — timern tickar inte.
   const [finalDur, setFinalDur] = useState<number | null>(null)
+  const [passEffort, setPassEffortState] = useState<number | null>(null)
   useEffect(() => {
     if (!visible || !session) return
     if (isCompleted) {
       getPassDuration(`${session.id}:${date}`).then(setFinalDur)
+      getPassEffort(`${session.id}:${date}`).then(setPassEffortState)
       return
     }
     setFinalDur(null)
+    setPassEffortState(null)
     getOrInitPassStart(`${session.id}:${date}`).then(ts => {
       startTs.current = ts
       setElapsed(Math.max(0, Math.floor((Date.now() - ts) / 1000)))
@@ -226,6 +231,26 @@ export function SessionFullscreen({
   }
 
 
+  // ── Betygsätt ansträngning — visas efter Slutför, innan vyn stängs ──
+  const [effortOpen, setEffortOpen] = useState(false)
+  const afterEffortRef = useRef<(() => void) | null>(null)
+
+  function requestEffort(then: () => void) {
+    afterEffortRef.current = then
+    setEffortOpen(true)
+  }
+
+  function handleEffortDone(e: number | null) {
+    setEffortOpen(false)
+    if (e && session) {
+      setPassEffort(`${session.id}:${date}`, e).catch(() => {})
+      setPassEffortState(e)
+    }
+    const then = afterEffortRef.current
+    afterEffortRef.current = null
+    then?.()
+  }
+
   // ── Slutför: spara allt, bocka övningar, markera passet klart ──
   async function finish() {
     if (!session || !userId || saving) return
@@ -245,8 +270,10 @@ export function SessionFullscreen({
         { text: 'Markera klart', onPress: () => {
           setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
           clearPassStart(`${session.id}:${date}`).catch(() => {})
-          onComplete()
-          onClose()
+          requestEffort(() => {
+            onComplete()
+            onClose()
+          })
         } },
       ])
       return
@@ -284,12 +311,23 @@ export function SessionFullscreen({
       cancelRest()
       if (!isCompleted) setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
       clearPassStart(`${session.id}:${date}`).catch(() => {})
-      if (!isCompleted) onComplete()
       onSaved?.()
-      onClose()
-      if (prs.length > 0) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-        setTimeout(() => Alert.alert('🏆 Nytt personligt rekord!', prs.join('\n')), 400)
+
+      const wrapUp = () => {
+        onClose()
+        if (prs.length > 0) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+          setTimeout(() => Alert.alert('🏆 Nytt personligt rekord!', prs.join('\n')), 400)
+        }
+      }
+      if (!isCompleted) {
+        // Nytt avklarat pass → betygsätt ansträngningen innan vi stänger
+        requestEffort(() => {
+          onComplete()
+          wrapUp()
+        })
+      } else {
+        wrapUp()
       }
     } finally {
       setSaving(false)
@@ -325,6 +363,14 @@ export function SessionFullscreen({
               {isCompleted ? (finalDur != null ? fmtClock(finalDur) : '–') : fmtClock(elapsed)}
             </Text>
           </View>
+          {isCompleted && passEffort != null && (
+            <View style={[s.stat, { marginLeft: 28 }]}>
+              <Text style={s.statLabel}>Ansträngning</Text>
+              <Text style={[s.statValue, { color: effortColor(passEffort) }]}>
+                {passEffort} · {effortLabel(passEffort)}
+              </Text>
+            </View>
+          )}
           <View style={{ flex: 1 }} />
           {/* Vilotid — tryck för att ställa in tiderna mellan set/övningar */}
           <TouchableOpacity style={s.restClockBtn} onPress={() => setRestSheetOpen(true)} activeOpacity={0.75}>
@@ -502,6 +548,9 @@ export function SessionFullscreen({
             </TouchableOpacity>
           </View>
         )}
+
+        {/* ── Betygsätt ansträngning — lager över passvyn ── */}
+        <EffortRating visible={effortOpen} onDone={handleEffortDone} />
       </View>
     </Modal>
   )

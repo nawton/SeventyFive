@@ -10,6 +10,7 @@ import WebView from 'react-native-webview'
 import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, GREEN } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
+import { effortColor, effortLabel } from '@/components/EffortRating'
 
 const CARDIO_BLUE = '#4AA8E0'
 const { height: SCREEN_H } = Dimensions.get('window')
@@ -240,6 +241,15 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
             ))}
           </View>
 
+          {typeof d.effort === 'number' && d.effort >= 1 && (
+            <View style={s.effortRow}>
+              <View style={[s.effortBadge, { backgroundColor: effortColor(d.effort) + '26', borderColor: effortColor(d.effort) }]}>
+                <Text style={[s.effortBadgeText, { color: effortColor(d.effort) }]}>{d.effort}</Text>
+              </View>
+              <Text style={s.effortText}>Ansträngning · {effortLabel(d.effort)}</Text>
+            </View>
+          )}
+
           {splits.length > 0 && (
             <View style={s.splitsCard}>
               <Text style={s.splitsTitle}>Kilometersplittar</Text>
@@ -336,6 +346,17 @@ const s = StyleSheet.create({
   },
   donePillText: { color: GREEN, fontSize: 12, fontWeight: '700' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 20, paddingHorizontal: 4, marginTop: 14 },
+  effortRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'center',
+    marginTop: 20, paddingVertical: 8, paddingHorizontal: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20,
+  },
+  effortBadge: {
+    width: 24, height: 24, borderRadius: 12, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  effortBadgeText: { fontSize: 12, fontWeight: '800' },
+  effortText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   statCell: { width: '50%', gap: 3, alignItems: 'center' },
   statValue: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
   statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
