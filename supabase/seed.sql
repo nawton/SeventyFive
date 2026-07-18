@@ -1,5 +1,5 @@
 -- =============================================================================
--- SEED DATA — SEVENTYFIVE BY NAWTON
+-- SEED DATA, SEVENTYFIVE BY NAWTON
 -- Denna fil körs efter migrationer för att fylla databasen med grunddata.
 -- Kör: npx supabase db reset (lokalt) eller manuellt via SQL Editor.
 -- =============================================================================
@@ -45,7 +45,7 @@ INSERT INTO challenge_levels (id, slug, display_name, description, rules) VALUES
     {"rule": "Träna 60 minuter × 2 per dag", "icon": "dumbbell"},
     {"rule": "Drick 4 liter vatten", "icon": "droplet"},
     {"rule": "Läs 30 sidor", "icon": "book"},
-    {"rule": "Strikt diet — noll kompromisser", "icon": "ban"},
+    {"rule": "Strikt diet, noll kompromisser", "icon": "ban"},
     {"rule": "Ta ett framstegsfoto", "icon": "camera"},
     {"rule": "10 minuters kall dusch", "icon": "snowflake"},
     {"rule": "Skriv en daglig reflektion", "icon": "pen"}
@@ -55,7 +55,7 @@ ON CONFLICT (id) DO NOTHING;
 
 
 -- =============================================================================
--- TASK TEMPLATES — NORMAL
+-- TASK TEMPLATES, NORMAL
 -- =============================================================================
 INSERT INTO task_templates (level_id, type, name, description, target_value, unit) VALUES
 (
@@ -102,7 +102,7 @@ ON CONFLICT (level_id, type, name) DO NOTHING;
 
 
 -- =============================================================================
--- TASK TEMPLATES — HARD
+-- TASK TEMPLATES, HARD
 -- =============================================================================
 INSERT INTO task_templates (level_id, type, name, description, target_value, unit) VALUES
 (
@@ -132,7 +132,7 @@ INSERT INTO task_templates (level_id, type, name, description, target_value, uni
 (
   'a1b2c3d4-0002-0002-0002-000000000002',
   'diet',
-  'Kostplan — noll socker',
+  'Kostplan, noll socker',
   'Strikt kostplan. Inget socker, ingen alkohol.',
   NULL,
   NULL
@@ -149,7 +149,7 @@ ON CONFLICT (level_id, type, name) DO NOTHING;
 
 
 -- =============================================================================
--- TASK TEMPLATES — EXTREME
+-- TASK TEMPLATES, EXTREME
 -- =============================================================================
 INSERT INTO task_templates (level_id, type, name, description, target_value, unit) VALUES
 (

@@ -19,43 +19,43 @@ describe('getGreetingSubtitle', () => {
       expect(getGreetingSubtitle(10, 3, 5, 2)).toBe('Bra start! 2 uppgifter kvar.')
     })
     it('shows single remaining', () => {
-      expect(getGreetingSubtitle(11, 4, 5, 2)).toBe('En uppgift kvar — du är nästan i mål.')
+      expect(getGreetingSubtitle(11, 4, 5, 2)).toBe('En uppgift kvar, du är nästan i mål.')
     })
   })
 
   describe('afternoon (12–17)', () => {
     it('urges start when nothing done', () => {
-      expect(getGreetingSubtitle(14, 0, 5, 5)).toBe('Eftermiddag och inget loggat än — kom igång nu.')
+      expect(getGreetingSubtitle(14, 0, 5, 5)).toBe('Eftermiddag och inget loggat än, kom igång nu.')
     })
     it('shows single remaining', () => {
-      expect(getGreetingSubtitle(15, 4, 5, 5)).toBe('En uppgift kvar — du fixar den.')
+      expect(getGreetingSubtitle(15, 4, 5, 5)).toBe('En uppgift kvar, du fixar den.')
     })
     it('shows count when multiple remaining', () => {
-      expect(getGreetingSubtitle(16, 2, 5, 5)).toBe('3 uppgifter kvar — håll farten.')
+      expect(getGreetingSubtitle(16, 2, 5, 5)).toBe('3 uppgifter kvar, håll farten.')
     })
   })
 
   describe('evening (17–21)', () => {
     it('urges start when nothing done', () => {
-      expect(getGreetingSubtitle(19, 0, 5, 10)).toBe('Kväll och inget klart ännu — nu kör vi.')
+      expect(getGreetingSubtitle(19, 0, 5, 10)).toBe('Kväll och inget klart ännu, nu kör vi.')
     })
     it('shows single remaining', () => {
-      expect(getGreetingSubtitle(20, 4, 5, 10)).toBe('En uppgift kvar — spurta hem.')
+      expect(getGreetingSubtitle(20, 4, 5, 10)).toBe('En uppgift kvar, spurta hem.')
     })
     it('shows count when multiple remaining', () => {
-      expect(getGreetingSubtitle(18, 1, 5, 10)).toBe('4 uppgifter kvar — kom igen.')
+      expect(getGreetingSubtitle(18, 1, 5, 10)).toBe('4 uppgifter kvar, kom igen.')
     })
   })
 
   describe('night (21–05)', () => {
     it('shows single remaining at night', () => {
-      expect(getGreetingSubtitle(23, 4, 5, 7)).toBe('En uppgift kvar — sista chansen.')
+      expect(getGreetingSubtitle(23, 4, 5, 7)).toBe('En uppgift kvar, sista chansen.')
     })
     it('shows multiple remaining at night', () => {
-      expect(getGreetingSubtitle(22, 2, 5, 7)).toBe('3 uppgifter kvar — sista chansen idag.')
+      expect(getGreetingSubtitle(22, 2, 5, 7)).toBe('3 uppgifter kvar, sista chansen idag.')
     })
     it('works for early morning before 5', () => {
-      expect(getGreetingSubtitle(3, 0, 5, 7)).toBe('5 uppgifter kvar — sista chansen idag.')
+      expect(getGreetingSubtitle(3, 0, 5, 7)).toBe('5 uppgifter kvar, sista chansen idag.')
     })
   })
 })

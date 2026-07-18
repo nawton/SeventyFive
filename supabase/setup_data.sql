@@ -1,5 +1,5 @@
 -- ══════════════════════════════════════════════════════════════════════════════
--- SeventyFive — Kör detta EN GÅNG i Supabase SQL Editor
+-- SeventyFive, Kör detta EN GÅNG i Supabase SQL Editor
 -- Dashboard → SQL Editor → New query → klistra in allt → Run
 -- Säker att köra flera gånger (ON CONFLICT DO NOTHING / IF NOT EXISTS)
 -- ══════════════════════════════════════════════════════════════════════════════
@@ -46,7 +46,7 @@ INSERT INTO challenge_levels (id, slug, display_name, description, rules) VALUES
     {"rule": "Träna 60 minuter × 2 per dag", "icon": "dumbbell"},
     {"rule": "Drick 4 liter vatten", "icon": "droplet"},
     {"rule": "Läs 30 sidor", "icon": "book"},
-    {"rule": "Strikt diet — noll kompromisser", "icon": "ban"},
+    {"rule": "Strikt diet, noll kompromisser", "icon": "ban"},
     {"rule": "Ta ett framstegsfoto", "icon": "camera"},
     {"rule": "10 minuters kall dusch", "icon": "snowflake"},
     {"rule": "Skriv en daglig reflektion", "icon": "pen"}
@@ -65,7 +65,7 @@ INSERT INTO task_templates (level_id, type, name, description, target_value, uni
 ('a1b2c3d4-0002-0002-0002-000000000002', 'workout', 'Träning',       'Minst 45 minuter hårt träningspass.',       45,   'minutes'),
 ('a1b2c3d4-0002-0002-0002-000000000002', 'water',   'Vatten',        'Drick minst 3 liter vatten under dagen.',    3,   'liter'),
 ('a1b2c3d4-0002-0002-0002-000000000002', 'reading', 'Läsning',       'Läs minst 20 sidor i en bok.',              20,   'pages'),
-('a1b2c3d4-0002-0002-0002-000000000002', 'diet',    'Kostplan — noll socker', 'Inget socker, ingen alkohol.',    NULL,   NULL),
+('a1b2c3d4-0002-0002-0002-000000000002', 'diet',    'Kostplan, noll socker', 'Inget socker, ingen alkohol.',    NULL,   NULL),
 ('a1b2c3d4-0002-0002-0002-000000000002', 'photo',   'Framstegsfoto', 'Ta ett foto för att dokumentera din förändring.', NULL, NULL),
 
 ('a1b2c3d4-0003-0003-0003-000000000003', 'workout', 'Pass 1',        'Första träningspasset på minst 60 minuter.', 60,  'minutes'),
@@ -106,26 +106,26 @@ INSERT INTO exercises (name, description, category, difficulty) VALUES
 ('Push-ups',               'Klassisk kroppsviktsövning. Skala med knä eller lyft fötterna.',    'strength', 'beginner'),
 ('Dips',                   'Bröst och triceps. Luta framåt för mer bröst, upprätt för triceps.','strength', 'intermediate'),
 ('Kabelkorsning',          'Isolerar bröstet i toppen av rörelsen. Bra pump-övning.',            'strength', 'intermediate'),
-('Smalbänkpress',          'Närgripet grepp — mer triceps och inre bröst.',                     'strength', 'intermediate'),
+('Smalbänkpress',          'Närgripet grepp, mer triceps och inre bröst.',                     'strength', 'intermediate'),
 ('Pec deck',               'Maskinövning som isolerar bröstet utan axelbelastning.',             'strength', 'beginner'),
 
 -- STYRKA: RYGG
 ('Latsdrag framifrån',     'Breda ryggar byggs med latsdrag. Dra till bröstets höjd.',          'strength', 'beginner'),
 ('Rodd med skivstång',     'Tung ryggövning. Håll ryggen parallell med golvet.',                'strength', 'intermediate'),
-('Enarms hantelrodd',      'Unilateral rörelse — korrigerar sidoskillnader i ryggstyrkan.',     'strength', 'beginner'),
+('Enarms hantelrodd',      'Unilateral rörelse, korrigerar sidoskillnader i ryggstyrkan.',     'strength', 'beginner'),
 ('Kabelrodd sittande',     'Jämn belastning hela vägen. Bra för övre och mellersta ryggen.',    'strength', 'beginner'),
 ('T-bar rodd',             'Mellanting mellan skivstångsrodd och maskin. Tung grundövning.',    'strength', 'intermediate'),
 ('Face pulls',             'Skyddar axlarna och bygger bakre deltamuskeln. Gör det ofta.',      'strength', 'beginner'),
 ('Hyperextensions',        'Stärker nedre ryggen, sätesmusklerna och hamstrings.',              'strength', 'beginner'),
-('Rack pull',              'Partiell marklyft från rack — lastar ryggen tungt och säkert.',      'strength', 'advanced'),
+('Rack pull',              'Partiell marklyft från rack, lastar ryggen tungt och säkert.',      'strength', 'advanced'),
 ('Chin-ups',               'Undersidesgreppt pull-up. Mer biceps-aktivering än pull-ups.',      'strength', 'intermediate'),
 ('Latsdrag bakåt',         'Varianten bakom nacken. Tränar breda ryggen brett.',                'strength', 'intermediate'),
 
 -- STYRKA: BEN
 ('Benpress',               'Maskinalternativ till knäböj. Lättare på ryggen, tungt på benen.',  'strength', 'beginner'),
 ('Utfall',                 'Unilateral benövning för lår och säte. Håll överkroppen upprätt.',  'strength', 'beginner'),
-('Bulgariska utfall',      'Bakre fot upphöjd — enorm stretch och aktivering av sätet.',        'strength', 'intermediate'),
-('Rumänsk marklyft',       'Hamstrings och säte. Känn stretchen — stoppa när ryggen rundas.',   'strength', 'intermediate'),
+('Bulgariska utfall',      'Bakre fot upphöjd, enorm stretch och aktivering av sätet.',        'strength', 'intermediate'),
+('Rumänsk marklyft',       'Hamstrings och säte. Känn stretchen, stoppa när ryggen rundas.',   'strength', 'intermediate'),
 ('Bencurl liggande',       'Isolerar hamstrings. Kör kontrollerat hela rörelseomfånget.',       'strength', 'beginner'),
 ('Benextension',           'Isolerar quadriceps. Bra komplement till knäböj.',                  'strength', 'beginner'),
 ('Vadpress stående',       'Vader bygger du med hög volym. 15–25 reps per set.',                'strength', 'beginner'),
@@ -147,10 +147,10 @@ INSERT INTO exercises (name, description, category, difficulty) VALUES
 
 -- STYRKA: ARMAR
 ('Bicepscurl',             'Klassisk armövning med hantlar eller skivstång.',                   'strength', 'beginner'),
-('Hammercurl',             'Neutralt grepp — tränar brachialis och underarm.',                  'strength', 'beginner'),
+('Hammercurl',             'Neutralt grepp, tränar brachialis och underarm.',                  'strength', 'beginner'),
 ('Koncentrationscurl',     'Arm mot insidan av låret. Maximalt fokus på biceps.',               'strength', 'beginner'),
 ('Kabelbiceps',            'Konstant spänning via kabel. Bra pump.',                            'strength', 'beginner'),
-('Preacher curl',          'Armbågen stödd på pult — ingen fusk möjlig. Ren bicepsövning.',    'strength', 'intermediate'),
+('Preacher curl',          'Armbågen stödd på pult, ingen fusk möjlig. Ren bicepsövning.',    'strength', 'intermediate'),
 ('Tricepsstötning kabel',  'Kabelmaskin, driv ner till lås. Isolerar triceps.',                 'strength', 'beginner'),
 ('Skull crushers',         'Hantlar eller stång till pannan. Tungt triceps-arbete.',             'strength', 'intermediate'),
 ('Triceps kickback',       'Böj framåt, sträck armen bakåt. Känn muskelns topp.',              'strength', 'beginner'),
@@ -159,7 +159,7 @@ INSERT INTO exercises (name, description, category, difficulty) VALUES
 -- STYRKA: MAGE / CORE
 ('Plankan',                'Håll kroppen rak som en planka. Bygg upp tid progressivt.',         'strength', 'beginner'),
 ('Situps',                 'Klassisk magövning. Håll fötterna i golvet.',                       'strength', 'beginner'),
-('Crunches',               'Kortare rörelse än situps — mer isolerat för raka magmuskeln.',     'strength', 'beginner'),
+('Crunches',               'Kortare rörelse än situps, mer isolerat för raka magmuskeln.',     'strength', 'beginner'),
 ('Russian twist',          'Rotera med vikt. Tränar snedmagsmuskler och core.',                 'strength', 'intermediate'),
 ('Hängande benlyft',       'Häng i bom och lyft benen. Kräver styrka och kontroll.',           'strength', 'advanced'),
 ('Ab wheel',               'Rulla ut och tillbaka. En av de tuffaste magövningarna.',           'strength', 'advanced'),
@@ -179,7 +179,7 @@ INSERT INTO exercises (name, description, category, difficulty) VALUES
 ('Promenad',               'Aktiv återhämtning. Lägre intensitet men räknas varje steg.',      'cardio', 'beginner'),
 ('Backlöpning',            'Kortare intervaller i backe. Bygger explosiv styrka och kondition.','cardio', 'advanced'),
 ('Simning',                'Lågbelastad fullkroppsträning. Perfekt vid skador.',                'cardio', 'beginner'),
-('Rodd maskin',            'Kraftfullt drag — 86 % av kroppens muskler aktiveras.',            'cardio', 'intermediate'),
+('Rodd maskin',            'Kraftfullt drag, 86 % av kroppens muskler aktiveras.',            'cardio', 'intermediate'),
 ('Stairmaster',            'Klättra i trappor. Hög puls, stark nedre kropp.',                  'cardio', 'intermediate'),
 ('Elliptical',             'Konditionsmaskin med låg belastning på lederna.',                   'cardio', 'beginner'),
 
@@ -201,7 +201,7 @@ INSERT INTO exercises (name, description, category, difficulty) VALUES
 ('Battle ropes',           'Vågrörelse med tjocka rep. Axlar, core och kondition.',            'hiit', 'intermediate'),
 ('Wall balls',             'Kastboll mot väggen från djup knäböj. CrossFit-klassiker.',        'hiit', 'intermediate'),
 ('Devil press',            'Burpee + hantellyft ovan huvud. En av de hårdaste HIIT-övningarna.','hiit', 'advanced'),
-('Kettlebell circuit',     'Cirkelträning med kettlebell — swing, clean, press i sekvens.',    'hiit', 'intermediate'),
+('Kettlebell circuit',     'Cirkelträning med kettlebell, swing, clean, press i sekvens.',    'hiit', 'intermediate'),
 ('Sprint 100m',            '10–12 sekunder maximal ansträngning. Vila 90 sek, upprepa.',        'hiit', 'advanced'),
 ('Jump rope double under', 'Hopprep med dubbel rotation per hopp. Kräver timing och kondition.','hiit', 'advanced')
 

@@ -68,7 +68,7 @@ export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props
           <Text style={styles.title}>Logga läsning</Text>
           <Text style={styles.subtitle}>
             {targetPages
-              ? `Minst ${targetPages} sidor i en riktig bok — inte poddar, inte artiklar.`
+              ? `Minst ${targetPages} sidor i en riktig bok, inte poddar eller artiklar.`
               : 'Vad läste du idag?'}
           </Text>
 
