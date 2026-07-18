@@ -553,25 +553,18 @@ export default function StatsScreen() {
         workout: w,
       }
     }),
-    // GPS-loggade cardiopass ligger redan i user_workouts — här tar vi gympass
-    // och manuellt avbockade cardiopass (utan sparad distans) från schemat
+    // GPS-loggade cardiopass ligger redan i user_workouts — här tar vi bara
+    // manuellt avbockade cardiopass (utan sparad distans) från schemat
     ...completedSessions
       .filter(c =>
-        (c.sessionType === 'gym' || (c.sessionType === 'cardio' && c.distanceKm == null)) &&
+        c.sessionType === 'cardio' && c.distanceKm == null &&
         (!rangeStartStr || c.completedDate >= rangeStartStr))
       .map((c): SessRow => {
-        const isGym = c.sessionType === 'gym'
-        const meta = isGym
-          ? { icon: 'barbell' as const, color: ORANGE }
-          : (CARDIO_META[c.cardioType ?? ''] ?? { icon: 'fitness' as const, color: BLUE })
+        const meta = CARDIO_META[c.cardioType ?? ''] ?? { icon: 'fitness' as const, color: BLUE }
         return {
           key: `g:${c.id}`,
           name: c.name,
-          value: c.durationSeconds
-            ? fmtSessTime(c.durationSeconds)
-            : isGym && c.exerciseNames.length > 0
-              ? `${c.exerciseNames.length} övningar`
-              : 'Klart',
+          value: c.durationSeconds ? fmtSessTime(c.durationSeconds) : 'Klart',
           icon: meta.icon,
           color: meta.color,
           sortKey: new Date(`${c.completedDate}T12:00:00`).getTime(),
