@@ -106,6 +106,14 @@ export function SessionFullscreen({
     getExerciseRestSeconds().then(setExRestDefault)
   }, [])
   useEffect(() => () => { if (restInterval.current) clearInterval(restInterval.current) }, [])
+  // Stoppa vilan när passvyn stängs — komponenten avmonteras inte (bara döljs),
+  // så timern skulle annars ticka och vibrera i bakgrunden
+  useEffect(() => {
+    if (visible) return
+    if (restInterval.current) clearInterval(restInterval.current)
+    restInterval.current = null
+    setRestLeft(null)
+  }, [visible])
 
   function startRest(secs: number) {
     setRestTotal(secs)
