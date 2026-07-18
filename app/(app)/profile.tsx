@@ -90,9 +90,14 @@ export default function ProfileScreen() {
       refreshingRef.current = true
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       setRefreshing(true)
+      const started = Date.now()
       load().catch(() => {}).finally(() => {
-        setRefreshing(false)
-        refreshingRef.current = false
+        // Låt snurran synas en stund även om hämtningen går blixtsnabbt
+        const wait = Math.max(0, 1200 - (Date.now() - started))
+        setTimeout(() => {
+          setRefreshing(false)
+          refreshingRef.current = false
+        }, wait)
       })
     }
   }
@@ -266,18 +271,6 @@ export default function ProfileScreen() {
   function renderHeader() {
     return (
       <View style={s.headerWrap}>
-        {/* Titelrad med kugghjul */}
-        <View style={s.topRow}>
-          <Text style={s.title}>Profil</Text>
-          <GlassCircleButton
-            icon="settings-outline"
-            size={40}
-            iconColor={TEXT_PRIMARY}
-            onPress={() => router.push('/(app)/settings')}
-            fallbackStyle={s.gearButton}
-          />
-        </View>
-
         {/* Hero: avatar + namn + utmaning */}
         <TouchableOpacity
           style={s.hero}
@@ -324,9 +317,6 @@ export default function ProfileScreen() {
             <Text style={s.addButtonText}>Lägg till dagens foto</Text>
           </TouchableOpacity>
         )}
-
-        {/* Uppdaterings-snurran visas här, det är fotona nedanför som hämtas om */}
-        {refreshing && <ActivityIndicator color={ORANGE} style={s.refreshSpinner} />}
 
         <Text style={s.sectionTitle}>FRAMSTEGSFOTON</Text>
 
@@ -380,6 +370,21 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
+      {/* Fast topp: titel + kugghjul står stilla, allt under uppdateras */}
+      <View style={s.fixedTop}>
+        <View style={s.topRow}>
+          <Text style={s.title}>Profil</Text>
+          <GlassCircleButton
+            icon="settings-outline"
+            size={40}
+            iconColor={TEXT_PRIMARY}
+            onPress={() => router.push('/(app)/settings')}
+            fallbackStyle={s.gearButton}
+          />
+        </View>
+        {refreshing && <ActivityIndicator color={ORANGE} style={s.refreshSpinner} />}
+      </View>
+
       <FlatList
         data={photos}
         keyExtractor={p => p.id}
@@ -407,7 +412,8 @@ export default function ProfileScreen() {
 const s = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: BG },
   centered: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' },
-  scroll:   { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 + TAB_CONTENT_PAD, gap: 16 },
+  scroll:   { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 40 + TAB_CONTENT_PAD, gap: 16 },
+  fixedTop: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
 
   headerWrap: { gap: 16 },
   topRow: {
@@ -416,7 +422,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '700' },
-  refreshSpinner: { marginTop: 2, marginBottom: 6 },
+  refreshSpinner: { marginTop: 12, marginBottom: 2 },
   gearButton: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: CARD,
