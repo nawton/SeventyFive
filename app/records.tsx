@@ -92,6 +92,7 @@ interface MedalInfo {
   progress?: string
 }
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { GlassCircleButton } from '@/components/GlassButton'
 
 const GOLD = '#FFD54F'
 
@@ -215,9 +216,10 @@ export default function RecordsScreen() {
   return (
     <SafeAreaView style={s.screen}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
-        </TouchableOpacity>
+        <GlassCircleButton
+          icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
+          onPress={() => router.back()} fallbackStyle={s.iconBtn}
+        />
         <Text style={s.title}>Rekord & medaljer</Text>
         <View style={{ width: 40 }} />
       </View>

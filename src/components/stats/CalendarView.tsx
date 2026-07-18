@@ -15,6 +15,7 @@ import { deleteCardioWorkout } from '@/services/workouts'
 import type { UnitSystem } from '@/lib/units'
 import { DayWorkoutsModal } from './DayWorkoutsModal'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
+import { GlassCircleButton } from '@/components/GlassButton'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
 const GRID_PADDING = 20
@@ -241,9 +242,10 @@ export function CalendarView({
           <View style={s.fullInner}>
           <View style={s.fullHeader}>
             <Text style={s.fullTitle}>Hela utmaningen</Text>
-            <TouchableOpacity style={s.yearClose} onPress={() => setYearOpen(false)} activeOpacity={0.7}>
-              <Ionicons name="close" size={22} color={TEXT_PRIMARY} />
-            </TouchableOpacity>
+            <GlassCircleButton
+              icon="close" size={38} iconColor={TEXT_PRIMARY}
+              onPress={() => setYearOpen(false)} fallbackStyle={s.yearClose}
+            />
           </View>
 
           {/* Fast veckodagsrad */}

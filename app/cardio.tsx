@@ -30,7 +30,7 @@ import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { getCardioStatsTheme, getVoiceCues, type CardioStatsTheme } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
-import { GlassCircleButton } from '@/components/GlassButton'
+import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
 
 type Coord = { latitude: number; longitude: number }
 type Status = 'idle' | 'running' | 'paused'
@@ -829,17 +829,17 @@ export default function CardioScreen() {
       {/* ── Stats overlay — syns även innan start ── */}
       {hudHidden ? (
         <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
-          <TouchableOpacity
-            style={[styles.hudMini, lightCard && styles.statsCardLight]}
+          <GlassPill
             onPress={() => setHudHidden(false)}
-            activeOpacity={0.8}
+            style={styles.hudMiniLayout}
+            fallbackStyle={lightCard ? [styles.hudMini, styles.statsCardLight] : styles.hudMini}
           >
             <Text style={[styles.hudMiniTime, lightCard && { color: '#000' }]}>{formatTime(elapsed)}</Text>
             <View style={styles.hudMiniShow}>
               <Text style={styles.hudMiniShowText}>Visa statistik</Text>
               <Ionicons name="chevron-down" size={13} color="#fff" />
             </View>
-          </TouchableOpacity>
+          </GlassPill>
         </SafeAreaView>
       ) : (
         <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
@@ -950,12 +950,12 @@ export default function CardioScreen() {
 
       {/* ── Right-side buttons ── */}
       <View style={styles.rightBtns}>
-        <TouchableOpacity style={styles.compassBtn} onPress={openCompass} activeOpacity={0.8}>
+        <GlassCircleButton onPress={openCompass} fallbackStyle={styles.compassBtn}>
           <Animated.View style={[{ alignItems: 'center' }, needleStyle]}>
             <Ionicons name="caret-up" size={17} color="#FF3B4A" style={{ marginBottom: -5 }} />
             <Ionicons name="caret-down" size={17} color="#fff" style={{ marginTop: -5 }} />
           </Animated.View>
-        </TouchableOpacity>
+        </GlassCircleButton>
         <GlassCircleButton
           icon="layers-outline"
           draggable
@@ -967,9 +967,7 @@ export default function CardioScreen() {
       {/* ── Tillbaka-knapp — bara innan passet startats ── */}
       {status === 'idle' && (
         <SafeAreaView style={styles.topRight} edges={['top']}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color="#000" />
-          </TouchableOpacity>
+          <GlassCircleButton icon="chevron-back" size={40} onPress={() => router.back()} />
         </SafeAreaView>
       )}
 
@@ -1412,6 +1410,14 @@ const styles = StyleSheet.create({
     color: '#bbb',
     fontSize: 12,
     fontWeight: '700',
+  },
+  hudMiniLayout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   hudMini: {
     flexDirection: 'row',

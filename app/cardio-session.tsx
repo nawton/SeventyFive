@@ -21,6 +21,7 @@ import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/workouts'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { GlassCircleButton } from '@/components/GlassButton'
 import { parseLocalDate } from '@/lib/date'
 import {
   getUnitSystem, setUnitSystem, toDisplayDistance, fromDisplayDistance,
@@ -222,13 +223,15 @@ export default function CardioSessionScreen() {
 
         {/* ── Topp: tillbaka + datum ── */}
         <View style={s.topRow}>
-          <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
-          </TouchableOpacity>
+          <GlassCircleButton
+            icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
+            onPress={() => router.back()} fallbackStyle={s.iconBtn}
+          />
           {dateLabel && <Text style={s.dateLabel}>{dateLabel}</Text>}
-          <TouchableOpacity onPress={() => setSettingsOpen(true)} style={s.iconBtn} activeOpacity={0.7}>
-            <Ionicons name="settings-outline" size={20} color={TEXT_PRIMARY} />
-          </TouchableOpacity>
+          <GlassCircleButton
+            icon="settings-outline" size={40} iconColor={TEXT_PRIMARY}
+            onPress={() => setSettingsOpen(true)} fallbackStyle={s.iconBtn}
+          />
         </View>
 
         {/* ── Hero ── */}
