@@ -55,13 +55,11 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
     }
   }
 
-  // Vid tap är pos.value fortfarande mitt i fjädringen från gamla platsen —
-  // gå därför alltid på senast markerade ikonen, inte den animerade positionen
-  function commit() {
-    const i = hotRef.current ?? activeIdx
+  // Indexet räknas ut i själva släpp-händelsen från fingrets x-position —
+  // deterministiskt oavsett om JS-tråden hunnit ikapp markeringen eller inte
+  function commit(i: number) {
     hotRef.current = null
     setHotIdx(null)
-    pos.value = withSpring(i, SP)
     const tab = TABS[i]
     if (tab && tab.name !== activeName) navigation.navigate(tab.name as never)
   }
@@ -81,9 +79,11 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
       pos.value = f
       runOnJS(setHot)(Math.min(n - 1, Math.max(0, Math.round(f))))
     })
-    .onFinalize(() => {
+    .onFinalize(e => {
       if (slotW <= 0) return
-      runOnJS(commit)()
+      const i = Math.min(n - 1, Math.max(0, Math.floor(e.x / slotW)))
+      pos.value = withSpring(i, SP)
+      runOnJS(commit)(i)
     })
 
   const bubbleStyle = useAnimatedStyle(() => ({
