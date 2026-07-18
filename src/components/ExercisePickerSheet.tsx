@@ -4,6 +4,7 @@ import {
   TextInput, ScrollView, Modal, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
@@ -43,6 +44,8 @@ export function ExercisePickerSheet({
   onSelect,
   onClose,
   gymOnly = false,
+  multiSelect = false,
+  onConfirmMulti,
 }: {
   visible:   boolean
   exercises: Exercise[]
@@ -50,6 +53,9 @@ export function ExercisePickerSheet({
   onClose:   () => void
   /** Gym-pass innehåller bara gym-övningar — hoppa förbi landing och cardio */
   gymOnly?:  boolean
+  /** Bocka i hur många övningar som helst (utan set/reps-frågan) och spara med Klar */
+  multiSelect?: boolean
+  onConfirmMulti?: (exs: Exercise[]) => void
 }) {
   const insets = useSafeAreaInsets()
   // Gym-pass startar direkt på muskelgrupperna; annars på typvalet
@@ -58,6 +64,7 @@ export function ExercisePickerSheet({
   const [selectedGroup, setSelectedGroup] = useState('')
   const [search, setSearch]               = useState('')
   const [pendingEx, setPendingEx]         = useState<Exercise | null>(null)
+  const [multiSel, setMultiSel]           = useState<Exercise[]>([])
   const [sets, setSets]                   = useState('3')
   const [reps, setReps]                   = useState('10')
 
@@ -67,6 +74,7 @@ export function ExercisePickerSheet({
       setSelectedGroup('')
       setSearch('')
       setPendingEx(null)
+      setMultiSel([])
     }
   }, [visible, startPage])
 
@@ -90,6 +98,13 @@ export function ExercisePickerSheet({
   }
 
   function handleTap(ex: Exercise) {
+    if (multiSelect) {
+      Haptics.selectionAsync()
+      setMultiSel(prev => prev.some(e => e.id === ex.id)
+        ? prev.filter(e => e.id !== ex.id)
+        : [...prev, ex])
+      return
+    }
     if (ex.category === 'cardio') {
       onSelect(ex, null, null)
     } else {
@@ -97,6 +112,13 @@ export function ExercisePickerSheet({
       setReps('10')
       setPendingEx(ex)
     }
+  }
+
+  function confirmMulti() {
+    if (multiSel.length === 0) return
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    onConfirmMulti?.(multiSel)
+    setMultiSel([])
   }
 
   function handleConfirm() {
@@ -196,6 +218,11 @@ export function ExercisePickerSheet({
                   <Text style={s.groupLabel}>{group.label}</Text>
                   <Text style={s.groupCount}>{gymGroupCount(group.key)} övningar</Text>
                 </View>
+                {multiSelect && multiSel.filter(e => getExerciseMuscleGroup(e.name) === group.key).length > 0 && (
+                  <View style={s.groupSelBadge}>
+                    <Text style={s.groupSelBadgeText}>{multiSel.filter(e => getExerciseMuscleGroup(e.name) === group.key).length}</Text>
+                  </View>
+                )}
                 <Ionicons name="chevron-forward" size={20} color={TEXT_SECONDARY} />
               </TouchableOpacity>
             ))}
@@ -251,22 +278,43 @@ export function ExercisePickerSheet({
               contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
               keyboardShouldPersistTaps="handled"
             >
-              {filteredExercises.map(ex => (
-                <TouchableOpacity key={ex.id} style={s.row} onPress={() => handleTap(ex)} activeOpacity={0.7}>
-                  <View style={s.exIconBox}>
-                    <Ionicons name="barbell-outline" size={18} color={TEXT_SECONDARY} />
-                  </View>
-                  <Text style={[s.rowName, { flex: 1 }]}>{ex.name}</Text>
-                  <View style={s.addBtn}>
-                    <Ionicons name="add" size={20} color={ORANGE} />
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {filteredExercises.map(ex => {
+                const on = multiSelect && multiSel.some(e => e.id === ex.id)
+                return (
+                  <TouchableOpacity key={ex.id} style={[s.row, on && s.rowOn]} onPress={() => handleTap(ex)} activeOpacity={0.7}>
+                    <View style={[s.exIconBox, on && { backgroundColor: ORANGE + '22' }]}>
+                      <Ionicons name="barbell-outline" size={18} color={on ? ORANGE : TEXT_SECONDARY} />
+                    </View>
+                    <Text style={[s.rowName, { flex: 1 }, on && { color: ORANGE }]}>{ex.name}</Text>
+                    {multiSelect ? (
+                      <View style={[s.checkBox, on && s.checkBoxOn]}>
+                        {on && <Ionicons name="checkmark" size={16} color="#000" />}
+                      </View>
+                    ) : (
+                      <View style={s.addBtn}>
+                        <Ionicons name="add" size={20} color={ORANGE} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )
+              })}
               {filteredExercises.length === 0 && (
                 <Text style={s.emptyText}>Inga övningar hittades</Text>
               )}
             </ScrollView>
           </>
+        )}
+
+        {/* ── Klar-knapp i multiväljarläget ────────────────────────── */}
+        {multiSelect && multiSel.length > 0 && (page === 'gym' || page === 'exercises') && (
+          <View style={[s.multiFooter, { paddingBottom: insets.bottom + 12 }]}>
+            <TouchableOpacity style={s.multiBtn} onPress={confirmMulti} activeOpacity={0.85}>
+              <Ionicons name="checkmark" size={20} color="#000" />
+              <Text style={s.multiBtnText}>
+                Klar · {multiSel.length} {multiSel.length === 1 ? 'övning' : 'övningar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* ── SETS / REPS PROMPT ───────────────────────────────────── */}
@@ -325,6 +373,28 @@ export function ExercisePickerSheet({
 }
 
 const s = StyleSheet.create({
+  rowOn: { backgroundColor: 'rgba(255,159,10,0.05)' },
+  checkBox: {
+    width: 26, height: 26, borderRadius: 8, borderWidth: 1.5, borderColor: BORDER,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  checkBoxOn: { backgroundColor: ORANGE, borderColor: ORANGE },
+  groupSelBadge: {
+    minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6,
+    backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', marginRight: 8,
+  },
+  groupSelBadgeText: { color: '#000', fontSize: 12, fontWeight: '800' },
+  multiFooter: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    paddingHorizontal: 16, paddingTop: 10,
+    backgroundColor: BG, borderTopWidth: 1, borderTopColor: BORDER,
+  },
+  multiBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: ORANGE, borderRadius: 16, paddingVertical: 16,
+  },
+  multiBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
+
   screen: { flex: 1, backgroundColor: BG },
 
   header: {

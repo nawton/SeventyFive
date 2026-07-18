@@ -67,6 +67,16 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
     // Väljaren lämnas öppen så man kan lägga till flera övningar i rad
   }
 
+  function handlePickerConfirm(exs: Exercise[]) {
+    setEntries(prev => {
+      const have = new Set(prev.map(en => en.exercise.id))
+      const added = exs.filter(e => !have.has(e.id)).map(e => ({ exercise: e, sets: '3', reps: '10' }))
+      return [...prev, ...added]
+    })
+    setPickerOpen(false)
+    setStep('gymOverview')
+  }
+
   function handlePickerClose() {
     setPickerOpen(false)
     if (entriesRef.current.length > 0) setStep('gymOverview')
@@ -74,9 +84,6 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
     else setStep('choose')
   }
 
-  function updateEntry(exId: string, field: 'sets' | 'reps', value: string) {
-    setEntries(prev => prev.map(en => en.exercise.id === exId ? { ...en, [field]: value } : en))
-  }
   function removeEntry(exId: string) {
     setEntries(prev => prev.filter(en => en.exercise.id !== exId))
   }
@@ -179,36 +186,20 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
                 />
               </View>
 
-              {entries.map(en => (
-                <View key={en.exercise.id} style={s.exCard}>
-                  <View style={s.exCardHeader}>
-                    <Text style={s.exCardName} numberOfLines={1}>{en.exercise.name}</Text>
+              {/* Set, reps och vikt fylls i inne i passet — här väljs bara övningarna */}
+              <View style={s.exListCard}>
+                {entries.map((en, i) => (
+                  <View key={en.exercise.id} style={[s.exListRow, i < entries.length - 1 && s.exListBorder]}>
+                    <View style={s.exListIcon}>
+                      <Ionicons name="barbell-outline" size={17} color={ORANGE} />
+                    </View>
+                    <Text style={s.exListName} numberOfLines={1}>{en.exercise.name}</Text>
                     <TouchableOpacity onPress={() => removeEntry(en.exercise.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Ionicons name="close-circle" size={20} color={TEXT_SECONDARY} />
                     </TouchableOpacity>
                   </View>
-                  <View style={s.fieldRow}>
-                    <View style={s.field}>
-                      <Text style={s.fieldSmall}>SET</Text>
-                      <TextInput
-                        style={s.fieldInput}
-                        defaultValue={en.sets}
-                        onChangeText={v => updateEntry(en.exercise.id, 'sets', v)}
-                        keyboardType="number-pad" placeholder="3" placeholderTextColor={TEXT_SECONDARY} selectTextOnFocus
-                      />
-                    </View>
-                    <View style={s.field}>
-                      <Text style={s.fieldSmall}>REPS</Text>
-                      <TextInput
-                        style={s.fieldInput}
-                        defaultValue={en.reps}
-                        onChangeText={v => updateEntry(en.exercise.id, 'reps', v)}
-                        keyboardType="default" placeholder="10" placeholderTextColor={TEXT_SECONDARY} selectTextOnFocus
-                      />
-                    </View>
-                  </View>
-                </View>
-              ))}
+                ))}
+              </View>
 
               {/* Fler övningar via muskelgruppssidan */}
               <TouchableOpacity style={s.addExBtn} onPress={() => setPickerOpen(true)} activeOpacity={0.8}>
@@ -236,7 +227,9 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
           visible={pickerOpen}
           exercises={exercises}
           gymOnly
+          multiSelect
           onSelect={handlePickerSelect}
+          onConfirmMulti={handlePickerConfirm}
           onClose={handlePickerClose}
         />
       </View>
@@ -297,14 +290,12 @@ const s = StyleSheet.create({
     backgroundColor: CARD, borderRadius: 14, borderWidth: 1, borderColor: BORDER,
     color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600', paddingHorizontal: 14, paddingVertical: 14,
   },
-  exCard: { backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER, padding: 16, gap: 12 },
-  exCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  exCardName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', flex: 1, marginRight: 10 },
-  fieldRow: { flexDirection: 'row', gap: 12 },
-  field: { flex: 1, gap: 6 },
-  fieldSmall: { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '700', letterSpacing: 1 },
-  fieldInput: {
-    height: 46, backgroundColor: BG, borderRadius: 12, borderWidth: 1, borderColor: BORDER,
-    color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', textAlign: 'center',
+  exListCard: { backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER, overflow: 'hidden' },
+  exListRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 13 },
+  exListBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
+  exListIcon: {
+    width: 34, height: 34, borderRadius: 10, backgroundColor: ORANGE + '18',
+    alignItems: 'center', justifyContent: 'center',
   },
+  exListName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
 })
