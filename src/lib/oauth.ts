@@ -6,12 +6,11 @@ import { supabase } from './supabase'
 WebBrowser.maybeCompleteAuthSession()
 
 export async function signInWithGoogle(): Promise<boolean> {
-  // Expo Go: exp://<LAN-IP>:8081/--/auth-callback · Dev build: seventyfive://auth-callback
-  // OBS: URL:en måste vara tillåten under Supabase → Auth → URL Configuration,
-  // annars skickas Safari till Site URL (ofta localhost) och "kan inte ansluta"
+  // Expo Go: exp://<host>:8081/--/auth-callback · Dev build: seventyfive://auth-callback
+  // OBS: URL:en måste vara tillåten under Supabase → Auth → URL Configuration.
+  // Supabase vägrar dessutom LAN-IP-adresser som redirect (skickar till Site URL
+  // i stället) — i Expo Go kräver Google-inloggning därför `expo start --tunnel`
   const redirectTo = Linking.createURL('auth-callback')
-  // Felsökning: den här adressen MÅSTE finnas i Supabase → Auth → URL Configuration
-  console.log('[oauth] redirectTo:', redirectTo)
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
