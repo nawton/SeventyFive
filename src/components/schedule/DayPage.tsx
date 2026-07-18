@@ -2,6 +2,7 @@ import React, { useRef } from 'react'
 import {
   View,
   Text,
+  Alert,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -190,13 +191,19 @@ export const DayPage = React.memo(function DayPage({
                       onOpenFullscreen={s.session_type !== 'cardio' ? () => api.openFullscreen(displaySession, dateStr) : undefined}
                       gymStats={gymStats}
                       onStartCardioSession={s.session_type === 'cardio'
-                        ? () => router.push({ pathname: '/cardio-session', params: {
+                        ? () => {
+                            if (!isToday && !isPast) {
+                              Alert.alert('Framtida pass', 'Du kan starta passet först på passdagen.')
+                              return
+                            }
+                            router.push({ pathname: '/cardio-session', params: {
                             sessionId: s.id,
                             name: sessionDisplayName(s),
                             cardioType: s.cardio_type ?? 'running',
                             notes: s.notes ?? '',
                             date: dateStr,
                           } })
+                          }
                         : undefined}
                       cardioStats={s.session_type === 'cardio' ? cardioStats[s.id] : undefined}
                       onViewCardioSummary={s.session_type === 'cardio' && isCompleted && cardioStats[s.id]

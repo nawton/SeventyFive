@@ -13,6 +13,7 @@ import type { Exercise } from '@/services/exercises'
 import { saveStrengthWorkout, getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
 import { getPersonalRecords, findNewPR } from '@/services/personalRecords'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
+import { toLocalDateString } from '@/lib/date'
 import {
   getRestSeconds, setRestSeconds,
   getExerciseRestSeconds, setExerciseRestSeconds,
@@ -96,8 +97,14 @@ export function SessionFullscreen({
     })
   }, [visible, session?.id, isCompleted])
 
+  const isFuture = date > toLocalDateString()
+
   function startPass() {
     if (!session) return
+    if (isFuture) {
+      Alert.alert('Framtida pass', 'Du kan starta passet först på passdagen.')
+      return
+    }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     getOrInitPassStart(`${session.id}:${date}`).then(ts => {
       startTs.current = ts
@@ -272,6 +279,10 @@ export function SessionFullscreen({
   // Bekräfta innan passet slutförs — Spara på redan avklarade pass går direkt
   function confirmFinish() {
     if (!session || saving) return
+    if (isFuture) {
+      Alert.alert('Framtida pass', 'Passet kan slutföras först på passdagen.')
+      return
+    }
     if (isCompleted) { finish(); return }
     const anySets = session.exercises.some(ex => (logs[ex.id] ?? []).some(r => (parseInt(r.reps) || 0) > 0))
     if (!anySets) { finish(); return }
