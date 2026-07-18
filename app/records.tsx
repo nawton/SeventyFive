@@ -93,7 +93,7 @@ interface MedalInfo {
 }
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { LinearGradient } from 'expo-linear-gradient'
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -158,18 +158,13 @@ export default function RecordsScreen() {
   }
   const [mainTab, setMainTab] = useState<0 | 1>(0)
   const mainPos = useSharedValue(0)
-  useEffect(() => { mainPos.value = withSpring(mainTab, { damping: 18, stiffness: 240 }) }, [mainTab])
+  useEffect(() => { mainPos.value = withTiming(mainTab, { duration: 160, easing: Easing.out(Easing.quad) }) }, [mainTab])
   const mainIndicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: mainPos.value * (PAGE_W / 2) }],
   }))
 
   const [earnTab, setEarnTab] = useState<0 | 1>(0)
   const earnPagerRef = useRef<ScrollView>(null)
-  // Underline-indikatorn följer kortsvepet i realtid, som flikarna på Framsteg
-  const earnScrollX = useSharedValue(0)
-  const earnIndicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: Math.min(PAGE_W / 2, Math.max(0, (earnScrollX.value / SNAP_W) * (PAGE_W / 2))) }],
-  }))
 
   function openMedal(info: MedalInfo) {
     Haptics.selectionAsync()
@@ -384,31 +379,27 @@ export default function RecordsScreen() {
         </View>
 
         {mainTab === 0 && (<>
-        {/* Tjäna poäng — svep mellan återkommande och engångsmål */}
+        {/* Tjäna poäng — chips i rubriken, svep mellan korten funkar också */}
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>TJÄNA POÄNG</Text>
-        </View>
-        <View style={s.earnTabsRow}>
-          {(['Återkommande', `Engångs ${ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/${ONE_TIME_RULES.length}`]).map((label, i) => (
-            <TouchableOpacity
-              key={i}
-              style={s.earnTabBtn}
-              onPress={() => switchEarnTab(i as 0 | 1)}
-              activeOpacity={0.75}
-            >
-              <Text style={[s.earnTabText, earnTab === i && s.earnTabTextActive]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={s.earnTrack}>
-          <Animated.View style={[s.earnIndicator, earnIndicatorStyle]} />
+          <View style={s.earnChips}>
+            {(['Återkommande', `Engångs ${ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/${ONE_TIME_RULES.length}`]).map((label, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[s.earnChip, earnTab === i && s.earnChipActive]}
+                onPress={() => switchEarnTab(i as 0 | 1)}
+                activeOpacity={0.75}
+              >
+                <Text style={[s.earnChipText, earnTab === i && s.earnChipTextActive]}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
         <ScrollView
           ref={earnPagerRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
-          onScroll={e => { earnScrollX.value = e.nativeEvent.contentOffset.x }}
           onMomentumScrollEnd={e => {
             setEarnTab(Math.round(e.nativeEvent.contentOffset.x / SNAP_W) as 0 | 1)
           }}
@@ -828,9 +819,16 @@ const s = StyleSheet.create({
   cardioRecVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
   earnTabsRow: { flexDirection: 'row' },
   earnTabBtn:  { flex: 1, alignItems: 'center', paddingVertical: 8 },
-  earnTabText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
   mainTabText:       { color: TEXT_SECONDARY, fontSize: 16, fontWeight: '700' },
   earnTabTextActive: { color: ORANGE, fontWeight: '700' },
+  earnChips: { flexDirection: 'row', gap: 6 },
+  earnChip: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 13,
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
+  earnChipActive: { backgroundColor: ORANGE, borderColor: ORANGE },
+  earnChipText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  earnChipTextActive: { color: '#000', fontWeight: '700' },
   earnTrack: {
     height: 3, borderRadius: 2, overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 12,
