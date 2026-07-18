@@ -349,6 +349,16 @@ export default function CardioScreen() {
   const [workoutName, setWorkoutName] = useState('')
   const [distanceKm, setDistanceKm] = useState(0)
   const [elapsed, setElapsed] = useState(0)
+  // GPS-signal: 2 = bra, 1 = ok, 0 = svag, -1 = ingen fix på länge
+  const [gpsCat, setGpsCat] = useState(1)
+  const gpsCatRef = useRef(1)
+  const lastFixTs = useRef(0)
+  function updateGps(cat: number) {
+    if (cat !== gpsCatRef.current) {
+      gpsCatRef.current = cat
+      setGpsCat(cat)
+    }
+  }
   const [currentPaceSec, setCurrentPaceSec] = useState(0)
   const [splitToast, setSplitToast] = useState<string | null>(null)
   const lastCoord = useRef<Coord | null>(null)
@@ -587,6 +597,10 @@ export default function CardioScreen() {
         elapsedRef.current = v
         return v
       })
+      // Ingen GPS-fix på 8 sekunder → visa "ingen signal"
+      if (lastFixTs.current > 0 && Date.now() - lastFixTs.current > 8000) {
+        updateGps(-1)
+      }
       // Tidsmål uppnått — säg till en gång
       if (goalMinNum > 0 && !goalMinSaid.current && elapsedRef.current >= goalMinNum * 60) {
         goalMinSaid.current = true
@@ -602,6 +616,11 @@ export default function CardioScreen() {
     locationSub.current = await Location.watchPositionAsync(
       { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 3 },
       (loc) => {
+        // Signalindikator — uppdateras även för fixar som filtreras bort
+        const acc = loc.coords.accuracy ?? 99
+        lastFixTs.current = Date.now()
+        updateGps(acc <= 15 ? 2 : acc <= 30 ? 1 : 0)
+
         if (loc.coords.accuracy && loc.coords.accuracy > 30) return
 
         const coord: Coord = { latitude: loc.coords.latitude, longitude: loc.coords.longitude }
@@ -850,6 +869,17 @@ export default function CardioScreen() {
               {status === 'paused' && (
                 <View style={styles.pausedBadge}>
                   <Text style={styles.pausedBadgeText}>PAUSAD</Text>
+                </View>
+              )}
+              {/* GPS-signal — så man förstår varför distansen står stilla */}
+              {status === 'running' && (
+                <View style={styles.gpsChip}>
+                  <View style={[styles.gpsDot, {
+                    backgroundColor: gpsCat === 2 ? '#4CAF50' : gpsCat === 1 ? '#FFC107' : '#FF453A',
+                  }]} />
+                  <Text style={[styles.gpsText, lightCard && { color: '#777' }]}>
+                    {gpsCat === -1 ? 'Ingen GPS' : gpsCat === 0 ? 'Svag GPS' : 'GPS'}
+                  </Text>
                 </View>
               )}
             </View>
@@ -1430,6 +1460,17 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
+  gpsChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  gpsDot: { width: 7, height: 7, borderRadius: 3.5 },
+  gpsText: { color: '#999', fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
   pausedBadge: {
     backgroundColor: '#FF3B30',
     borderRadius: 6,
