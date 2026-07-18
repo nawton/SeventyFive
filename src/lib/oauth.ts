@@ -2,34 +2,32 @@ import * as Linking from 'expo-linking'
 import * as WebBrowser from 'expo-web-browser'
 import { supabase } from './supabase'
 
+// Stänger ev. kvarhängande auth-session när appen öppnas igen via deep link
+WebBrowser.maybeCompleteAuthSession()
+
 export async function signInWithGoogle(): Promise<boolean> {
+  // Expo Go: exp://<LAN-IP>:8081/--/auth-callback · Dev build: seventyfive://auth-callback
+  // OBS: URL:en måste vara tillåten under Supabase → Auth → URL Configuration,
+  // annars skickas Safari till Site URL (ofta localhost) och "kan inte ansluta"
   const redirectTo = Linking.createURL('auth-callback')
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo, skipBrowserRedirect: true },
   })
-
   if (error || !data.url) return false
 
-  return new Promise((resolve) => {
-    // Lyssnar på deep link när appen öppnas igen efter OAuth
-    const sub = Linking.addEventListener('url', async ({ url }) => {
-      sub.remove()
-      try {
-        const code = new URL(url).searchParams.get('code')
-        if (!code) { resolve(false); return }
-        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
-        resolve(!sessionError)
-      } catch {
-        resolve(false)
-      }
-    })
+  // openAuthSessionAsync stänger webbläsaren själv vid redirect och ger oss
+  // callback-URL:en direkt — ingen deep link-lyssnare som kan tappa racet
+  const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
+  if (result.type !== 'success' || !result.url) return false
 
-    // Öppnar SFSafariViewController — iOS skickar exp://-redirecten till Expo Go
-    WebBrowser.openBrowserAsync(data.url).then(() => {
-      sub.remove()
-      resolve(false)
-    })
-  })
+  try {
+    const code = new URL(result.url).searchParams.get('code')
+    if (!code) return false
+    const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
+    return !sessionError
+  } catch {
+    return false
+  }
 }
