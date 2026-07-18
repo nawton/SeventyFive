@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet,
 } from 'react-native'
@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 import { GlassView } from 'expo-glass-effect'
 import { LIQUID_GLASS } from '@/lib/glass'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
@@ -36,7 +37,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-/** Tvåvals-slider med glastumme (fjädrande) — samma design som enhetsväljaren */
+/** Glasslider: tap för att byta, eller dra tummen över spåret — den följer
+ *  fingret och fjädrar fast på närmaste läge när du släpper */
 function GlassSegment<T extends string>({
   value, options, onChange,
 }: {
@@ -44,12 +46,19 @@ function GlassSegment<T extends string>({
   options: Array<{ key: T; label: string }>
   onChange: (v: T) => void
 }) {
+  const n = options.length
   const [segW, setSegW] = useState(0)
+  const slotW = segW / n
   const idx = Math.max(0, options.findIndex(o => o.key === value))
   const pos = useSharedValue(idx)
-  useEffect(() => { pos.value = withSpring(idx, SEG_SPRING) }, [idx])
+  const dragging = useRef(false)
+
+  useEffect(() => {
+    if (!dragging.current) pos.value = withSpring(idx, SEG_SPRING)
+  }, [idx, slotW])
+
   const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: pos.value * (segW / options.length) }],
+    transform: [{ translateX: pos.value * slotW }],
   }))
 
   function choose(k: T) {
@@ -58,28 +67,64 @@ function GlassSegment<T extends string>({
     onChange(k)
   }
 
+  function beginDrag() { dragging.current = true }
+
+  function commitIdx(i: number) {
+    dragging.current = false
+    const opt = options[i]
+    if (opt && opt.key !== value) {
+      Haptics.selectionAsync()
+      onChange(opt.key)
+    }
+  }
+
+  function abortDrag() {
+    if (!dragging.current) return
+    dragging.current = false
+    pos.value = withSpring(idx, SEG_SPRING)
+  }
+
+  // Tummen följer fingret fritt under drag och snäpper vid släpp
+  const pan = Gesture.Pan()
+    .activeOffsetX([-6, 6])
+    .failOffsetY([-14, 14])
+    .onStart(() => { runOnJS(beginDrag)() })
+    .onUpdate(e => {
+      if (slotW <= 0) return
+      pos.value = Math.min(n - 1, Math.max(0, e.x / slotW - 0.5))
+    })
+    .onEnd(e => {
+      if (slotW <= 0) return
+      const i = Math.min(n - 1, Math.max(0, Math.round(e.x / slotW - 0.5)))
+      pos.value = withSpring(i, SEG_SPRING)
+      runOnJS(commitIdx)(i)
+    })
+    .onFinalize(() => { runOnJS(abortDrag)() })
+
   return (
-    <View style={s.segTrack} onLayout={e => setSegW(e.nativeEvent.layout.width - 6)}>
-      {segW > 0 && (LIQUID_GLASS ? (
-        <AnimatedGlassView
-          glassEffectStyle="regular"
-          tintColor={ORANGE}
-          style={[s.segThumb, s.segThumbGlass, { width: segW / options.length }, thumbStyle]}
-        />
-      ) : (
-        <Animated.View style={[s.segThumb, { width: segW / options.length }, thumbStyle]} />
-      ))}
-      {options.map(o => (
-        <TouchableOpacity key={o.key} style={s.segBtn} onPress={() => choose(o.key)} activeOpacity={0.8}>
-          <Text style={[
-            s.segText,
-            value === o.key && (LIQUID_GLASS ? s.segTextActiveGlass : s.segTextActive),
-          ]}>
-            {o.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+    <GestureDetector gesture={pan}>
+      <View style={s.segTrack} onLayout={e => setSegW(e.nativeEvent.layout.width - 6)}>
+        {segW > 0 && (LIQUID_GLASS ? (
+          <AnimatedGlassView
+            glassEffectStyle="regular"
+            tintColor={ORANGE}
+            style={[s.segThumb, s.segThumbGlass, { width: slotW }, thumbStyle]}
+          />
+        ) : (
+          <Animated.View style={[s.segThumb, { width: slotW }, thumbStyle]} />
+        ))}
+        {options.map(o => (
+          <TouchableOpacity key={o.key} style={s.segBtn} onPress={() => choose(o.key)} activeOpacity={0.8}>
+            <Text style={[
+              s.segText,
+              value === o.key && (LIQUID_GLASS ? s.segTextActiveGlass : s.segTextActive),
+            ]}>
+              {o.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </GestureDetector>
   )
 }
 
