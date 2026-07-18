@@ -11,6 +11,7 @@ import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
 import { effortColor, effortLabel } from '@/components/EffortRating'
+import { GlassCircleButton } from '@/components/GlassButton'
 
 const CARDIO_BLUE = '#3BD5FF'
 const { height: SCREEN_H } = Dimensions.get('window')
@@ -186,21 +187,15 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
         />
       )}
 
-      {/* Tillbaka + (radera) + lager */}
+      {/* Tillbaka + (radera) + lager — liquid glass över kartan (iOS 26) */}
       <View style={[s.controls, { top: insets.top + 12 }]} pointerEvents="box-none">
-        <TouchableOpacity onPress={onClose} style={s.circleBtn} activeOpacity={0.85}>
-          <Ionicons name="chevron-back" size={22} color="#000" />
-        </TouchableOpacity>
+        <GlassCircleButton icon="chevron-back" onPress={onClose} />
         <View style={{ flexDirection: 'row', gap: 10 }}>
           {onDelete && (
-            <TouchableOpacity onPress={onDelete} style={s.circleBtn} activeOpacity={0.85}>
-              <Ionicons name="trash-outline" size={19} color={RED} />
-            </TouchableOpacity>
+            <GlassCircleButton icon="trash-outline" iconColor={RED} onPress={onDelete} />
           )}
           {hasRoute && (
-            <TouchableOpacity onPress={openStyleSheet} style={s.circleBtn} activeOpacity={0.85}>
-              <Ionicons name="layers-outline" size={20} color="#000" />
-            </TouchableOpacity>
+            <GlassCircleButton icon="layers-outline" draggable onPress={openStyleSheet} />
           )}
         </View>
       </View>
@@ -311,13 +306,6 @@ const s = StyleSheet.create({
     position: 'absolute', left: 0, right: 0,
     flexDirection: 'row', justifyContent: 'space-between',
     paddingHorizontal: 16, zIndex: 5,
-  },
-  circleBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25, shadowRadius: 6,
   },
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,

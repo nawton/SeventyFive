@@ -30,6 +30,7 @@ import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { getCardioStatsTheme, getVoiceCues, type CardioStatsTheme } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
+import { GlassCircleButton } from '@/components/GlassButton'
 
 type Coord = { latitude: number; longitude: number }
 type Status = 'idle' | 'running' | 'paused'
@@ -955,16 +956,12 @@ export default function CardioScreen() {
             <Ionicons name="caret-down" size={17} color="#fff" style={{ marginTop: -5 }} />
           </Animated.View>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.mapBtn}
+        <GlassCircleButton
+          icon="layers-outline"
+          draggable
           onPress={() => (styleMenuOpen ? closeStyleSheet() : openStyleSheet())}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="layers-outline" size={20} color="#000" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.mapBtn} onPress={centerOnUser} activeOpacity={0.8}>
-          <Ionicons name="locate" size={20} color="#000" />
-        </TouchableOpacity>
+        />
+        <GlassCircleButton icon="locate" draggable onPress={centerOnUser} />
       </View>
 
       {/* ── Tillbaka-knapp — bara innan passet startats ── */}
@@ -1558,19 +1555,6 @@ const styles = StyleSheet.create({
     gap: 10,
     zIndex: 10,
   },
-  mapBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-  },
-
   // ── Nedräkning ──
   countdownOverlay: {
     ...StyleSheet.absoluteFillObject,
