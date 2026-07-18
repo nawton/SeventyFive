@@ -44,15 +44,15 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
   const [pickerOpen, setPickerOpen] = useState(false)
 
   useEffect(() => {
-    if (!visible) {
-      setStep('choose'); setEntries([]); setPassName(''); setSaving(false); setPickerOpen(false)
-      return
-    }
+    if (!visible) return
+    // Återställs vid öppning — att nollställa vid stängning gav en synlig
+    // "choose"-blink medan modalen animerade ut
+    setStep(allowCardio ? 'choose' : 'gymOverview')
+    setEntries([])
+    setPassName('')
+    setSaving(false)
     // Utan cardio-val: hoppa direkt in i övningsväljaren med översikten bakom
-    if (!allowCardio) {
-      setStep('gymOverview')
-      setPickerOpen(true)
-    }
+    setPickerOpen(!allowCardio)
   }, [visible, allowCardio])
 
   function handlePickerSelect(ex: Exercise, sets: number | null, reps: string | null) {
@@ -80,7 +80,11 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
   function handlePickerClose() {
     setPickerOpen(false)
     if (entriesRef.current.length > 0) setStep('gymOverview')
-    else if (!allowCardio) onClose()
+    else if (!allowCardio) {
+      // Vänta tills väljarens modal hunnit stängas — stängs båda i samma
+      // tick lämnar iOS en svart, död presentation kvar
+      setTimeout(() => onClose(), 400)
+    }
     else setStep('choose')
   }
 
