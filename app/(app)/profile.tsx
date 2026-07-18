@@ -8,7 +8,8 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  RefreshControl,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
@@ -75,11 +76,25 @@ export default function ProfileScreen() {
   const [loading, setLoading]       = useState(true)
   const [composerUri, setComposerUri] = useState<string | null>(null)
   const [refreshing, setRefreshing]   = useState(false)
+  const refreshingRef = useRef(false)
+  const pullArmedRef  = useRef(true)
 
-  async function handleRefresh() {
-    setRefreshing(true)
-    await load().catch(() => {})
-    setRefreshing(false)
+  // Egen pull-to-refresh utan native-snurra: dra ner förbi tröskeln → hämta om,
+  // snurran visas under Lägg till dagens foto istället för högst upp
+  function onListScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    onScrollShrink(e)
+    const y = e.nativeEvent.contentOffset.y
+    if (y >= 0) pullArmedRef.current = true
+    if (y < -70 && pullArmedRef.current && !refreshingRef.current) {
+      pullArmedRef.current = false
+      refreshingRef.current = true
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+      setRefreshing(true)
+      load().catch(() => {}).finally(() => {
+        setRefreshing(false)
+        refreshingRef.current = false
+      })
+    }
   }
 
   useFocusEffect(useCallback(() => { load() }, []))
@@ -372,11 +387,8 @@ export default function ProfileScreen() {
         ListHeaderComponent={renderHeader()}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
-        onScroll={onScrollShrink}
+        onScroll={onListScroll}
         scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="transparent" />
-        }
       />
 
       <PhotoComposer
