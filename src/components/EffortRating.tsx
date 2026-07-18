@@ -4,16 +4,13 @@ import Animated, { FadeIn, runOnJS } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
-import { BG, GREEN, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { BG, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 
 // =============================================================================
 // BETYGSÄTT DIN ANSTRÄNGNING (RPE 1–10)
 // Fullskärmslager som visas efter avslutat pass. Egen design: stigande staplar
 // som fylls i zonfärg (grön → gul → orange → röd) upp till valt betyg.
 // =============================================================================
-
-const YELLOW = '#F5A623'
-const RED    = '#FF3B4A'
 
 export function effortLabel(n: number): string {
   if (n <= 1) return 'Mycket lätt'
@@ -23,11 +20,22 @@ export function effortLabel(n: number): string {
   return 'Maximal'
 }
 
+function hslToHex(h: number, s: number, l: number): string {
+  const a = s * Math.min(l, 1 - l)
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12
+    const c = l - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)))
+    return Math.round(255 * c).toString(16).padStart(2, '0')
+  }
+  return `#${f(0)}${f(8)}${f(4)}`
+}
+
+/** Gradvis färgskala 1–10: grönt → gulgrönt → gult → orange → rött.
+ *  Ett litet nyansskifte per steg — subtilt men tydligt över hela skalan. */
 export function effortColor(n: number): string {
-  if (n <= 3) return GREEN
-  if (n <= 6) return YELLOW
-  if (n <= 8) return ORANGE
-  return RED
+  const t = (Math.min(10, Math.max(1, n)) - 1) / 9
+  const hue = 140 - t * 140   // 140° (grön) → 0° (röd)
+  return hslToHex(hue, 0.82, 0.58)
 }
 
 const BARS = Array.from({ length: 10 }, (_, i) => i + 1)
