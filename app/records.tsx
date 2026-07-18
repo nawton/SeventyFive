@@ -204,27 +204,6 @@ export default function RecordsScreen() {
     })
     .onFinalize(() => { runOnJS(abortMainDrag)() })
 
-  // Svep var som helst på sidan växlar flik — poängpagern får dock behålla
-  // sina egna horisontella svep (requireExternalGestureToFail)
-  const earnNativeScroll = Gesture.Native()
-  const pagePan = Gesture.Pan()
-    .activeOffsetX([-24, 24])
-    .failOffsetY([-14, 14])
-    .requireExternalGestureToFail(earnNativeScroll)
-    .onStart(() => { runOnJS(beginMainDrag)() })
-    .onUpdate(e => {
-      const f = mainTabRef.current + (-e.translationX / 300)
-      mainPos.value = Math.min(1, Math.max(0, f))
-    })
-    .onEnd(e => {
-      const cur = mainTabRef.current
-      let target: 0 | 1 = cur
-      if ((e.translationX < -50 || e.velocityX < -600) && cur === 0) target = 1
-      else if ((e.translationX > 50 || e.velocityX > 600) && cur === 1) target = 0
-      runOnJS(commitMain)(target)
-    })
-    .onFinalize(() => { runOnJS(abortMainDrag)() })
-
   const earnPagerRef = useRef<ScrollView>(null)
 
   function openMedal(info: MedalInfo) {
@@ -358,7 +337,6 @@ export default function RecordsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <GestureDetector gesture={pagePan}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* ── Min nivå ── */}
@@ -445,7 +423,6 @@ export default function RecordsScreen() {
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>TJÄNA POÄNG</Text>
         </View>
-        <GestureDetector gesture={earnNativeScroll}>
         <ScrollView
           ref={earnPagerRef}
           horizontal
@@ -458,7 +435,15 @@ export default function RecordsScreen() {
         >
           {/* Sida 1: återkommande */}
           <View style={[s.recordCard, { width: PAGE_W }]}>
-            <Text style={s.earnCardTitle}>Återkommande</Text>
+            <View style={s.earnCardHead}>
+              <View style={[s.ruleIcon, { backgroundColor: ORANGE + '1A' }]}>
+                <Ionicons name="repeat" size={16} color={ORANGE} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.earnCardTitle}>Återkommande</Text>
+                <Text style={s.earnCardSub}>Poäng du kan tjäna varje dag</Text>
+              </View>
+            </View>
             {POINT_RULES.map((rule, i) => (
               <View key={rule.label} style={[s.recordRow, i < POINT_RULES.length - 1 && s.recordBorder]}>
                 <View style={s.ruleIcon}>
@@ -475,7 +460,15 @@ export default function RecordsScreen() {
 
           {/* Sida 2: engångsmål */}
           <View style={[s.recordCard, { width: PAGE_W }]}>
-            <Text style={s.earnCardTitle}>Engångsmål {ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/{ONE_TIME_RULES.length}</Text>
+            <View style={s.earnCardHead}>
+              <View style={[s.ruleIcon, { backgroundColor: '#3BE8621A' }]}>
+                <Ionicons name="checkmark-done" size={16} color="#3BE862" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.earnCardTitle}>Engångsmål</Text>
+                <Text style={s.earnCardSub}>{ONE_TIME_RULES.filter(r => oneTime[r.id]).length} av {ONE_TIME_RULES.length} avklarade</Text>
+              </View>
+            </View>
             {ONE_TIME_RULES.map((rule, i) => {
               const earned = oneTime[rule.id]
               return (
@@ -504,7 +497,6 @@ export default function RecordsScreen() {
             })}
           </View>
         </ScrollView>
-        </GestureDetector>
 
         {/* ── Medaljer ── */}
         <View style={s.sectionRow}>
@@ -642,7 +634,6 @@ export default function RecordsScreen() {
         </>)}
 
       </ScrollView>
-      </GestureDetector>
 
       {/* ── Rekordpassets detaljvy ── */}
       <Modal visible={!!selectedCardio} animationType="slide" onRequestClose={() => setSelectedCardio(null)}>
@@ -872,7 +863,13 @@ const s = StyleSheet.create({
   earnTabBtn:  { flex: 1, alignItems: 'center', paddingVertical: 8 },
   mainTabText:       { color: TEXT_SECONDARY, fontSize: 16, fontWeight: '700' },
   earnTabTextActive: { color: ORANGE, fontWeight: '700' },
-  earnCardTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  earnCardHead: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingBottom: 12, marginBottom: 4,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+  earnCardTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
+  earnCardSub: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   earnTrack: {
     height: 3, borderRadius: 2, overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 12,
