@@ -310,6 +310,9 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Uppdaterings-snurran visas här, det är fotona nedanför som hämtas om */}
+        {refreshing && <ActivityIndicator color={ORANGE} style={s.refreshSpinner} />}
+
         <Text style={s.sectionTitle}>FRAMSTEGSFOTON</Text>
 
         {photos.length === 0 && (
@@ -317,7 +320,7 @@ export default function ProfileScreen() {
             <Ionicons name="images-outline" size={28} color={TEXT_SECONDARY} />
             <Text style={s.emptyTitle}>Inga foton än</Text>
             <Text style={s.emptyText}>
-              Ta ett foto varje dag och skriv några rader — om 75 dagar har du hela resan samlad här.
+              Ta ett foto varje dag och skriv några rader. Om 75 dagar har du hela resan samlad här.
             </Text>
           </View>
         )}
@@ -372,7 +375,7 @@ export default function ProfileScreen() {
         onScroll={onScrollShrink}
         scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ORANGE} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="transparent" />
         }
       />
 
@@ -401,6 +404,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '700' },
+  refreshSpinner: { marginTop: 2, marginBottom: 6 },
   gearButton: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: CARD,
