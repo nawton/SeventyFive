@@ -38,6 +38,7 @@ const BLUE   = '#4A90D9'
 const RED    = '#FF453A'
 const YELLOW = '#F5A623'
 const PURPLE = '#9B6DFF'
+const TEAL   = '#5AD8D2'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -680,16 +681,53 @@ export default function StatsScreen() {
               ))}
             </View>
 
-            <View style={s.statsGrid}>
-              <View style={s.statsRow}>
-                <StatCard label={`${unitLabel} totalt`} value={toDisplayDistance(totalKm, unit).toFixed(1)} icon="map-outline" color={ORANGE} />
-                <StatCard label="total tid"  value={fmtDuration(totalSecs)}    icon="time-outline"  color={BLUE} />
-                <StatCard label="pass"       value={cardioW.length}            icon="walk-outline"  color={GREEN} />
-              </View>
-              <View style={s.statsRow}>
-                <StatCard label="snittempo"   value={avgPace}                          icon="speedometer-outline" color={YELLOW} />
-                <StatCard label="bästa tempo" value={bestPace}                         icon="stopwatch-outline"   color={RED} />
-                <StatCard label="kcal"        value={totalCals.toLocaleString('sv-SE')} icon="flash-outline"      color={PURPLE} />
+            {/* Träningsdetaljer — Apple-stil, inga boxar */}
+            <View style={s.card}>
+              <View>
+                <View style={[s.dtlRow, { paddingTop: 0 }]}>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Träningstid</Text>
+                    <Text style={[s.dtlVal, { color: YELLOW }]}>{fmtDuration(totalSecs)}</Text>
+                  </View>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Distans</Text>
+                    <Text style={[s.dtlVal, { color: BLUE }]}>
+                      {toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')}
+                      <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
+                    </Text>
+                  </View>
+                </View>
+                <View style={s.dtlSep} />
+                <View style={s.dtlRow}>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Kilokalorier</Text>
+                    <Text style={[s.dtlVal, { color: RED }]}>
+                      {totalCals.toLocaleString('sv-SE')}
+                      <Text style={s.dtlUnit}> KCAL</Text>
+                    </Text>
+                  </View>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Antal pass</Text>
+                    <Text style={[s.dtlVal, { color: GREEN }]}>{cardioW.length}</Text>
+                  </View>
+                </View>
+                <View style={s.dtlSep} />
+                <View style={[s.dtlRow, { paddingBottom: 0 }]}>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Snittempo</Text>
+                    <Text style={[s.dtlVal, { color: TEAL }]}>
+                      {avgPace}
+                      <Text style={s.dtlUnit}> /{unitLabel}</Text>
+                    </Text>
+                  </View>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Bästa tempo</Text>
+                    <Text style={[s.dtlVal, { color: PURPLE }]}>
+                      {bestPace}
+                      <Text style={s.dtlUnit}> /{unitLabel}</Text>
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
 
@@ -1065,6 +1103,14 @@ const s = StyleSheet.create({
   card:      { backgroundColor: CARD, borderRadius: 20, borderWidth: 1, borderColor: BORDER, padding: 20, gap: 14 },
   cardTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
   cardSub:   { color: TEXT_SECONDARY, fontSize: 12, marginTop: -8 },
+
+  // Träningsdetaljer (Apple-stil)
+  dtlRow:  { flexDirection: 'row', paddingVertical: 13 },
+  dtlCell: { flex: 1, gap: 3 },
+  dtlLbl:  { color: TEXT_SECONDARY, fontSize: 14 },
+  dtlVal:  { fontSize: 26, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  dtlUnit: { fontSize: 14, fontWeight: '600' },
+  dtlSep:  { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
 
   // Periodfilter (cardio-fliken)
   rangeRow: { flexDirection: 'row', gap: 8 },
