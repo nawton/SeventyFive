@@ -13,7 +13,7 @@ import {
 import * as Haptics from 'expo-haptics'
 
 const SCREEN_W  = Dimensions.get('window').width
-const PAGE_W    = SCREEN_W - 40  // scroll-paddingen är 20 per sida
+const PAGE_W    = SCREEN_W - 68  // smalare än skärmen så nästa kort sticker fram
 const PAGE_GAP  = 14             // mellanrum mellan korten i pagern
 const SNAP_W    = PAGE_W + PAGE_GAP
 const MAX_THRESHOLD = 7500       // Diamant — sliderns högra ände
@@ -93,7 +93,8 @@ interface MedalInfo {
 }
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { LinearGradient } from 'expo-linear-gradient'
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated'
+import Animated, { runOnJS, useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -157,13 +158,73 @@ export default function RecordsScreen() {
     setHistoryPts(buildHistory(allWorkoutsRef.current ?? [], name))
   }
   const [mainTab, setMainTab] = useState<0 | 1>(0)
+  const mainTabRef = useRef<0 | 1>(0)
+  useEffect(() => { mainTabRef.current = mainTab }, [mainTab])
   const mainPos = useSharedValue(0)
-  useEffect(() => { mainPos.value = withTiming(mainTab, { duration: 160, easing: Easing.out(Easing.quad) }) }, [mainTab])
+  const mainDragging = useRef(false)
+  const [tabW, setTabW] = useState(0)
+  useEffect(() => {
+    if (!mainDragging.current) mainPos.value = withTiming(mainTab, { duration: 160, easing: Easing.out(Easing.quad) })
+  }, [mainTab])
   const mainIndicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: mainPos.value * (PAGE_W / 2) }],
   }))
 
-  const [earnTab, setEarnTab] = useState<0 | 1>(0)
+  function beginMainDrag() { mainDragging.current = true }
+  function commitMain(i: 0 | 1) {
+    mainDragging.current = false
+    mainPos.value = withTiming(i, { duration: 160, easing: Easing.out(Easing.quad) })
+    if (i !== mainTabRef.current) {
+      Haptics.selectionAsync()
+      setMainTab(i)
+    }
+  }
+  function abortMainDrag() {
+    if (!mainDragging.current) return
+    mainDragging.current = false
+    mainPos.value = withTiming(mainTabRef.current, { duration: 160, easing: Easing.out(Easing.quad) })
+  }
+
+  // Dra på flikraden: indikatorn följer fingret, släpp väljer närmaste flik
+  const tabPan = Gesture.Pan()
+    .activeOffsetX([-8, 8])
+    .failOffsetY([-14, 14])
+    .onStart(e => {
+      if (tabW <= 0) return
+      runOnJS(beginMainDrag)()
+      mainPos.value = Math.min(1, Math.max(0, e.x / (tabW / 2) - 0.5))
+    })
+    .onUpdate(e => {
+      if (tabW <= 0) return
+      mainPos.value = Math.min(1, Math.max(0, e.x / (tabW / 2) - 0.5))
+    })
+    .onEnd(e => {
+      if (tabW <= 0) return
+      runOnJS(commitMain)(Math.round(Math.min(1, Math.max(0, e.x / (tabW / 2) - 0.5))) as 0 | 1)
+    })
+    .onFinalize(() => { runOnJS(abortMainDrag)() })
+
+  // Svep var som helst på sidan växlar flik — poängpagern får dock behålla
+  // sina egna horisontella svep (requireExternalGestureToFail)
+  const earnNativeScroll = Gesture.Native()
+  const pagePan = Gesture.Pan()
+    .activeOffsetX([-24, 24])
+    .failOffsetY([-14, 14])
+    .requireExternalGestureToFail(earnNativeScroll)
+    .onStart(() => { runOnJS(beginMainDrag)() })
+    .onUpdate(e => {
+      const f = mainTabRef.current + (-e.translationX / 300)
+      mainPos.value = Math.min(1, Math.max(0, f))
+    })
+    .onEnd(e => {
+      const cur = mainTabRef.current
+      let target: 0 | 1 = cur
+      if ((e.translationX < -50 || e.velocityX < -600) && cur === 0) target = 1
+      else if ((e.translationX > 50 || e.velocityX > 600) && cur === 1) target = 0
+      runOnJS(commitMain)(target)
+    })
+    .onFinalize(() => { runOnJS(abortMainDrag)() })
+
   const earnPagerRef = useRef<ScrollView>(null)
 
   function openMedal(info: MedalInfo) {
@@ -171,10 +232,6 @@ export default function RecordsScreen() {
     setSelectedMedal(info)
   }
 
-  function switchEarnTab(tab: 0 | 1) {
-    setEarnTab(tab)
-    earnPagerRef.current?.scrollTo({ x: tab * SNAP_W, animated: true })
-  }
 
   useEffect(() => {
     async function load() {
@@ -301,6 +358,7 @@ export default function RecordsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      <GestureDetector gesture={pagePan}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* ── Min nivå ── */}
@@ -361,48 +419,37 @@ export default function RecordsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Huvudflikar: medaljer och poäng för sig, egna rekord för sig */}
-        <View style={[s.earnTabsRow, { marginTop: 10 }]}>
-          {(['Medaljer', 'Rekord'] as const).map((label, i) => (
-            <TouchableOpacity
-              key={label}
-              style={s.earnTabBtn}
-              onPress={() => setMainTab(i as 0 | 1)}
-              activeOpacity={0.75}
-            >
-              <Text style={[s.mainTabText, mainTab === i && s.earnTabTextActive]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={s.earnTrack}>
-          <Animated.View style={[s.earnIndicator, mainIndicatorStyle]} />
-        </View>
+        {/* Huvudflikar: tap, dra på raden eller svep var som helst på sidan */}
+        <GestureDetector gesture={tabPan}>
+          <View onLayout={e => setTabW(e.nativeEvent.layout.width)}>
+            <View style={[s.earnTabsRow, { marginTop: 10 }]}>
+              {(['Medaljer', 'Rekord'] as const).map((label, i) => (
+                <TouchableOpacity
+                  key={label}
+                  style={s.earnTabBtn}
+                  onPress={() => commitMain(i as 0 | 1)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[s.mainTabText, mainTab === i && s.earnTabTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={s.earnTrack}>
+              <Animated.View style={[s.earnIndicator, mainIndicatorStyle]} />
+            </View>
+          </View>
+        </GestureDetector>
 
         {mainTab === 0 && (<>
-        {/* Tjäna poäng — chips i rubriken, svep mellan korten funkar också */}
+        {/* Tjäna poäng — titlarna sitter i korten, nästa kort sticker fram */}
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>TJÄNA POÄNG</Text>
-          <View style={s.earnChips}>
-            {(['Återkommande', `Engångs ${ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/${ONE_TIME_RULES.length}`]).map((label, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[s.earnChip, earnTab === i && s.earnChipActive]}
-                onPress={() => switchEarnTab(i as 0 | 1)}
-                activeOpacity={0.75}
-              >
-                <Text style={[s.earnChipText, earnTab === i && s.earnChipTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
         </View>
+        <GestureDetector gesture={earnNativeScroll}>
         <ScrollView
           ref={earnPagerRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onMomentumScrollEnd={e => {
-            setEarnTab(Math.round(e.nativeEvent.contentOffset.x / SNAP_W) as 0 | 1)
-          }}
           style={{ marginHorizontal: -20 }}
           contentContainerStyle={{ paddingHorizontal: 20, gap: PAGE_GAP }}
           snapToInterval={SNAP_W}
@@ -411,6 +458,7 @@ export default function RecordsScreen() {
         >
           {/* Sida 1: återkommande */}
           <View style={[s.recordCard, { width: PAGE_W }]}>
+            <Text style={s.earnCardTitle}>Återkommande</Text>
             {POINT_RULES.map((rule, i) => (
               <View key={rule.label} style={[s.recordRow, i < POINT_RULES.length - 1 && s.recordBorder]}>
                 <View style={s.ruleIcon}>
@@ -427,6 +475,7 @@ export default function RecordsScreen() {
 
           {/* Sida 2: engångsmål */}
           <View style={[s.recordCard, { width: PAGE_W }]}>
+            <Text style={s.earnCardTitle}>Engångsmål {ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/{ONE_TIME_RULES.length}</Text>
             {ONE_TIME_RULES.map((rule, i) => {
               const earned = oneTime[rule.id]
               return (
@@ -455,6 +504,7 @@ export default function RecordsScreen() {
             })}
           </View>
         </ScrollView>
+        </GestureDetector>
 
         {/* ── Medaljer ── */}
         <View style={s.sectionRow}>
@@ -592,6 +642,7 @@ export default function RecordsScreen() {
         </>)}
 
       </ScrollView>
+      </GestureDetector>
 
       {/* ── Rekordpassets detaljvy ── */}
       <Modal visible={!!selectedCardio} animationType="slide" onRequestClose={() => setSelectedCardio(null)}>
@@ -821,14 +872,7 @@ const s = StyleSheet.create({
   earnTabBtn:  { flex: 1, alignItems: 'center', paddingVertical: 8 },
   mainTabText:       { color: TEXT_SECONDARY, fontSize: 16, fontWeight: '700' },
   earnTabTextActive: { color: ORANGE, fontWeight: '700' },
-  earnChips: { flexDirection: 'row', gap: 6 },
-  earnChip: {
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 13,
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
-  },
-  earnChipActive: { backgroundColor: ORANGE, borderColor: ORANGE },
-  earnChipText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
-  earnChipTextActive: { color: '#000', fontWeight: '700' },
+  earnCardTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', marginBottom: 4 },
   earnTrack: {
     height: 3, borderRadius: 2, overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 12,
