@@ -58,7 +58,7 @@ import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
-import { toLocalDateString, weekdayOf } from '@/lib/date'
+import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
 
 const GPS_KEYWORDS = ['löpning', 'running', 'jogging', 'cykling', 'cycling', 'promenad', 'walking', 'spring', 'intervallspring', 'gång']
 const DAY_SHORT  = ['MÅN','TIS','ONS','TOR','FRE','LÖR','SÖN']
@@ -617,6 +617,30 @@ export default function SchemaScreen() {
     openEditor,
     openFullscreen: (s, date) => setFullscreenTarget({ session: s, date }),
   }
+  // Veckosammanfattning — "X av Y pass klara denna vecka" för vald veckas dagar
+  const weekSummary = useMemo(() => {
+    const start = startOfWeek(selectedDate)
+    let total = 0
+    let done = 0
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      const wd = weekdayOf(d)
+      const ds = isoDate(d)
+      const skipPfx = `SKIP:${ds}:`
+      const skipIds = sessions.filter(s => s.name.startsWith(skipPfx)).map(s => s.name.slice(skipPfx.length))
+      const day = sessions.filter(s =>
+        !s.name.startsWith('SKIP:') &&
+        !skipIds.includes(s.id) &&
+        (s.weekdays.includes(wd) || (s.weekdays.length === 0 && s.name.startsWith(`ONCE:${ds}:`)))
+      )
+      total += day.length
+      const comp = completedByDate[ds]
+      if (comp) done += day.filter(s => comp.has(s.id)).length
+    }
+    return { total, done }
+  }, [sessions, completedByDate, selectedDate])
+
   const api = useMemo<DayPageApi>(() => ({
     toggleCheck:      (...a) => apiFnsRef.current.toggleCheck(...a),
     deleteExercise:   (...a) => apiFnsRef.current.deleteExercise(...a),
@@ -719,6 +743,21 @@ export default function SchemaScreen() {
         <Text style={styles.manageLinkText}>Hantera schemalagda pass</Text>
         <Ionicons name="chevron-forward" size={13} color={TEXT_SECONDARY} />
       </TouchableOpacity>
+
+      {/* Veckosammanfattning */}
+      {weekSummary.total > 0 && (
+        <View style={styles.weekSummary}>
+          <Text style={styles.weekSummaryText}>
+            {weekSummary.done} av {weekSummary.total} pass klara denna vecka
+          </Text>
+          <View style={styles.weekTrack}>
+            <View style={[styles.weekFill, {
+              width: `${Math.min(100, (weekSummary.done / weekSummary.total) * 100)}%` as never,
+              backgroundColor: weekSummary.done >= weekSummary.total ? '#4CAF50' : ORANGE,
+            }]} />
+          </View>
+        </View>
+      )}
 
       {/* Horizontal day pager — one page per calendar date */}
       <FlatList
@@ -981,6 +1020,18 @@ const styles = StyleSheet.create({
     borderColor: ORANGE + '40', borderStyle: 'dashed',
   },
   quickAddText: { color: ORANGE, fontSize: 15, fontWeight: '600' },
+
+  weekSummary: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 20, paddingVertical: 9,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  weekSummaryText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  weekTrack: {
+    flex: 1, height: 4, borderRadius: 2, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  weekFill: { height: '100%', borderRadius: 2 },
 
   emptyState: { alignItems: 'center', paddingVertical: 52, paddingHorizontal: 32, gap: 8 },
   emptyIcon: {
