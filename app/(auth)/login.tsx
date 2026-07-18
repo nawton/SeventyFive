@@ -34,8 +34,16 @@ export default function LoginScreen() {
     setGoogleLoading(true)
     try {
       const ok = await signInWithGoogle()
-      if (ok) router.replace('/(app)/dashboard')
-      else Alert.alert('Google-inloggning misslyckades', 'Försök igen.')
+      if (ok) {
+        // Samma routing som e-post: vald startdag ska följa med in i quizet
+        router.replace(
+          startDay
+            ? { pathname: '/(auth)/quiz', params: { startDay } }
+            : '/(app)/dashboard'
+        )
+      } else {
+        Alert.alert('Google-inloggning misslyckades', 'Försök igen.')
+      }
     } finally {
       setGoogleLoading(false)
     }
