@@ -1,35 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, FlatList,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import Body from 'react-native-body-highlighter'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 import { completeExercise, updateSessionExercise, addSingleExerciseToSession } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
 import { saveStrengthWorkout, getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
 import { getPersonalRecords, findNewPR } from '@/services/personalRecords'
-import { getMusclesForName, bestSideForMuscles, getExerciseMuscleGroup } from '@/lib/muscles'
+import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import {
   getRestSeconds, setRestSeconds,
   getExerciseRestSeconds, setExerciseRestSeconds,
 } from '@/lib/prefs'
 
 type LogSet = { reps: string; weight: string; done: boolean }
-
-const MUSCLE_GROUPS = [
-  { key: 'all',       label: 'Alla' },
-  { key: 'legs',      label: 'Ben' },
-  { key: 'chest',     label: 'Bröst' },
-  { key: 'back',      label: 'Rygg' },
-  { key: 'shoulders', label: 'Axlar' },
-  { key: 'arms',      label: 'Armar' },
-  { key: 'core',      label: 'Mage' },
-]
 
 function fmtClock(secs: number): string {
   const m = Math.floor(secs / 60)
@@ -186,26 +175,8 @@ export function SessionFullscreen({
     }
   }
 
-  // ── Lägg till övning i passet ──
-  const [addExOpen, setAddExOpen]   = useState(false)
-  const [exSearch, setExSearch]     = useState('')
-  const [exGroup, setExGroup]       = useState('all')
-  const inPass = new Set(exercises.map(e => e.exercise_name))
-
-  const pickableExercises = [...new Map(
-    exercisesList.filter(e => e.category === 'strength').map(e => [e.name.toLowerCase(), e]),
-  ).values()].filter(e => {
-    const g = exGroup === 'all' || getExerciseMuscleGroup(e.name) === exGroup
-    const q = exSearch.trim() === '' || e.name.toLowerCase().includes(exSearch.toLowerCase())
-    return g && q
-  })
-
-  async function pickExercise(exInfo: Exercise) {
-    if (!session || inPass.has(exInfo.name)) return
-    Haptics.selectionAsync()
-    await addSingleExerciseToSession(session.id, exInfo.name, exercises.length, 3, '10').catch(() => null)
-    onSaved?.()   // laddar om — den nya övningen dyker upp i listan
-  }
+  // ── Lägg till övning i passet — via den vanliga övningsväljaren ──
+  const [addExOpen, setAddExOpen] = useState(false)
   function addSet(exId: string) {
     setLogs(prev => {
       const rows = prev[exId] ?? []
@@ -404,80 +375,20 @@ export function SessionFullscreen({
           </ScrollView>
         </KeyboardAvoidingView>
 
-        {/* ── Lägg till övning — lager med muskelgubbar per övning ── */}
-        {addExOpen && (
-          <View style={[StyleSheet.absoluteFill, s.addExScreen, { paddingTop: insets.top + 6 }]}>
-            <View style={s.addExHeader}>
-              <TouchableOpacity onPress={() => setAddExOpen(false)} style={s.iconBtn} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
-              </TouchableOpacity>
-              <Text style={s.addExTitle}>Lägg till övning</Text>
-              <TouchableOpacity onPress={() => setAddExOpen(false)} style={s.addExDone} activeOpacity={0.8}>
-                <Text style={s.addExDoneText}>Klar</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={s.searchBar}>
-              <Ionicons name="search-outline" size={16} color={TEXT_SECONDARY} />
-              <TextInput
-                style={s.searchInput}
-                value={exSearch}
-                onChangeText={setExSearch}
-                placeholder="Sök övning…"
-                placeholderTextColor={TEXT_SECONDARY}
-                autoCorrect={false}
-                autoCapitalize="none"
-                clearButtonMode="while-editing"
-              />
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipStrip} contentContainerStyle={s.chips}>
-              {MUSCLE_GROUPS.map(g => (
-                <TouchableOpacity key={g.key} style={[s.chip, exGroup === g.key && s.chipActive]} onPress={() => setExGroup(g.key)} activeOpacity={0.7}>
-                  <Text style={[s.chipText, exGroup === g.key && s.chipTextActive]}>{g.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <FlatList
-              data={pickableExercises}
-              keyExtractor={item => item.id}
-              keyboardShouldPersistTaps="handled"
-              initialNumToRender={9}
-              windowSize={5}
-              contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-              renderItem={({ item }) => {
-                const muscles = getMusclesForName(item.name)
-                const already = inPass.has(item.name)
-                return (
-                  <TouchableOpacity
-                    style={[s.exPickRow, already && { opacity: 0.45 }]}
-                    onPress={() => pickExercise(item)}
-                    disabled={already}
-                    activeOpacity={0.7}
-                  >
-                    {/* Muskelgubbe — musklerna för övningen markerade */}
-                    <View style={s.exPickThumb}>
-                      <Body
-                        data={muscles.map(slug => ({ slug, intensity: 1 as const }))}
-                        side={bestSideForMuscles(muscles)}
-                        gender="male"
-                        scale={0.28}
-                        colors={[ORANGE]}
-                        defaultFill="#3A3A3C"
-                      />
-                    </View>
-                    <Text style={s.exPickName} numberOfLines={2}>{item.name}</Text>
-                    <View style={[s.exPickAdd, already && { backgroundColor: GREEN + '22' }]}>
-                      <Ionicons name={already ? 'checkmark' : 'add'} size={19} color={already ? GREEN : ORANGE} />
-                    </View>
-                  </TouchableOpacity>
-                )
-              }}
-              ListEmptyComponent={<Text style={s.empty}>Inga övningar hittades</Text>}
-            />
-          </View>
-        )}
+        {/* ── Lägg till övning — samma väljare som i schemat (muskelgrupper) ── */}
+        <ExercisePickerSheet
+          visible={addExOpen}
+          exercises={exercisesList}
+          gymOnly
+          onClose={() => setAddExOpen(false)}
+          onSelect={async (exInfo, sets, reps) => {
+            if (!session) { setAddExOpen(false); return }
+            setAddExOpen(false)
+            Haptics.selectionAsync()
+            await addSingleExerciseToSession(session.id, exInfo.name, exercises.length, sets, reps).catch(() => null)
+            onSaved?.()   // laddar om — övningen dyker upp i tabellen
+          }}
+        />
 
         {/* ── Vilotidsinställning — lager över passvyn ── */}
         {restSheetOpen && (
@@ -629,47 +540,6 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: ORANGE + '50', borderStyle: 'dashed',
   },
   addExText: { color: ORANGE, fontSize: 15, fontWeight: '700' },
-
-  // Lägg till övning — lager
-  addExScreen: { backgroundColor: BG },
-  addExHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 12, paddingBottom: 8,
-  },
-  addExTitle: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
-  addExDone: { backgroundColor: ORANGE, borderRadius: 16, paddingHorizontal: 15, paddingVertical: 8 },
-  addExDoneText: { color: '#000', fontSize: 14, fontWeight: '800' },
-  searchBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: 16, marginBottom: 8,
-    paddingHorizontal: 14, height: 44,
-    backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: BORDER,
-  },
-  searchInput: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, padding: 0 },
-  chipStrip: { flexGrow: 0, marginBottom: 6 },
-  chips: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER },
-  chipActive: { backgroundColor: ORANGE, borderColor: ORANGE },
-  chipText: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
-  chipTextActive: { color: '#000', fontWeight: '700' },
-  exPickRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  exPickThumb: {
-    width: 52, height: 88, overflow: 'hidden',
-    alignItems: 'center', justifyContent: 'flex-start',
-    backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER,
-  },
-  exPickName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  exPickAdd: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: ORANGE + '18',
-    alignItems: 'center', justifyContent: 'center',
-  },
 
   restSheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
