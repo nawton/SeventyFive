@@ -36,7 +36,7 @@ export function RestartPromptModal({ visible, variant, missedDays, onRestart, on
     if (variant === 'today') {
       return 'Utmaningen bygger på att varje dag räknas. Vad gör du nu?'
     }
-    return 'Ingen dag loggades som klar. Utmaningen bygger på att varje dag räknas — vad gör du nu?'
+    return 'Ingen dag loggades som klar. Utmaningen bygger på att varje dag räknas. Vad gör du nu?'
   }
 
   async function handle(action: 'restart' | 'continue') {

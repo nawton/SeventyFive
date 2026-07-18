@@ -38,7 +38,7 @@ const RUN_OPTIONS = [
   { key: '5k',       label: '5K',          sub: 'Perfekt startpunkt',      icon: 'walk-outline'     },
   { key: '10k',      label: '10K',          sub: 'Nästa nivå',              icon: 'fitness-outline'  },
   { key: 'half',     label: 'Halvmarathon', sub: '21.1 km',                icon: 'flag-outline'     },
-  { key: 'marathon', label: 'Marathon',     sub: '42.2 km — den ultimata', icon: 'trophy-outline'   },
+  { key: 'marathon', label: 'Marathon',     sub: '42.2 km, den ultimata', icon: 'trophy-outline'   },
 ] as const
 
 // ─── Types ────────────────────────────────────────────────────────────────────

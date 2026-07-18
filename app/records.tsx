@@ -527,7 +527,7 @@ export default function RecordsScreen() {
                 </View>
               ))}
               {pointSources.length === 0 && (
-                <Text style={s.modalDesc}>Inga poäng ännu — kom igång med dagens uppgifter!</Text>
+                <Text style={s.modalDesc}>Inga poäng ännu. Kom igång med dagens uppgifter!</Text>
               )}
             </View>
 

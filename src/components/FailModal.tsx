@@ -15,7 +15,7 @@ import { BG, CARD, BORDER, RED, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/l
 
 // Hårdkodade motivationsvar — ersätts med OpenAI av Anton
 const AI_RESPONSES = [
-  'Din ursäkt är verklig. Din potential är större. Imorgon börjar du om — starkare.',
+  'Din ursäkt är verklig. Din potential är större. Imorgon börjar du om, starkare.',
   'Nawton-mentaliteten handlar inte om perfektion. Den handlar om att resa sig. Gör det imorgon.',
   'Du visste att det inte skulle vara enkelt. Det är precis därför det är värt det. En dag i taget.',
   'Kom ihåg varför du startade. Den känslan är starkare än varje ursäkt. Tillbaka på spåret imorgon.',

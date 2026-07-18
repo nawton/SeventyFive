@@ -455,7 +455,7 @@ export function SessionEditor({
                     <TouchableOpacity
                       onPress={() => Alert.alert(
                         'Upprepa varje vecka',
-                        'På — passet visas automatiskt varje vald veckodag och fortsätter tills du tar bort det.\n\nAv — passet visas bara en enda gång, på den dag du väljer.',
+                        'På: passet visas automatiskt varje vald veckodag och fortsätter tills du tar bort det.\n\nAv: passet visas bara en enda gång, på den dag du väljer.',
                         [{ text: 'OK' }],
                       )}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

@@ -392,7 +392,7 @@ export default function ScheduleScreen() {
             style={styles.skipButton}
             onPress={() => router.replace('/(app)/dashboard')}
           >
-            <Text style={styles.skipText}>Hoppa över — ställ in senare</Text>
+            <Text style={styles.skipText}>Hoppa över, ställ in senare</Text>
           </TouchableOpacity>
         )}
 

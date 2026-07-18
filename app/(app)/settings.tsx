@@ -174,7 +174,7 @@ export default function SettingsScreen() {
   async function handleDeleteAccount() {
     Alert.alert(
       'Radera konto',
-      'All din data — utmaningar, träningspass, foton och profil — raderas permanent. Det går inte att ångra.',
+      'All din data (utmaningar, träningspass, foton och profil) raderas permanent. Det går inte att ångra.',
       [
         { text: 'Avbryt', style: 'cancel' },
         {

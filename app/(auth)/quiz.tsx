@@ -49,9 +49,9 @@ const QUESTIONS: Question[] = [
     id: 'pressure',
     question: 'Hur hårt vill du ha det?',
     options: [
-      { value: 'normal', label: 'Lagom – jag tar det steg för steg' },
-      { value: 'hard', label: 'Hårt – jag vill utmanas ordentligt' },
-      { value: 'extreme', label: 'Extremt – jag vill testa min gräns' },
+      { value: 'normal', label: 'Lagom, jag tar det steg för steg' },
+      { value: 'hard', label: 'Hårt, jag vill utmanas ordentligt' },
+      { value: 'extreme', label: 'Extremt, jag vill testa min gräns' },
     ],
   },
 ]

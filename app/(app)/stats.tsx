@@ -54,7 +54,7 @@ function getWeekBounds(offset: number): { start: string; end: string; label: str
   return {
     start: toLocalDateString(mon),
     end:   toLocalDateString(sun),
-    label: offset === 0 ? 'Denna vecka' : `${fmt(mon)} – ${fmt(sun)}`,
+    label: offset === 0 ? 'Denna vecka' : `${fmt(mon)} till ${fmt(sun)}`,
   }
 }
 
@@ -690,7 +690,7 @@ export default function StatsScreen() {
                 <View style={s.msIcon}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
                   <Text style={s.msEyebrow}>NÄSTA MILSTOLPE</Text>
-                  <Text style={s.msTitle}>Dag {milestone.day} — {milestone.label}</Text>
+                  <Text style={s.msTitle}>Dag {milestone.day}: {milestone.label}</Text>
                   <Text style={s.msSub}>{milestone.daysLeft} dagar kvar · Du är på väg!</Text>
                 </View>
               </View>
@@ -712,7 +712,7 @@ export default function StatsScreen() {
                 <View style={s.msIcon}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
                   <Text style={s.msEyebrow}>NÄSTA MILSTOLPE</Text>
-                  <Text style={s.msTitle}>Dag {milestone.day} — {milestone.label}</Text>
+                  <Text style={s.msTitle}>Dag {milestone.day}: {milestone.label}</Text>
                   <Text style={s.msSub}>{milestone.daysLeft} dagar kvar · Håll ut</Text>
                 </View>
               </View>

@@ -203,7 +203,7 @@ export default function AnpassningScreen() {
               ]}
               onChange={u => { setUnit(u); setUnitSystem(u).catch(() => {}) }}
             />
-            <Text style={s.segHint}>Gäller i hela appen — pass, statistik och rekord</Text>
+            <Text style={s.segHint}>Gäller i hela appen: pass, statistik och rekord</Text>
           </View>
         </Section>
 

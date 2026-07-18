@@ -79,7 +79,7 @@ export default function Welcome() {
             onPress={() => setDayModalVisible(true)}
             activeOpacity={0.8}
           >
-            <Text style={s.secondaryBtnText}>Jag har redan börjat — välj dag</Text>
+            <Text style={s.secondaryBtnText}>Jag har redan börjat, välj dag</Text>
           </TouchableOpacity>
         </Animated.View>
 

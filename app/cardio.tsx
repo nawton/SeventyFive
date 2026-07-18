@@ -638,7 +638,7 @@ export default function CardioScreen() {
           const newKm = prevKm + d
           if (newKm >= splitKm.current) {
             const splitTime = elapsedRef.current - lastSplitElapsed.current
-            const label = `${splitKm.current} km  —  ${formatPace(1, splitTime)} /km`
+            const label = `${splitKm.current} km  ${formatPace(1, splitTime)} /km`
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
             if (splitToastTimer.current) clearTimeout(splitToastTimer.current)
             setSplitToast(label)

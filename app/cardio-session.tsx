@@ -268,7 +268,7 @@ export default function CardioSessionScreen() {
             <Text style={s.goalTileLabel}>DISTANS</Text>
             <TouchableOpacity onPress={() => openEdit('dist')} activeOpacity={0.7}>
               <Text style={[s.goalTileValue, goalKm > 0 && { color: CARDIO_BLUE }]}>
-                {goalDist > 0 ? goalDist.toFixed(1).replace('.', ',') : '—'}
+                {goalDist > 0 ? goalDist.toFixed(1).replace('.', ',') : '0'}
               </Text>
               <Text style={s.goalTileUnit}>{unitLabel}</Text>
             </TouchableOpacity>
@@ -311,7 +311,7 @@ export default function CardioSessionScreen() {
             <Text style={s.goalTileLabel}>TID</Text>
             <TouchableOpacity onPress={() => openEdit('time')} activeOpacity={0.7}>
               <Text style={[s.goalTileValue, goalMin > 0 && { color: CARDIO_BLUE }]}>
-                {goalMin > 0 ? goalMin : '—'}
+                {goalMin > 0 ? goalMin : '0'}
               </Text>
               <Text style={s.goalTileUnit}>min</Text>
             </TouchableOpacity>
@@ -371,7 +371,7 @@ export default function CardioSessionScreen() {
               </View>
             </View>
           ) : (
-            <Text style={s.lastEmpty}>Inget tidigare pass av den här typen — dags att sätta ribban!</Text>
+            <Text style={s.lastEmpty}>Inget tidigare pass av den här typen. Dags att sätta ribban!</Text>
           )}
         </View>
 

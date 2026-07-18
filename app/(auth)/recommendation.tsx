@@ -52,7 +52,7 @@ const LEVELS: Record<Level, LevelConfig> = {
     tagline: 'Bara de starkaste klarar detta.',
     rules: [
       '2 träningspass per dag (ett utomhus)',
-      'Strikt kostplan – inga undantag',
+      'Strikt kostplan, inga undantag',
       'Drick 4 liter vatten',
       'Läs 20 sidor',
       'Ta ett progressfoto',
