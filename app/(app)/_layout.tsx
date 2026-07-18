@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Tabs } from 'expo-router'
-import { View, StyleSheet } from 'react-native'
+import { View, Pressable, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, runOnJS } from 'react-native-reanimated'
@@ -55,18 +55,27 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
     }
   }
 
-  // Indexet räknas ut i själva släpp-händelsen från fingrets x-position —
-  // deterministiskt oavsett om JS-tråden hunnit ikapp markeringen eller inte
   function commit(i: number) {
     hotRef.current = null
     setHotIdx(null)
+    pos.value = withSpring(i, SP)
     const tab = TABS[i]
     if (tab && tab.name !== activeName) navigation.navigate(tab.name as never)
   }
 
+  // Säkerhetsnät: gesten avbröts utan commit → bubblan fjädrar hem igen
+  function abortHot() {
+    if (hotRef.current === null) return
+    hotRef.current = null
+    setHotIdx(null)
+    pos.value = withSpring(activeIdx, SP)
+  }
+
+  // Tap sköts av Pressables per ikon (native-pålitligt) — pannen aktiveras
+  // först vid håll-och-dra och tar då över från tryckytorna
   const pan = Gesture.Pan()
-    .minDistance(0)
-    .onBegin(e => {
+    .activateAfterLongPress(180)
+    .onStart(e => {
       if (slotW <= 0) return
       const i = Math.min(n - 1, Math.max(0, Math.floor(e.x / slotW)))
       pos.value = withSpring(i, SP)
@@ -79,11 +88,13 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
       pos.value = f
       runOnJS(setHot)(Math.min(n - 1, Math.max(0, Math.round(f))))
     })
-    .onFinalize(e => {
+    .onEnd(e => {
       if (slotW <= 0) return
       const i = Math.min(n - 1, Math.max(0, Math.floor(e.x / slotW)))
-      pos.value = withSpring(i, SP)
       runOnJS(commit)(i)
+    })
+    .onFinalize(() => {
+      runOnJS(abortHot)()
     })
 
   const bubbleStyle = useAnimatedStyle(() => ({
@@ -116,17 +127,17 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
             />
           )}
 
-          <View style={styles.row} pointerEvents="none">
+          <View style={styles.row}>
             {TABS.map((t, i) => {
               const on = i === shownIdx
               return (
-                <View key={t.name} style={styles.slot}>
+                <Pressable key={t.name} style={styles.slot} onPress={() => commit(i)}>
                   <Ionicons
                     name={on ? t.iconActive : t.icon}
                     size={24}
                     color={on ? ORANGE : 'rgba(255,255,255,0.55)'}
                   />
-                </View>
+                </Pressable>
               )
             })}
           </View>
