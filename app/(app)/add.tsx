@@ -60,7 +60,6 @@ import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
 
-const GPS_KEYWORDS = ['löpning', 'running', 'jogging', 'cykling', 'cycling', 'promenad', 'walking', 'spring', 'intervallspring', 'gång']
 const DAY_SHORT  = ['MÅN','TIS','ONS','TOR','FRE','LÖR','SÖN']
 const SCREEN_W   = Dimensions.get('window').width
 const TOTAL_DAYS = 365
@@ -70,14 +69,6 @@ const PAGER_DATA = Array.from({ length: TOTAL_DAYS }, (_, i) => i)
 
 function isoDate(d: Date): string { return toLocalDateString(d) }
 
-/** Mappar en cardio-övnings namn till detaljskärmens typnyckel. */
-function cardioTypeForName(name: string): string {
-  const n = name.toLowerCase()
-  if (n.includes('cykl') || n.includes('cycling'))                    return 'cycling'
-  if (n.includes('promenad') || n.includes('gång') || n.includes('walking')) return 'walking'
-  if (n.includes('intervall'))                                        return 'interval'
-  return 'running'
-}
 function todayMidnight(): Date { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
 function indexToDate(i: number): Date {
   const d = todayMidnight(); d.setDate(d.getDate() + i - CENTER_IDX); return d
@@ -230,13 +221,11 @@ const DayPage = React.memo(function DayPage({
                       progressedIds={new Set(scaled.filter(x => x.progressed).map(x => x.ex.id))}
                       checked={checked}
                       isCompleted={isCompleted}
-                      onToggleExercise={(exId) => api.toggleCheck(exId, dateStr)}
                       onDeleteExercise={(exId) => api.deleteExercise(s.id, exId, dateStr)}
                       onLongPress={() => api.sessionLongPress(s, sessionDisplayName(s))}
                       onAddExercise={!isPast ? () => api.setPickerSession(s) : undefined}
                       onOpenFullscreen={s.session_type !== 'cardio' ? () => api.openFullscreen(displaySession, dateStr) : undefined}
                       gymStats={gymStats}
-                      onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
                       onStartCardioSession={s.session_type === 'cardio'
                         ? () => router.push({ pathname: '/cardio-session', params: {
                             sessionId: s.id,
@@ -254,37 +243,6 @@ const DayPage = React.memo(function DayPage({
                             date: dateStr,
                           } })
                         : undefined}
-                      onCardPress={(sessionEx) => {
-                        const name   = sessionEx.exercise_name
-                        const exInfo = exercises.find(e => e.name === name)
-                        if (!exInfo) return
-                        const hasMap = exInfo.category === 'cardio' && GPS_KEYWORDS.some(kw => name.toLowerCase().includes(kw))
-                        if (hasMap) {
-                          // Cardio-övning → passdetaljen med målsättning, inte rakt in i GPS:en
-                          router.push({ pathname: '/cardio-session', params: {
-                            name,
-                            cardioType: cardioTypeForName(name),
-                            notes: sessionEx.reps ?? '',
-                            date: dateStr,
-                          } })
-                        } else {
-                          router.push({
-                            pathname: '/exercise/[id]',
-                            params: {
-                              id:          exInfo.id,
-                              name:        exInfo.name,
-                              description: exInfo.description ?? '',
-                              category:    exInfo.category,
-                              difficulty:  exInfo.difficulty,
-                              initialSets: sessionEx.sets != null ? String(sessionEx.sets) : '',
-                              initialReps: sessionEx.reps ?? '',
-                              sessionExId: sessionEx.id,
-                              sessionDate: dateStr,
-                              repeating: s.weekdays.length > 0 ? '1' : '',
-                            },
-                          })
-                        }
-                      }}
                       onComplete={() => api.complete(s.id, dateStr)}
                       onUncomplete={() => api.uncomplete(s.id, dateStr)}
                     />
@@ -299,10 +257,7 @@ const DayPage = React.memo(function DayPage({
                       checked={checked}
                       isCompleted={false}
                       isQuickLog
-                      onToggleExercise={(exId) => api.toggleCheck(exId, dateStr)}
                       onDeleteExercise={(exId) => api.deleteExercise(quickLogSession.id, exId, dateStr)}
-                      onStartCardio={(name) => router.push({ pathname: '/cardio', params: { name } })}
-                      onCardPress={() => {}}
                       onOpenFullscreen={() => api.openFullscreen({ ...quickLogSession, name: 'Loggat idag' }, dateStr)}
                       onComplete={() => {}}
                       onUncomplete={() => {}}
@@ -326,10 +281,7 @@ const DayPage = React.memo(function DayPage({
                       isCompleted
                       cardioStats={{ distanceKm: w.data.distance_km, durationSeconds: w.data.duration_seconds }}
                       onViewCardioSummary={() => router.push({ pathname: '/cardio-summary', params: { name: w.name, cardioType: w.data.type, date: dateStr, workoutId: w.id } })}
-                      onToggleExercise={() => {}}
                       onDeleteExercise={() => {}}
-                      onStartCardio={() => {}}
-                      onCardPress={() => {}}
                       onComplete={() => {}}
                       onUncomplete={() => {}}
                     />

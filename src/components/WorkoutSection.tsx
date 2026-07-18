@@ -303,13 +303,14 @@ export interface WorkoutSectionProps {
   session:           WorkoutSession
   checked:           Record<string, boolean>
   isCompleted:       boolean
-  onToggleExercise:  (exId: string) => void
+  /** Används inte längre av korten — interaktionen sker i passvyn (Öppna) */
+  onToggleExercise?: (exId: string) => void
   onDeleteExercise:  (exId: string) => void
-  onStartCardio:         (name: string) => void
+  onStartCardio?:        (name: string) => void
   onStartCardioSession?: () => void
   onViewCardioSummary?:  () => void
   onOpenFullscreen?:     () => void
-  onCardPress:           (ex: SessionExercise) => void
+  onCardPress?:          (ex: SessionExercise) => void
   onComplete:            () => void
   onUncomplete:          () => void
   /** Passinställningar nås numera via långtryck på passnamnet → Inställningar */
