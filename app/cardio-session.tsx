@@ -26,7 +26,7 @@ import {
   getUnitSystem, setUnitSystem, toDisplayDistance, fromDisplayDistance,
   distanceUnitLabel, paceForUnit, type UnitSystem,
 } from '@/lib/units'
-import { getCardioStatsTheme, setCardioStatsTheme, getVoiceCues, setVoiceCues, type CardioStatsTheme } from '@/lib/prefs'
+import { getCardioStatsTheme, setCardioStatsTheme, getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, type CardioStatsTheme } from '@/lib/prefs'
 
 const CARDIO_BLUE = '#4AA8E0'
 const SCREEN_W    = Dimensions.get('window').width
@@ -131,7 +131,13 @@ export default function CardioSessionScreen() {
     getUnitSystem().then(setUnit)
     getCardioStatsTheme().then(setStatsTheme)
     getVoiceCues().then(setVoiceOn)
-  }, [])
+    // Förifyll med senaste målet för den här passtypen
+    getCardioGoal(type).then(g => {
+      if (!g) return
+      if (g.km > 0) setGoalKm(g.km)
+      if (g.min > 0) setGoalMin(g.min)
+    })
+  }, [type])
 
   const unitLabel = distanceUnitLabel(unit)
   const goalDist  = toDisplayDistance(goalKm, unit)   // visningsvärde i vald enhet
@@ -197,6 +203,8 @@ export default function CardioSessionScreen() {
 
   function handleStart() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    // Spara målet som förval för nästa pass av samma typ
+    setCardioGoal(type, { km: goalKm, min: goalMin }).catch(() => {})
     router.replace({
       pathname: '/cardio',
       params: {

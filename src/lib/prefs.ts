@@ -69,6 +69,22 @@ export async function setExerciseRestSeconds(secs: number): Promise<void> {
   await AsyncStorage.setItem(EXREST_KEY, String(secs)).catch(() => {})
 }
 
+// Senast satta cardiomål per passtyp — förifylls nästa gång
+export async function getCardioGoal(type: string): Promise<{ km: number; min: number } | null> {
+  try {
+    const raw = await AsyncStorage.getItem(`cardioGoal:${type}`)
+    if (!raw) return null
+    const v = JSON.parse(raw)
+    return { km: Number(v.km) || 0, min: Number(v.min) || 0 }
+  } catch {
+    return null
+  }
+}
+
+export async function setCardioGoal(type: string, goal: { km: number; min: number }): Promise<void> {
+  await AsyncStorage.setItem(`cardioGoal:${type}`, JSON.stringify(goal)).catch(() => {})
+}
+
 // Passets starttid (per pass + dag) — så Tid-räknaren överlever att vyn stängs
 export async function getOrInitPassStart(id: string): Promise<number> {
   const key = `passStart:${id}`
