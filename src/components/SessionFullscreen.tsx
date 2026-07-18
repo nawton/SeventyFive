@@ -221,10 +221,6 @@ export function SessionFullscreen({
     })
   }
 
-  // ── Statistik i toppraden ──
-  const allRows   = Object.values(logs).flat()
-  const doneRows  = allRows.filter(r => r.done)
-  const volumeKg  = doneRows.reduce((sum, r) => sum + (parseFloat(r.weight) || 0) * (parseInt(r.reps) || 0), 0)
 
   // ── Slutför: spara allt, bocka övningar, markera passet klart ──
   async function finish() {
@@ -309,22 +305,14 @@ export function SessionFullscreen({
           )}
         </View>
 
-        {/* ── Statistikrad: tid · volym · set ── */}
+        {/* ── Statistikrad: tid + vilotidsinställning ── */}
         <View style={s.statsRow}>
           <View style={s.stat}>
             <Text style={s.statLabel}>Tid</Text>
             <Text style={[s.statValue, { color: ORANGE }]}>{fmtClock(elapsed)}</Text>
           </View>
-          <View style={s.stat}>
-            <Text style={s.statLabel}>Volym</Text>
-            <Text style={s.statValue}>{Math.round(volumeKg)} kg</Text>
-          </View>
-          <View style={s.stat}>
-            <Text style={s.statLabel}>Set</Text>
-            <Text style={s.statValue}>{doneRows.length}</Text>
-          </View>
           <View style={{ flex: 1 }} />
-          {/* Vilotid — tryck för att ställa in tiden mellan seten */}
+          {/* Vilotid — tryck för att ställa in tiderna mellan set/övningar */}
           <TouchableOpacity style={s.restClockBtn} onPress={() => setRestSheetOpen(true)} activeOpacity={0.75}>
             <Ionicons name="timer-outline" size={20} color={ORANGE} />
             <Text style={s.restClockText}>{fmtClock(restDefault)}</Text>
@@ -357,7 +345,7 @@ export function SessionFullscreen({
                       <View key={i} style={[s.setRow, r.done && s.setRowDone]}>
                         <Text style={s.setNum}>{i + 1}</Text>
                         <TextInput
-                          style={s.input}
+                          style={[s.input, r.done && s.inputDone]}
                           value={r.reps}
                           onChangeText={v => updateLog(ex.id, i, 'reps', v.replace(/[^0-9]/g, ''))}
                           keyboardType="number-pad"
@@ -367,7 +355,7 @@ export function SessionFullscreen({
                           selectTextOnFocus
                         />
                         <TextInput
-                          style={s.input}
+                          style={[s.input, r.done && s.inputDone]}
                           value={r.weight}
                           onChangeText={v => updateLog(ex.id, i, 'weight', v.replace(/[^0-9.,]/g, '').replace(',', '.'))}
                           keyboardType="decimal-pad"
@@ -614,6 +602,7 @@ const s = StyleSheet.create({
     color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700',
     textAlign: 'center', fontVariant: ['tabular-nums'],
   },
+  inputDone: { backgroundColor: GREEN + '22', borderColor: GREEN + '55' },
   check: {
     width: 40, height: 34, borderRadius: 9,
     backgroundColor: 'rgba(255,255,255,0.07)',
