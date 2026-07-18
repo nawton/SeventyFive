@@ -33,11 +33,13 @@ const GRID_PADDING = 20
 const STATS_SCREEN_W = Dimensions.get('window').width
 const TAB_BAR_W = STATS_SCREEN_W - GRID_PADDING * 2
 const SEG_W     = TAB_BAR_W / 3      // en flik-kolumns bredd
-const BLUE   = '#4A90D9'
-const RED    = '#FF453A'
-const YELLOW = '#F5A623'
-const PURPLE = '#9B6DFF'
-const TEAL   = '#5AD8D2'
+// Klara Apple Fitness-färger för statistikvärden
+const BLUE   = '#46B7FF'
+const RED    = '#FF375F'
+const YELLOW = '#FFD60A'
+const PURPLE = '#BF5AF2'
+const TEAL   = '#63E6E2'
+const LIME   = '#A9F548'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -1194,8 +1196,8 @@ const s = StyleSheet.create({
   dtlRow:  { flexDirection: 'row', paddingVertical: 13 },
   dtlCell: { flex: 1, gap: 3 },
   dtlLbl:  { color: TEXT_SECONDARY, fontSize: 14 },
-  dtlVal:  { fontSize: 26, fontFamily: 'Nunito_800ExtraBold' },
-  dtlUnit: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
+  dtlVal:  { fontSize: 26, fontFamily: 'Nunito_700Bold' },
+  dtlUnit: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
   dtlSep:  { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
 
   // Periodfilter (cardio-fliken)
@@ -1224,7 +1226,7 @@ const s = StyleSheet.create({
   },
   sessIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   sessName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  sessValue: { color: GREEN, fontSize: 23, fontFamily: 'Nunito_800ExtraBold', marginTop: 1 },
+  sessValue: { color: LIME, fontSize: 23, fontFamily: 'Nunito_700Bold', marginTop: 1 },
   sessDate: { color: TEXT_SECONDARY, fontSize: 13, alignSelf: 'flex-end', marginBottom: 4 },
 
   // Cardiorekord
@@ -1234,7 +1236,7 @@ const s = StyleSheet.create({
     width: 32, height: 32, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
-  recVal: { color: TEXT_PRIMARY, fontSize: 16, fontFamily: 'Nunito_800ExtraBold' },
+  recVal: { color: TEXT_PRIMARY, fontSize: 16, fontFamily: 'Nunito_700Bold' },
   recLbl: { color: TEXT_SECONDARY, fontSize: 11, marginTop: 1 },
 
   // Ring chart

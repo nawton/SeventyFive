@@ -2,12 +2,12 @@ import 'react-native-url-polyfill/auto'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { useFonts, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito'
+import { useFonts, Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export default function RootLayout() {
   // Rundad siffer-font (SF Rounded-känsla) — appen renderar med systemfont tills den laddats
-  useFonts({ Nunito_700Bold, Nunito_800ExtraBold })
+  useFonts({ Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold })
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary>

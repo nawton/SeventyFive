@@ -25,6 +25,8 @@ import { deleteRepeatingSessions } from '@/services/workoutSchedule'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as Haptics from 'expo-haptics'
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
 
@@ -92,6 +94,23 @@ export default function SettingsScreen() {
   const [userId, setUserId]         = useState<string | null>(null)
   const [wizardVisible, setWizardVisible] = useState(false)
   const [unit, setUnit]             = useState<UnitSystem>('metric')
+  const [segW, setSegW]             = useState(0)
+
+  // Animerad tumme i enhetsväljaren
+  const segPos = useSharedValue(0)
+  useEffect(() => {
+    segPos.value = withTiming(unit === 'imperial' ? 1 : 0, { duration: 220 })
+  }, [unit])
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: segPos.value * (segW / 2) }],
+  }))
+
+  function chooseUnit(u: UnitSystem) {
+    if (u === unit) return
+    Haptics.selectionAsync()
+    setUnit(u)
+    setUnitSystem(u).catch(() => {})
+  }
 
   async function loadSettings() {
     try {
@@ -358,30 +377,38 @@ export default function SettingsScreen() {
 
         {/* Träning */}
         <Section title="Träning">
-          <SettingRow
-            icon="speedometer-outline"
-            label="Enheter"
-            last
-            rightElement={
-              <View style={styles.unitPills}>
-                {([
-                  { key: 'metric',   label: 'km' },
-                  { key: 'imperial', label: 'miles' },
-                ] as const).map(({ key, label }) => (
-                  <TouchableOpacity
-                    key={key}
-                    style={[styles.unitPill, unit === key && styles.unitPillActive]}
-                    onPress={() => { setUnit(key); setUnitSystem(key).catch(() => {}) }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.unitPillText, unit === key && styles.unitPillTextActive]}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            }
-          />
+          <View style={styles.unitBlock}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="speedometer-outline" size={20} color={TEXT_SECONDARY} />
+              <Text style={styles.rowLabel}>Enheter</Text>
+            </View>
+            <View
+              style={styles.segTrack}
+              onLayout={e => setSegW(e.nativeEvent.layout.width - 6)}
+            >
+              {segW > 0 && (
+                <Animated.View style={[styles.segThumb, { width: segW / 2 }, thumbStyle]} />
+              )}
+              {([
+                { key: 'metric',   label: 'Kilometer' },
+                { key: 'imperial', label: 'Miles' },
+              ] as const).map(({ key, label }) => (
+                <TouchableOpacity
+                  key={key}
+                  style={styles.segBtn}
+                  onPress={() => chooseUnit(key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.segText, unit === key && styles.segTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.unitHint}>
+              Distans och tempo visas i {unit === 'metric' ? 'kilometer' : 'miles'} i hela appen
+            </Text>
+          </View>
         </Section>
 
         {/* Notifications */}
@@ -575,19 +602,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Enhetsväljare (km/miles)
-  unitPills: {
+  // Enhetsväljare (km/miles) — segmenterad kontroll med glidande tumme
+  unitBlock: {
+    padding: 16,
+    gap: 12,
+  },
+  segTrack: {
     flexDirection: 'row',
+    height: 44,
     backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 3,
   },
-  unitPill: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 13,
+  segThumb: {
+    position: 'absolute',
+    left: 3,
+    top: 3,
+    bottom: 3,
+    borderRadius: 11,
+    backgroundColor: ORANGE,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  unitPillActive: { backgroundColor: ORANGE },
-  unitPillText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  unitPillTextActive: { color: '#000' },
+  segBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segText: {
+    color: TEXT_SECONDARY,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  segTextActive: {
+    color: '#000',
+    fontWeight: '700',
+  },
+  unitHint: {
+    color: TEXT_SECONDARY,
+    fontSize: 12,
+  },
 })
