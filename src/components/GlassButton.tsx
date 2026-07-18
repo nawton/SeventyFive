@@ -109,7 +109,7 @@ export function GlassCircleButton({
 
 /** Glaspill med valfritt innehåll — t.ex. "Visa statistik"-kapseln över kartan */
 export function GlassPill({
-  children, onPress, draggable = false, style, fallbackStyle,
+  children, onPress, draggable = false, style, fallbackStyle, tint,
 }: {
   children: React.ReactNode
   onPress?: () => void
@@ -118,6 +118,8 @@ export function GlassPill({
   style?: StyleProp<ViewStyle>
   /** Bakgrund/skugga på iOS utan liquid glass */
   fallbackStyle?: StyleProp<ViewStyle>
+  /** Färgton i glaset (t.ex. ORANGE för primärknappar) */
+  tint?: string
 }) {
   const { gesture, anim } = useGlassGesture(onPress, draggable)
   return (
@@ -126,6 +128,7 @@ export function GlassPill({
         <AnimatedGlassView
           isInteractive={!draggable}
           glassEffectStyle="regular"
+          tintColor={tint}
           style={[s.pill, style, anim]}
         >
           {children}

@@ -56,7 +56,8 @@ import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
-import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { TAB_CONTENT_PAD, LIQUID_GLASS } from '@/lib/glass'
+import { GlassPill } from '@/components/GlassButton'
 import { DayPage, EMPTY_CHECKED, EMPTY_COMPLETED, EMPTY_CARDIO_STATS, EMPTY_CARDIO_LOGS, EMPTY_LOGGED, type DayPageApi } from '@/components/schedule/DayPage'
 import { PAGER_DATA, CENTER_IDX, isoDate, todayMidnight, indexToDate, dateToIndex } from '@/lib/scheduleDates'
 
@@ -396,10 +397,10 @@ export default function SchemaScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.addBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
-          <Ionicons name="add" size={18} color="#000" />
-          <Text style={styles.addBtnText}>Nytt pass</Text>
-        </TouchableOpacity>
+        <GlassPill onPress={() => openEditor(null)} tint={ORANGE} style={styles.addBtnLayout} fallbackStyle={styles.addBtn}>
+          <Ionicons name="add" size={18} color={LIQUID_GLASS ? '#fff' : '#000'} />
+          <Text style={[styles.addBtnText, LIQUID_GLASS && { color: '#fff' }]}>Nytt pass</Text>
+        </GlassPill>
       </View>
 
       {/* "Skapa ditt schema" banner — visas bara om man varken har ett schema
@@ -691,6 +692,10 @@ const styles = StyleSheet.create({
   },
   dayCounterNum:   { color: TEXT_PRIMARY, fontSize: 26, fontFamily: NUM_FONT },
   dayCounterSlash: { color: TEXT_SECONDARY, fontSize: 16, fontFamily: NUM_FONT_SEMI },
+  addBtnLayout: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+  },
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: ORANGE, borderRadius: 20,
