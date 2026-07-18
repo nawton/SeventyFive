@@ -12,9 +12,11 @@ import { completeExercise, updateSessionExercise } from '@/services/workoutSched
 import type { Exercise } from '@/services/exercises'
 import { saveStrengthWorkout, getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
 import { getPersonalRecords, findNewPR } from '@/services/personalRecords'
-import { getRestSeconds } from '@/lib/prefs'
+import { getRestSeconds, setRestSeconds } from '@/lib/prefs'
 
 type LogSet = { reps: string; weight: string; done: boolean }
+
+const REST_PRESETS = [30, 45, 60, 90, 120, 180]
 
 function fmtClock(secs: number): string {
   const m = Math.floor(secs / 60)
@@ -122,6 +124,15 @@ export function SessionFullscreen({
     if (restInterval.current) clearInterval(restInterval.current)
     restInterval.current = null
     setRestLeft(null)
+  }
+
+  // Inställning av vilotid (klockikonen i statsraden)
+  const [restSheetOpen, setRestSheetOpen] = useState(false)
+  function chooseRest(secs: number) {
+    Haptics.selectionAsync()
+    const clamped = Math.max(15, Math.min(600, secs))
+    setRestDefault(clamped)
+    setRestSeconds(clamped).catch(() => {})
   }
 
   // ── Set-hantering ──
@@ -259,6 +270,12 @@ export function SessionFullscreen({
             <Text style={s.statLabel}>Set</Text>
             <Text style={s.statValue}>{doneRows.length}</Text>
           </View>
+          <View style={{ flex: 1 }} />
+          {/* Vilotid — tryck för att ställa in tiden mellan seten */}
+          <TouchableOpacity style={s.restClockBtn} onPress={() => setRestSheetOpen(true)} activeOpacity={0.75}>
+            <Ionicons name="timer-outline" size={20} color={ORANGE} />
+            <Text style={s.restClockText}>{fmtClock(restDefault)}</Text>
+          </TouchableOpacity>
         </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -340,6 +357,52 @@ export function SessionFullscreen({
           </ScrollView>
         </KeyboardAvoidingView>
 
+        {/* ── Vilotidsinställning — lager över passvyn ── */}
+        {restSheetOpen && (
+          <View style={StyleSheet.absoluteFill}>
+            <TouchableOpacity
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.55)' }]}
+              onPress={() => setRestSheetOpen(false)}
+              activeOpacity={1}
+            />
+            <View style={[s.restSheet, { paddingBottom: insets.bottom + 20 }]}>
+              <View style={s.restSheetHandle} />
+              <Text style={s.restSheetTitle}>Vilotid mellan set</Text>
+              <Text style={s.restSheetSub}>Startar automatiskt när du bockar av ett set</Text>
+
+              <View style={s.restPresetGrid}>
+                {REST_PRESETS.map(secs => (
+                  <TouchableOpacity
+                    key={secs}
+                    style={[s.restPresetChip, restDefault === secs && s.restPresetChipActive]}
+                    onPress={() => chooseRest(secs)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[s.restPresetText, restDefault === secs && s.restPresetTextActive]}>
+                      {fmtClock(secs)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Finjustering ±15 s */}
+              <View style={s.restStepRow}>
+                <TouchableOpacity style={s.restStepBtn} onPress={() => chooseRest(restDefault - 15)} activeOpacity={0.75}>
+                  <Ionicons name="remove" size={20} color={TEXT_PRIMARY} />
+                </TouchableOpacity>
+                <Text style={s.restStepValue}>{fmtClock(restDefault)}</Text>
+                <TouchableOpacity style={s.restStepBtn} onPress={() => chooseRest(restDefault + 15)} activeOpacity={0.75}>
+                  <Ionicons name="add" size={20} color={TEXT_PRIMARY} />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity style={s.restSheetDone} onPress={() => setRestSheetOpen(false)} activeOpacity={0.85}>
+                <Text style={s.restSheetDoneText}>Klar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* ── Vilotimer — dyker upp när ett set bockas av ── */}
         {restLeft !== null && (
           <View style={[s.restBar, { marginBottom: insets.bottom + 10 }]}>
@@ -386,10 +449,17 @@ const s = StyleSheet.create({
 
   statsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: BORDER,
     gap: 28,
   },
+  restClockBtn: {
+    alignItems: 'center', gap: 2,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 12,
+  },
+  restClockText: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
   stat: { gap: 2 },
   statLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
   statValue: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', fontVariant: ['tabular-nums'] },
@@ -431,6 +501,46 @@ const s = StyleSheet.create({
   addSetText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
 
   empty: { color: TEXT_SECONDARY, textAlign: 'center', marginTop: 48, fontSize: 15 },
+
+  restSheet: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    backgroundColor: CARD,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 20, paddingTop: 10,
+    gap: 14,
+  },
+  restSheetHandle: {
+    alignSelf: 'center', width: 40, height: 4, borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  restSheetTitle: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800', textAlign: 'center', marginTop: 6 },
+  restSheetSub: { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', marginTop: -8 },
+  restPresetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  restPresetChip: {
+    flexBasis: '31%', flexGrow: 1, alignItems: 'center',
+    paddingVertical: 12, borderRadius: 12,
+    borderWidth: 1.5, borderColor: BORDER, backgroundColor: BG,
+  },
+  restPresetChipActive: { borderColor: ORANGE, backgroundColor: ORANGE + '15' },
+  restPresetText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  restPresetTextActive: { color: ORANGE },
+  restStepRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 22,
+  },
+  restStepBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: BG, borderWidth: 1, borderColor: BORDER,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  restStepValue: {
+    color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800',
+    fontVariant: ['tabular-nums'], minWidth: 76, textAlign: 'center',
+  },
+  restSheetDone: {
+    backgroundColor: ORANGE, borderRadius: 14,
+    paddingVertical: 14, alignItems: 'center',
+  },
+  restSheetDoneText: { color: '#000', fontSize: 15, fontWeight: '800' },
 
   restBar: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
