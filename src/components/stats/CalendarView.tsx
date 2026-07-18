@@ -313,6 +313,7 @@ export function CalendarView({
                 workouts={workouts}
                 strengthWorkouts={strengthWorkouts}
                 completedSessions={completedSessions}
+                unit={unit}
                 onClose={() => setFsDay(null)}
                 onSelectWorkout={setFsWorkout}
               />

@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
 
 const EXERCISE_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
@@ -26,12 +27,13 @@ function fmtPace(secsPerKm: number): string {
 
 /** Kompakt rad för en cardio-träning i listor. Detaljvyn hanteras numera av
  *  CardioSummaryView (kart-/statsdesignen som delas med schemat). */
-export function WorkoutRow({ workout, last, onPress }: {
-  workout: CardioWorkout; last: boolean; onPress: () => void
+export function WorkoutRow({ workout, last, onPress, unit = 'metric' }: {
+  workout: CardioWorkout; last: boolean; onPress: () => void; unit?: UnitSystem
 }) {
-  const d    = workout.data
-  const pace = d.distance_km > 0.1
-    ? fmtPace(d.duration_seconds / d.distance_km) + ' /km' : null
+  const d     = workout.data
+  const label = distanceUnitLabel(unit)
+  const pace  = d.distance_km > 0.1
+    ? fmtPace(paceForUnit(d.duration_seconds / d.distance_km, unit)) + ` /${label}` : null
   const date = new Date(workout.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
 
   return (
@@ -49,7 +51,7 @@ export function WorkoutRow({ workout, last, onPress }: {
           <Text style={s.rowDate}>{date}</Text>
         </View>
         <View style={s.rowMeta}>
-          <Text style={s.rowStat}>{d.distance_km.toFixed(2)} km</Text>
+          <Text style={s.rowStat}>{toDisplayDistance(d.distance_km, unit).toFixed(2)} {label}</Text>
           <Text style={s.rowDot}>·</Text>
           <Text style={s.rowStat}>{fmtTime(d.duration_seconds)}</Text>
           {pace && (

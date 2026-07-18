@@ -25,7 +25,7 @@ import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
 import { WorkoutRow } from '@/components/stats/WorkoutDetail'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { getProfile } from '@/services/profile'
-import { getUnitSystem, type UnitSystem } from '@/lib/units'
+import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
@@ -417,6 +417,7 @@ export default function StatsScreen() {
   const completedDays = days.filter(d => d.status === 'completed').length
   const missedDays    = days.filter(d => d.status === 'failed').length
 
+  const unitLabel  = distanceUnitLabel(unit)
   const totalKm    = workouts.reduce((sum, w) => sum + w.data.distance_km, 0)
   const totalSecs  = workouts.reduce((sum, w) => sum + w.data.duration_seconds, 0)
   const totalCals  = workouts.reduce((sum, w) => sum + w.data.calories, 0)
@@ -426,8 +427,9 @@ export default function StatsScreen() {
     .reduce((b, p) => p < b ? p : b, Infinity)
   const pacedKm    = pacedW.reduce((s, w) => s + w.data.distance_km, 0)
   const pacedSecs  = pacedW.reduce((s, w) => s + w.data.duration_seconds, 0)
-  const avgPace    = pacedKm > 0 ? fmtPace(pacedSecs / pacedKm) : '--:--'
-  const bestPace   = bestPaceSec === Infinity ? '--:--' : fmtPace(bestPaceSec)
+  // Tempo per vald enhet (sek/km → sek/mi vid imperial)
+  const avgPace    = pacedKm > 0 ? fmtPace(paceForUnit(pacedSecs / pacedKm, unit)) : '--:--'
+  const bestPace   = bestPaceSec === Infinity ? '--:--' : fmtPace(paceForUnit(bestPaceSec, unit))
 
   const milestone   = nextMilestone(currentDay)
   const isEarlyDays = currentDay <= 7
@@ -604,7 +606,7 @@ export default function StatsScreen() {
           <>
             <View style={s.statsGrid}>
               <View style={s.statsRow}>
-                <StatCard label="km totalt"  value={totalKm.toFixed(1)}       icon="map-outline"   color={ORANGE} />
+                <StatCard label={`${unitLabel} totalt`} value={toDisplayDistance(totalKm, unit).toFixed(1)} icon="map-outline" color={ORANGE} />
                 <StatCard label="total tid"  value={fmtDuration(totalSecs)}    icon="time-outline"  color={BLUE} />
                 <StatCard label="pass"       value={workouts.length}           icon="walk-outline"  color={GREEN} />
               </View>
@@ -618,7 +620,7 @@ export default function StatsScreen() {
             {/* Stacked bar chart */}
             {weeklyBars.length > 0 && (
               <View style={s.card}>
-                <Text style={s.cardTitle}>Km per vecka</Text>
+                <Text style={s.cardTitle}>{unit === 'imperial' ? 'Miles' : 'Km'} per vecka</Text>
                 <View style={s.barChart}>
                   {weeklyBars.map((bar, i) => (
                     <View key={i} style={s.barRow}>
@@ -647,7 +649,7 @@ export default function StatsScreen() {
                         )}
                       </View>
                       <Text style={[s.barKmLbl, bar.isCurrent && { color: ORANGE }]}>
-                        {bar.total.toFixed(1)}
+                        {toDisplayDistance(bar.total, unit).toFixed(1)}
                       </Text>
                     </View>
                   ))}
@@ -675,6 +677,7 @@ export default function StatsScreen() {
                   <WorkoutRow
                     key={w.id}
                     workout={w}
+                    unit={unit}
                     last={i === Math.min(workouts.length, 10) - 1}
                     onPress={() => setSelectedWorkout(w)}
                   />
@@ -830,6 +833,7 @@ export default function StatsScreen() {
             workouts={workouts}
             strengthWorkouts={strengthWorkouts}
             completedSessions={completedSessions}
+            unit={unit}
             onClose={() => setSelectedDay(null)}
             onSelectWorkout={setSelectedWorkout}
           />

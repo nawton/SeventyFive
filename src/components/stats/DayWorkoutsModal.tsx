@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ORANGE, GREEN, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
+import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
@@ -46,12 +47,13 @@ function dayDate(startDate: string, dayNumber: number): Date {
   return d
 }
 
-export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, completedSessions, onClose, onSelectWorkout }: {
+export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, completedSessions, unit = 'metric', onClose, onSelectWorkout }: {
   day: DaySummary
   startDate: string
   workouts: CardioWorkout[]
   strengthWorkouts: StrengthWorkout[]
   completedSessions?: CompletedSessionItem[]
+  unit?: UnitSystem
   onClose: () => void
   onSelectWorkout: (w: CardioWorkout) => void
 }) {
@@ -197,7 +199,7 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, c
                           <View style={s.itemBody}>
                             <Text style={s.itemName}>{w.name}</Text>
                             <View style={s.itemMeta}>
-                              <Text style={s.itemStat}>{w.data.distance_km.toFixed(2)} km</Text>
+                              <Text style={s.itemStat}>{toDisplayDistance(w.data.distance_km, unit).toFixed(2)} {distanceUnitLabel(unit)}</Text>
                               <Text style={s.itemDot}>·</Text>
                               <Text style={s.itemStat}>{fmtTime(w.data.duration_seconds)}</Text>
                             </View>
