@@ -12,6 +12,8 @@ import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } fr
 import type { CardioWorkout } from '@/services/workouts'
 import { effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { GlassView } from 'expo-glass-effect'
+import { LIQUID_GLASS } from '@/lib/glass'
 
 const CARDIO_BLUE = '#3BD5FF'
 const { height: SCREEN_H } = Dimensions.get('window')
@@ -265,7 +267,8 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
       {styleMenuOpen && (
         <>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeStyleSheet} />
-          <Animated.View style={[s.styleSheet, styleSheetStyle]}>
+          <Animated.View style={[s.styleSheet, LIQUID_GLASS && s.styleSheetGlass, styleSheetStyle]}>
+            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={styleDrag}>
               <View style={s.styleGrip}>
                 <View style={s.sheetHandle} />
@@ -369,6 +372,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingBottom: 12, zIndex: 40,
     shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.35, shadowRadius: 16,
   },
+  styleSheetGlass: { backgroundColor: 'transparent', overflow: 'hidden' },
   styleGrip: { paddingTop: 10, paddingBottom: 4 },
   sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: '#3A3A3C' },
   sheetTitle: { color: '#fff', fontSize: 18, fontWeight: '800', textAlign: 'center', marginTop: 14, marginBottom: 6 },

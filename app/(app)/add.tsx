@@ -56,7 +56,8 @@ import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
-import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { TAB_CONTENT_PAD, LIQUID_GLASS } from '@/lib/glass'
+import { GlassPill } from '@/components/GlassButton'
 import { DayPage, EMPTY_CHECKED, EMPTY_COMPLETED, EMPTY_CARDIO_STATS, EMPTY_CARDIO_LOGS, EMPTY_LOGGED, type DayPageApi } from '@/components/schedule/DayPage'
 import { PAGER_DATA, CENTER_IDX, isoDate, todayMidnight, indexToDate, dateToIndex } from '@/lib/scheduleDates'
 
@@ -596,10 +597,10 @@ export default function SchemaScreen() {
       {/* ── Logga pass — idag och bakåt (missade pass), inte framtida dagar ── */}
       {selectedDate.getTime() <= todayMidnight().getTime() && (
         <View style={styles.recordWrap} pointerEvents="box-none">
-          <TouchableOpacity style={styles.recordBtn} onPress={handleRecordWorkout} activeOpacity={0.9}>
-            <Ionicons name="play" size={18} color="#000" />
-            <Text style={styles.recordBtnText}>Logga pass</Text>
-          </TouchableOpacity>
+          <GlassPill onPress={handleRecordWorkout} style={styles.recordBtnLayout} fallbackStyle={styles.recordBtn}>
+            <Ionicons name="play" size={18} color={LIQUID_GLASS ? '#fff' : '#000'} />
+            <Text style={[styles.recordBtnText, LIQUID_GLASS && { color: '#fff' }]}>Logga pass</Text>
+          </GlassPill>
         </View>
       )}
 
@@ -615,6 +616,10 @@ const styles = StyleSheet.create({
   recordWrap: {
     position: 'absolute', left: 0, right: 0, bottom: TAB_CONTENT_PAD,
     paddingHorizontal: 16,
+  },
+  recordBtnLayout: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderRadius: 28, paddingVertical: 16,
   },
   recordBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

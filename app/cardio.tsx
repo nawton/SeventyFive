@@ -31,6 +31,8 @@ import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type 
 import { getCardioStatsTheme, getVoiceCues, type CardioStatsTheme } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
+import { GlassView } from 'expo-glass-effect'
+import { LIQUID_GLASS } from '@/lib/glass'
 
 type Coord = { latitude: number; longitude: number }
 type Status = 'idle' | 'running' | 'paused'
@@ -942,7 +944,8 @@ export default function CardioScreen() {
 
       {/* ── Km split toast ── */}
       {splitToast && (
-        <View style={styles.splitToast} pointerEvents="none">
+        <View style={[styles.splitToast, LIQUID_GLASS && styles.glassSurface]} pointerEvents="none">
+          {LIQUID_GLASS && <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />}
           <Ionicons name="flag" size={16} color={ORANGE} />
           <Text style={styles.splitToastText}>{splitToast}</Text>
         </View>
@@ -1073,7 +1076,8 @@ export default function CardioScreen() {
         <>
           {/* Osynlig yta bakom sheeten: tryck utanför stänger, utan att mörka kartan */}
           <Pressable style={styles.sheetDismiss} onPress={closePicker} />
-          <Animated.View style={[styles.sheetWrap, sheetStyle]}>
+          <Animated.View style={[styles.sheetWrap, LIQUID_GLASS && styles.glassSurface, sheetStyle]}>
+            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={sheetDrag}>
               <View style={styles.sheetGrip}>
                 <View style={styles.sheetHandle} />
@@ -1111,7 +1115,8 @@ export default function CardioScreen() {
       {styleMenuOpen && (
         <>
           <Pressable style={styles.sheetDismiss} onPress={closeStyleSheet} />
-          <Animated.View style={[styles.sheetWrap, styleSheetStyle]}>
+          <Animated.View style={[styles.sheetWrap, LIQUID_GLASS && styles.glassSurface, styleSheetStyle]}>
+            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={styleDrag}>
               <View style={styles.sheetGrip}>
                 <View style={styles.sheetHandle} />
@@ -1308,7 +1313,8 @@ export default function CardioScreen() {
         </View>
       </Modal>
 
-      <SafeAreaView style={styles.bottomBar} edges={['bottom']}>
+      <SafeAreaView style={[styles.bottomBar, LIQUID_GLASS && styles.glassSurface]} edges={['bottom']}>
+        {LIQUID_GLASS && <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />}
         <View style={styles.bottomInner}>
 
           {status === 'idle' ? (
@@ -1747,6 +1753,11 @@ const styles = StyleSheet.create({
   sheetDismiss: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 39,
+  },
+  // Glasläge: bakgrundsfärgen släcks och GlassView fyller ytan bakom innehållet
+  glassSurface: {
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
   },
   sheetWrap: {
     position: 'absolute',
