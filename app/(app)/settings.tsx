@@ -357,7 +357,6 @@ export default function SettingsScreen() {
           <SettingRow
             icon="color-palette-outline"
             label="Anpassning"
-            value="Navbar · Enheter · Cardio"
             onPress={() => router.push('/(app)/anpassning' as any)}
             last
           />

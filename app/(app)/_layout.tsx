@@ -152,6 +152,7 @@ export default function AppLayout() {
   return (
     <Tabs
       tabBar={props => <GlassTabBar {...props} />}
+      backBehavior="history"
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="dashboard" />
