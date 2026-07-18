@@ -11,7 +11,6 @@ import {
   Dimensions,
 } from 'react-native'
 import * as Haptics from 'expo-haptics'
-import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated'
 
 const SCREEN_W  = Dimensions.get('window').width
 const PAGE_W    = SCREEN_W - 40  // scroll-paddingen är 20 per sida
@@ -92,9 +91,27 @@ interface MedalInfo {
   progress?: string
 }
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { LinearGradient } from 'expo-linear-gradient'
+import { GlassSegment } from '@/components/GlassSegment'
+import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
+import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { GlassCircleButton } from '@/components/GlassButton'
 
 const GOLD = '#FFD54F'
+const CARDIO_BLUE = '#3BD5FF'
+const LIME = '#BDFF3B'
+
+type CardioRecs = {
+  longestKm: number
+  bestPaceSec: number
+  fastestSplitSec: number
+  biggestWeekKm: number
+}
+
+function fmtPaceStr(secs: number): string {
+  if (!Number.isFinite(secs) || secs <= 0) return '--:--'
+  return `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`
+}
 
 export default function RecordsScreen() {
   const [loading, setLoading]           = useState(true)
@@ -106,6 +123,8 @@ export default function RecordsScreen() {
     hasAvatar: false, hasProgressPhoto: false, hasSchedule: false, hasCustomRule: false,
   })
   const [selectedMedal, setSelectedMedal] = useState<MedalInfo | null>(null)
+  const [cardioRecs, setCardioRecs]     = useState<CardioRecs | null>(null)
+  const [unit, setUnit]                 = useState<UnitSystem>('metric')
   const [breakdownVisible, setBreakdownVisible] = useState(false)
   // Övningshistorik — öppnas från rekordraderna
   const [historyEx, setHistoryEx]   = useState<string | null>(null)
@@ -125,11 +144,6 @@ export default function RecordsScreen() {
   }
   const [earnTab, setEarnTab] = useState<0 | 1>(0)
   const earnPagerRef = useRef<ScrollView>(null)
-  // Indikatorlinjen följer svepet i realtid (halva banans bredd per flik)
-  const earnScrollX = useSharedValue(0)
-  const earnIndicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: (earnScrollX.value / SNAP_W) * (PAGE_W / 2) }],
-  }))
 
   function openMedal(info: MedalInfo) {
     Haptics.selectionAsync()
@@ -169,6 +183,34 @@ export default function RecordsScreen() {
           : [0, 0]
 
         setRecords(prs)
+        getUnitSystem().then(setUnit)
+
+        // Cardiorekord (all-time) från de hämtade passen
+        if (cardio.length > 0) {
+          const paced = cardio.filter(w => w.data.distance_km > 0.1)
+          const bestPaceSec = paced
+            .map(w => w.data.duration_seconds / w.data.distance_km)
+            .reduce((b2, p2) => p2 < b2 ? p2 : b2, Infinity)
+          const fastestSplitSec = cardio.reduce((best, w) => {
+            for (const sp of w.data.splits ?? []) {
+              if (/^\d+\s*(km|mi)$/.test(sp.label) && sp.paceSec > 0 && sp.paceSec < best) best = sp.paceSec
+            }
+            return best
+          }, Infinity)
+          const byWeek = new Map<string, number>()
+          for (const w of cardio) {
+            const key = toLocalDateString(startOfWeek(new Date(w.created_at)))
+            byWeek.set(key, (byWeek.get(key) ?? 0) + w.data.distance_km)
+          }
+          let biggestWeekKm = 0
+          byWeek.forEach(v => { if (v > biggestWeekKm) biggestWeekKm = v })
+          setCardioRecs({
+            longestKm: cardio.reduce((b2, w) => Math.max(b2, w.data.distance_km), 0),
+            bestPaceSec,
+            fastestSplitSec,
+            biggestWeekKm,
+          })
+        }
         const medals = computeAchievements({
           completedDays,
           streak,
@@ -235,7 +277,11 @@ export default function RecordsScreen() {
         {/* Kompakt nivå-slider: progress mot Diamant med tier-markörer längs banan */}
         <View style={s.tierSlider}>
           <View style={s.tierTrack}>
-            <View style={[s.tierFill, { width: `${Math.min(100, (points / MAX_THRESHOLD) * 100)}%` as any }]} />
+            <LinearGradient
+              colors={[ORANGE, '#FFE60A']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={[s.tierFill, { width: `${Math.min(100, (points / MAX_THRESHOLD) * 100)}%` as any }]}
+            />
           </View>
           {LEVEL_TIERS.map(t => {
             const pct     = (t.threshold / MAX_THRESHOLD) * 100
@@ -284,29 +330,21 @@ export default function RecordsScreen() {
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>TJÄNA POÄNG</Text>
         </View>
-        <View style={s.earnTabsRow}>
-          {(['Återkommande', 'Engångs'] as const).map((label, i) => (
-            <TouchableOpacity
-              key={label}
-              style={s.earnTabBtn}
-              onPress={() => switchEarnTab(i as 0 | 1)}
-              activeOpacity={0.75}
-            >
-              <Text style={[s.earnTabText, earnTab === i && s.earnTabTextActive]}>
-                {label}{i === 1 ? ` ${ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/${ONE_TIME_RULES.length}` : ''}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={s.earnTrack}>
-          <Animated.View style={[s.earnIndicator, earnIndicatorStyle]} />
+        <View style={s.earnSegWrap}>
+          <GlassSegment
+            value={earnTab === 0 ? 'recurring' : 'oneTime'}
+            options={[
+              { key: 'recurring', label: 'Återkommande' },
+              { key: 'oneTime',   label: `Engångs ${ONE_TIME_RULES.filter(r => oneTime[r.id]).length}/${ONE_TIME_RULES.length}` },
+            ]}
+            onChange={k => switchEarnTab(k === 'recurring' ? 0 : 1)}
+          />
         </View>
         <ScrollView
           ref={earnPagerRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
-          onScroll={e => { earnScrollX.value = e.nativeEvent.contentOffset.x }}
           onMomentumScrollEnd={e => {
             setEarnTab(Math.round(e.nativeEvent.contentOffset.x / SNAP_W) as 0 | 1)
           }}
@@ -434,6 +472,49 @@ export default function RecordsScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        )}
+
+        {/* ── Cardiorekord ── */}
+        {cardioRecs && (
+          <>
+            <View style={[s.sectionRow, { marginTop: 8 }]}>
+              <Text style={s.sectionTitle}>CARDIOREKORD</Text>
+            </View>
+            <View style={s.recordCard}>
+              {([
+                {
+                  icon: 'map-outline' as const, color: CARDIO_BLUE, label: 'Längsta pass',
+                  value: cardioRecs.longestKm > 0
+                    ? `${toDisplayDistance(cardioRecs.longestKm, unit).toFixed(2).replace('.', ',')} ${distanceUnitLabel(unit)}`
+                    : '0',
+                },
+                {
+                  icon: 'flash-outline' as const, color: LIME, label: 'Snabbaste km',
+                  value: fmtPaceStr(cardioRecs.fastestSplitSec),
+                },
+                {
+                  icon: 'stopwatch-outline' as const, color: ORANGE, label: 'Bästa tempo',
+                  value: cardioRecs.bestPaceSec === Infinity
+                    ? '--:--'
+                    : `${fmtPaceStr(paceForUnit(cardioRecs.bestPaceSec, unit))} /${distanceUnitLabel(unit)}`,
+                },
+                {
+                  icon: 'trending-up-outline' as const, color: GOLD, label: 'Längsta vecka',
+                  value: cardioRecs.biggestWeekKm > 0
+                    ? `${toDisplayDistance(cardioRecs.biggestWeekKm, unit).toFixed(1).replace('.', ',')} ${distanceUnitLabel(unit)}`
+                    : '0',
+                },
+              ]).map((r, i, arr) => (
+                <View key={r.label} style={[s.recordRow, i < arr.length - 1 && s.recordBorder]}>
+                  <View style={[s.ruleIcon, { backgroundColor: r.color + '1A' }]}>
+                    <Ionicons name={r.icon} size={16} color={r.color} />
+                  </View>
+                  <Text style={[s.ruleLabel, { flex: 1 }]}>{r.label}</Text>
+                  <Text style={s.cardioRecVal}>{r.value}</Text>
+                </View>
+              ))}
+            </View>
+          </>
         )}
 
       </ScrollView>
@@ -623,7 +704,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginTop: 2,
   },
-  levelPtsBig: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', flexShrink: 1 },
+  levelPtsBig: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT_SEMI, flexShrink: 1 },
   historyBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: CARD, borderRadius: 18,
@@ -633,15 +714,6 @@ const s = StyleSheet.create({
   historyBtnText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
 
   // Tjäna poäng-flikar (Runna-stil: text + tunn glidande indikatorlinje)
-  earnTabsRow: { flexDirection: 'row' },
-  earnTabBtn:  { flex: 1, alignItems: 'center', paddingVertical: 8 },
-  earnTabText:       { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
-  earnTabTextActive: { color: TEXT_PRIMARY, fontWeight: '700' },
-  earnTrack: {
-    height: 3, borderRadius: 2, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  earnIndicator: { width: '50%', height: '100%', backgroundColor: TEXT_PRIMARY, borderRadius: 2 },
 
   // Poängregler
   ruleIcon: {
@@ -651,11 +723,13 @@ const s = StyleSheet.create({
   },
   ruleLabel: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500' },
   ruleCap:   { color: TEXT_SECONDARY, fontSize: 11, marginTop: 1 },
-  rulePts:   { color: ORANGE, fontSize: 14, fontWeight: '700' },
+  rulePts:   { color: ORANGE, fontSize: 14, fontFamily: NUM_FONT },
 
   sectionRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
-  sectionCount: { color: ORANGE, fontSize: 12, fontWeight: '700' },
+  sectionCount: { color: ORANGE, fontSize: 12, fontFamily: NUM_FONT },
+  earnSegWrap: { marginBottom: 12 },
+  cardioRecVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
 
   medalGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   medal: {
