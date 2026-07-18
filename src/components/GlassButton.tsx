@@ -34,7 +34,9 @@ function useGlassGesture(onPress?: () => void, draggable = false) {
 
   const tap = Gesture.Tap()
     .maxDuration(300)
+    .onBegin(() => { scale.value = withSpring(0.96, SPRING) })
     .onEnd((_, ok) => { if (ok) runOnJS(press)() })
+    .onFinalize(() => { scale.value = withSpring(1, SPRING) })
 
   const drag = Gesture.Pan()
     .activateAfterLongPress(200)
@@ -122,22 +124,21 @@ export function GlassPill({
   tint?: string
 }) {
   const { gesture, anim } = useGlassGesture(onPress, draggable)
+  // Glaset ligger som bakgrundslager i en vanlig vy — då är HELA pillen
+  // träffyta (den nativa glasvyn släpper annars bara igenom tryck på barnen)
   return (
     <GestureDetector gesture={gesture}>
-      {GLASS ? (
-        <AnimatedGlassView
-          isInteractive={!draggable}
-          glassEffectStyle="regular"
-          tintColor={tint}
-          style={[s.pill, style, anim]}
-        >
-          {children}
-        </AnimatedGlassView>
-      ) : (
-        <Animated.View style={[s.pill, fallbackStyle ?? s.fallbackPill, style, anim]}>
-          {children}
-        </Animated.View>
-      )}
+      <Animated.View style={[s.pill, !GLASS && (fallbackStyle ?? s.fallbackPill), style, anim]}>
+        {GLASS && (
+          <GlassView
+            glassEffectStyle="regular"
+            tintColor={tint}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+        )}
+        {children}
+      </Animated.View>
     </GestureDetector>
   )
 }

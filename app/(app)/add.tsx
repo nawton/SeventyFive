@@ -397,9 +397,9 @@ export default function SchemaScreen() {
           </View>
         </View>
 
-        <GlassPill onPress={() => openEditor(null)} tint={ORANGE} style={styles.addBtnLayout} fallbackStyle={styles.addBtn}>
-          <Ionicons name="add" size={18} color={LIQUID_GLASS ? '#fff' : '#000'} />
-          <Text style={[styles.addBtnText, LIQUID_GLASS && { color: '#fff' }]}>Nytt pass</Text>
+        <GlassPill onPress={() => openEditor(null)} tint={ORANGE + '66'} style={styles.addBtnLayout} fallbackStyle={styles.addBtn}>
+          <Ionicons name="add" size={18} color={LIQUID_GLASS ? 'rgba(255,255,255,0.85)' : '#000'} />
+          <Text style={[styles.addBtnText, LIQUID_GLASS && { color: 'rgba(255,255,255,0.85)' }]}>Nytt pass</Text>
         </GlassPill>
       </View>
 
