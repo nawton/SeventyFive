@@ -29,6 +29,7 @@ import { deleteCardioWorkout } from '@/services/workouts'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 
 const GRID_PADDING = 20
 const STATS_SCREEN_W = Dimensions.get('window').width
@@ -242,6 +243,7 @@ const TABS: Array<{ key: StatsTab; label: string; icon: React.ComponentProps<typ
 ]
 
 export default function StatsScreen() {
+  const onScrollShrink = useTabBarShrinkOnScroll()
   const [days, setDays]                         = useState<DaySummary[]>([])
   const [currentDay, setCurrentDay]             = useState(1)
   const [startDate, setStartDate]               = useState<string | null>(null)
@@ -643,6 +645,8 @@ export default function StatsScreen() {
           style={{ width: STATS_SCREEN_W }}
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
+          onScroll={onScrollShrink}
+          scrollEventThrottle={16}
         >
           <>
             {/* Ring chart */}
@@ -736,6 +740,8 @@ export default function StatsScreen() {
           style={{ width: STATS_SCREEN_W }}
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
+          onScroll={onScrollShrink}
+          scrollEventThrottle={16}
         >
           <>
             {/* Periodfilter */}
@@ -986,6 +992,8 @@ export default function StatsScreen() {
           style={{ width: STATS_SCREEN_W }}
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
+          onScroll={onScrollShrink}
+          scrollEventThrottle={16}
         >
           <>
             <View style={s.statsRow}>

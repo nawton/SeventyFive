@@ -59,6 +59,7 @@ import { AddRuleSheet } from '@/components/AddRuleSheet'
 import type { UserChallengeWithLevel } from '@/types/database'
 import { getGreetingSubtitle } from '@/lib/getGreetingSubtitle'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 
 const ORANGE    = '#FFA817'
 const NUM_FONT  = 'Nunito_700Bold'
@@ -166,6 +167,7 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
 
 // ── Dashboard Screen ───────────────────────────────────────────────────────────
 export default function DashboardScreen() {
+  const onScrollShrink = useTabBarShrinkOnScroll()
   const insets = useSafeAreaInsets()
   const [userName, setUserName]     = useState('')
   const [userAvatar, setUserAvatar] = useState<string | null>(null)
@@ -505,6 +507,8 @@ export default function DashboardScreen() {
         ref={scrollRef}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
+        onScroll={onScrollShrink}
+        scrollEventThrottle={16}
       >
 
         {/* ── Header ── */}

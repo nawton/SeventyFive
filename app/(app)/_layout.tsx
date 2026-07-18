@@ -8,6 +8,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { GlassView } from 'expo-glass-effect'
 import * as Haptics from 'expo-haptics'
 import { LIQUID_GLASS } from '@/lib/glass'
+import { tabBarShrink } from '@/lib/tabBar'
 import { ORANGE } from '@/lib/theme'
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
@@ -87,10 +88,18 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
     transform: [{ translateX: pos.value * slotW }],
   }))
 
+  // Krymper när man scrollar ner, växer tillbaka när man scrollar upp
+  const shrinkStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: tabBarShrink.value * 18 },
+      { scale: 1 - tabBarShrink.value * 0.18 },
+    ],
+  }))
+
   const shownIdx = hotIdx ?? activeIdx
 
   return (
-    <View style={styles.wrap} pointerEvents="box-none">
+    <Animated.View style={[styles.wrap, shrinkStyle]} pointerEvents="box-none">
       <GestureDetector gesture={pan}>
         <View style={styles.pill} onLayout={e => setBarW(e.nativeEvent.layout.width)}>
           {LIQUID_GLASS ? (
@@ -121,7 +130,7 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
           </View>
         </View>
       </GestureDetector>
-    </View>
+    </Animated.View>
   )
 }
 

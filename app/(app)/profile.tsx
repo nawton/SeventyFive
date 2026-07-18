@@ -34,6 +34,7 @@ import {
 import { PhotoComposer } from '@/components/PhotoComposer'
 import { ORANGE, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import type { UserChallengeWithLevel } from '@/types/database'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ function Avatar({ url, fallback, size }: { url: string | null; fallback: string;
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
+  const onScrollShrink = useTabBarShrinkOnScroll()
   const [userId, setUserId]         = useState<string | null>(null)
   const [name, setName]             = useState('')
   const [avatarUrl, setAvatarUrl]   = useState<string | null>(null)
@@ -359,6 +361,8 @@ export default function ProfileScreen() {
         ListHeaderComponent={renderHeader()}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
+        onScroll={onScrollShrink}
+        scrollEventThrottle={16}
       />
 
       <PhotoComposer

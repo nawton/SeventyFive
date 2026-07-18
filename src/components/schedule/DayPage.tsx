@@ -21,6 +21,7 @@ import type { WorkoutSession } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 
 const SCREEN_W = Dimensions.get('window').width
 
@@ -62,6 +63,7 @@ export const DayPage = React.memo(function DayPage({
   dayAnimStyle: AnimatedStyle<ViewStyle>
   api: DayPageApi
 }) {
+          const onScrollShrink = useTabBarShrinkOnScroll()
 
           const date       = indexToDate(idx)
           const weekday    = weekdayOf(date)
@@ -106,6 +108,8 @@ export const DayPage = React.memo(function DayPage({
               style={{ width: SCREEN_W }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scroll}
+              onScroll={onScrollShrink}
+              scrollEventThrottle={16}
             >
               {/* Day header */}
               <Animated.View style={[styles.dayHeader, dayAnimStyle]}>
