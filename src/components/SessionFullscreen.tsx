@@ -17,6 +17,7 @@ import {
   getRestSeconds, setRestSeconds,
   getExerciseRestSeconds, setExerciseRestSeconds,
   getOrInitPassStart, clearPassStart,
+  setPassDuration, getPassDuration,
 } from '@/lib/prefs'
 
 type LogSet = { reps: string; weight: string; done: boolean }
@@ -66,14 +67,21 @@ export function SessionFullscreen({
     })
   }, [visible, exIdsKey])
 
-  // Starttiden sparas per pass + dag så räknaren överlever att vyn stängs/öppnas
+  // Starttiden sparas per pass + dag så räknaren överlever att vyn stängs/öppnas.
+  // Avklarade pass visar den sparade sluttiden statiskt — timern tickar inte.
+  const [finalDur, setFinalDur] = useState<number | null>(null)
   useEffect(() => {
     if (!visible || !session) return
+    if (isCompleted) {
+      getPassDuration(`${session.id}:${date}`).then(setFinalDur)
+      return
+    }
+    setFinalDur(null)
     getOrInitPassStart(`${session.id}:${date}`).then(ts => {
       startTs.current = ts
       setElapsed(Math.max(0, Math.floor((Date.now() - ts) / 1000)))
     })
-  }, [visible, session?.id])
+  }, [visible, session?.id, isCompleted])
 
   // Förra passets set per övning — visas i FÖRRA-kolumnen och som placeholders
   useEffect(() => {
@@ -91,10 +99,10 @@ export function SessionFullscreen({
   const startTs = useRef(Date.now())
   const [elapsed, setElapsed] = useState(0)
   useEffect(() => {
-    if (!visible) return
+    if (!visible || isCompleted) return
     const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTs.current) / 1000)), 1000)
     return () => clearInterval(t)
-  }, [visible])
+  }, [visible, isCompleted])
 
   // ── Vilotimer (samma mönster som övningsloggen) ──
   const [restLeft, setRestLeft]       = useState<number | null>(null)
@@ -234,7 +242,12 @@ export function SessionFullscreen({
       if (isCompleted) { onClose(); return }
       Alert.alert('Inga set ifyllda', 'Vill du markera passet som klart utan att logga set?', [
         { text: 'Avbryt', style: 'cancel' },
-        { text: 'Markera klart', onPress: () => { onComplete(); onClose() } },
+        { text: 'Markera klart', onPress: () => {
+          setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
+          clearPassStart(`${session.id}:${date}`).catch(() => {})
+          onComplete()
+          onClose()
+        } },
       ])
       return
     }
@@ -269,6 +282,7 @@ export function SessionFullscreen({
       }
 
       cancelRest()
+      if (!isCompleted) setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
       clearPassStart(`${session.id}:${date}`).catch(() => {})
       if (!isCompleted) onComplete()
       onSaved?.()
@@ -307,7 +321,9 @@ export function SessionFullscreen({
         <View style={s.statsRow}>
           <View style={s.stat}>
             <Text style={s.statLabel}>Tid</Text>
-            <Text style={[s.statValue, { color: ORANGE }]}>{fmtClock(elapsed)}</Text>
+            <Text style={[s.statValue, { color: ORANGE }]}>
+              {isCompleted ? (finalDur != null ? fmtClock(finalDur) : '–') : fmtClock(elapsed)}
+            </Text>
           </View>
           <View style={{ flex: 1 }} />
           {/* Vilotid — tryck för att ställa in tiderna mellan set/övningar */}

@@ -84,3 +84,17 @@ export async function getOrInitPassStart(id: string): Promise<number> {
 export async function clearPassStart(id: string): Promise<void> {
   await AsyncStorage.removeItem(`passStart:${id}`).catch(() => {})
 }
+
+// Passets sluttid — visas statiskt när passet är avklarat
+export async function setPassDuration(id: string, secs: number): Promise<void> {
+  await AsyncStorage.setItem(`passDur:${id}`, String(secs)).catch(() => {})
+}
+
+export async function getPassDuration(id: string): Promise<number | null> {
+  try {
+    const v = parseInt((await AsyncStorage.getItem(`passDur:${id}`)) ?? '', 10)
+    return Number.isFinite(v) && v >= 0 ? v : null
+  } catch {
+    return null
+  }
+}
