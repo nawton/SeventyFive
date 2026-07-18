@@ -268,7 +268,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
         <>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeStyleSheet} />
           <Animated.View style={[s.styleSheet, LIQUID_GLASS && s.styleSheetGlass, styleSheetStyle]}>
-            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />}
+            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={styleDrag}>
               <View style={s.styleGrip}>
                 <View style={s.sheetHandle} />

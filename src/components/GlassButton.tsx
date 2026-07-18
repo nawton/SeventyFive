@@ -96,6 +96,7 @@ export function GlassCircleButton({
         <AnimatedGlassView
           isInteractive={!draggable}
           glassEffectStyle="regular"
+          colorScheme="dark"
           style={[s.center, circle, anim, style]}
         >
           {content}
@@ -132,6 +133,7 @@ export function GlassPill({
         {GLASS && (
           <GlassView
             glassEffectStyle="regular"
+          colorScheme="dark"
             tintColor={tint}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"

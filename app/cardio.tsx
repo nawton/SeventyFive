@@ -165,8 +165,8 @@ const MAP_HTML = `<!DOCTYPE html>
   }).setView([59.33, 18.06], 4);
 
   var tileLayer = L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    { maxZoom:19, subdomains:'abcd' }
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom:20, maxNativeZoom:18 }
   ).addTo(map);
 
   var gpsIcon = L.divIcon({
@@ -322,7 +322,7 @@ export default function CardioScreen() {
   // Dölj statskortet till en liten tidspill när man vill se kartan
   const [hudHidden, setHudHidden] = useState(false)
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
-  const [activeStyle, setActiveStyle] = useState<string>('standard')
+  const [activeStyle, setActiveStyle] = useState<string>('satellite')
   const [summary, setSummary] = useState<{
     distanceKm: number
     elapsed: number
@@ -945,7 +945,7 @@ export default function CardioScreen() {
       {/* ── Km split toast ── */}
       {splitToast && (
         <View style={[styles.splitToast, LIQUID_GLASS && styles.glassSurface]} pointerEvents="none">
-          {LIQUID_GLASS && <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />}
+          {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" style={StyleSheet.absoluteFill} />}
           <Ionicons name="flag" size={16} color={ORANGE} />
           <Text style={styles.splitToastText}>{splitToast}</Text>
         </View>
@@ -1077,7 +1077,7 @@ export default function CardioScreen() {
           {/* Osynlig yta bakom sheeten: tryck utanför stänger, utan att mörka kartan */}
           <Pressable style={styles.sheetDismiss} onPress={closePicker} />
           <Animated.View style={[styles.sheetWrap, LIQUID_GLASS && styles.glassSurface, sheetStyle]}>
-            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />}
+            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={sheetDrag}>
               <View style={styles.sheetGrip}>
                 <View style={styles.sheetHandle} />
@@ -1116,7 +1116,7 @@ export default function CardioScreen() {
         <>
           <Pressable style={styles.sheetDismiss} onPress={closeStyleSheet} />
           <Animated.View style={[styles.sheetWrap, LIQUID_GLASS && styles.glassSurface, styleSheetStyle]}>
-            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />}
+            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={styleDrag}>
               <View style={styles.sheetGrip}>
                 <View style={styles.sheetHandle} />
@@ -1314,7 +1314,7 @@ export default function CardioScreen() {
       </Modal>
 
       <SafeAreaView style={[styles.bottomBar, LIQUID_GLASS && styles.glassSurface]} edges={['bottom']}>
-        {LIQUID_GLASS && <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />}
+        {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" style={StyleSheet.absoluteFill} />}
         <View style={styles.bottomInner}>
 
           {status === 'idle' ? (

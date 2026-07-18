@@ -122,7 +122,7 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
       <GestureDetector gesture={pan}>
         <View style={styles.pill} onLayout={e => setBarW(e.nativeEvent.layout.width)}>
           {LIQUID_GLASS ? (
-            <GlassView glassEffectStyle="regular" style={styles.barBg} />
+            <GlassView glassEffectStyle="regular" colorScheme="dark" style={styles.barBg} />
           ) : (
             <View style={[styles.barBg, styles.barBgFallback]} />
           )}
