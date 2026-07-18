@@ -33,15 +33,18 @@ type GymEntry = { exercise: Exercise; sets: string; reps: string }
 
 export type GymLogItem = { exerciseName: string; sets: number; reps: string }
 
-export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onSaveGym }: {
+export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onSaveGym, allowCardio = true }: {
   visible: boolean
   exercises: Exercise[]
   onClose: () => void
   onPickCardio: (type: string, label: string) => void
   onSaveGym: (name: string, items: GymLogItem[]) => void
+  /** Tidigare dagar: GPS-cardio går inte i efterhand — hoppa direkt till gym */
+  allowCardio?: boolean
 }) {
   const insets = useSafeAreaInsets()
-  const [step, setStep] = useState<Step>('choose')
+  const startStep: Step = allowCardio ? 'choose' : 'gymPick'
+  const [step, setStep] = useState<Step>(startStep)
   const [search, setSearch] = useState('')
   const [group, setGroup] = useState('all')
   const [selected, setSelected] = useState<Exercise[]>([])
@@ -51,10 +54,10 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
 
   useEffect(() => {
     if (!visible) {
-      setStep('choose'); setSearch(''); setGroup('all')
+      setStep(startStep); setSearch(''); setGroup('all')
       setSelected([]); setEntries([]); setPassName(''); setSaving(false)
     }
-  }, [visible])
+  }, [visible, startStep])
 
   const strength = [...new Map(exercises.filter(e => e.category === 'strength').map(e => [e.name.toLowerCase(), e])).values()]
   const filtered = strength.filter(e => {
@@ -104,7 +107,8 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
     : 'Passöversikt'
 
   function back() {
-    if (step === 'cardio' || step === 'gymPick') setStep('choose')
+    if (step === 'gymPick' && !allowCardio) onClose()
+    else if (step === 'cardio' || step === 'gymPick') setStep('choose')
     else if (step === 'gymOverview') setStep('gymPick')
     else onClose()
   }

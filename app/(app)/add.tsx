@@ -335,16 +335,6 @@ const DayPage = React.memo(function DayPage({
                     />
                   ))}
 
-                  {isPast && (
-                    <TouchableOpacity
-                      style={styles.quickAddBtn}
-                      onPress={() => api.setPickerSession({ id: dateStr, user_id: userId ?? '', name: dateStr, weekdays: [], sort_order: 0, created_at: '', notes: null, session_type: 'gym', cardio_type: null, exercises: [] })}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="add-circle-outline" size={18} color={ORANGE} />
-                      <Text style={styles.quickAddText}>Logga missad övning</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               )}
             </ScrollView>
@@ -858,6 +848,8 @@ export default function SchemaScreen() {
       <LogWorkoutSheet
         visible={logSheetOpen}
         exercises={exercises}
+        // GPS-löpning kan inte köras i efterhand — tidigare dagar loggar bara gym
+        allowCardio={isoDate(selectedDate) === isoDate(todayMidnight())}
         onClose={() => setLogSheetOpen(false)}
         onPickCardio={(type, label) => {
           // Stäng modalen FÖRST, navigera sen — annars krockar dismiss + push
@@ -866,7 +858,7 @@ export default function SchemaScreen() {
         }}
         onSaveGym={async (name, items) => {
           if (!userId) { setLogSheetOpen(false); return }
-          const date = isoDate(todayMidnight())
+          const date = isoDate(selectedDate)
           try {
             // Skapa ETT pass (ONCE för idag) → renderas som ett vanligt pass-kort
             // (inte avklarat — användaren bockar av övningarna själv)
@@ -918,8 +910,8 @@ export default function SchemaScreen() {
         }}
       />
 
-      {/* ── Logga pass — fast knapp, bara på dagens datum ── */}
-      {isoDate(selectedDate) === isoDate(todayMidnight()) && (
+      {/* ── Logga pass — idag och bakåt (missade pass), inte framtida dagar ── */}
+      {selectedDate.getTime() <= todayMidnight().getTime() && (
         <View style={styles.recordWrap} pointerEvents="box-none">
           <TouchableOpacity style={styles.recordBtn} onPress={handleRecordWorkout} activeOpacity={0.9}>
             <Ionicons name="play" size={18} color="#000" />
