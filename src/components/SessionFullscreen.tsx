@@ -12,11 +12,9 @@ import { completeExercise, updateSessionExercise } from '@/services/workoutSched
 import type { Exercise } from '@/services/exercises'
 import { saveStrengthWorkout, getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
 import { getPersonalRecords, findNewPR } from '@/services/personalRecords'
-import { getRestSeconds, setRestSeconds } from '@/lib/prefs'
+import { getRestSeconds } from '@/lib/prefs'
 
 type LogSet = { reps: string; weight: string; done: boolean }
-
-const REST_OPTIONS = [60, 90, 120, 180]
 
 function fmtClock(secs: number): string {
   const m = Math.floor(secs / 60)
@@ -124,13 +122,6 @@ export function SessionFullscreen({
     if (restInterval.current) clearInterval(restInterval.current)
     restInterval.current = null
     setRestLeft(null)
-  }
-  function cycleRestDefault() {
-    Haptics.selectionAsync()
-    const i = REST_OPTIONS.indexOf(restDefault)
-    const next = REST_OPTIONS[(i + 1) % REST_OPTIONS.length] ?? 90
-    setRestDefault(next)
-    setRestSeconds(next).catch(() => {})
   }
 
   // ── Set-hantering ──
@@ -242,10 +233,6 @@ export function SessionFullscreen({
             <Ionicons name="chevron-down" size={26} color={TEXT_PRIMARY} />
           </TouchableOpacity>
           <Text style={s.title} numberOfLines={1}>{session?.name}</Text>
-          <TouchableOpacity style={s.restPill} onPress={cycleRestDefault} activeOpacity={0.75}>
-            <Ionicons name="timer-outline" size={13} color={TEXT_SECONDARY} />
-            <Text style={s.restPillText}>{fmtClock(restDefault)}</Text>
-          </TouchableOpacity>
           {isCompleted ? (
             <TouchableOpacity onPress={onUncomplete} style={s.doneBadge} activeOpacity={0.8}>
               <Ionicons name="checkmark-circle" size={14} color={GREEN} />
@@ -298,14 +285,7 @@ export function SessionFullscreen({
                     const p = prev?.[i]
                     return (
                       <View key={i} style={[s.setRow, r.done && s.setRowDone]}>
-                        <TouchableOpacity
-                          style={{ width: 36 }}
-                          onLongPress={() => removeSet(ex.id, i)}
-                          delayLongPress={350}
-                          activeOpacity={0.6}
-                        >
-                          <Text style={s.setNum}>{i + 1}</Text>
-                        </TouchableOpacity>
+                        <Text style={s.setNum}>{i + 1}</Text>
                         <TextInput
                           style={s.input}
                           value={r.reps}
@@ -338,15 +318,25 @@ export function SessionFullscreen({
                     )
                   })}
 
-                  <TouchableOpacity style={s.addSetBtn} onPress={() => addSet(ex.id)} activeOpacity={0.75}>
-                    <Ionicons name="add" size={16} color={TEXT_PRIMARY} />
-                    <Text style={s.addSetText}>Lägg till set</Text>
-                  </TouchableOpacity>
+                  <View style={s.setBtnRow}>
+                    <TouchableOpacity style={s.addSetBtn} onPress={() => addSet(ex.id)} activeOpacity={0.75}>
+                      <Ionicons name="add" size={16} color={TEXT_PRIMARY} />
+                      <Text style={s.addSetText}>Lägg till set</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.addSetBtn, rows.length <= 1 && { opacity: 0.35 }]}
+                      onPress={() => removeSet(ex.id, rows.length - 1)}
+                      disabled={rows.length <= 1}
+                      activeOpacity={0.75}
+                    >
+                      <Ionicons name="remove" size={16} color={TEXT_PRIMARY} />
+                      <Text style={s.addSetText}>Ta bort set</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )
             })}
             {exercises.length === 0 && <Text style={s.empty}>Inga övningar i passet</Text>}
-            <Text style={s.hint}>Håll in setnumret för att ta bort ett set</Text>
           </ScrollView>
         </KeyboardAvoidingView>
 
@@ -381,12 +371,6 @@ const s = StyleSheet.create({
   },
   iconBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
-  restPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 9, paddingVertical: 6,
-    borderRadius: 12, borderWidth: 1, borderColor: BORDER,
-  },
-  restPillText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'] },
   finishBtn: {
     backgroundColor: ORANGE, borderRadius: 18,
     paddingHorizontal: 16, paddingVertical: 9,
@@ -436,16 +420,17 @@ const s = StyleSheet.create({
   },
   checkOn: { backgroundColor: GREEN },
 
+  setBtnRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   addSetBtn: {
+    flex: 1,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: CARD, borderRadius: 12,
-    paddingVertical: 10, marginTop: 10,
+    paddingVertical: 10,
     borderWidth: 1, borderColor: BORDER,
   },
   addSetText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
 
   empty: { color: TEXT_SECONDARY, textAlign: 'center', marginTop: 48, fontSize: 15 },
-  hint: { color: 'rgba(255,255,255,0.25)', fontSize: 11, textAlign: 'center', marginTop: 18 },
 
   restBar: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
