@@ -93,7 +93,8 @@ export default function RecommendationScreen() {
         goal: params.goal ?? '',
         pressure: params.pressure ?? 'normal',
       }, startDay)
-      router.replace('/(auth)/schedule')
+      // Cast tills Metro genererat om typed routes för den nya skärmen
+      router.replace('/(auth)/setup-schedule' as any)
     } catch (e: any) {
       Alert.alert('Något gick fel', e.message)
     } finally {

@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { saveSchedule, getSchedule } from '@/services/schedule'
@@ -218,10 +218,9 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
+// Nås numera bara från Inställningar — onboardingen använder setup-schedule
+// (tiderna här kopplas till notiser när dev-builden är på plats)
 export default function ScheduleScreen() {
-  const { from } = useLocalSearchParams<{ from?: string }>()
-  const isSettings = from === 'settings'
-
   const defaultTpl = TEMPLATES[1] // Morgonkrigaren
   const [selectedTemplate, setSelectedTemplate] = useState<string>(defaultTpl.id)
   const [loading, setLoading] = useState(false)
@@ -319,10 +318,7 @@ export default function ScheduleScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          {isSettings
-            ? <Text style={styles.stepLabel}>DITT SCHEMA</Text>
-            : <Text style={styles.stepLabel}>STEG 5 AV 5</Text>
-          }
+          <Text style={styles.stepLabel}>DITT SCHEMA</Text>
           <Text style={styles.title}>Bygg din dag</Text>
           <Text style={styles.subtitle}>
             Välj en mall eller anpassa ditt eget schema. Du kan ändra när som helst.
@@ -386,15 +382,6 @@ export default function ScheduleScreen() {
             : <Text style={styles.saveButtonText}>Spara schema</Text>
           }
         </TouchableOpacity>
-
-        {!isSettings && (
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={() => router.replace('/(app)/dashboard')}
-          >
-            <Text style={styles.skipText}>Hoppa över, ställ in senare</Text>
-          </TouchableOpacity>
-        )}
 
       </ScrollView>
     </SafeAreaView>
@@ -585,13 +572,5 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
     fontWeight: '700',
-  },
-  skipButton: {
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  skipText: {
-    color: TEXT_SECONDARY,
-    fontSize: 14,
   },
 })
