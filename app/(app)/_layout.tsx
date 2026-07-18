@@ -32,7 +32,12 @@ const BUBBLE_H = 46
 
 function GlassTabBar({ state, navigation }: BottomTabBarProps) {
   const activeName = state.routes[state.index]?.name
-  const activeIdx  = Math.max(0, TABS.findIndex(t => t.name === activeName))
+  // Dolda rutter (Inställningar, Anpassning …) finns inte bland ikonerna —
+  // bubblan ligger då kvar på senast besökta synliga flik istället för huset
+  const rawIdx = TABS.findIndex(t => t.name === activeName)
+  const lastVisibleIdx = useRef(0)
+  if (rawIdx >= 0) lastVisibleIdx.current = rawIdx
+  const activeIdx = rawIdx >= 0 ? rawIdx : lastVisibleIdx.current
   const n = TABS.length
 
   const [barW, setBarW] = useState(0)
