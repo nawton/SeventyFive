@@ -25,16 +25,7 @@ import { deleteRepeatingSessions } from '@/services/workoutSchedule'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import * as Haptics from 'expo-haptics'
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
-import { GlassView } from 'expo-glass-effect'
-import { LIQUID_GLASS } from '@/lib/glass'
 import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
-
-// Glaset måste animeras direkt på den nativa vyn för att linsen ska följa med
-const AnimatedGlassView = Animated.createAnimatedComponent(GlassView)
-import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
-import { getTabBarShrinkEnabled, setTabBarShrinkEnabled } from '@/lib/tabBar'
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -99,26 +90,6 @@ export default function SettingsScreen() {
   const [loading, setLoading]       = useState(true)
   const [userId, setUserId]         = useState<string | null>(null)
   const [wizardVisible, setWizardVisible] = useState(false)
-  const [unit, setUnit]             = useState<UnitSystem>('metric')
-  const [segW, setSegW]             = useState(0)
-  const [navShrink, setNavShrink]   = useState(false)
-
-  // Animerad tumme i enhetsväljaren — fjädrar mellan lägena
-  const segPos = useSharedValue(0)
-  useEffect(() => {
-    segPos.value = withSpring(unit === 'imperial' ? 1 : 0, { damping: 17, stiffness: 240, mass: 0.8 })
-  }, [unit])
-  const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: segPos.value * (segW / 2) }],
-  }))
-
-  function chooseUnit(u: UnitSystem) {
-    if (u === unit) return
-    Haptics.selectionAsync()
-    setUnit(u)
-    setUnitSystem(u).catch(() => {})
-  }
-
   async function loadSettings() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -132,8 +103,6 @@ export default function SettingsScreen() {
       setDisplayName(profile?.name ?? userEmail.split('@')[0] ?? '')
       setAvatarUrl(profile?.avatar_url ?? null)
 
-      setUnit(await getUnitSystem())
-      setNavShrink(await getTabBarShrinkEnabled())
 
       const challenge = await getActiveChallenge(session.user.id)
       if (challenge) {
@@ -383,66 +352,14 @@ export default function SettingsScreen() {
           />
         </Section>
 
-        {/* Träning */}
-        <Section title="Träning">
-          <View style={styles.unitBlock}>
-            <View style={styles.rowLeft}>
-              <Ionicons name="speedometer-outline" size={20} color={TEXT_SECONDARY} />
-              <Text style={styles.rowLabel}>Enheter</Text>
-            </View>
-            <View
-              style={styles.segTrack}
-              onLayout={e => setSegW(e.nativeEvent.layout.width - 6)}
-            >
-              {segW > 0 && (LIQUID_GLASS ? (
-                // Liquid glass-tumme med orange ton som glider mellan lägena
-                <AnimatedGlassView
-                  glassEffectStyle="regular"
-                  tintColor={ORANGE}
-                  style={[styles.segThumb, styles.segThumbGlass, { width: segW / 2 }, thumbStyle]}
-                />
-              ) : (
-                <Animated.View style={[styles.segThumb, { width: segW / 2 }, thumbStyle]} />
-              ))}
-              {([
-                { key: 'metric',   label: 'Kilometer' },
-                { key: 'imperial', label: 'Miles' },
-              ] as const).map(({ key, label }) => (
-                <TouchableOpacity
-                  key={key}
-                  style={styles.segBtn}
-                  onPress={() => chooseUnit(key)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[
-                    styles.segText,
-                    unit === key && (LIQUID_GLASS ? styles.segTextActiveGlass : styles.segTextActive),
-                  ]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.unitHint}>
-              Distans och tempo visas i {unit === 'metric' ? 'kilometer' : 'miles'} i hela appen
-            </Text>
-          </View>
-        </Section>
-
-        {/* Anpassning */}
+        {/* Anpassning — egen sida med stil- och beteendeinställningar */}
         <Section title="Anpassning">
           <SettingRow
-            icon="resize-outline"
-            label="Minimera navbaren vid scroll"
+            icon="color-palette-outline"
+            label="Anpassning"
+            value="Navbar · Enheter · Cardio"
+            onPress={() => router.push('/(app)/anpassning' as any)}
             last
-            rightElement={
-              <Switch
-                value={navShrink}
-                onValueChange={v => { setNavShrink(v); setTabBarShrinkEnabled(v) }}
-                trackColor={{ false: BORDER, true: ORANGE }}
-                thumbColor="#fff"
-              />
-            }
           />
         </Section>
 
@@ -637,56 +554,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Enhetsväljare (km/miles) — segmenterad kontroll med glidande tumme
-  unitBlock: {
-    padding: 16,
-    gap: 12,
-  },
-  segTrack: {
-    flexDirection: 'row',
-    height: 44,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 14,
-    padding: 3,
-  },
-  segThumb: {
-    position: 'absolute',
-    left: 3,
-    top: 3,
-    bottom: 3,
-    borderRadius: 11,
-    backgroundColor: ORANGE,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  segBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segText: {
-    color: TEXT_SECONDARY,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  segTextActive: {
-    color: '#000',
-    fontWeight: '700',
-  },
-  segThumbGlass: {
-    backgroundColor: 'transparent',
-    overflow: 'hidden',
-    shadowOpacity: 0,
-  },
-  segTextActiveGlass: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  unitHint: {
-    color: TEXT_SECONDARY,
-    fontSize: 12,
-  },
 })
