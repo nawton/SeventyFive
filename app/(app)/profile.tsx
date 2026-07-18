@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
@@ -34,6 +35,7 @@ import {
 import { PhotoComposer } from '@/components/PhotoComposer'
 import { ORANGE, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import type { UserChallengeWithLevel } from '@/types/database'
 
@@ -72,6 +74,13 @@ export default function ProfileScreen() {
   const [photos, setPhotos]         = useState<ProgressPhotoItem[]>([])
   const [loading, setLoading]       = useState(true)
   const [composerUri, setComposerUri] = useState<string | null>(null)
+  const [refreshing, setRefreshing]   = useState(false)
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    await load().catch(() => {})
+    setRefreshing(false)
+  }
 
   useFocusEffect(useCallback(() => { load() }, []))
 
@@ -245,14 +254,13 @@ export default function ProfileScreen() {
         {/* Titelrad med kugghjul */}
         <View style={s.topRow}>
           <Text style={s.title}>Profil</Text>
-          <TouchableOpacity
-            style={s.gearButton}
+          <GlassCircleButton
+            icon="settings-outline"
+            size={40}
+            iconColor={TEXT_PRIMARY}
             onPress={() => router.push('/(app)/settings')}
-            activeOpacity={0.7}
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={22} color={TEXT_PRIMARY} />
-          </TouchableOpacity>
+            fallbackStyle={s.gearButton}
+          />
         </View>
 
         {/* Hero: avatar + namn + utmaning */}
@@ -363,6 +371,9 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={onScrollShrink}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ORANGE} />
+        }
       />
 
       <PhotoComposer
