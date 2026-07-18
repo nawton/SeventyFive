@@ -863,9 +863,10 @@ const s = StyleSheet.create({
   earnTabBtn:  { flex: 1, alignItems: 'center', paddingVertical: 8 },
   mainTabText:       { color: TEXT_SECONDARY, fontSize: 16, fontWeight: '700' },
   earnTabTextActive: { color: ORANGE, fontWeight: '700' },
+  // Samma padding som raderna (kortet självt är opaddat)
   earnCardHead: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingBottom: 12, marginBottom: 4,
+    padding: 14,
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
   },
   earnCardTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
