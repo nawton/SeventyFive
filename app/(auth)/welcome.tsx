@@ -15,13 +15,13 @@ import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
 
 const { width } = Dimensions.get('window')
 
-const ORANGE = '#FF9F0A'
-const BG     = '#000000'
+const ORANGE = '#FFA817'
+const BG     = '#0A0A0C'
 const CARD   = '#1C1C1E'
 const BORDER = '#2C2C2E'
 
 const TASK_ICONS = [
-  { icon: 'barbell-outline',    color: '#FF9F0A' },
+  { icon: 'barbell-outline',    color: '#FFA817' },
   { icon: 'restaurant-outline', color: '#66BB6A' },
   { icon: 'water-outline',      color: '#00BCD4' },
   { icon: 'book-outline',       color: '#AB47BC' },

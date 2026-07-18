@@ -12,8 +12,8 @@ import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI }
 import { toLocalDateString } from '@/lib/date'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 
-const GREEN       = '#30D158'
-const CARDIO_BLUE = '#4AC7FF'
+const GREEN       = '#3BE862'
+const CARDIO_BLUE = '#3BD5FF'
 const SCREEN_W    = Dimensions.get('window').width
 // Kompakta höjder — kalendern ska ta så lite plats som möjligt från passlistan
 const ROW_H   = 46    // height of one week row

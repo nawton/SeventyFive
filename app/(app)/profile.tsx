@@ -350,7 +350,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeAreaView style={s.screen} edges={['top']}>
       <FlatList
         data={photos}
         keyExtractor={p => p.id}

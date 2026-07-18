@@ -9,7 +9,7 @@ import type { TaskType } from '@/types/database'
 
 const { width: SW } = Dimensions.get('window')
 
-const ORANGE      = '#FF9F0A'
+const ORANGE      = '#FFA817'
 const CARD_BG     = '#131315'
 const CARD_BORDER = '#1E1E21'
 
@@ -17,7 +17,7 @@ export const TASK_GAP = 10
 export const TASK_W   = (SW - 40 - TASK_GAP) / 2
 
 export const TASK_COLORS: Record<TaskType, string> = {
-  workout: '#FF9F0A',
+  workout: '#FFA817',
   water:   '#00BCD4',
   diet:    '#66BB6A',
   reading: '#AB47BC',

@@ -34,12 +34,12 @@ const STATS_SCREEN_W = Dimensions.get('window').width
 const TAB_BAR_W = STATS_SCREEN_W - GRID_PADDING * 2
 const SEG_W     = TAB_BAR_W / 3      // en flik-kolumns bredd
 // Klara Apple Fitness-färger för statistikvärden
-const BLUE   = '#46B7FF'
-const RED    = '#FF375F'
-const YELLOW = '#FFD60A'
-const PURPLE = '#BF5AF2'
-const TEAL   = '#63E6E2'
-const LIME   = '#A9F548'
+const BLUE   = '#3FBBFF'
+const RED    = '#FF3D73'
+const YELLOW = '#FFE60A'
+const PURPLE = '#D65CFF'
+const TEAL   = '#40F5E9'
+const LIME   = '#BDFF3B'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -594,7 +594,7 @@ export default function StatsScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.header}>
         <Text style={s.title}>Framsteg</Text>
         <Text style={s.subtitle}>{levelName}</Text>

@@ -12,7 +12,7 @@ import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } fr
 import type { CardioWorkout } from '@/services/workouts'
 import { effortColor, effortLabel } from '@/components/EffortRating'
 
-const CARDIO_BLUE = '#4AC7FF'
+const CARDIO_BLUE = '#3BD5FF'
 const { height: SCREEN_H } = Dimensions.get('window')
 
 const TILE_URLS: Record<string, { url: string; opts: object }> = {

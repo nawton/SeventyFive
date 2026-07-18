@@ -20,9 +20,9 @@ import * as Haptics from 'expo-haptics'
 import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
 
-const GREEN    = '#30D158'
+const GREEN    = '#3BE862'
 // Kondition har egen accentfärg så gym- och cardiopass skiljer sig direkt
-const CARDIO_BLUE = '#4AC7FF'
+const CARDIO_BLUE = '#3BD5FF'
 const SCREEN_W = Dimensions.get('window').width
 
 const GPS_KEYWORDS = ['löpning', 'running', 'jogging', 'cykling', 'cycling', 'promenad', 'walking', 'spring', 'intervallspring', 'gång']

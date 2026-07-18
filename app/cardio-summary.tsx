@@ -47,7 +47,7 @@ export default function CardioSummaryScreen() {
     : null
 
   if (loading) {
-    return <View style={st.center}><ActivityIndicator color="#4AC7FF" /></View>
+    return <View style={st.center}><ActivityIndicator color="#3BD5FF" /></View>
   }
   if (!workout) {
     return (

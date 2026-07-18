@@ -31,7 +31,7 @@ const LEVELS: Record<Level, LevelConfig> = {
       'Läs 10 sidor',
       'Ta ett progressfoto',
     ],
-    color: '#30D158',
+    color: '#3BE862',
   },
   hard: {
     slug: 'hard',
@@ -44,7 +44,7 @@ const LEVELS: Record<Level, LevelConfig> = {
       'Läs 10 sidor',
       'Ta ett progressfoto',
     ],
-    color: '#FF9F0A',
+    color: '#FFA817',
   },
   extreme: {
     slug: 'extreme',
@@ -58,7 +58,7 @@ const LEVELS: Record<Level, LevelConfig> = {
       'Ta ett progressfoto',
       'Kall dusch varje morgon',
     ],
-    color: '#FF453A',
+    color: '#FF3B4A',
   },
 }
 

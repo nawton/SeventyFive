@@ -13,7 +13,7 @@ import Animated, {
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import { TASK_COLORS } from '@/components/TaskGridCard'
 
-const ORANGE      = '#FF9F0A'
+const ORANGE      = '#FFA817'
 const CARD_BG     = '#131315'
 const CARD_BORDER = '#1E1E21'
 const CUSTOM      = TASK_COLORS.custom

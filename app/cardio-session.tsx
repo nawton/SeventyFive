@@ -28,7 +28,7 @@ import {
 } from '@/lib/units'
 import { getCardioStatsTheme, setCardioStatsTheme, getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, type CardioStatsTheme } from '@/lib/prefs'
 
-const CARDIO_BLUE = '#4AC7FF'
+const CARDIO_BLUE = '#3BD5FF'
 const SCREEN_W    = Dimensions.get('window').width
 const GOAL_PAGE_W = SCREEN_W - 40   // scrollens padding är 20 per sida
 const GOAL_GAP    = 12

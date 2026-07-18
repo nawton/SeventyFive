@@ -346,12 +346,12 @@ export default function RecordsScreen() {
                   }}
                 >
                   <View style={s.ruleIcon}>
-                    <Ionicons name={rule.icon} size={16} color={earned ? '#30D158' : ORANGE} />
+                    <Ionicons name={rule.icon} size={16} color={earned ? '#3BE862' : ORANGE} />
                   </View>
                   <Text style={[s.ruleLabel, { flex: 1 }]}>{rule.label}</Text>
                   <Text style={s.rulePts}>{rule.pts} p</Text>
                   {earned ? (
-                    <Ionicons name="checkmark-circle" size={18} color="#30D158" />
+                    <Ionicons name="checkmark-circle" size={18} color="#3BE862" />
                   ) : (
                     <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
                   )}
@@ -561,9 +561,9 @@ export default function RecordsScreen() {
                 <Ionicons
                   name={selectedMedal.unlocked ? 'checkmark-circle' : 'lock-closed'}
                   size={13}
-                  color={selectedMedal.unlocked ? '#30D158' : TEXT_SECONDARY}
+                  color={selectedMedal.unlocked ? '#3BE862' : TEXT_SECONDARY}
                 />
-                <Text style={[s.statusPillText, selectedMedal.unlocked && { color: '#30D158' }]}>
+                <Text style={[s.statusPillText, selectedMedal.unlocked && { color: '#3BE862' }]}>
                   {selectedMedal.unlocked ? 'Upplåst' : selectedMedal.progress ?? 'Låst'}
                 </Text>
               </View>
@@ -721,7 +721,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
     marginTop: 6,
   },
-  statusPillUnlocked: { backgroundColor: '#30D15818' },
+  statusPillUnlocked: { backgroundColor: '#3BE86218' },
   statusPillLocked:   { backgroundColor: 'rgba(255,255,255,0.06)' },
   statusPillText:     { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
   modalDesc: {

@@ -174,7 +174,7 @@ export default function ChangePasswordScreen() {
               <Ionicons
                 name={confirm === password ? 'checkmark-circle' : 'close-circle'}
                 size={18}
-                color={confirm === password ? '#30D158' : '#FF453A'}
+                color={confirm === password ? '#3BE862' : '#FF3B4A'}
               />
             )}
           </View>

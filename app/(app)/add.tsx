@@ -347,7 +347,7 @@ export default function SchemaScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
 
       {/* Sticky top bar */}
       <View style={styles.topHeader}>

@@ -137,13 +137,13 @@ const MAP_HTML = `<!DOCTYPE html>
     .gps-wrap { position:relative; width:22px; height:22px; }
     .gps-dot {
       width:18px; height:18px;
-      background:#FF9F0A; border:3px solid #fff; border-radius:50%;
+      background:#FFA817; border:3px solid #fff; border-radius:50%;
       box-shadow:0 2px 10px rgba(255,143,0,0.5);
       position:absolute; top:2px; left:2px;
     }
     .gps-ring {
       width:22px; height:22px;
-      border:2px solid #FF9F0A; border-radius:50%;
+      border:2px solid #FFA817; border-radius:50%;
       position:absolute; top:0; left:0;
       animation:gps-pulse 2s ease-out infinite;
     }
@@ -174,7 +174,7 @@ const MAP_HTML = `<!DOCTYPE html>
   });
 
   var marker = null;
-  var polyline = L.polyline([], { color:'#FF9F0A', weight:5, lineCap:'round', lineJoin:'round' }).addTo(map);
+  var polyline = L.polyline([], { color:'#FFA817', weight:5, lineCap:'round', lineJoin:'round' }).addTo(map);
 
   window.addEventListener('message', function(e) {
     try {
@@ -233,9 +233,9 @@ function routeMapHtml(route: Array<[number, number]>): string {
     var pts = ${JSON.stringify(pts)};
     var map = L.map('map',{zoomControl:false,attributionControl:false,dragging:false,touchZoom:false,doubleClickZoom:false,scrollWheelZoom:false,boxZoom:false,keyboard:false});
     L.tileLayer('https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-    var line = L.polyline(pts,{color:'#FF9F0A',weight:4,lineCap:'round',lineJoin:'round'}).addTo(map);
-    L.circleMarker(pts[0],{radius:5,color:'#fff',weight:2,fillColor:'#30D158',fillOpacity:1}).addTo(map);
-    L.circleMarker(pts[pts.length-1],{radius:5,color:'#fff',weight:2,fillColor:'#FF453A',fillOpacity:1}).addTo(map);
+    var line = L.polyline(pts,{color:'#FFA817',weight:4,lineCap:'round',lineJoin:'round'}).addTo(map);
+    L.circleMarker(pts[0],{radius:5,color:'#fff',weight:2,fillColor:'#3BE862',fillOpacity:1}).addTo(map);
+    L.circleMarker(pts[pts.length-1],{radius:5,color:'#fff',weight:2,fillColor:'#FF3B4A',fillOpacity:1}).addTo(map);
     map.fitBounds(line.getBounds(),{padding:[24,24]});
   </script></body></html>`
 }
@@ -808,7 +808,7 @@ export default function CardioScreen() {
 
             <View style={styles.compassStage}>
               {/* Fast markör som visar riktningen mot den roterande skivan */}
-              <Ionicons name="caret-down" size={24} color="#FF453A" style={{ marginBottom: 8 }} />
+              <Ionicons name="caret-down" size={24} color="#FF3B4A" style={{ marginBottom: 8 }} />
 
               <View style={{ width: DIAL, height: DIAL }}>
                 <Animated.View style={[styles.compassDial, dialStyle]}>
@@ -827,7 +827,7 @@ export default function CardioScreen() {
                   {/* Väderstreck */}
                   {([['N', 0], ['Ö', 90], ['S', 180], ['V', 270]] as const).map(([letter, d]) => (
                     <View key={letter} style={[styles.tickWrap, { transform: [{ rotate: `${d}deg` }] }]}>
-                      <Text style={[styles.dialCardinal, letter === 'N' && { color: '#FF453A' }]}>{letter}</Text>
+                      <Text style={[styles.dialCardinal, letter === 'N' && { color: '#FF3B4A' }]}>{letter}</Text>
                     </View>
                   ))}
                 </Animated.View>
@@ -882,7 +882,7 @@ export default function CardioScreen() {
               {status === 'running' && (
                 <View style={styles.gpsChip}>
                   <View style={[styles.gpsDot, {
-                    backgroundColor: gpsCat === 2 ? '#30D158' : gpsCat === 1 ? '#FFC107' : '#FF453A',
+                    backgroundColor: gpsCat === 2 ? '#3BE862' : gpsCat === 1 ? '#FFC107' : '#FF3B4A',
                   }]} />
                   <Text style={[styles.gpsText, lightCard && { color: '#777' }]}>
                     {gpsCat === -1 ? 'Ingen GPS' : gpsCat === 0 ? 'Svag GPS' : 'GPS'}
@@ -969,7 +969,7 @@ export default function CardioScreen() {
       <View style={styles.rightBtns}>
         <TouchableOpacity style={styles.compassBtn} onPress={openCompass} activeOpacity={0.8}>
           <Animated.View style={[{ alignItems: 'center' }, needleStyle]}>
-            <Ionicons name="caret-up" size={17} color="#FF453A" style={{ marginBottom: -5 }} />
+            <Ionicons name="caret-up" size={17} color="#FF3B4A" style={{ marginBottom: -5 }} />
             <Ionicons name="caret-down" size={17} color="#fff" style={{ marginTop: -5 }} />
           </Animated.View>
         </TouchableOpacity>
@@ -1520,12 +1520,12 @@ const styles = StyleSheet.create({
   goalOne: { gap: 5 },
   goalTextRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   goalText:      { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600' },
-  goalPct:       { color: '#4AC7FF', fontSize: 12, fontWeight: '800' },
+  goalPct:       { color: '#3BD5FF', fontSize: 12, fontWeight: '800' },
   goalTrack: {
     height: 4, borderRadius: 2, overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  goalFill: { height: '100%', backgroundColor: '#4AC7FF', borderRadius: 2 },
+  goalFill: { height: '100%', backgroundColor: '#3BD5FF', borderRadius: 2 },
 
   statsRow: {
     flexDirection: 'row',
@@ -2023,7 +2023,7 @@ const styles = StyleSheet.create({
   // ── Summary modal ──
   summaryOverlay: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0C',
   },
   summaryContainer: {
     flex: 1,

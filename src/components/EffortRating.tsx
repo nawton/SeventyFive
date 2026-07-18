@@ -11,7 +11,7 @@ import { BG, GREEN, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib
 // =============================================================================
 
 const YELLOW = '#F5A623'
-const RED    = '#FF453A'
+const RED    = '#FF3B4A'
 
 export function effortLabel(n: number): string {
   if (n <= 1) return 'Mycket lätt'

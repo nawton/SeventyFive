@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router'
 import { View, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-const ORANGE   = '#FF9F0A'
+const ORANGE   = '#FFA817'
 const TAB_BG   = '#1C1C1E'
 const INACTIVE = '#555555'
 
