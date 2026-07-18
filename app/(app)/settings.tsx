@@ -34,6 +34,7 @@ import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/l
 // Glaset måste animeras direkt på den nativa vyn för att linsen ska följa med
 const AnimatedGlassView = Animated.createAnimatedComponent(GlassView)
 import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
+import { getTabBarShrinkEnabled, setTabBarShrinkEnabled } from '@/lib/tabBar'
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -100,6 +101,7 @@ export default function SettingsScreen() {
   const [wizardVisible, setWizardVisible] = useState(false)
   const [unit, setUnit]             = useState<UnitSystem>('metric')
   const [segW, setSegW]             = useState(0)
+  const [navShrink, setNavShrink]   = useState(false)
 
   // Animerad tumme i enhetsväljaren — fjädrar mellan lägena
   const segPos = useSharedValue(0)
@@ -131,6 +133,7 @@ export default function SettingsScreen() {
       setAvatarUrl(profile?.avatar_url ?? null)
 
       setUnit(await getUnitSystem())
+      setNavShrink(await getTabBarShrinkEnabled())
 
       const challenge = await getActiveChallenge(session.user.id)
       if (challenge) {
@@ -424,6 +427,23 @@ export default function SettingsScreen() {
               Distans och tempo visas i {unit === 'metric' ? 'kilometer' : 'miles'} i hela appen
             </Text>
           </View>
+        </Section>
+
+        {/* Anpassning */}
+        <Section title="Anpassning">
+          <SettingRow
+            icon="resize-outline"
+            label="Minimera navbaren vid scroll"
+            last
+            rightElement={
+              <Switch
+                value={navShrink}
+                onValueChange={v => { setNavShrink(v); setTabBarShrinkEnabled(v) }}
+                trackColor={{ false: BORDER, true: ORANGE }}
+                thumbColor="#fff"
+              />
+            }
+          />
         </Section>
 
         {/* Notifications */}
