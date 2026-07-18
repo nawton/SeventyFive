@@ -16,7 +16,7 @@ import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import {
   getRestSeconds, setRestSeconds,
   getExerciseRestSeconds, setExerciseRestSeconds,
-  getOrInitPassStart, clearPassStart,
+  getOrInitPassStart, getPassStart, clearPassStart,
   setPassDuration, getPassDuration,
   setPassEffort, getPassEffort,
 } from '@/lib/prefs'
@@ -73,6 +73,8 @@ export function SessionFullscreen({
   // Avklarade pass visar den sparade sluttiden statiskt — timern tickar inte.
   const [finalDur, setFinalDur] = useState<number | null>(null)
   const [passEffort, setPassEffortState] = useState<number | null>(null)
+  // Passet startar först när man trycker Starta — då börjar timern ticka
+  const [started, setStarted] = useState(false)
   useEffect(() => {
     if (!visible || !session) return
     if (isCompleted) {
@@ -82,11 +84,27 @@ export function SessionFullscreen({
     }
     setFinalDur(null)
     setPassEffortState(null)
-    getOrInitPassStart(`${session.id}:${date}`).then(ts => {
-      startTs.current = ts
-      setElapsed(Math.max(0, Math.floor((Date.now() - ts) / 1000)))
+    setStarted(false)
+    setElapsed(0)
+    // Redan startat (vyn stängdes och öppnades igen) → fortsätt ticka
+    getPassStart(`${session.id}:${date}`).then(ts => {
+      if (ts) {
+        startTs.current = ts
+        setElapsed(Math.max(0, Math.floor((Date.now() - ts) / 1000)))
+        setStarted(true)
+      }
     })
   }, [visible, session?.id, isCompleted])
+
+  function startPass() {
+    if (!session) return
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    getOrInitPassStart(`${session.id}:${date}`).then(ts => {
+      startTs.current = ts
+      setElapsed(0)
+      setStarted(true)
+    })
+  }
 
   // Förra passets set per övning — visas i FÖRRA-kolumnen och som placeholders
   useEffect(() => {
@@ -104,10 +122,10 @@ export function SessionFullscreen({
   const startTs = useRef(Date.now())
   const [elapsed, setElapsed] = useState(0)
   useEffect(() => {
-    if (!visible || isCompleted) return
+    if (!visible || isCompleted || !started) return
     const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTs.current) / 1000)), 1000)
     return () => clearInterval(t)
-  }, [visible, isCompleted])
+  }, [visible, isCompleted, started])
 
   // ── Vilotimer (samma mönster som övningsloggen) ──
   const [restLeft, setRestLeft]       = useState<number | null>(null)
@@ -251,6 +269,18 @@ export function SessionFullscreen({
     then?.()
   }
 
+  // Bekräfta innan passet slutförs — Spara på redan avklarade pass går direkt
+  function confirmFinish() {
+    if (!session || saving) return
+    if (isCompleted) { finish(); return }
+    const anySets = session.exercises.some(ex => (logs[ex.id] ?? []).some(r => (parseInt(r.reps) || 0) > 0))
+    if (!anySets) { finish(); return }
+    Alert.alert('Är du klar med passet?', 'Passet markeras som avklarat och dina set sparas.', [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Slutför', onPress: () => finish() },
+    ])
+  }
+
   // ── Slutför: spara allt, bocka övningar, markera passet klart ──
   async function finish() {
     if (!session || !userId || saving) return
@@ -349,10 +379,16 @@ export function SessionFullscreen({
               <Text style={s.doneBadgeText}>Klar</Text>
             </TouchableOpacity>
           )}
-          {/* Avklarat pass går fortfarande att komplettera — knappen blir Spara */}
-          <TouchableOpacity onPress={finish} style={[s.finishBtn, saving && { opacity: 0.6 }]} disabled={saving} activeOpacity={0.85}>
-            {saving ? <ActivityIndicator size="small" color="#000" /> : <Text style={s.finishText}>{isCompleted ? 'Spara' : 'Slutför'}</Text>}
-          </TouchableOpacity>
+          {/* Starta → Slutför → Spara (avklarade pass går att komplettera) */}
+          {!isCompleted && !started ? (
+            <TouchableOpacity onPress={startPass} style={s.finishBtn} activeOpacity={0.85}>
+              <Text style={s.finishText}>Starta</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={confirmFinish} style={[s.finishBtn, saving && { opacity: 0.6 }]} disabled={saving} activeOpacity={0.85}>
+              {saving ? <ActivityIndicator size="small" color="#000" /> : <Text style={s.finishText}>{isCompleted ? 'Spara' : 'Slutför'}</Text>}
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Statistikrad: tid + vilotidsinställning ── */}

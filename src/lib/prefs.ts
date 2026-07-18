@@ -97,6 +97,16 @@ export async function getOrInitPassStart(id: string): Promise<number> {
   return now
 }
 
+/** Läser starttiden utan att sätta den — null om passet inte startats */
+export async function getPassStart(id: string): Promise<number | null> {
+  try {
+    const v = parseInt((await AsyncStorage.getItem(`passStart:${id}`)) ?? '', 10)
+    return Number.isFinite(v) && v > 0 ? v : null
+  } catch {
+    return null
+  }
+}
+
 export async function clearPassStart(id: string): Promise<void> {
   await AsyncStorage.removeItem(`passStart:${id}`).catch(() => {})
 }
