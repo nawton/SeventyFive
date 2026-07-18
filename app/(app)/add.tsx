@@ -56,6 +56,7 @@ import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { DayPage, EMPTY_CHECKED, EMPTY_COMPLETED, EMPTY_CARDIO_STATS, EMPTY_CARDIO_LOGS, EMPTY_LOGGED, type DayPageApi } from '@/components/schedule/DayPage'
 import { PAGER_DATA, CENTER_IDX, isoDate, todayMidnight, indexToDate, dateToIndex } from '@/lib/scheduleDates'
 
@@ -610,9 +611,9 @@ const styles = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: BG },
   centered: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' },
 
-  // Spela in pass-knappen
+  // Spela in pass-knappen — ovanför den flytande tabbar-pillen
   recordWrap: {
-    position: 'absolute', left: 0, right: 0, bottom: 14,
+    position: 'absolute', left: 0, right: 0, bottom: TAB_CONTENT_PAD,
     paddingHorizontal: 16,
   },
   recordBtn: {
