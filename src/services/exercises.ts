@@ -24,9 +24,9 @@ export const DIFFICULTY_LABELS: Record<ExerciseDifficulty, string> = {
 }
 
 export const DIFFICULTY_COLORS: Record<ExerciseDifficulty, string> = {
-  beginner:     '#4CAF50',
-  intermediate: '#FF8F00',
-  advanced:     '#E53935',
+  beginner:     '#30D158',
+  intermediate: '#FF9F0A',
+  advanced:     '#FF453A',
 }
 
 export async function getExercises(): Promise<Exercise[]> {

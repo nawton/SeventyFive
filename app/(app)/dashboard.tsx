@@ -59,7 +59,7 @@ import { AddRuleSheet } from '@/components/AddRuleSheet'
 import type { UserChallengeWithLevel } from '@/types/database'
 import { getGreetingSubtitle } from '@/lib/getGreetingSubtitle'
 
-const ORANGE    = '#FF8F00'
+const ORANGE    = '#FF9F0A'
 const NUM_FONT  = 'Nunito_700Bold'
 const SCENE_BG  = '#0A0A0B'
 const CARD_BG   = '#131315'
@@ -122,7 +122,7 @@ function getGreeting(): string {
 function ProgressRing({ completed, total }: { completed: number; total: number }) {
   const progress   = useSharedValue(0)
   const isComplete = total > 0 && completed === total
-  const ringColor  = isComplete ? '#4CAF50' : ORANGE
+  const ringColor  = isComplete ? '#30D158' : ORANGE
 
   useEffect(() => {
     progress.value = withTiming(
@@ -853,9 +853,9 @@ const s = StyleSheet.create({
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
     borderWidth: 1, borderColor: '#1E1E21',
   },
-  countBadgeDone: { backgroundColor: '#4CAF501A', borderColor: '#4CAF5035' },
+  countBadgeDone: { backgroundColor: '#30D1581A', borderColor: '#30D15835' },
   countText:     { color: '#444', fontSize: 12, fontWeight: '700' },
-  countTextDone: { color: '#4CAF50' },
+  countTextDone: { color: '#30D158' },
 
   // Task grid
   taskGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: TASK_GAP },
@@ -913,8 +913,8 @@ const s = StyleSheet.create({
   // Fail
   failBtn: {
     borderRadius: 14, paddingVertical: 14, alignItems: 'center',
-    borderWidth: 1, borderColor: '#E5393520', marginTop: 4,
+    borderWidth: 1, borderColor: '#FF453A20', marginTop: 4,
   },
-  failBtnText:   { color: '#E53935', fontSize: 14, fontWeight: '600' },
+  failBtnText:   { color: '#FF453A', fontSize: 14, fontWeight: '600' },
   dayFailedText: { color: '#3A3A40', fontSize: 13, textAlign: 'center', paddingVertical: 8 },
 })

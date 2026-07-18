@@ -354,8 +354,8 @@ export function SessionEditor({
             {session && allowDelete ? (
               <TouchableOpacity onPress={handleDelete} style={s.iconBtn} activeOpacity={0.7} disabled={deleting}>
                 {deleting
-                  ? <ActivityIndicator size="small" color="#E53935" />
-                  : <Ionicons name="trash-outline" size={20} color="#E53935" />}
+                  ? <ActivityIndicator size="small" color="#FF453A" />
+                  : <Ionicons name="trash-outline" size={20} color="#FF453A" />}
               </TouchableOpacity>
             ) : (
               <View style={{ width: 40 }} />

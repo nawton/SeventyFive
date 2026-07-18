@@ -18,7 +18,7 @@ const SCREEN_HEIGHT = Dimensions.get('window').height
 const SCREEN_WIDTH  = Dimensions.get('window').width
 const SHEET_PARTIAL = SCREEN_HEIGHT * 0.30
 const SHEET_SP      = { damping: 26, stiffness: 260, mass: 1 } as const
-const CARDIO_BLUE   = '#4AA8E0'
+const CARDIO_BLUE   = '#4AC7FF'
 
 const EXERCISE_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   running:  'fitness-outline',

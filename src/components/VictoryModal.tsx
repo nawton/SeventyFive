@@ -12,7 +12,7 @@ import * as Haptics from 'expo-haptics'
 
 import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
-const GREEN = '#4CAF50'
+const GREEN = '#30D158'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
