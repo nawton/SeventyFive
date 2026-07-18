@@ -381,12 +381,21 @@ export function SessionFullscreen({
           )}
           {/* Starta → Slutför → Spara (avklarade pass går att komplettera) */}
           {!isCompleted && !started ? (
-            <TouchableOpacity onPress={startPass} style={s.finishBtn} activeOpacity={0.85}>
+            <TouchableOpacity onPress={startPass} style={[s.finishBtn, s.startBtn]} activeOpacity={0.85}>
               <Text style={s.finishText}>Starta</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={confirmFinish} style={[s.finishBtn, saving && { opacity: 0.6 }]} disabled={saving} activeOpacity={0.85}>
-              {saving ? <ActivityIndicator size="small" color="#000" /> : <Text style={s.finishText}>{isCompleted ? 'Spara' : 'Slutför'}</Text>}
+            <TouchableOpacity
+              onPress={confirmFinish}
+              style={[s.finishBtn, !isCompleted && s.stopBtn, saving && { opacity: 0.6 }]}
+              disabled={saving}
+              activeOpacity={0.85}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={isCompleted ? '#000' : '#fff'} />
+              ) : (
+                <Text style={[s.finishText, !isCompleted && s.stopText]}>{isCompleted ? 'Spara' : 'Slutför'}</Text>
+              )}
             </TouchableOpacity>
           )}
         </View>
@@ -601,6 +610,9 @@ const s = StyleSheet.create({
   },
   iconBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
+  startBtn: { backgroundColor: GREEN },
+  stopBtn:  { backgroundColor: '#FF3B4A' },
+  stopText: { color: '#fff' },
   finishBtn: {
     backgroundColor: ORANGE, borderRadius: 18,
     paddingHorizontal: 16, paddingVertical: 9,
