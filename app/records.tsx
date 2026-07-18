@@ -93,7 +93,7 @@ interface MedalInfo {
 }
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { LinearGradient } from 'expo-linear-gradient'
-import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated'
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -156,6 +156,13 @@ export default function RecordsScreen() {
     }
     setHistoryPts(buildHistory(allWorkoutsRef.current ?? [], name))
   }
+  const [mainTab, setMainTab] = useState<0 | 1>(0)
+  const mainPos = useSharedValue(0)
+  useEffect(() => { mainPos.value = withSpring(mainTab, { damping: 18, stiffness: 240 }) }, [mainTab])
+  const mainIndicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: mainPos.value * (PAGE_W / 2) }],
+  }))
+
   const [earnTab, setEarnTab] = useState<0 | 1>(0)
   const earnPagerRef = useRef<ScrollView>(null)
   // Underline-indikatorn följer kortsvepet i realtid, som flikarna på Framsteg
@@ -359,6 +366,24 @@ export default function RecordsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Huvudflikar: medaljer och poäng för sig, egna rekord för sig */}
+        <View style={[s.earnTabsRow, { marginTop: 10 }]}>
+          {(['Medaljer', 'Rekord'] as const).map((label, i) => (
+            <TouchableOpacity
+              key={label}
+              style={s.earnTabBtn}
+              onPress={() => setMainTab(i as 0 | 1)}
+              activeOpacity={0.75}
+            >
+              <Text style={[s.mainTabText, mainTab === i && s.earnTabTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={s.earnTrack}>
+          <Animated.View style={[s.earnIndicator, mainIndicatorStyle]} />
+        </View>
+
+        {mainTab === 0 && (<>
         {/* Tjäna poäng — svep mellan återkommande och engångsmål */}
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>TJÄNA POÄNG</Text>
@@ -473,6 +498,9 @@ export default function RecordsScreen() {
           ))}
         </View>
 
+        </>)}
+
+        {mainTab === 1 && (<>
         {/* ── Personliga rekord ── */}
         <View style={[s.sectionRow, { marginTop: 8 }]}>
           <Text style={s.sectionTitle}>PERSONLIGA REKORD</Text>
@@ -570,6 +598,7 @@ export default function RecordsScreen() {
             </View>
           </>
         )}
+        </>)}
 
       </ScrollView>
 
@@ -800,6 +829,7 @@ const s = StyleSheet.create({
   earnTabsRow: { flexDirection: 'row' },
   earnTabBtn:  { flex: 1, alignItems: 'center', paddingVertical: 8 },
   earnTabText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
+  mainTabText:       { color: TEXT_SECONDARY, fontSize: 16, fontWeight: '700' },
   earnTabTextActive: { color: ORANGE, fontWeight: '700' },
   earnTrack: {
     height: 3, borderRadius: 2, overflow: 'hidden',
