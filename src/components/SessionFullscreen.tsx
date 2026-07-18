@@ -289,15 +289,13 @@ export function SessionFullscreen({
 
                   <View style={s.tableHead}>
                     <Text style={[s.th, { width: 36 }]}>SET</Text>
-                    <Text style={[s.th, { flex: 1 }]}>FÖRRA</Text>
-                    <Text style={[s.th, { width: 64, textAlign: 'center' }]}>KG</Text>
-                    <Text style={[s.th, { width: 64, textAlign: 'center' }]}>REPS</Text>
+                    <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>REPS</Text>
+                    <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>KG</Text>
                     <View style={{ width: 40 }} />
                   </View>
 
                   {rows.map((r, i) => {
                     const p = prev?.[i]
-                    const prevStr = p ? `${p.weight_kg > 0 ? `${p.weight_kg} kg × ` : ''}${p.reps}` : '—'
                     return (
                       <View key={i} style={[s.setRow, r.done && s.setRowDone]}>
                         <TouchableOpacity
@@ -308,17 +306,6 @@ export function SessionFullscreen({
                         >
                           <Text style={s.setNum}>{i + 1}</Text>
                         </TouchableOpacity>
-                        <Text style={s.prevText} numberOfLines={1}>{prevStr}</Text>
-                        <TextInput
-                          style={s.input}
-                          value={r.weight}
-                          onChangeText={v => updateLog(ex.id, i, 'weight', v.replace(/[^0-9.,]/g, '').replace(',', '.'))}
-                          keyboardType="decimal-pad"
-                          returnKeyType="done"
-                          placeholder={p && p.weight_kg > 0 ? String(p.weight_kg) : '0'}
-                          placeholderTextColor="rgba(255,255,255,0.22)"
-                          selectTextOnFocus
-                        />
                         <TextInput
                           style={s.input}
                           value={r.reps}
@@ -326,6 +313,16 @@ export function SessionFullscreen({
                           keyboardType="number-pad"
                           returnKeyType="done"
                           placeholder={p && p.reps > 0 ? String(p.reps) : (ex.reps ?? '0')}
+                          placeholderTextColor="rgba(255,255,255,0.22)"
+                          selectTextOnFocus
+                        />
+                        <TextInput
+                          style={s.input}
+                          value={r.weight}
+                          onChangeText={v => updateLog(ex.id, i, 'weight', v.replace(/[^0-9.,]/g, '').replace(',', '.'))}
+                          keyboardType="decimal-pad"
+                          returnKeyType="done"
+                          placeholder={p && p.weight_kg > 0 ? String(p.weight_kg) : '0'}
                           placeholderTextColor="rgba(255,255,255,0.22)"
                           selectTextOnFocus
                         />
@@ -425,9 +422,8 @@ const s = StyleSheet.create({
   },
   setRowDone: { backgroundColor: GREEN + '14' },
   setNum: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', width: 36 },
-  prevText: { flex: 1, color: TEXT_SECONDARY, fontSize: 13, fontVariant: ['tabular-nums'] },
   input: {
-    width: 64, height: 38,
+    flex: 1, height: 38,
     backgroundColor: CARD, borderRadius: 10,
     borderWidth: 1, borderColor: BORDER,
     color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700',
