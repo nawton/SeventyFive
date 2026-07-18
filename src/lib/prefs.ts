@@ -52,3 +52,19 @@ export async function getRestSeconds(): Promise<number> {
 export async function setRestSeconds(secs: number): Promise<void> {
   await AsyncStorage.setItem(REST_KEY, String(secs)).catch(() => {})
 }
+
+// Vilotid mellan ÖVNINGAR — startar när sista setet i en övning bockas av
+const EXREST_KEY = 'restExerciseSeconds'
+
+export async function getExerciseRestSeconds(): Promise<number> {
+  try {
+    const v = parseInt((await AsyncStorage.getItem(EXREST_KEY)) ?? '', 10)
+    return Number.isFinite(v) && v > 0 ? v : 180
+  } catch {
+    return 180
+  }
+}
+
+export async function setExerciseRestSeconds(secs: number): Promise<void> {
+  await AsyncStorage.setItem(EXREST_KEY, String(secs)).catch(() => {})
+}

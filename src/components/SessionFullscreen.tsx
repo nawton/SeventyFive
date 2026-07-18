@@ -1,22 +1,35 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, FlatList,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
+import Body from 'react-native-body-highlighter'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import type { WorkoutSession } from '@/services/workoutSchedule'
-import { completeExercise, updateSessionExercise } from '@/services/workoutSchedule'
+import { completeExercise, updateSessionExercise, addSingleExerciseToSession } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
 import { saveStrengthWorkout, getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
 import { getPersonalRecords, findNewPR } from '@/services/personalRecords'
-import { getRestSeconds, setRestSeconds } from '@/lib/prefs'
+import { getMusclesForName, bestSideForMuscles, getExerciseMuscleGroup } from '@/lib/muscles'
+import {
+  getRestSeconds, setRestSeconds,
+  getExerciseRestSeconds, setExerciseRestSeconds,
+} from '@/lib/prefs'
 
 type LogSet = { reps: string; weight: string; done: boolean }
 
-const REST_PRESETS = [30, 45, 60, 90, 120, 180]
+const MUSCLE_GROUPS = [
+  { key: 'all',       label: 'Alla' },
+  { key: 'legs',      label: 'Ben' },
+  { key: 'chest',     label: 'Bröst' },
+  { key: 'back',      label: 'Rygg' },
+  { key: 'shoulders', label: 'Axlar' },
+  { key: 'arms',      label: 'Armar' },
+  { key: 'core',      label: 'Mage' },
+]
 
 function fmtClock(secs: number): string {
   const m = Math.floor(secs / 60)
@@ -47,16 +60,24 @@ export function SessionFullscreen({
   const [prevByName, setPrevByName] = useState<Record<string, StrengthSet[]>>({})
   const [saving, setSaving] = useState(false)
 
+  // Logg-rader synkas mot passets övningar — behåller ifyllt när nya läggs till
+  const exIdsKey = exercises.map(e => e.id).join(',')
   useEffect(() => {
     if (!visible || !session) return
-    setLogs(() => {
+    setLogs(prev => {
       const out: Record<string, LogSet[]> = {}
       for (const ex of session.exercises) {
-        const n = Math.max(1, ex.sets ?? 3)
-        out[ex.id] = Array.from({ length: n }, () => ({ reps: '', weight: '', done: false }))
+        out[ex.id] = prev[ex.id] ?? Array.from(
+          { length: Math.max(1, ex.sets ?? 3) },
+          () => ({ reps: '', weight: '', done: false }),
+        )
       }
       return out
     })
+  }, [visible, exIdsKey])
+
+  useEffect(() => {
+    if (!visible) return
     setElapsed(0)
     startTs.current = Date.now()
   }, [visible, session?.id])
@@ -86,11 +107,15 @@ export function SessionFullscreen({
   const [restLeft, setRestLeft]       = useState<number | null>(null)
   const [restTotal, setRestTotal]     = useState(90)
   const [restDefault, setRestDefault] = useState(90)
+  const [exRestDefault, setExRestDefault] = useState(180)
   const restInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const restEnd      = useRef(0)
   const restLastSec  = useRef(-1)
 
-  useEffect(() => { getRestSeconds().then(setRestDefault) }, [])
+  useEffect(() => {
+    getRestSeconds().then(setRestDefault)
+    getExerciseRestSeconds().then(setExRestDefault)
+  }, [])
   useEffect(() => () => { if (restInterval.current) clearInterval(restInterval.current) }, [])
 
   function startRest(secs: number) {
@@ -126,13 +151,19 @@ export function SessionFullscreen({
     setRestLeft(null)
   }
 
-  // Inställning av vilotid (klockikonen i statsraden)
+  // Inställning av vilotider (klockikonen i statsraden)
   const [restSheetOpen, setRestSheetOpen] = useState(false)
   function chooseRest(secs: number) {
     Haptics.selectionAsync()
     const clamped = Math.max(15, Math.min(600, secs))
     setRestDefault(clamped)
     setRestSeconds(clamped).catch(() => {})
+  }
+  function chooseExRest(secs: number) {
+    Haptics.selectionAsync()
+    const clamped = Math.max(15, Math.min(900, secs))
+    setExRestDefault(clamped)
+    setExerciseRestSeconds(clamped).catch(() => {})
   }
 
   // ── Set-hantering ──
@@ -143,15 +174,37 @@ export function SessionFullscreen({
     }))
   }
   function toggleDone(exId: string, i: number) {
-    const wasDone = logs[exId]?.[i]?.done
-    setLogs(prev => ({
-      ...prev,
-      [exId]: (prev[exId] ?? []).map((r, j) => j === i ? { ...r, done: !r.done } : r),
-    }))
+    const rows = logs[exId] ?? []
+    const wasDone = rows[i]?.done
+    const next = rows.map((r, j) => j === i ? { ...r, done: !r.done } : r)
+    setLogs(prev => ({ ...prev, [exId]: next }))
     if (!wasDone) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      startRest(restDefault)
+      // Sista setet i övningen → längre vila (mellan övningar)
+      const allDone = next.every(r => r.done)
+      startRest(allDone ? exRestDefault : restDefault)
     }
+  }
+
+  // ── Lägg till övning i passet ──
+  const [addExOpen, setAddExOpen]   = useState(false)
+  const [exSearch, setExSearch]     = useState('')
+  const [exGroup, setExGroup]       = useState('all')
+  const inPass = new Set(exercises.map(e => e.exercise_name))
+
+  const pickableExercises = [...new Map(
+    exercisesList.filter(e => e.category === 'strength').map(e => [e.name.toLowerCase(), e]),
+  ).values()].filter(e => {
+    const g = exGroup === 'all' || getExerciseMuscleGroup(e.name) === exGroup
+    const q = exSearch.trim() === '' || e.name.toLowerCase().includes(exSearch.toLowerCase())
+    return g && q
+  })
+
+  async function pickExercise(exInfo: Exercise) {
+    if (!session || inPass.has(exInfo.name)) return
+    Haptics.selectionAsync()
+    await addSingleExerciseToSession(session.id, exInfo.name, exercises.length, 3, '10').catch(() => null)
+    onSaved?.()   // laddar om — den nya övningen dyker upp i listan
   }
   function addSet(exId: string) {
     setLogs(prev => {
@@ -354,8 +407,89 @@ export function SessionFullscreen({
               )
             })}
             {exercises.length === 0 && <Text style={s.empty}>Inga övningar i passet</Text>}
+
+            {/* Lägg till övning i passet */}
+            <TouchableOpacity style={s.addExBtn} onPress={() => setAddExOpen(true)} activeOpacity={0.8}>
+              <Ionicons name="add-circle-outline" size={19} color={ORANGE} />
+              <Text style={s.addExText}>Lägg till övning</Text>
+            </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* ── Lägg till övning — lager med muskelgubbar per övning ── */}
+        {addExOpen && (
+          <View style={[StyleSheet.absoluteFill, s.addExScreen, { paddingTop: insets.top + 6 }]}>
+            <View style={s.addExHeader}>
+              <TouchableOpacity onPress={() => setAddExOpen(false)} style={s.iconBtn} activeOpacity={0.7}>
+                <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
+              </TouchableOpacity>
+              <Text style={s.addExTitle}>Lägg till övning</Text>
+              <TouchableOpacity onPress={() => setAddExOpen(false)} style={s.addExDone} activeOpacity={0.8}>
+                <Text style={s.addExDoneText}>Klar</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={s.searchBar}>
+              <Ionicons name="search-outline" size={16} color={TEXT_SECONDARY} />
+              <TextInput
+                style={s.searchInput}
+                value={exSearch}
+                onChangeText={setExSearch}
+                placeholder="Sök övning…"
+                placeholderTextColor={TEXT_SECONDARY}
+                autoCorrect={false}
+                autoCapitalize="none"
+                clearButtonMode="while-editing"
+              />
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipStrip} contentContainerStyle={s.chips}>
+              {MUSCLE_GROUPS.map(g => (
+                <TouchableOpacity key={g.key} style={[s.chip, exGroup === g.key && s.chipActive]} onPress={() => setExGroup(g.key)} activeOpacity={0.7}>
+                  <Text style={[s.chipText, exGroup === g.key && s.chipTextActive]}>{g.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <FlatList
+              data={pickableExercises}
+              keyExtractor={item => item.id}
+              keyboardShouldPersistTaps="handled"
+              initialNumToRender={9}
+              windowSize={5}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+              renderItem={({ item }) => {
+                const muscles = getMusclesForName(item.name)
+                const already = inPass.has(item.name)
+                return (
+                  <TouchableOpacity
+                    style={[s.exPickRow, already && { opacity: 0.45 }]}
+                    onPress={() => pickExercise(item)}
+                    disabled={already}
+                    activeOpacity={0.7}
+                  >
+                    {/* Muskelgubbe — musklerna för övningen markerade */}
+                    <View style={s.exPickThumb}>
+                      <Body
+                        data={muscles.map(slug => ({ slug, intensity: 1 as const }))}
+                        side={bestSideForMuscles(muscles)}
+                        gender="male"
+                        scale={0.28}
+                        colors={[ORANGE]}
+                        defaultFill="#3A3A3C"
+                      />
+                    </View>
+                    <Text style={s.exPickName} numberOfLines={2}>{item.name}</Text>
+                    <View style={[s.exPickAdd, already && { backgroundColor: GREEN + '22' }]}>
+                      <Ionicons name={already ? 'checkmark' : 'add'} size={19} color={already ? GREEN : ORANGE} />
+                    </View>
+                  </TouchableOpacity>
+                )
+              }}
+              ListEmptyComponent={<Text style={s.empty}>Inga övningar hittades</Text>}
+            />
+          </View>
+        )}
 
         {/* ── Vilotidsinställning — lager över passvyn ── */}
         {restSheetOpen && (
@@ -367,31 +501,28 @@ export function SessionFullscreen({
             />
             <View style={[s.restSheet, { paddingBottom: insets.bottom + 20 }]}>
               <View style={s.restSheetHandle} />
-              <Text style={s.restSheetTitle}>Vilotid mellan set</Text>
+              <Text style={s.restSheetTitle}>Vilotider</Text>
               <Text style={s.restSheetSub}>Startar automatiskt när du bockar av ett set</Text>
 
-              <View style={s.restPresetGrid}>
-                {REST_PRESETS.map(secs => (
-                  <TouchableOpacity
-                    key={secs}
-                    style={[s.restPresetChip, restDefault === secs && s.restPresetChipActive]}
-                    onPress={() => chooseRest(secs)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[s.restPresetText, restDefault === secs && s.restPresetTextActive]}>
-                      {fmtClock(secs)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Finjustering ±15 s */}
+              <Text style={s.restSectionLabel}>MELLAN SET</Text>
               <View style={s.restStepRow}>
                 <TouchableOpacity style={s.restStepBtn} onPress={() => chooseRest(restDefault - 15)} activeOpacity={0.75}>
                   <Ionicons name="remove" size={20} color={TEXT_PRIMARY} />
                 </TouchableOpacity>
                 <Text style={s.restStepValue}>{fmtClock(restDefault)}</Text>
                 <TouchableOpacity style={s.restStepBtn} onPress={() => chooseRest(restDefault + 15)} activeOpacity={0.75}>
+                  <Ionicons name="add" size={20} color={TEXT_PRIMARY} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={s.restSectionLabel}>MELLAN ÖVNINGAR</Text>
+              <Text style={s.restSectionHint}>Används när sista setet i en övning bockas av</Text>
+              <View style={s.restStepRow}>
+                <TouchableOpacity style={s.restStepBtn} onPress={() => chooseExRest(exRestDefault - 15)} activeOpacity={0.75}>
+                  <Ionicons name="remove" size={20} color={TEXT_PRIMARY} />
+                </TouchableOpacity>
+                <Text style={s.restStepValue}>{fmtClock(exRestDefault)}</Text>
+                <TouchableOpacity style={s.restStepBtn} onPress={() => chooseExRest(exRestDefault + 15)} activeOpacity={0.75}>
                   <Ionicons name="add" size={20} color={TEXT_PRIMARY} />
                 </TouchableOpacity>
               </View>
@@ -502,6 +633,55 @@ const s = StyleSheet.create({
 
   empty: { color: TEXT_SECONDARY, textAlign: 'center', marginTop: 48, fontSize: 15 },
 
+  addExBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginHorizontal: 16, marginTop: 22,
+    paddingVertical: 13, borderRadius: 14,
+    borderWidth: 1.5, borderColor: ORANGE + '50', borderStyle: 'dashed',
+  },
+  addExText: { color: ORANGE, fontSize: 15, fontWeight: '700' },
+
+  // Lägg till övning — lager
+  addExScreen: { backgroundColor: BG },
+  addExHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 12, paddingBottom: 8,
+  },
+  addExTitle: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
+  addExDone: { backgroundColor: ORANGE, borderRadius: 16, paddingHorizontal: 15, paddingVertical: 8 },
+  addExDoneText: { color: '#000', fontSize: 14, fontWeight: '800' },
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 14, height: 44,
+    backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  searchInput: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, padding: 0 },
+  chipStrip: { flexGrow: 0, marginBottom: 6 },
+  chips: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, backgroundColor: CARD, borderWidth: 1, borderColor: BORDER },
+  chipActive: { backgroundColor: ORANGE, borderColor: ORANGE },
+  chipText: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
+  chipTextActive: { color: '#000', fontWeight: '700' },
+  exPickRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  exPickThumb: {
+    width: 52, height: 88, overflow: 'hidden',
+    alignItems: 'center', justifyContent: 'flex-start',
+    backgroundColor: CARD, borderRadius: 12,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  exPickName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  exPickAdd: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: ORANGE + '18',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
   restSheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: CARD,
@@ -515,15 +695,11 @@ const s = StyleSheet.create({
   },
   restSheetTitle: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800', textAlign: 'center', marginTop: 6 },
   restSheetSub: { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', marginTop: -8 },
-  restPresetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  restPresetChip: {
-    flexBasis: '31%', flexGrow: 1, alignItems: 'center',
-    paddingVertical: 12, borderRadius: 12,
-    borderWidth: 1.5, borderColor: BORDER, backgroundColor: BG,
+  restSectionLabel: {
+    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
+    letterSpacing: 1.5, textAlign: 'center', marginTop: 4,
   },
-  restPresetChipActive: { borderColor: ORANGE, backgroundColor: ORANGE + '15' },
-  restPresetText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  restPresetTextActive: { color: ORANGE },
+  restSectionHint: { color: 'rgba(255,255,255,0.3)', fontSize: 11, textAlign: 'center', marginTop: -10 },
   restStepRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 22,
   },
