@@ -72,9 +72,10 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
   }
 
   // Tap sköts av Pressables per ikon (native-pålitligt) — pannen aktiveras
-  // först vid håll-och-dra och tar då över från tryckytorna
+  // direkt vid sidledsdrag och tar då över från tryckytorna (scrubbing)
   const pan = Gesture.Pan()
-    .activateAfterLongPress(180)
+    .activeOffsetX([-8, 8])
+    .failOffsetY([-16, 16])
     .onStart(e => {
       if (slotW <= 0) return
       const i = Math.min(n - 1, Math.max(0, Math.floor(e.x / slotW)))
