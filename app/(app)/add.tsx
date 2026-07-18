@@ -56,8 +56,7 @@ import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
-import { TAB_CONTENT_PAD, LIQUID_GLASS } from '@/lib/glass'
-import { GlassPill } from '@/components/GlassButton'
+import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { DayPage, EMPTY_CHECKED, EMPTY_COMPLETED, EMPTY_CARDIO_STATS, EMPTY_CARDIO_LOGS, EMPTY_LOGGED, type DayPageApi } from '@/components/schedule/DayPage'
 import { PAGER_DATA, CENTER_IDX, isoDate, todayMidnight, indexToDate, dateToIndex } from '@/lib/scheduleDates'
 
@@ -597,10 +596,10 @@ export default function SchemaScreen() {
       {/* ── Logga pass — idag och bakåt (missade pass), inte framtida dagar ── */}
       {selectedDate.getTime() <= todayMidnight().getTime() && (
         <View style={styles.recordWrap} pointerEvents="box-none">
-          <GlassPill onPress={handleRecordWorkout} style={styles.recordBtnLayout} fallbackStyle={styles.recordBtn}>
-            <Ionicons name="play" size={18} color={LIQUID_GLASS ? '#fff' : '#000'} />
-            <Text style={[styles.recordBtnText, LIQUID_GLASS && { color: '#fff' }]}>Logga pass</Text>
-          </GlassPill>
+          <TouchableOpacity style={styles.recordBtn} onPress={handleRecordWorkout} activeOpacity={0.9}>
+            <Ionicons name="play" size={16} color="#000" />
+            <Text style={styles.recordBtnText}>Logga pass</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -617,17 +616,14 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, bottom: TAB_CONTENT_PAD,
     paddingHorizontal: 16,
   },
-  recordBtnLayout: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    borderRadius: 28, paddingVertical: 16,
-  },
   recordBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#F2F2F5', borderRadius: 28, paddingVertical: 16,
+    alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    backgroundColor: '#F2F2F5', borderRadius: 24, paddingVertical: 12, paddingHorizontal: 26,
     shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4, shadowRadius: 14, elevation: 8,
   },
-  recordBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+  recordBtnText: { color: '#000', fontSize: 15, fontWeight: '700' },
 
   wizardBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
