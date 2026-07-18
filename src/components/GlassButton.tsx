@@ -1,4 +1,4 @@
-import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native'
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, {
   useAnimatedStyle, useSharedValue, withSpring, runOnJS,
@@ -18,6 +18,10 @@ import * as Haptics from 'expo-haptics'
 const GLASS = isLiquidGlassAvailable()
 
 const SPRING = { damping: 14, stiffness: 220, mass: 0.7 } as const
+
+// Transformen måste ligga direkt på glasvyn — ligger den på en förälder
+// följer bara innehållet (ikonen) med medan själva glaslinsen står kvar
+const AnimatedGlassView = Animated.createAnimatedComponent(GlassView)
 
 export function GlassCircleButton({
   icon, size = 44, iconColor, onPress, draggable = false, style,
@@ -79,21 +83,19 @@ export function GlassCircleButton({
 
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View style={[anim, style]}>
-        {GLASS ? (
-          <GlassView
-            isInteractive
-            glassEffectStyle="regular"
-            style={[s.glass, circle]}
-          >
-            <Ionicons name={icon} size={size * 0.45} color={iconColor ?? '#fff'} />
-          </GlassView>
-        ) : (
-          <View style={[s.fallback, circle]}>
-            <Ionicons name={icon} size={size * 0.45} color={iconColor ?? '#000'} />
-          </View>
-        )}
-      </Animated.View>
+      {GLASS ? (
+        <AnimatedGlassView
+          isInteractive={!draggable}
+          glassEffectStyle="regular"
+          style={[s.glass, circle, anim, style]}
+        >
+          <Ionicons name={icon} size={size * 0.45} color={iconColor ?? '#fff'} />
+        </AnimatedGlassView>
+      ) : (
+        <Animated.View style={[s.fallback, circle, anim, style]}>
+          <Ionicons name={icon} size={size * 0.45} color={iconColor ?? '#000'} />
+        </Animated.View>
+      )}
     </GestureDetector>
   )
 }
@@ -102,7 +104,6 @@ const s = StyleSheet.create({
   glass: {
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   fallback: {
     alignItems: 'center',
