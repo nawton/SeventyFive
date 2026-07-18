@@ -136,15 +136,6 @@ function buildWeeklyBars(workouts: CardioWorkout[]): WeekBar[] {
 
 // ─── Sessioner-listan ──────────────────────────────────────────────────────────
 
-/** "0:01", "35:12" eller "1:02:45" — stor grön siffra i sessionslistan */
-function fmtSessTime(secs: number): string {
-  const h = Math.floor(secs / 3600)
-  const m = Math.floor((secs % 3600) / 60)
-  const s = secs % 60
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
 function monthLabel(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })
 }
@@ -361,7 +352,11 @@ export default function StatsScreen() {
   const [weekLoading, setWeekLoading]           = useState(false)
   const [weekGymSessions, setWeekGymSessions]   = useState<GymSession[]>([])
 
-  useFocusEffect(useCallback(() => { loadStats() }, []))
+  useFocusEffect(useCallback(() => {
+    loadStats()
+    // Enhetsvalet kan ha ändrats i Inställningar sedan sist
+    getUnitSystem().then(setUnit)
+  }, []))
 
   async function loadStats() {
     try {
@@ -543,9 +538,8 @@ export default function StatsScreen() {
       return {
         key: `c:${w.id}`,
         name: w.name,
-        value: w.data.distance_km > 0.05
-          ? `${toDisplayDistance(w.data.distance_km, unit).toFixed(2).replace('.', ',')} ${unitLabel.toUpperCase()}`
-          : fmtSessTime(w.data.duration_seconds),
+        // Alltid distans — aldrig tid — som stort värde
+        value: `${toDisplayDistance(w.data.distance_km, unit).toFixed(2).replace('.', ',')} ${unitLabel.toUpperCase()}`,
         icon: meta.icon,
         color: meta.color,
         sortKey: new Date(w.created_at).getTime(),
@@ -564,7 +558,7 @@ export default function StatsScreen() {
         return {
           key: `g:${c.id}`,
           name: c.name,
-          value: c.durationSeconds ? fmtSessTime(c.durationSeconds) : 'Klart',
+          value: 'Klart',
           icon: meta.icon,
           color: meta.color,
           sortKey: new Date(`${c.completedDate}T12:00:00`).getTime(),
@@ -1200,8 +1194,8 @@ const s = StyleSheet.create({
   dtlRow:  { flexDirection: 'row', paddingVertical: 13 },
   dtlCell: { flex: 1, gap: 3 },
   dtlLbl:  { color: TEXT_SECONDARY, fontSize: 14 },
-  dtlVal:  { fontSize: 26, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  dtlUnit: { fontSize: 14, fontWeight: '600' },
+  dtlVal:  { fontSize: 26, fontFamily: 'Nunito_800ExtraBold' },
+  dtlUnit: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
   dtlSep:  { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
 
   // Periodfilter (cardio-fliken)
@@ -1222,7 +1216,7 @@ const s = StyleSheet.create({
   paceWeekLbl:  { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
 
   // Sessioner-listan (Apple Fitness-stil)
-  sessMonth: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800', marginTop: 8 },
+  sessMonth: { color: TEXT_PRIMARY, fontSize: 20, fontFamily: 'Nunito_800ExtraBold', marginTop: 8 },
   sessRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER,
@@ -1230,7 +1224,7 @@ const s = StyleSheet.create({
   },
   sessIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   sessName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  sessValue: { color: GREEN, fontSize: 23, fontWeight: '800', fontVariant: ['tabular-nums'], marginTop: 1 },
+  sessValue: { color: GREEN, fontSize: 23, fontFamily: 'Nunito_800ExtraBold', marginTop: 1 },
   sessDate: { color: TEXT_SECONDARY, fontSize: 13, alignSelf: 'flex-end', marginBottom: 4 },
 
   // Cardiorekord
@@ -1240,7 +1234,7 @@ const s = StyleSheet.create({
     width: 32, height: 32, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
-  recVal: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  recVal: { color: TEXT_PRIMARY, fontSize: 16, fontFamily: 'Nunito_800ExtraBold' },
   recLbl: { color: TEXT_SECONDARY, fontSize: 11, marginTop: 1 },
 
   // Ring chart

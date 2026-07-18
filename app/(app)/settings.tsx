@@ -26,6 +26,7 @@ import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ export default function SettingsScreen() {
   const [loading, setLoading]       = useState(true)
   const [userId, setUserId]         = useState<string | null>(null)
   const [wizardVisible, setWizardVisible] = useState(false)
+  const [unit, setUnit]             = useState<UnitSystem>('metric')
 
   async function loadSettings() {
     try {
@@ -103,6 +105,8 @@ export default function SettingsScreen() {
       const profile = await getProfile(session.user.id)
       setDisplayName(profile?.name ?? userEmail.split('@')[0] ?? '')
       setAvatarUrl(profile?.avatar_url ?? null)
+
+      setUnit(await getUnitSystem())
 
       const challenge = await getActiveChallenge(session.user.id)
       if (challenge) {
@@ -352,6 +356,34 @@ export default function SettingsScreen() {
           />
         </Section>
 
+        {/* Träning */}
+        <Section title="Träning">
+          <SettingRow
+            icon="speedometer-outline"
+            label="Enheter"
+            last
+            rightElement={
+              <View style={styles.unitPills}>
+                {([
+                  { key: 'metric',   label: 'km' },
+                  { key: 'imperial', label: 'miles' },
+                ] as const).map(({ key, label }) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.unitPill, unit === key && styles.unitPillActive]}
+                    onPress={() => { setUnit(key); setUnitSystem(key).catch(() => {}) }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.unitPillText, unit === key && styles.unitPillTextActive]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            }
+          />
+        </Section>
+
         {/* Notifications */}
         <Section title="Notiser">
           <SettingRow
@@ -542,4 +574,20 @@ const styles = StyleSheet.create({
     color: TEXT_SECONDARY,
     fontSize: 14,
   },
+
+  // Enhetsväljare (km/miles)
+  unitPills: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 16,
+    padding: 3,
+  },
+  unitPill: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 13,
+  },
+  unitPillActive: { backgroundColor: ORANGE },
+  unitPillText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  unitPillTextActive: { color: '#000' },
 })
