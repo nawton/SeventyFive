@@ -29,7 +29,7 @@ import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
-import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, type CardioStatsTheme, type VoiceSettings } from '@/lib/prefs'
+import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, getLastMapCoord, setLastMapCoord, type CardioStatsTheme, type VoiceSettings } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -127,8 +127,8 @@ export default function CardioScreen() {
   const [goalKmNum, setGoalKmNum]   = useState(goalKm ? parseFloat(goalKm) : 0)
   const [goalMinNum, setGoalMinNum] = useState(goalMin ? parseInt(goalMin, 10) : 0)
   const [goalModalOpen, setGoalModalOpen] = useState(false)
-  const [goalKmDraft, setGoalKmDraft]   = useState('')
-  const [goalMinDraft, setGoalMinDraft] = useState('')
+  const [goalKmDraft, setGoalKmDraft]   = useState(0)
+  const [goalMinDraft, setGoalMinDraft] = useState(0)
 
   // Enhetsval (km/miles) — lagring sker alltid i km, bara visningen konverteras
   const [unit, setUnit] = useState<UnitSystem>('metric')
@@ -221,6 +221,11 @@ export default function CardioScreen() {
   const mapRef = useRef<MapView>(null)
   const followRef = useRef(true)
   const [routeLine, setRouteLine] = useState<Coord[]>([])
+  // Startregion: cachad position → kartan öppnar inzoomad, inte hela Sverige
+  const [initRegion, setInitRegion] = useState<{ latitude: number; longitude: number } | null>(null)
+  useEffect(() => {
+    getLastMapCoord().then(c => { if (c) setInitRegion(prev => prev ?? c) })
+  }, [])
   const locationSub = useRef<Location.LocationSubscription | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -372,22 +377,22 @@ export default function CardioScreen() {
   // Målväljaren på startvyn — förifylls med senaste målet för aktiviteten
   async function openGoalModal() {
     if (goalKmNum > 0 || goalMinNum > 0) {
-      setGoalKmDraft(goalKmNum > 0 ? String(goalKmNum).replace('.', ',') : '')
-      setGoalMinDraft(goalMinNum > 0 ? String(goalMinNum) : '')
+      setGoalKmDraft(goalKmNum)
+      setGoalMinDraft(goalMinNum)
     } else {
       const saved = await getCardioGoal(exercise)
-      setGoalKmDraft(saved && saved.km > 0 ? String(saved.km).replace('.', ',') : '')
-      setGoalMinDraft(saved && saved.min > 0 ? String(saved.min) : '')
+      setGoalKmDraft(saved?.km ?? 0)
+      setGoalMinDraft(saved?.min ?? 0)
     }
     setGoalModalOpen(true)
   }
 
   function saveGoal() {
-    const km  = parseFloat(goalKmDraft.replace(',', '.')) || 0
-    const min = parseInt(goalMinDraft, 10) || 0
-    setGoalKmNum(km)
-    setGoalMinNum(min)
-    if (km > 0 || min > 0) setCardioGoal(exercise, { km, min }).catch(() => {})
+    setGoalKmNum(goalKmDraft)
+    setGoalMinNum(goalMinDraft)
+    if (goalKmDraft > 0 || goalMinDraft > 0) {
+      setCardioGoal(exercise, { km: goalKmDraft, min: goalMinDraft }).catch(() => {})
+    }
     setGoalModalOpen(false)
   }
 
@@ -470,6 +475,8 @@ export default function CardioScreen() {
       if (last) {
         const c = { latitude: last.coords.latitude, longitude: last.coords.longitude }
         latestCoord.current = c
+        setInitRegion(prev => prev ?? c)
+        setLastMapCoord(c).catch(() => {})
         sendInit(c)
       }
 
@@ -493,6 +500,8 @@ export default function CardioScreen() {
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
       const c = { latitude: loc.coords.latitude, longitude: loc.coords.longitude }
       latestCoord.current = c
+      setInitRegion(prev => prev ?? c)
+      setLastMapCoord(c).catch(() => {})
       sendInit(c)
     } catch {
       // GPS:en kan vägra svara (flygplansläge, ingen signal) — skärmen funkar ändå,
@@ -762,10 +771,13 @@ export default function CardioScreen() {
   return (
     <View style={styles.root}>
 
-      {/* ── Fullscreen Apple Maps ── */}
+      {/* ── Fullscreen Apple Maps — väntar på startregion så vi öppnar inzoomade ── */}
+      {initRegion === null && <View style={[StyleSheet.absoluteFill, { backgroundColor: '#101012' }]} />}
+      {initRegion !== null && (
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
+        initialRegion={{ ...initRegion, latitudeDelta: 0.008, longitudeDelta: 0.008 }}
         mapType={APPLE_MAP_TYPES[activeStyle] ?? 'standard'}
         userInterfaceStyle={activeStyle === 'dark' ? 'dark' : 'light'}
         showsUserLocation
@@ -790,6 +802,7 @@ export default function CardioScreen() {
           />
         )}
       </MapView>
+      )}
 
       {/* ── Nedräkning 3-2-1 innan start ── */}
       {countdown !== null && (
@@ -1151,9 +1164,24 @@ export default function CardioScreen() {
                       onPress={() => changeStyle(ms.key)}
                       activeOpacity={0.85}
                     >
-                      <View style={[styles.mapPreview, styles.mapPreviewIcon]}>
-                        <Ionicons name={ms.icon} size={26} color={active ? CARDIO_ACCENT : '#9BA0A6'} />
-                      </View>
+                      {initRegion ? (
+                        <View style={styles.mapPreview} pointerEvents="none">
+                          <MapView
+                            style={StyleSheet.absoluteFill}
+                            mapType={APPLE_MAP_TYPES[ms.key] ?? 'standard'}
+                            userInterfaceStyle={ms.key === 'dark' ? 'dark' : 'light'}
+                            initialRegion={{ ...initRegion, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
+                            scrollEnabled={false}
+                            zoomEnabled={false}
+                            rotateEnabled={false}
+                            pitchEnabled={false}
+                          />
+                        </View>
+                      ) : (
+                        <View style={[styles.mapPreview, styles.mapPreviewIcon]}>
+                          <Ionicons name={ms.icon} size={26} color={active ? CARDIO_ACCENT : '#9BA0A6'} />
+                        </View>
+                      )}
                       <View style={styles.mapCardLabelRow}>
                         <Text style={[styles.mapCardLabel, active && { color: CARDIO_ACCENT }]}>{ms.label}</Text>
                         {active && <Ionicons name="checkmark-circle" size={15} color={CARDIO_ACCENT} />}
@@ -1488,35 +1516,83 @@ export default function CardioScreen() {
         </View>
       </Modal>
 
-      {/* Målväljare — km och/eller minuter */}
+      {/* Målväljare — stegare i samma stil som röstinställningarna */}
       <Modal visible={goalModalOpen} transparent animationType="slide" onRequestClose={() => setGoalModalOpen(false)}>
         <Pressable style={styles.goalModalOverlay} onPress={() => setGoalModalOpen(false)}>
           <Pressable style={styles.goalModalSheet} onPress={() => {}}>
-            <Text style={styles.goalModalTitle}>Sätt mål</Text>
-            <View style={styles.goalModalRow}>
-              <View style={styles.goalModalField}>
-                <Text style={styles.goalModalLabel}>Distans ({unitLabel})</Text>
-                <TextInput
-                  style={styles.goalModalInput}
-                  value={goalKmDraft}
-                  onChangeText={v => setGoalKmDraft(v.replace(/[^0-9.,]/g, ''))}
-                  keyboardType="decimal-pad"
-                  placeholder="0"
-                  placeholderTextColor="#555"
+            <View style={styles.goalIconWrap}>
+              <View style={styles.goalIconCircle}>
+                <Ionicons name="flag-outline" size={28} color={CARDIO_ACCENT} />
+              </View>
+              <Text style={styles.goalModalTitle}>Sätt mål</Text>
+            </View>
+
+            <View style={styles.voiceFreqBlock}>
+              <View style={styles.voiceRowPlain}>
+                <Text style={styles.voiceRowLabel}>Distans</Text>
+                <Switch
+                  value={goalKmDraft > 0}
+                  onValueChange={on => setGoalKmDraft(on ? 5 : 0)}
+                  trackColor={{ false: '#333', true: CARDIO_ACCENT }}
+                  thumbColor="#fff"
                 />
               </View>
-              <View style={styles.goalModalField}>
-                <Text style={styles.goalModalLabel}>Tid (min)</Text>
-                <TextInput
-                  style={styles.goalModalInput}
-                  value={goalMinDraft}
-                  onChangeText={v => setGoalMinDraft(v.replace(/[^0-9]/g, ''))}
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  placeholderTextColor="#555"
-                />
+              <View style={[styles.voiceStepper, goalKmDraft === 0 && { opacity: 0.35 }]}>
+                <TouchableOpacity
+                  style={styles.voiceStepBtn}
+                  disabled={goalKmDraft <= 0.5}
+                  onPress={() => setGoalKmDraft(v => Math.max(0.5, Math.round((v - 0.5) * 2) / 2))}
+                >
+                  <Ionicons name="remove" size={24} color="#fff" />
+                </TouchableOpacity>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={styles.voiceStepValue}>
+                    {(goalKmDraft || 5).toFixed(goalKmDraft % 1 === 0 ? 0 : 1).replace('.', ',')}
+                  </Text>
+                  <Text style={styles.voiceStepUnit}>{unitLabel}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.voiceStepBtn}
+                  disabled={goalKmDraft === 0 || goalKmDraft >= 100}
+                  onPress={() => setGoalKmDraft(v => Math.min(100, Math.round((v + 0.5) * 2) / 2))}
+                >
+                  <Ionicons name="add" size={24} color="#fff" />
+                </TouchableOpacity>
               </View>
             </View>
+
+            <View style={styles.voiceFreqBlock}>
+              <View style={styles.voiceRowPlain}>
+                <Text style={styles.voiceRowLabel}>Tid</Text>
+                <Switch
+                  value={goalMinDraft > 0}
+                  onValueChange={on => setGoalMinDraft(on ? 30 : 0)}
+                  trackColor={{ false: '#333', true: CARDIO_ACCENT }}
+                  thumbColor="#fff"
+                />
+              </View>
+              <View style={[styles.voiceStepper, goalMinDraft === 0 && { opacity: 0.35 }]}>
+                <TouchableOpacity
+                  style={styles.voiceStepBtn}
+                  disabled={goalMinDraft <= 5}
+                  onPress={() => setGoalMinDraft(v => Math.max(5, v - 5))}
+                >
+                  <Ionicons name="remove" size={24} color="#fff" />
+                </TouchableOpacity>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={styles.voiceStepValue}>{goalMinDraft || 30}</Text>
+                  <Text style={styles.voiceStepUnit}>minuter</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.voiceStepBtn}
+                  disabled={goalMinDraft === 0 || goalMinDraft >= 300}
+                  onPress={() => setGoalMinDraft(v => Math.min(300, v + 5))}
+                >
+                  <Ionicons name="add" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
             <TouchableOpacity style={styles.goalModalSave} onPress={saveGoal} activeOpacity={0.85}>
               <Text style={styles.goalModalSaveText}>Spara mål</Text>
             </TouchableOpacity>
@@ -1740,18 +1816,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#1C1C1E', borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, paddingBottom: 40, gap: 14,
   },
-  goalModalTitle: { color: '#fff', fontSize: 19, fontWeight: '800', textAlign: 'center' },
-  goalModalRow: { flexDirection: 'row', gap: 10 },
-  goalModalField: { flex: 1, gap: 6 },
-  goalModalLabel: { color: '#9BA0A6', fontSize: 12, fontWeight: '600' },
-  goalModalInput: {
-    backgroundColor: '#0A0A0C', borderRadius: 12, borderWidth: 1, borderColor: '#2C2C2E',
-    color: '#fff', fontSize: 18, paddingVertical: 12, paddingHorizontal: 14,
+  goalModalTitle: { color: '#fff', fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
+  goalIconWrap: { alignItems: 'center', gap: 10, marginBottom: 4 },
+  goalIconCircle: {
+    width: 58, height: 58, borderRadius: 29,
+    backgroundColor: CARDIO_ACCENT + '1C',
+    alignItems: 'center', justifyContent: 'center',
   },
   goalModalSave: {
-    backgroundColor: CARDIO_ACCENT, borderRadius: 14, paddingVertical: 14, alignItems: 'center',
+    backgroundColor: CARDIO_ACCENT, borderRadius: 999, paddingVertical: 14, alignItems: 'center',
   },
-  goalModalSaveText: { color: '#000', fontSize: 15, fontWeight: '700' },
+  goalModalSaveText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   goalModalClear: { alignItems: 'center', paddingVertical: 8 },
   goalModalClearText: { color: '#9BA0A6', fontSize: 13 },
   root: { flex: 1, backgroundColor: '#e8e8e8' },
@@ -2053,6 +2128,7 @@ const styles = StyleSheet.create({
   },
   mapPreviewIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
   mapPreview: {
+    overflow: 'hidden',
     width: '100%',
     height: 96,
     backgroundColor: '#2C2C2E',

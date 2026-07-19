@@ -215,3 +215,20 @@ export async function getPassDraft<T>(id: string): Promise<T | null> {
 export async function clearPassDraft(id: string): Promise<void> {
   await AsyncStorage.removeItem(`passDraft:${id}`).catch(() => {})
 }
+
+// Senast kända kartposition — så GPS-skärmen öppnar inzoomad direkt i stället
+// för att visa hela Sverige medan första fixen hämtas
+export async function getLastMapCoord(): Promise<{ latitude: number; longitude: number } | null> {
+  try {
+    const raw = await AsyncStorage.getItem('lastMapCoord')
+    if (!raw) return null
+    const v = JSON.parse(raw)
+    return Number.isFinite(v.latitude) && Number.isFinite(v.longitude) ? v : null
+  } catch {
+    return null
+  }
+}
+
+export async function setLastMapCoord(c: { latitude: number; longitude: number }): Promise<void> {
+  await AsyncStorage.setItem('lastMapCoord', JSON.stringify(c)).catch(() => {})
+}
