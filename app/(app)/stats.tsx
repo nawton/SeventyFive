@@ -240,6 +240,8 @@ function RingChart({ currentDay, completedDays }: { currentDay: number; complete
 // Svep vänster på en sessionsrad — samma tvåstegssystem som schemasidan:
 // steg 1 snäpper fram en rund soptunna, steg 2 expanderar den till en
 // "Ta bort"-pill, och full-svep utlöser samma bekräftelse som knappen.
+// Lysande neonröd för radera-knappen (statistikens RED är rosaaktig)
+const SWIPE_RED = '#FF2438'
 const SWIPE_SNAP_OPEN = 82
 const SWIPE_FULL = Math.round(STATS_SCREEN_W * 0.54)
 const SWIPE_BTN_H = 52
@@ -2133,8 +2135,10 @@ const s = StyleSheet.create({
   },
   swipeBtn: {
     height: SWIPE_BTN_H, borderRadius: SWIPE_BTN_H / 2,
-    backgroundColor: RED, overflow: 'hidden',
+    backgroundColor: SWIPE_RED, overflow: 'hidden',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    shadowColor: SWIPE_RED, shadowOpacity: 0.55, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 }, elevation: 6,
   },
   swipeBtnLabel: { color: '#fff', fontSize: 14, fontWeight: '700', marginLeft: 4 },
   sessName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
