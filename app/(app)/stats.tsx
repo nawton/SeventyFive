@@ -281,6 +281,7 @@ export default function StatsScreen() {
   const [unit, setUnit]                         = useState<UnitSystem>('metric')
   const [cardioRange, setCardioRange]           = useState<'week' | 'month' | 'all'>('all')
   const [cardioOffset, setCardioOffset]         = useState(0)
+  const [cardioDetailsOpen, setCardioDetailsOpen] = useState(false)
   const [distDetailOpen, setDistDetailOpen]     = useState(false)
   const [milestoneOpen, setMilestoneOpen]       = useState(false)
   const [gymDetail, setGymDetail] = useState<{ name: string; dateLabel: string; planned: string[]; logged: StrengthWorkout[] } | null>(null)
@@ -1087,87 +1088,44 @@ export default function StatsScreen() {
               </View>
             )}
 
-            {/* Träningsdetaljer — Apple-stil, inga boxar */}
-            <Text style={s.sectionHead}>Träningsdetaljer</Text>
-            <View style={[s.card, s.cardPlain]}>
-              <View>
-                <View style={[s.dtlRow, { paddingTop: 0 }]}>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Träningstid</Text>
-                    <Text style={[s.dtlVal, { color: YELLOW }]}>{fmtDuration(totalSecs)}</Text>
-                  </View>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Distans</Text>
-                    <Text style={[s.dtlVal, { color: BLUE }]}>
-                      {toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')}
-                      <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
-                    </Text>
-                  </View>
+            {/* Träningsdetaljer — kompakt på fliken, tryck för alla detaljer */}
+            <View style={s.sectionHeadRow}>
+              <Text style={[s.sectionHead, s.sectionHeadInline]}>Träningsdetaljer</Text>
+              <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
+            </View>
+            <TouchableOpacity
+              style={[s.card, s.cardPlain]}
+              activeOpacity={0.85}
+              onPress={() => setCardioDetailsOpen(true)}
+            >
+              <View style={[s.dtlRow, { paddingTop: 0 }]}>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Träningstid</Text>
+                  <Text style={[s.dtlVal, { color: YELLOW }]}>{fmtDuration(totalSecs)}</Text>
                 </View>
-                <View style={s.dtlSep} />
-                <View style={s.dtlRow}>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Kilokalorier</Text>
-                    <Text style={[s.dtlVal, { color: RED }]}>
-                      {totalCals.toLocaleString('sv-SE')}
-                      <Text style={s.dtlUnit}> KCAL</Text>
-                    </Text>
-                  </View>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Antal pass</Text>
-                    <Text style={[s.dtlVal, { color: GREEN }]}>{cardioW.length}</Text>
-                  </View>
-                </View>
-                <View style={s.dtlSep} />
-                <View style={s.dtlRow}>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Snittempo</Text>
-                    <Text style={[s.dtlVal, { color: TEAL }]}>
-                      {avgPace}
-                      <Text style={s.dtlUnit}> /{unitLabel}</Text>
-                    </Text>
-                  </View>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Bästa tempo</Text>
-                    <Text style={[s.dtlVal, { color: PURPLE }]}>
-                      {bestPace}
-                      <Text style={s.dtlUnit}> /{unitLabel}</Text>
-                    </Text>
-                  </View>
-                </View>
-                <View style={s.dtlSep} />
-                <View style={s.dtlRow}>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Snittdistans</Text>
-                    <Text style={[s.dtlVal, { color: LIME }]}>
-                      {toDisplayDistance(avgDistKm, unit).toFixed(2).replace('.', ',')}
-                      <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
-                    </Text>
-                  </View>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Längsta pass</Text>
-                    <Text style={[s.dtlVal, { color: ORANGE }]}>
-                      {toDisplayDistance(longestPassKm, unit).toFixed(2).replace('.', ',')}
-                      <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
-                    </Text>
-                  </View>
-                </View>
-                <View style={s.dtlSep} />
-                <View style={[s.dtlRow, { paddingBottom: 0 }]}>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Snittansträngning</Text>
-                    <Text style={[s.dtlVal, { color: avgEffort > 0 ? effortColor(Math.round(avgEffort)) : TEXT_SECONDARY }]}>
-                      {avgEffort > 0 ? avgEffort.toFixed(1).replace('.', ',') : '–'}
-                      {avgEffort > 0 && <Text style={s.dtlUnit}> / 10</Text>}
-                    </Text>
-                  </View>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Aktiva dagar</Text>
-                    <Text style={[s.dtlVal, { color: TEXT_PRIMARY }]}>{activeCardioDays}</Text>
-                  </View>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Distans</Text>
+                  <Text style={[s.dtlVal, { color: BLUE }]}>
+                    {toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')}
+                    <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
+                  </Text>
                 </View>
               </View>
-            </View>
+              <View style={s.dtlSep} />
+              <View style={[s.dtlRow, { paddingBottom: 0 }]}>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Antal pass</Text>
+                  <Text style={[s.dtlVal, { color: GREEN }]}>{cardioW.length}</Text>
+                </View>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Snittempo</Text>
+                  <Text style={[s.dtlVal, { color: TEAL }]}>
+                    {avgPace}
+                    <Text style={s.dtlUnit}> /{unitLabel}</Text>
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
 
             {/* Tempoutveckling */}
             {paceWeeks.length >= 2 && (() => {
@@ -1875,6 +1833,43 @@ export default function StatsScreen() {
         )}
       </Modal>
 
+      {/* Alla cardiodetaljer för vald period */}
+      <Modal visible={cardioDetailsOpen} animationType="slide" onRequestClose={() => setCardioDetailsOpen(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
+          <View style={s.modalTopBar}>
+            <GlassCircleButton icon="chevron-back" onPress={() => setCardioDetailsOpen(false)} />
+            <Text style={s.modalTopTitle}>Träningsdetaljer</Text>
+            <View style={{ width: 44 }} />
+          </View>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+            <Text style={s.sessionsWeekLabel}>{cardioBounds.label}</Text>
+            <View style={[s.card, s.cardPlain, { marginTop: 12, paddingVertical: 4 }]}>
+              {([
+                { label: 'Träningstid', value: fmtDuration(totalSecs), color: YELLOW },
+                { label: 'Distans', value: `${toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: BLUE },
+                { label: 'Kilokalorier', value: `${totalCals.toLocaleString('sv-SE')} kcal`, color: RED },
+                { label: 'Antal pass', value: String(cardioW.length), color: GREEN },
+                { label: 'Aktiva dagar', value: String(activeCardioDays), color: TEXT_PRIMARY },
+                { label: 'Snittempo', value: `${avgPace} /${unitLabel}`, color: TEAL },
+                { label: 'Bästa tempo', value: `${bestPace} /${unitLabel}`, color: PURPLE },
+                { label: 'Snittdistans', value: `${toDisplayDistance(avgDistKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: LIME },
+                { label: 'Längsta pass', value: `${toDisplayDistance(longestPassKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: ORANGE },
+                {
+                  label: 'Snittansträngning',
+                  value: avgEffort > 0 ? `${avgEffort.toFixed(1).replace('.', ',')} / 10` : '–',
+                  color: avgEffort > 0 ? effortColor(Math.round(avgEffort)) : TEXT_SECONDARY,
+                },
+              ]).map((r, i) => (
+                <View key={r.label} style={[s.cdRow, i > 0 && s.cdRowBorder]}>
+                  <Text style={s.cdLbl}>{r.label}</Text>
+                  <Text style={[s.cdVal, { color: r.color }]}>{r.value}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
       <VolumeDetailModal
         visible={volumeOpen}
         onClose={() => setVolumeOpen(false)}
@@ -2099,6 +2094,10 @@ const s = StyleSheet.create({
   },
   tabEmptyBtnText: { color: '#000', fontSize: 14, fontWeight: '700' },
   sessionsWeekLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', marginTop: 8 },
+  cdRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 13 },
+  cdRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
+  cdLbl: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
+  cdVal: { fontSize: 17, fontFamily: 'Nunito_700Bold', fontVariant: ['tabular-nums'] as any },
 
   // Week nav
   // Dagremsa: V-knapp + Mån–Sön
