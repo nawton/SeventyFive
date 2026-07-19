@@ -16,6 +16,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Switch,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -28,7 +29,7 @@ import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
-import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getVoiceInterval, setVoiceInterval, getCardioGoal, setCardioGoal, getDefaultMapStyle, type CardioStatsTheme, type VoiceInterval } from '@/lib/prefs'
+import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, type CardioStatsTheme, type VoiceSettings } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -55,6 +56,8 @@ function nameToType(name: string): ExerciseType {
 
 const DIAL = Math.min(Dimensions.get('window').width - 70, 320)
 const LIVE_W = Dimensions.get('window').width
+// Cardioskärmens blå accent — ersätter appens orange på just den här ytan
+const CARDIO_ACCENT = '#3FA7FF'
 
 function cardinalLabel(deg: number): string {
   const dirs = ['N', 'NÖ', 'Ö', 'SÖ', 'S', 'SV', 'V', 'NV']
@@ -250,13 +253,28 @@ export default function CardioScreen() {
   // Röstguidning — talade besked om splittar och mål
   const voiceRef = useRef(true)
   const [voiceOn, setVoiceOn] = useState(true)
-  const [voiceInterval, setVoiceIntervalState] = useState<VoiceInterval>('km')
-  const [voiceSheetOpen, setVoiceSheetOpen] = useState(false)
-  const voiceIntervalRef = useRef<VoiceInterval>('km')
+  const [voiceSet, setVoiceSet] = useState<VoiceSettings>(DEFAULT_VOICE_SETTINGS)
+  const voiceSetRef = useRef<VoiceSettings>(DEFAULT_VOICE_SETTINGS)
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false)
+  const [voicePage, setVoicePage] = useState<'main' | 'freq' | 'stats'>('main')
   const lastVoiceMinute = useRef(0)
+  const nextVoiceKm = useRef(0)
+
+  function updateVoiceSet(patch: Partial<VoiceSettings> | { say: Partial<VoiceSettings['say']> }) {
+    setVoiceSet(prev => {
+      const next: VoiceSettings = {
+        ...prev,
+        ...('say' in patch ? {} : patch as Partial<VoiceSettings>),
+        say: { ...prev.say, ...('say' in patch ? (patch as { say: Partial<VoiceSettings['say']> }).say : {}) },
+      }
+      voiceSetRef.current = next
+      setVoiceSettings(next).catch(() => {})
+      return next
+    })
+  }
   useEffect(() => {
     getVoiceCues().then(on => { voiceRef.current = on; setVoiceOn(on) })
-    getVoiceInterval().then(v => { voiceIntervalRef.current = v; setVoiceIntervalState(v) })
+    getVoiceSettings().then(v => { voiceSetRef.current = v; setVoiceSet(v) })
     return () => { Speech.stop() }
   }, [])
   function speak(text: string) {
@@ -490,21 +508,26 @@ export default function CardioScreen() {
     setGoalModalOpen(false)
   }
 
-  function chooseVoice(mode: 'off' | VoiceInterval) {
+  function setVoiceEnabled(on: boolean) {
     Haptics.selectionAsync()
-    if (mode === 'off') {
-      setVoiceOn(false)
-      voiceRef.current = false
-      setVoiceCues(false).catch(() => {})
-    } else {
-      setVoiceOn(true)
-      voiceRef.current = true
-      setVoiceCues(true).catch(() => {})
-      setVoiceIntervalState(mode)
-      voiceIntervalRef.current = mode
-      setVoiceInterval(mode).catch(() => {})
+    setVoiceOn(on)
+    voiceRef.current = on
+    setVoiceCues(on).catch(() => {})
+  }
+
+  /** Talad statusrad utifrån valda statistik-flaggor */
+  function statusPhrase(includeSplit: boolean): string {
+    const s = voiceSetRef.current.say
+    const dist = distanceRef.current
+    const parts: string[] = []
+    if (s.time) parts.push(`Tid: ${spokenTime(elapsedRef.current)}.`)
+    if (s.distance) parts.push(`Distans: ${dist.toFixed(2).replace('.', ' komma ')} kilometer.`)
+    if (s.avgPace && dist > 0.05) parts.push(`Snittempo: ${spokenTime(elapsedRef.current / dist)} per kilometer.`)
+    if (s.curPace && smoothedPaceRef.current > 0) parts.push(`Aktuellt tempo: ${spokenTime(smoothedPaceRef.current)} per kilometer.`)
+    if (includeSplit && s.splitPace && splitTimes.current.length > 0) {
+      parts.push(`Senaste kilometern: ${spokenTime(splitTimes.current[splitTimes.current.length - 1])}.`)
     }
-    setVoiceSheetOpen(false)
+    return parts.join(' ')
   }
 
   function openStyleSheet() {
@@ -684,18 +707,14 @@ export default function CardioScreen() {
         smoothedPaceRef.current = 0
         setCurrentPaceSec(0)
       }
-      // Statusbesked var 5:e/10:e minut (kilometersplittarna talar i km-läget)
-      const ivMin = voiceIntervalRef.current === 'min5' ? 5 : voiceIntervalRef.current === 'min10' ? 10 : 0
+      // Tidsbaserade statusbesked enligt röstinställningarna
+      const ivMin = voiceSetRef.current.timeEvery
       if (ivMin > 0) {
         const minute = Math.floor(elapsedRef.current / 60)
         if (minute > 0 && minute % ivMin === 0 && minute !== lastVoiceMinute.current) {
           lastVoiceMinute.current = minute
-          const dist = distanceRef.current
-          const distTxt = `${dist.toFixed(2).replace('.', ' komma ')} kilometer`
-          const paceTxt = dist > 0.05
-            ? ` Snittempo ${formatPace(1, elapsedRef.current / dist).replace(':', ' och ')} per kilometer.`
-            : ''
-          speak(`${minute} minuter. Distans ${distTxt}.${paceTxt}`)
+          const phrase = statusPhrase(false)
+          if (phrase) speak(phrase)
         }
       }
     }, 1000)
@@ -741,8 +760,12 @@ export default function CardioScreen() {
             if (splitToastTimer.current) clearTimeout(splitToastTimer.current)
             setSplitToast(label)
             splitToastTimer.current = setTimeout(() => setSplitToast(null), 3500)
-            if (voiceIntervalRef.current === 'km') {
-              speak(`Kilometer ${splitKm.current}. Total tid: ${spokenTime(elapsedRef.current)}. Senaste kilometern: ${spokenTime(splitTime)}.`)
+            const vs = voiceSetRef.current
+            if (vs.distEvery > 0 && splitKm.current % vs.distEvery === 0) {
+              const phrase = statusPhrase(false)
+              speak(`Kilometer ${splitKm.current}.${vs.say.splitPace ? ` Senaste kilometern: ${spokenTime(splitTime)}.` : ''} ${phrase}`)
+            } else if (vs.say.splitPace) {
+              speak(`Kilometer ${splitKm.current}. Senaste kilometern: ${spokenTime(splitTime)}.`)
             }
             splitTimes.current.push(splitTime)
             lastSplitElapsed.current = elapsedRef.current
@@ -794,7 +817,14 @@ export default function CardioScreen() {
   function handleFinish() {
     cleanup()
     closeStats()
-    speak('Träning avslutad. Bra jobbat!')
+    // Talad sammanfattning om den är påslagen i röstinställningarna
+    if (voiceSetRef.current.say.summary) {
+      const dist = distanceRef.current
+      const paceTxt = dist > 0.05 ? ` Snittempo: ${spokenTime(elapsedRef.current / dist)} per kilometer.` : ''
+      speak(`Träning avslutad. Distans: ${dist.toFixed(2).replace('.', ' komma ')} kilometer. Tid: ${spokenTime(elapsedRef.current)}.${paceTxt} Bra jobbat!`)
+    } else {
+      speak('Träning avslutad. Bra jobbat!')
+    }
 
     // Splittar: en rad per hel kilometer + ev. påbörjad sista bit
     const splits = splitTimes.current.map((sec, i) => ({ label: `${i + 1} km`, paceSec: sec }))
@@ -984,7 +1014,7 @@ export default function CardioScreen() {
               </View>
               <View style={[styles.statDivider, lightCard && { backgroundColor: '#E0E0E0' }]} />
               <View style={styles.stat}>
-                <Text style={[styles.statValue, lightCard && { color: '#000' }, currentPaceSec > 0 && { color: ORANGE }]}>
+                <Text style={[styles.statValue, lightCard && { color: '#000' }, currentPaceSec > 0 && { color: CARDIO_ACCENT }]}>
                   {currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '--:--'}
                 </Text>
                 <Text style={styles.statLabel}>nu /{unitLabel}</Text>
@@ -1004,7 +1034,7 @@ export default function CardioScreen() {
       {splitToast && (
         <View style={[styles.splitToast, LIQUID_GLASS && styles.glassSurface]} pointerEvents="none">
           {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
-          <Ionicons name="flag" size={16} color={ORANGE} />
+          <Ionicons name="flag" size={16} color={CARDIO_ACCENT} />
           <Text style={styles.splitToastText}>{splitToast}</Text>
         </View>
       )}
@@ -1109,12 +1139,12 @@ export default function CardioScreen() {
                     <View style={styles.goalOne}>
                       <View style={styles.goalTextRow}>
                         <Text style={styles.goalText}>Mål: {goalMinNum} min</Text>
-                        <Text style={[styles.goalPct, { color: ORANGE }]}>
+                        <Text style={[styles.goalPct, { color: CARDIO_ACCENT }]}>
                           {Math.min(100, Math.round((elapsed / (goalMinNum * 60)) * 100))}%
                         </Text>
                       </View>
                       <View style={styles.goalTrack}>
-                        <View style={[styles.goalFill, { backgroundColor: ORANGE, width: `${Math.min(100, (elapsed / (goalMinNum * 60)) * 100)}%` as never }]} />
+                        <View style={[styles.goalFill, { backgroundColor: CARDIO_ACCENT, width: `${Math.min(100, (elapsed / (goalMinNum * 60)) * 100)}%` as never }]} />
                       </View>
                     </View>
                   )}
@@ -1138,7 +1168,7 @@ export default function CardioScreen() {
                 <View style={styles.exDivider} />
 
                 <View style={styles.exBlock}>
-                  <Text style={[styles.exValueBig, currentPaceSec > 0 && { color: ORANGE }]}>
+                  <Text style={[styles.exValueBig, currentPaceSec > 0 && { color: CARDIO_ACCENT }]}>
                     {currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '--:--'}
                   </Text>
                   <Text style={styles.exLabel}>Nu /{unitLabel}</Text>
@@ -1199,11 +1229,11 @@ export default function CardioScreen() {
                     }}
                     activeOpacity={0.8}
                   >
-                    <View style={[styles.sheetItemIcon, active && { backgroundColor: ORANGE + '2E' }]}>
-                      <Ionicons name={ex.icon} size={22} color={active ? ORANGE : '#999'} />
+                    <View style={[styles.sheetItemIcon, active && { backgroundColor: CARDIO_ACCENT + '2E' }]}>
+                      <Ionicons name={ex.icon} size={22} color={active ? CARDIO_ACCENT : '#999'} />
                     </View>
                     <Text style={[styles.sheetItemText, active && styles.sheetItemTextActive]}>{ex.label}</Text>
-                    {active && <Ionicons name="checkmark-circle" size={22} color={ORANGE} style={{ marginLeft: 'auto' }} />}
+                    {active && <Ionicons name="checkmark-circle" size={22} color={CARDIO_ACCENT} style={{ marginLeft: 'auto' }} />}
                   </TouchableOpacity>
                 )
               })}
@@ -1237,8 +1267,8 @@ export default function CardioScreen() {
                     >
                       <Image source={{ uri: previewUrl(ms.key) }} style={styles.mapPreview} />
                       <View style={styles.mapCardLabelRow}>
-                        <Text style={[styles.mapCardLabel, active && { color: ORANGE }]}>{ms.label}</Text>
-                        {active && <Ionicons name="checkmark-circle" size={15} color={ORANGE} />}
+                        <Text style={[styles.mapCardLabel, active && { color: CARDIO_ACCENT }]}>{ms.label}</Text>
+                        {active && <Ionicons name="checkmark-circle" size={15} color={CARDIO_ACCENT} />}
                       </View>
                     </TouchableOpacity>
                   )
@@ -1383,7 +1413,7 @@ export default function CardioScreen() {
 
             {/* Poäng-hint */}
             <View style={styles.summaryPoints}>
-              <Ionicons name="star" size={13} color={ORANGE} />
+              <Ionicons name="star" size={13} color={CARDIO_ACCENT} />
               <Text style={styles.summaryPointsText}>+30 p mot din nästa nivå</Text>
             </View>
 
@@ -1414,35 +1444,158 @@ export default function CardioScreen() {
         </View>
       </Modal>
 
-      {/* Röstguidningsväljare — vad och hur ofta rösten pratar */}
-      <Modal visible={voiceSheetOpen} transparent animationType="slide" onRequestClose={() => setVoiceSheetOpen(false)}>
-        <Pressable style={styles.goalModalOverlay} onPress={() => setVoiceSheetOpen(false)}>
-          <Pressable style={styles.goalModalSheet} onPress={() => {}}>
-            <Text style={styles.goalModalTitle}>Röstguidning</Text>
-            {([
-              { key: 'km' as const,   label: 'Varje kilometer',  sub: 'Splittid och total tid vid varje km' },
-              { key: 'min5' as const, label: 'Var 5:e minut',    sub: 'Tid, distans och snittempo' },
-              { key: 'min10' as const, label: 'Var 10:e minut',  sub: 'Tid, distans och snittempo' },
-              { key: 'off' as const,  label: 'Av',               sub: 'Ingen röst under passet' },
-            ]).map(opt => {
-              const active = opt.key === 'off' ? !voiceOn : voiceOn && voiceInterval === opt.key
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.voiceOption, active && styles.voiceOptionActive]}
-                  activeOpacity={0.8}
-                  onPress={() => chooseVoice(opt.key)}
-                >
+      {/* Röstguidning — fullskärmsinställningar i Runkeeper-stil */}
+      <Modal visible={voiceModalOpen} animationType="slide" onRequestClose={() => setVoiceModalOpen(false)}>
+        <View style={styles.voiceRoot}>
+          <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+            <View style={styles.voiceHeader}>
+              <TouchableOpacity
+                onPress={() => (voicePage === 'main' ? setVoiceModalOpen(false) : setVoicePage('main'))}
+                hitSlop={12}
+              >
+                <Ionicons name={voicePage === 'main' ? 'close' : 'chevron-back'} size={26} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.voiceIconWrap}>
+              <Ionicons name="volume-high-outline" size={44} color={CARDIO_ACCENT} />
+              <Text style={styles.voiceTitle}>
+                {voicePage === 'main' ? 'Röstguidning' : voicePage === 'freq' ? 'Hur ofta?' : 'Vilken statistik?'}
+              </Text>
+            </View>
+
+            {voicePage === 'main' && (
+              <View style={styles.voiceList}>
+                <View style={styles.voiceRow}>
+                  <Text style={styles.voiceRowLabel}>Aktivera</Text>
+                  <Switch
+                    value={voiceOn}
+                    onValueChange={setVoiceEnabled}
+                    trackColor={{ false: '#333', true: CARDIO_ACCENT }}
+                    thumbColor="#fff"
+                  />
+                </View>
+                <TouchableOpacity style={styles.voiceRow} onPress={() => setVoicePage('freq')} activeOpacity={0.7}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.voiceOptionLabel, active && { color: ORANGE }]}>{opt.label}</Text>
-                    <Text style={styles.voiceOptionSub}>{opt.sub}</Text>
+                    <Text style={styles.voiceRowLabel}>Hur ofta?</Text>
+                    <Text style={styles.voiceRowValue}>
+                      {[
+                        voiceSet.distEvery > 0 ? `Varje ${voiceSet.distEvery === 1 ? '' : `${voiceSet.distEvery}:e `}kilometer` : null,
+                        voiceSet.timeEvery > 0 ? `var ${voiceSet.timeEvery}:e minut` : null,
+                      ].filter(Boolean).join(' · ') || 'Aldrig'}
+                    </Text>
                   </View>
-                  {active && <Ionicons name="checkmark-circle" size={20} color={ORANGE} />}
+                  <Ionicons name="chevron-forward" size={18} color="#666" />
                 </TouchableOpacity>
-              )
-            })}
-          </Pressable>
-        </Pressable>
+                <TouchableOpacity style={styles.voiceRow} onPress={() => setVoicePage('stats')} activeOpacity={0.7}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.voiceRowLabel}>Vilken statistik?</Text>
+                    <Text style={styles.voiceRowValue} numberOfLines={1}>
+                      {[
+                        voiceSet.say.time && 'Tid',
+                        voiceSet.say.distance && 'Distans',
+                        voiceSet.say.avgPace && 'Snittempo',
+                        voiceSet.say.curPace && 'Aktuellt tempo',
+                        voiceSet.say.splitPace && 'Split-tempo',
+                        voiceSet.say.summary && 'Sammanfattning',
+                      ].filter(Boolean).join(', ') || 'Ingen'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#666" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {voicePage === 'freq' && (
+              <View style={styles.voiceList}>
+                <View style={styles.voiceFreqBlock}>
+                  <View style={styles.voiceRowPlain}>
+                    <Text style={styles.voiceRowLabel}>Distans</Text>
+                    <Switch
+                      value={voiceSet.distEvery > 0}
+                      onValueChange={on => updateVoiceSet({ distEvery: on ? 1 : 0 })}
+                      trackColor={{ false: '#333', true: CARDIO_ACCENT }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={[styles.voiceStepper, voiceSet.distEvery === 0 && { opacity: 0.35 }]}>
+                    <TouchableOpacity
+                      style={styles.voiceStepBtn}
+                      disabled={voiceSet.distEvery <= 1}
+                      onPress={() => updateVoiceSet({ distEvery: Math.max(1, voiceSet.distEvery - 1) })}
+                    >
+                      <Ionicons name="remove" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={styles.voiceStepValue}>{voiceSet.distEvery || 1}</Text>
+                      <Text style={styles.voiceStepUnit}>kilometer</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.voiceStepBtn}
+                      disabled={voiceSet.distEvery === 0 || voiceSet.distEvery >= 10}
+                      onPress={() => updateVoiceSet({ distEvery: Math.min(10, voiceSet.distEvery + 1) })}
+                    >
+                      <Ionicons name="add" size={24} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.voiceFreqBlock}>
+                  <View style={styles.voiceRowPlain}>
+                    <Text style={styles.voiceRowLabel}>Tid</Text>
+                    <Switch
+                      value={voiceSet.timeEvery > 0}
+                      onValueChange={on => updateVoiceSet({ timeEvery: on ? 5 : 0 })}
+                      trackColor={{ false: '#333', true: CARDIO_ACCENT }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={[styles.voiceStepper, voiceSet.timeEvery === 0 && { opacity: 0.35 }]}>
+                    <TouchableOpacity
+                      style={styles.voiceStepBtn}
+                      disabled={voiceSet.timeEvery <= 1}
+                      onPress={() => updateVoiceSet({ timeEvery: Math.max(1, voiceSet.timeEvery - 1) })}
+                    >
+                      <Ionicons name="remove" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={styles.voiceStepValue}>{voiceSet.timeEvery || 5}</Text>
+                      <Text style={styles.voiceStepUnit}>minuter</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.voiceStepBtn}
+                      disabled={voiceSet.timeEvery === 0 || voiceSet.timeEvery >= 60}
+                      onPress={() => updateVoiceSet({ timeEvery: Math.min(60, voiceSet.timeEvery + 1) })}
+                    >
+                      <Ionicons name="add" size={24} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {voicePage === 'stats' && (
+              <View style={styles.voiceList}>
+                {([
+                  { key: 'time' as const,      label: 'Tid' },
+                  { key: 'distance' as const,  label: 'Distans' },
+                  { key: 'avgPace' as const,   label: 'Genomsnittligt tempo' },
+                  { key: 'curPace' as const,   label: 'Aktuellt tempo' },
+                  { key: 'splitPace' as const, label: 'Split-tempo' },
+                  { key: 'summary' as const,   label: 'Sammanfattning vid avslut' },
+                ]).map(opt => (
+                  <View key={opt.key} style={styles.voiceRow}>
+                    <Text style={styles.voiceRowLabel}>{opt.label}</Text>
+                    <Switch
+                      value={voiceSet.say[opt.key]}
+                      onValueChange={on => updateVoiceSet({ say: { [opt.key]: on } })}
+                      trackColor={{ false: '#333', true: CARDIO_ACCENT }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
+          </SafeAreaView>
+        </View>
       </Modal>
 
       {/* Målväljare — km och/eller minuter */}
@@ -1510,7 +1663,7 @@ export default function CardioScreen() {
               <View style={styles.idleCard}>
               <View style={styles.idleGrid}>
                 <TouchableOpacity style={styles.idleCell} onPress={openPicker} activeOpacity={0.75}>
-                  <Ionicons name={selectedExercise.icon} size={20} color={ORANGE} />
+                  <Ionicons name={selectedExercise.icon} size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
                     <Text style={styles.idleCellLabel}>Aktivitet</Text>
                     <Text style={styles.idleCellValue}>{selectedExercise.label}</Text>
@@ -1518,7 +1671,7 @@ export default function CardioScreen() {
                 </TouchableOpacity>
                 <View style={styles.idleGridDivV} />
                 <TouchableOpacity style={styles.idleCell} onPress={openGoalModal} activeOpacity={0.75}>
-                  <Ionicons name="flag-outline" size={20} color={ORANGE} />
+                  <Ionicons name="flag-outline" size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
                     <Text style={styles.idleCellLabel}>Mål</Text>
                     <Text style={styles.idleCellValue} numberOfLines={1}>
@@ -1534,18 +1687,22 @@ export default function CardioScreen() {
               </View>
               <View style={styles.idleGridDivH} />
               <View style={styles.idleGrid}>
-                <TouchableOpacity style={styles.idleCell} onPress={() => setVoiceSheetOpen(true)} activeOpacity={0.75}>
-                  <Ionicons name={voiceOn ? 'volume-high-outline' : 'volume-mute-outline'} size={20} color={ORANGE} />
+                <TouchableOpacity style={styles.idleCell} onPress={() => { setVoicePage('main'); setVoiceModalOpen(true) }} activeOpacity={0.75}>
+                  <Ionicons name={voiceOn ? 'volume-high-outline' : 'volume-mute-outline'} size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
                     <Text style={styles.idleCellLabel}>Röstguidning</Text>
-                    <Text style={styles.idleCellValue}>
-                      {!voiceOn ? 'Av' : voiceInterval === 'km' ? 'Varje km' : voiceInterval === 'min5' ? 'Var 5:e min' : 'Var 10:e min'}
+                    <Text style={styles.idleCellValue} numberOfLines={1}>
+                      {!voiceOn ? 'Av'
+                        : [
+                            voiceSet.distEvery > 0 ? `${voiceSet.distEvery} km` : null,
+                            voiceSet.timeEvery > 0 ? `${voiceSet.timeEvery} min` : null,
+                          ].filter(Boolean).join(' · ') || 'På'}
                     </Text>
                   </View>
                 </TouchableOpacity>
                 <View style={styles.idleGridDivV} />
                 <TouchableOpacity style={styles.idleCell} onPress={openStyleSheet} activeOpacity={0.75}>
-                  <Ionicons name="layers-outline" size={20} color={ORANGE} />
+                  <Ionicons name="layers-outline" size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
                     <Text style={styles.idleCellLabel}>Karta</Text>
                     <Text style={styles.idleCellValue}>
@@ -1610,16 +1767,16 @@ const styles = StyleSheet.create({
   idleCellLabel: { color: '#9BA0A6', fontSize: 11, fontWeight: '600' },
   idleCellValue: { color: '#fff', fontSize: 15, fontWeight: '700', marginTop: 1 },
   startWide: {
-    backgroundColor: ORANGE, borderRadius: 999,
-    paddingVertical: 17, alignItems: 'center',
+    backgroundColor: CARDIO_ACCENT, borderRadius: 999,
+    paddingVertical: 13, alignItems: 'center',
   },
-  startWideText: { color: '#000', fontSize: 18, fontWeight: '800', letterSpacing: 0.3 },
+  startWideText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.3 },
 
   // ── Splits-sidan ──
   splitsPageTitle: { color: '#fff', fontSize: 30, fontWeight: '800', letterSpacing: -0.4, marginTop: 4, marginBottom: 14 },
   splitsList: { gap: 10, paddingBottom: 160 },
   splitBlock: { backgroundColor: '#1C1C1E', borderRadius: 18, padding: 18, gap: 2 },
-  splitBlockActive: { backgroundColor: ORANGE },
+  splitBlockActive: { backgroundColor: CARDIO_ACCENT },
   splitBlockLabel: { color: '#9BA0A6', fontSize: 14, fontWeight: '600' },
   splitBlockLabelActive: { color: 'rgba(0,0,0,0.6)', fontSize: 14, fontWeight: '700' },
   splitBlockPace: { color: '#fff', fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
@@ -1633,7 +1790,7 @@ const styles = StyleSheet.create({
   edgeTab: {
     position: 'absolute', right: 0, top: '66%',
     width: 46, height: 68,
-    backgroundColor: ORANGE,
+    backgroundColor: CARDIO_ACCENT,
     borderTopLeftRadius: 18, borderBottomLeftRadius: 18,
     alignItems: 'center', justifyContent: 'center',
     zIndex: 8,
@@ -1645,6 +1802,32 @@ const styles = StyleSheet.create({
   pageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)' },
   pageDotOn: { backgroundColor: '#fff' },
 
+  // Röstguidning — fullskärm
+  voiceRoot: { flex: 1, backgroundColor: '#0A0A0C' },
+  voiceHeader: { paddingHorizontal: 20, paddingTop: 8 },
+  voiceIconWrap: { alignItems: 'center', gap: 10, marginTop: 8, marginBottom: 22 },
+  voiceTitle: { color: '#fff', fontSize: 26, fontWeight: '800', letterSpacing: -0.3 },
+  voiceList: { paddingHorizontal: 20, gap: 4 },
+  voiceRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+  voiceRowPlain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  voiceRowLabel: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  voiceRowValue: { color: '#9BA0A6', fontSize: 14, marginTop: 3 },
+  voiceFreqBlock: {
+    paddingVertical: 18, gap: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+  voiceStepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
+  voiceStepBtn: {
+    width: 54, height: 54, borderRadius: 27, backgroundColor: '#1C1C1E',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  voiceStepValue: { color: '#fff', fontSize: 44, fontWeight: '800', lineHeight: 48 },
+  voiceStepUnit: { color: '#9BA0A6', fontSize: 15, fontWeight: '600', marginTop: -2 },
+
   // Röstguidningsväljare
   voiceOption: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
@@ -1652,7 +1835,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#2C2C2E',
     paddingHorizontal: 14, paddingVertical: 12,
   },
-  voiceOptionActive: { borderColor: ORANGE, backgroundColor: ORANGE + '10' },
+  voiceOptionActive: { borderColor: CARDIO_ACCENT, backgroundColor: CARDIO_ACCENT + '10' },
   voiceOptionLabel: { color: '#fff', fontSize: 15, fontWeight: '700' },
   voiceOptionSub: { color: '#9BA0A6', fontSize: 12, marginTop: 2 },
 
@@ -1671,7 +1854,7 @@ const styles = StyleSheet.create({
     color: '#fff', fontSize: 18, paddingVertical: 12, paddingHorizontal: 14,
   },
   goalModalSave: {
-    backgroundColor: ORANGE, borderRadius: 14, paddingVertical: 14, alignItems: 'center',
+    backgroundColor: CARDIO_ACCENT, borderRadius: 14, paddingVertical: 14, alignItems: 'center',
   },
   goalModalSaveText: { color: '#000', fontSize: 15, fontWeight: '700' },
   goalModalClear: { alignItems: 'center', paddingVertical: 8 },
@@ -1737,7 +1920,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: ORANGE,
+    backgroundColor: CARDIO_ACCENT,
     borderRadius: 12,
     paddingHorizontal: 9,
     paddingVertical: 4,
@@ -1865,7 +2048,7 @@ const styles = StyleSheet.create({
     zIndex: 60,
   },
   countdownNum: {
-    color: ORANGE,
+    color: CARDIO_ACCENT,
     fontSize: 170,
     fontFamily: NUM_FONT,
     fontVariant: ['tabular-nums'],
@@ -1971,7 +2154,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   mapCardActive: {
-    borderColor: ORANGE,
+    borderColor: CARDIO_ACCENT,
   },
   mapPreview: {
     width: '100%',
@@ -2017,8 +2200,8 @@ const styles = StyleSheet.create({
   bottomBarIdle: {
     position: 'absolute',
     bottom: 0,
-    left: 16,
-    right: 16,
+    left: 10,
+    right: 10,
     backgroundColor: 'transparent',
   },
   bottomBar: {
@@ -2213,7 +2396,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: ORANGE + '2E',
+    backgroundColor: CARDIO_ACCENT + '2E',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2224,7 +2407,7 @@ const styles = StyleSheet.create({
     width: 21,
     height: 21,
     borderRadius: 11,
-    backgroundColor: ORANGE,
+    backgroundColor: CARDIO_ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -2234,17 +2417,17 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderRadius: 41,
-    backgroundColor: ORANGE,
+    backgroundColor: CARDIO_ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: ORANGE,
+    shadowColor: CARDIO_ACCENT,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.45,
     shadowRadius: 12,
     elevation: 8,
   },
   startLabel: {
-    color: ORANGE,
+    color: CARDIO_ACCENT,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -2254,12 +2437,12 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 60,
     borderRadius: 30,
-    backgroundColor: ORANGE,
+    backgroundColor: CARDIO_ACCENT,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: ORANGE,
+    shadowColor: CARDIO_ACCENT,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -2302,11 +2485,11 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: ORANGE,
+    backgroundColor: CARDIO_ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
-    shadowColor: ORANGE,
+    shadowColor: CARDIO_ACCENT,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
     shadowRadius: 16,
@@ -2383,7 +2566,7 @@ const styles = StyleSheet.create({
   splitBar: {
     height: '100%',
     borderRadius: 7,
-    backgroundColor: ORANGE,
+    backgroundColor: CARDIO_ACCENT,
   },
   splitPace: {
     color: '#fff',
@@ -2447,13 +2630,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: ORANGE,
+    backgroundColor: CARDIO_ACCENT,
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 32,
     width: '100%',
     justifyContent: 'center',
-    shadowColor: ORANGE,
+    shadowColor: CARDIO_ACCENT,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,

@@ -37,20 +37,46 @@ export async function setVoiceCues(on: boolean): Promise<void> {
   await AsyncStorage.setItem(VOICE_KEY, on ? 'on' : 'off').catch(() => {})
 }
 
-// Röstguidningens intervall — vad som styr när status läses upp
-export type VoiceInterval = 'km' | 'min5' | 'min10'
-
-export async function getVoiceInterval(): Promise<VoiceInterval> {
-  try {
-    const v = await AsyncStorage.getItem('voiceInterval')
-    return v === 'min5' || v === 'min10' ? v : 'km'
-  } catch {
-    return 'km'
+// Röstguidningens fulla inställningar — hur ofta och vilken statistik som
+// läses upp. På/av-flaggan bor kvar i voiceCues så Anpassning är i synk.
+export interface VoiceSettings {
+  /** Läs upp var N:e kilometer — 0 = av */
+  distEvery: number
+  /** Läs upp var N:e minut — 0 = av */
+  timeEvery: number
+  say: {
+    time: boolean
+    distance: boolean
+    avgPace: boolean
+    curPace: boolean
+    splitPace: boolean
+    summary: boolean
   }
 }
 
-export async function setVoiceInterval(v: VoiceInterval): Promise<void> {
-  await AsyncStorage.setItem('voiceInterval', v).catch(() => {})
+export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
+  distEvery: 1,
+  timeEvery: 0,
+  say: { time: true, distance: true, avgPace: true, curPace: false, splitPace: true, summary: true },
+}
+
+export async function getVoiceSettings(): Promise<VoiceSettings> {
+  try {
+    const raw = await AsyncStorage.getItem('voiceSettings')
+    if (!raw) return DEFAULT_VOICE_SETTINGS
+    const v = JSON.parse(raw)
+    return {
+      distEvery: Number(v.distEvery) || 0,
+      timeEvery: Number(v.timeEvery) || 0,
+      say: { ...DEFAULT_VOICE_SETTINGS.say, ...(v.say ?? {}) },
+    }
+  } catch {
+    return DEFAULT_VOICE_SETTINGS
+  }
+}
+
+export async function setVoiceSettings(v: VoiceSettings): Promise<void> {
+  await AsyncStorage.setItem('voiceSettings', JSON.stringify(v)).catch(() => {})
 }
 
 // Vilotimerns senast valda längd (sekunder) — förvalet i övningsloggen
