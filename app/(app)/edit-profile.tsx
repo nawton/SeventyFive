@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)',
     backgroundColor: BG,
   },
   iconBtn: {
@@ -321,8 +321,7 @@ const styles = StyleSheet.create({
   },
   checkBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: ORANGE + '60',
+    backgroundColor: ORANGE + '22', alignItems: 'center', justifyContent: 'center',
   },
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
 
@@ -359,14 +358,13 @@ const styles = StyleSheet.create({
   // Navigerbara rader
   rowsCard: {
     backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: BORDER,
     overflow: 'hidden',
   },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 14, paddingVertical: 13,
   },
-  rowDivider: { height: 1, backgroundColor: BORDER, marginLeft: 60 },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 60 },
   rowIconBox: {
     width: 32, height: 32, borderRadius: 9,
     backgroundColor: ORANGE + '18',
@@ -400,10 +398,9 @@ const styles = StyleSheet.create({
   quickBtn: {
     flex: 1, alignItems: 'center', gap: 8,
     backgroundColor: BG, borderRadius: 14,
-    borderWidth: 1.5, borderColor: BORDER,
     paddingVertical: 16,
   },
-  quickBtnActive: { borderColor: ORANGE, backgroundColor: ORANGE + '10' },
+  quickBtnActive: { backgroundColor: ORANGE + '16' },
   quickIcon: {
     width: 52, height: 52, borderRadius: 26,
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
@@ -412,7 +409,7 @@ const styles = StyleSheet.create({
   quickInitial: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '700' },
   quickLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
 
-  sheetDivider: { height: 1, backgroundColor: BORDER },
+  sheetDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
   emojiHeader: {
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5,
   },
@@ -423,17 +420,16 @@ const styles = StyleSheet.create({
   emojiGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   emojiBtn: {
     width: 50, height: 50, borderRadius: 13,
-    backgroundColor: BG, borderWidth: 1.5, borderColor: BORDER,
+    backgroundColor: BG,
     alignItems: 'center', justifyContent: 'center',
   },
-  emojiBtnActive: { borderColor: ORANGE, backgroundColor: ORANGE + '18' },
+  emojiBtnActive: { backgroundColor: ORANGE + '22' },
   emojiText: { fontSize: 24 },
 
   // Cancel
   cancelBtn: {
     backgroundColor: BG, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center',
-    borderWidth: 1, borderColor: BORDER,
   },
   cancelText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
 })

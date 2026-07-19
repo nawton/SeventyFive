@@ -190,7 +190,7 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   headerTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
   iconBtn: {
@@ -199,10 +199,9 @@ const s = StyleSheet.create({
   },
   checkBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: ORANGE + '60',
+    backgroundColor: ORANGE + '22', alignItems: 'center', justifyContent: 'center',
   },
-  checkBtnDisabled: { borderColor: BORDER },
+  checkBtnDisabled: { backgroundColor: CARD },
   body: { paddingHorizontal: 20, paddingTop: 24, gap: 8, flex: 1 },
   bigIcon: {
     width: 84, height: 84, borderRadius: 42, alignSelf: 'center',
@@ -217,8 +216,7 @@ const s = StyleSheet.create({
   },
   inputWrapper: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER, paddingHorizontal: 14,
+    backgroundColor: CARD, borderRadius: 12, paddingHorizontal: 14,
   },
   input: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, paddingVertical: 14 },
   primaryBtn: {

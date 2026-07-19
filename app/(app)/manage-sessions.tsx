@@ -379,7 +379,7 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: PAD, paddingTop: 8, paddingBottom: 14,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   backBtn:  { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   titleWrap: {
@@ -397,7 +397,6 @@ const s = StyleSheet.create({
   summaryChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: ORANGE + '12',
-    borderWidth: 1, borderColor: ORANGE + '25',
     borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6,
   },
   summaryText: { color: ORANGE, fontSize: 12, fontWeight: '600' },
@@ -416,14 +415,11 @@ const s = StyleSheet.create({
     minHeight: 120,
     backgroundColor: CARD,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: BORDER,
     padding: 14,
     gap: 6,
     justifyContent: 'space-between',
   },
   dayCardActive: {
-    borderColor: ORANGE + '45',
     backgroundColor: '#1A1510',
     shadowColor: ORANGE,
     shadowOffset: { width: 0, height: 2 },
@@ -431,7 +427,6 @@ const s = StyleSheet.create({
     shadowRadius: 8,
   },
   dayCardToday: {
-    borderColor: ORANGE + '70',
     shadowOpacity: 0.25,
   },
 
