@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import Animated, { LinearTransition, FadeOut } from 'react-native-reanimated'
-import Svg, { Text as SvgText, Line as SvgLine, Polyline, Circle, Rect, G } from 'react-native-svg'
+import Svg, { Line as SvgLine, Polyline, Circle } from 'react-native-svg'
 import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek, weekdayOf, isoWeekNum } from '@/lib/date'
 import { fmtPace, fmtDuration } from '@/lib/format'
@@ -23,6 +23,7 @@ import {
 } from './statsShared'
 import { SwipeRow } from './SwipeRow'
 import { DistanceDetailModal } from './DistanceDetailModal'
+import { DistanceAreaChart } from './DistanceAreaChart'
 
 interface WeekBar {
   label:     string
@@ -465,7 +466,8 @@ export function CardioTab({
               )
             })()}
 
-            {/* Distansgraf — vertikala staplar som följer periodfiltret; tryck för detaljvyn */}
+            {/* Distansgraf — linje med fylld yta och adaptiv skala; tryck för detaljvyn
+                (fördelningen per aktivitet bor därinne) */}
             {distBuckets.some(b => b.total > 0) && (
               <>
               <View style={s.sectionHeadRow}>
@@ -480,79 +482,12 @@ export function CardioTab({
                 <Text style={[s.cardSub, { marginTop: 0 }]}>
                   {unitLabel} {cardioRange === 'week' ? 'per dag, vald vecka' : cardioRange === 'month' ? 'per vecka, vald månad' : 'per månad, senaste 6 månaderna'}
                 </Text>
-                {(() => {
-                  const CH_W = STATS_SCREEN_W - 80
-                  const CH_H = 150
-                  const n = distBuckets.length
-                  const slot = CH_W / n
-                  const barW = Math.min(30, Math.round(slot * 0.5))
-                  const maxV = Math.max(...distBuckets.map(b => b.total), 0.1)
-                  const scale = (CH_H - 30) / maxV
-                  return (
-                    <Svg width={CH_W} height={CH_H}>
-                      {[0.25, 0.5, 0.75, 1].map(f => (
-                        <SvgLine
-                          key={f}
-                          x1={0} x2={CH_W}
-                          y1={CH_H - 4 - f * (CH_H - 30)} y2={CH_H - 4 - f * (CH_H - 30)}
-                          stroke="rgba(255,255,255,0.06)" strokeWidth={1}
-                        />
-                      ))}
-                      {distBuckets.map((b, i) => {
-                        const x = i * slot + (slot - barW) / 2
-                        if (b.total <= 0) {
-                          return <Rect key={b.key} x={x} y={CH_H - 7} width={barW} height={3} rx={1.5} fill="rgba(255,255,255,0.10)" />
-                        }
-                        // Staplas nedifrån: löpning, cykling, promenad
-                        const segs = ([
-                          [b.run, ORANGE], [b.cycle, BLUE], [b.walk, GREEN],
-                        ] as const).filter(sg => sg[0] > 0)
-                        let y = CH_H - 4
-                        const rects = segs.map(([v, color], j) => {
-                          const h = Math.max(3, v * scale)
-                          y -= h
-                          return (
-                            <Rect
-                              key={j}
-                              x={x} y={y + (j > 0 ? 0.75 : 0)}
-                              width={barW} height={h - (j > 0 ? 1.5 : 0)} rx={3}
-                              fill={color} opacity={b.isCurrent ? 1 : 0.8}
-                            />
-                          )
-                        })
-                        return (
-                          <G key={b.key}>
-                            {rects}
-                            <SvgText
-                              x={x + barW / 2} y={y - 6}
-                              fontSize={10} fontWeight="700" textAnchor="middle"
-                              fill={b.isCurrent ? '#fff' : 'rgba(255,255,255,0.45)'}
-                            >
-                              {toDisplayDistance(b.total, unit).toFixed(1)}
-                            </SvgText>
-                          </G>
-                        )
-                      })}
-                    </Svg>
-                  )
-                })()}
-                <View style={s.distLblRow}>
-                  {distBuckets.map(b => (
-                    <Text key={b.key} style={[s.distLbl, b.isCurrent && { color: ORANGE }]}>{b.label}</Text>
-                  ))}
-                </View>
-                <View style={s.barLegend}>
-                  {([
-                    { color: ORANGE, label: 'Löpning' },
-                    { color: BLUE,   label: 'Cykling' },
-                    { color: GREEN,  label: 'Promenad' },
-                  ] as const).map(({ color, label }) => (
-                    <View key={label} style={s.legItem}>
-                      <View style={[s.legDot, { backgroundColor: color }]} />
-                      <Text style={s.legText}>{label}</Text>
-                    </View>
-                  ))}
-                </View>
+                <DistanceAreaChart
+                  buckets={distBuckets}
+                  width={STATS_SCREEN_W - 80}
+                  height={170}
+                  unit={unit}
+                />
               </TouchableOpacity>
               </>
             )}

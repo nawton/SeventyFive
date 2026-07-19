@@ -222,10 +222,6 @@ export const s = StyleSheet.create({
   // Bar chart
   distLblRow: { flexDirection: 'row', marginTop: -6 },
   distLbl: { flex: 1, textAlign: 'center', color: TEXT_SECONDARY, fontSize: 11, fontFamily: NUM_FONT_SEMI },
-  barLegend: { flexDirection: 'row', gap: 16 },
-  legItem:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  legDot:    { width: 8, height: 8, borderRadius: 2 },
-  legText:   { color: TEXT_SECONDARY, fontSize: 11 },
 
   empty:     { alignItems: 'center', paddingVertical: 32, gap: 12 },
   emptyText: { color: TEXT_SECONDARY, fontSize: 14 },

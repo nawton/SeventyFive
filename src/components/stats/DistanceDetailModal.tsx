@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { View, Text, StyleSheet, Modal, ScrollView, Dimensions, TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import Svg, { Text as SvgText, Line as SvgLine, Rect, G } from 'react-native-svg'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { DistanceAreaChart } from './DistanceAreaChart'
 import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/lib/date'
 import { fmtPace, fmtDuration } from '@/lib/format'
@@ -226,76 +226,17 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
             </Text>
           </View>
 
-          {/* Graf — tryck på en stapel för att inspektera */}
+          {/* Graf — linje med fylld yta och adaptiv skala; tryck på en punkt
+              för att inspektera perioden */}
           <View style={s.chartCard}>
-            {(() => {
-              const CH_W = SCREEN_W - 40 - 32
-              const CH_H = 220
-              const n = buckets.length
-              const slot = CH_W / n
-              const barW = Math.max(6, Math.min(26, Math.round(slot * 0.55)))
-              const maxV = Math.max(...buckets.map(b => b.total), 0.1)
-              const scale = (CH_H - 34) / maxV
-              return (
-                <>
-                  <Svg width={CH_W} height={CH_H} onPress={() => setSelKey(null)}>
-                    {[0.25, 0.5, 0.75, 1].map(f => (
-                      <SvgLine
-                        key={f}
-                        x1={0} x2={CH_W}
-                        y1={CH_H - 4 - f * (CH_H - 34)} y2={CH_H - 4 - f * (CH_H - 34)}
-                        stroke="rgba(255,255,255,0.06)" strokeWidth={1}
-                      />
-                    ))}
-                    {buckets.map((b, i) => {
-                      const x = i * slot + (slot - barW) / 2
-                      const dimmed = sel !== null && sel.key !== b.key
-                      if (b.total <= 0) {
-                        return <Rect key={b.key} x={x} y={CH_H - 7} width={barW} height={3} rx={1.5} fill="rgba(255,255,255,0.10)" />
-                      }
-                      const segs = ([
-                        [b.run, ORANGE], [b.cycle, BLUE], [b.walk, GREEN],
-                      ] as const).filter(sg => sg[0] > 0)
-                      let y = CH_H - 4
-                      const rects = segs.map(([v, color], j) => {
-                        const h = Math.max(3, v * scale)
-                        y -= h
-                        return (
-                          <Rect
-                            key={j}
-                            x={x} y={y + (j > 0 ? 0.75 : 0)}
-                            width={barW} height={h - (j > 0 ? 1.5 : 0)} rx={3}
-                            fill={color} opacity={dimmed ? 0.28 : 1}
-                          />
-                        )
-                      })
-                      return (
-                        <G key={b.key} onPress={() => setSelKey(k => k === b.key ? null : b.key)}>
-                          {/* Osynlig träffyta över hela kolumnen gör stapeln lätt att pricka */}
-                          <Rect x={i * slot} y={0} width={slot} height={CH_H} fill="transparent" />
-                          {rects}
-                          {sel?.key === b.key && (
-                            <SvgText
-                              x={x + barW / 2} y={y - 8}
-                              fontSize={11} fontWeight="700" textAnchor="middle" fill="#fff"
-                            >
-                              {toDisplayDistance(b.total, unit).toFixed(1)}
-                            </SvgText>
-                          )}
-                        </G>
-                      )
-                    })}
-                  </Svg>
-                  <View style={s.lblRow}>
-                    {buckets.map(b => (
-                      <Text key={b.key} style={[s.lbl, b.isCurrent && { color: ORANGE }, sel?.key === b.key && { color: TEXT_PRIMARY }]}>
-                        {b.label}
-                      </Text>
-                    ))}
-                  </View>
-                </>
-              )
-            })()}
+            <DistanceAreaChart
+              buckets={buckets}
+              width={SCREEN_W - 40 - 32}
+              height={220}
+              unit={unit}
+              selectedKey={selKey}
+              onSelect={key => setSelKey(k => k === key ? null : key)}
+            />
           </View>
 
           {/* Fördelning per aktivitet — för valet eller hela perioden */}
@@ -382,8 +323,6 @@ const s = StyleSheet.create({
   readoutSub: { color: TEXT_SECONDARY, fontSize: 12 },
 
   chartCard: { backgroundColor: CARD, borderRadius: 20, padding: 16 },
-  lblRow: { flexDirection: 'row', marginTop: 4 },
-  lbl: { flex: 1, textAlign: 'center', color: TEXT_SECONDARY, fontSize: 10, fontFamily: NUM_FONT_SEMI },
 
   sectionHead: {
     color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
