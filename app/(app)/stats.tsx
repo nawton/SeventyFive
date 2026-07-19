@@ -1350,6 +1350,22 @@ export default function StatsScreen() {
 
             </View>
 
+            {/* Tydlig ingång till muskeldetaljen (radar + set per grupp) */}
+            <TouchableOpacity
+              style={[s.card, s.cardPlain, s.muscleLinkRow]}
+              activeOpacity={0.7}
+              onPress={() => setMuscleOpen(true)}
+            >
+              <View style={s.muscleLinkIcon}>
+                <Ionicons name="stats-chart-outline" size={17} color={ORANGE} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.muscleLinkTitle}>Muskelfördelning & set</Text>
+                <Text style={s.muscleLinkSub}>Radar mot förra veckan · set per muskelgrupp</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
+            </TouchableOpacity>
+
             {/* Completed gym sessions */}
             {weekLoading ? (
               <ActivityIndicator color={ORANGE} style={{ marginVertical: 16 }} />
@@ -1645,6 +1661,13 @@ const s = StyleSheet.create({
   bodyToggleTextActive:{ color: '#000' },
   bodyWrap:            { alignItems: 'center', paddingVertical: 8 },
   muscleEmpty:         { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', paddingBottom: 8 },
+  muscleLinkRow:  { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
+  muscleLinkIcon: {
+    width: 34, height: 34, borderRadius: 10, backgroundColor: ORANGE + '18',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  muscleLinkTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  muscleLinkSub:   { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
 
   // Week nav
   weekNav: {
