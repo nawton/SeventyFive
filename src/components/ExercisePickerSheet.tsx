@@ -204,7 +204,7 @@ export function ExercisePickerSheet({
                 onPress={() => { setSelectedGroup(group.key); setPage('exercises') }}
                 activeOpacity={0.7}
               >
-                <View style={[s.thumbWrap, { borderColor: group.color + '50' }]}>
+                <View style={[s.thumbWrap, { backgroundColor: group.color + '14' }]}>
                   <Body
                     data={group.slugs.map(sl => ({ slug: sl, intensity: 1 as const }))}
                     side={group.side}
@@ -413,7 +413,6 @@ const s = StyleSheet.create({
   landingCards:     { flexDirection: 'row', gap: 16 },
   landingCard: {
     flex: 1, backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1, borderColor: BORDER,
     paddingVertical: 32, paddingHorizontal: 16, alignItems: 'center', gap: 12,
   },
   landingIcon:      { width: 80, height: 80, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
@@ -424,13 +423,12 @@ const s = StyleSheet.create({
   groupRow: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
     paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: BORDER, minHeight: 112,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)', minHeight: 112,
   },
   thumbWrap: {
     width: 64, height: 110, overflow: 'hidden',
     alignItems: 'center', justifyContent: 'flex-start',
     backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1.5,
   },
   groupLabel: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
   groupCount: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
@@ -469,7 +467,6 @@ const s = StyleSheet.create({
     marginHorizontal: 16, marginVertical: 10,
     paddingHorizontal: 14, height: 46,
     backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: BORDER,
   },
   searchInput: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, padding: 0 },
 
@@ -481,7 +478,6 @@ const s = StyleSheet.create({
   promptSheet: {
     backgroundColor: BG,
     borderTopLeftRadius: 26, borderTopRightRadius: 26,
-    borderWidth: 1, borderBottomWidth: 0, borderColor: BORDER,
     padding: 24, paddingBottom: 36, gap: 4,
   },
   promptHandle: {
@@ -494,7 +490,6 @@ const s = StyleSheet.create({
   promptFields: {
     flexDirection: 'row',
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER,
     overflow: 'hidden', marginBottom: 16,
   },
   promptField:   { flex: 1, alignItems: 'center', paddingVertical: 20, gap: 8 },

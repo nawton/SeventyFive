@@ -706,7 +706,6 @@ const s = StyleSheet.create({
   input: {
     flex: 1, height: 38,
     backgroundColor: CARD, borderRadius: 10,
-    borderWidth: 1, borderColor: BORDER,
     color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT,
     textAlign: 'center', fontVariant: ['tabular-nums'],
   },
@@ -722,9 +721,8 @@ const s = StyleSheet.create({
   addSetBtn: {
     flex: 1,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: CARD, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12,
     paddingVertical: 10,
-    borderWidth: 1, borderColor: BORDER,
   },
   addSetText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
 
@@ -761,7 +759,7 @@ const s = StyleSheet.create({
   },
   restStepBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: BG, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center', justifyContent: 'center',
   },
   restStepValue: {
@@ -778,8 +776,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     marginHorizontal: 16, marginTop: 8,
     paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: ORANGE + '50',
+    backgroundColor: ORANGE + '16', borderRadius: 14,
   },
   restBarTime: { color: TEXT_PRIMARY, fontSize: 18, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'], minWidth: 46 },
   restBarTrack: { flex: 1, height: 5, borderRadius: 3, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.08)' },
