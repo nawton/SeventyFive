@@ -29,6 +29,7 @@ import { MilestoneAnalysisModal } from '@/components/stats/MilestoneAnalysisModa
 import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import { MuscleDetailModal } from '@/components/stats/MuscleDetailModal'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { VolumeDetailModal } from '@/components/stats/VolumeDetailModal'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
@@ -264,6 +265,7 @@ export default function StatsScreen() {
   const [gymDetail, setGymDetail] = useState<{ name: string; dateLabel: string; planned: string[]; logged: StrengthWorkout[] } | null>(null)
   const [muscleOpen, setMuscleOpen] = useState(false)
   const [sessionsOpen, setSessionsOpen] = useState(false)
+  const [volumeOpen, setVolumeOpen] = useState(false)
   const [avatarUrl, setAvatarUrl]               = useState<string | null>(null)
   const pagerRef = useRef<ScrollView>(null)
 
@@ -1362,6 +1364,77 @@ export default function StatsScreen() {
               </View>
             </View>
 
+            {/* Volym per dag i vald vecka — tryck för fullständig historik */}
+            {weekStrength.some(w => w.data.sets.some(st => st.weight_kg > 0)) && (
+              <>
+              <View style={s.sectionHeadRow}>
+                <Text style={[s.sectionHead, s.sectionHeadInline]}>Volym</Text>
+                <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
+              </View>
+              <TouchableOpacity
+                style={[s.card, s.cardPlain]}
+                activeOpacity={0.85}
+                onPress={() => setVolumeOpen(true)}
+              >
+                <Text style={[s.cardSub, { marginTop: 0 }]}>kg lyft per dag, vald vecka</Text>
+                {(() => {
+                  const CH_W = STATS_SCREEN_W - 80
+                  const CH_H = 130
+                  const slot = CH_W / 7
+                  const barW = Math.min(30, Math.round(slot * 0.5))
+                  const dayVols = Array.from({ length: 7 }, (_, i) => {
+                    const d = parseLocalDate(weekBounds.start)
+                    d.setDate(d.getDate() + i)
+                    const iso = toLocalDateString(d)
+                    return weekStrength
+                      .filter(w => (w.data.workout_date ?? toLocalDateString(new Date(w.created_at))) === iso)
+                      .reduce((sum, w) => sum + w.data.sets.reduce((x, r) => x + r.reps * (r.weight_kg || 0), 0), 0)
+                  })
+                  const maxV = Math.max(...dayVols, 1)
+                  const scale = (CH_H - 28) / maxV
+                  return (
+                    <>
+                      <Svg width={CH_W} height={CH_H}>
+                        {[0.5, 1].map(f => (
+                          <SvgLine
+                            key={f}
+                            x1={0} x2={CH_W}
+                            y1={CH_H - 4 - f * (CH_H - 28)} y2={CH_H - 4 - f * (CH_H - 28)}
+                            stroke="rgba(255,255,255,0.06)" strokeWidth={1}
+                          />
+                        ))}
+                        {dayVols.map((v, i) => {
+                          const x = i * slot + (slot - barW) / 2
+                          if (v <= 0) {
+                            return <Rect key={i} x={x} y={CH_H - 7} width={barW} height={3} rx={1.5} fill="rgba(255,255,255,0.10)" />
+                          }
+                          const h = Math.max(3, v * scale)
+                          return (
+                            <G key={i}>
+                              <Rect x={x} y={CH_H - 4 - h} width={barW} height={h} rx={3} fill={ORANGE} opacity={dayIdx === null || dayIdx === i ? 1 : 0.35} />
+                              <SvgText
+                                x={x + barW / 2} y={CH_H - 8 - h}
+                                fontSize={9} fontWeight="700" textAnchor="middle"
+                                fill="rgba(255,255,255,0.55)"
+                              >
+                                {Math.round(v).toLocaleString('sv-SE')}
+                              </SvgText>
+                            </G>
+                          )
+                        })}
+                      </Svg>
+                      <View style={s.distLblRow}>
+                        {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((l, i) => (
+                          <Text key={i} style={[s.distLbl, dayIdx === i && { color: ORANGE }]}>{l}</Text>
+                        ))}
+                      </View>
+                    </>
+                  )
+                })()}
+              </TouchableOpacity>
+              </>
+            )}
+
             {/* Body map — rubriken öppnar muskeldetaljen (radar + set per grupp) */}
             <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setMuscleOpen(true)}>
               <Text style={[s.sectionHead, s.sectionHeadInline]}>Tränade muskler</Text>
@@ -1643,6 +1716,12 @@ export default function StatsScreen() {
           />
         )}
       </Modal>
+
+      <VolumeDetailModal
+        visible={volumeOpen}
+        onClose={() => setVolumeOpen(false)}
+        workouts={strengthWorkouts}
+      />
 
       <MuscleDetailModal
         visible={muscleOpen}
