@@ -2,15 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, TouchableOpacity, Modal, Dimensions, Alert,
-  Animated as RNAnimated,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   useSharedValue, useAnimatedStyle, interpolate, runOnJS, Extrapolation,
-  withTiming, Easing, LinearTransition, FadeOut,
+  withTiming, withSpring, Easing, LinearTransition, FadeOut,
 } from 'react-native-reanimated'
-import { Gesture, GestureDetector, Swipeable, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
+import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
 import Svg, { Circle, Text as SvgText, Polyline, Polygon, Line as SvgLine, Rect, G } from 'react-native-svg'
 import { useFocusEffect, router } from 'expo-router'
@@ -238,37 +237,71 @@ function RingChart({ currentDay, completedDays }: { currentDay: number; complete
   )
 }
 
-// Svep vänster på en sessionsrad → röd raderingsknapp som växer fram mjukt
-function SwipeRow({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
-  const ref = useRef<Swipeable>(null)
+// Svep vänster på en sessionsrad: hela ytan bakom är röd, kort svep fäller
+// ut soptunnan, drar man hela vägen raderas raden direkt (iOS Mail-stil)
+const SWIPE_BTN_W = 88
+const SWIPE_SPRING = { damping: 22, stiffness: 280, mass: 0.8 } as const
+
+function SwipeRow({ children, onDelete, onFullSwipe }: {
+  children: React.ReactNode
+  onDelete: () => void
+  onFullSwipe: () => void
+}) {
+  const x = useSharedValue(0)
+  const rowW = useSharedValue(1)
+
+  function fireFull() {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {})
+    onFullSwipe()
+  }
+  function closeRow() { x.value = withSpring(0, SWIPE_SPRING) }
+
+  const pan = Gesture.Pan()
+    .activeOffsetX(-14)
+    .failOffsetY([-12, 12])
+    .onUpdate(e => {
+      x.value = Math.min(0, e.translationX)
+    })
+    .onEnd(e => {
+      'worklet'
+      const w = rowW.value
+      const fullPull = e.translationX < -w * 0.55 ||
+        (e.velocityX < -1400 && e.translationX < -w * 0.3)
+      if (fullPull) {
+        x.value = withTiming(-w, { duration: 150 }, f => { if (f) runOnJS(fireFull)() })
+      } else if (e.translationX < -SWIPE_BTN_W * 0.6) {
+        x.value = withSpring(-SWIPE_BTN_W, SWIPE_SPRING)
+      } else {
+        x.value = withSpring(0, SWIPE_SPRING)
+      }
+    })
+
+  const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }))
+  const bgStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(-x.value, [0, 28, SWIPE_BTN_W], [0, 0.6, 1], Extrapolation.CLAMP),
+  }))
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(-x.value, [0, SWIPE_BTN_W], [0.5, 1], Extrapolation.CLAMP) }],
+  }))
+
   return (
-    <Swipeable
-      ref={ref}
-      friction={2}
-      rightThreshold={40}
-      overshootRight={false}
-      renderRightActions={(progress: RNAnimated.AnimatedInterpolation<number>) => (
-        <RNAnimated.View
-          style={[
-            s.swipeDeleteWrap,
-            {
-              opacity: progress.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0.6, 1] }),
-              transform: [{ scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1], extrapolate: 'clamp' }) }],
-            },
-          ]}
+    <View onLayout={e => { rowW.value = e.nativeEvent.layout.width }}>
+      {/* Röd botten över hela ytan som friläggs */}
+      <Animated.View style={[s.swipeBg, bgStyle]}>
+        <TouchableOpacity
+          style={s.swipeBgHit}
+          activeOpacity={0.8}
+          onPress={() => { closeRow(); onDelete() }}
         >
-          <TouchableOpacity
-            style={s.swipeDeleteBtn}
-            activeOpacity={0.8}
-            onPress={() => { ref.current?.close(); onDelete() }}
-          >
-            <Ionicons name="trash-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-        </RNAnimated.View>
-      )}
-    >
-      {children}
-    </Swipeable>
+          <Animated.View style={iconStyle}>
+            <Ionicons name="trash-outline" size={22} color="#fff" />
+          </Animated.View>
+        </TouchableOpacity>
+      </Animated.View>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={rowStyle}>{children}</Animated.View>
+      </GestureDetector>
+    </View>
   )
 }
 
@@ -432,6 +465,18 @@ export default function StatsScreen() {
 
   // Svep-radering i sessionslistan: GPS-pass tas bort helt, avbockade
   // schemapass får sin bock borttagen
+  function performDeleteSessionRow(r: { key: string; name: string; workout?: CardioWorkout }) {
+    if (r.workout) {
+      const id = r.workout.id
+      setWorkouts(prev => prev.filter(w => w.id !== id))
+      deleteCardioWorkout(id).catch(() => {})
+    } else if (r.key.startsWith('g:')) {
+      const id = r.key.slice(2)
+      setCompletedSessions(prev => prev.filter(c => c.id !== id))
+      deleteCompletion(id).catch(() => {})
+    }
+  }
+
   function deleteSessionRow(r: { key: string; name: string; workout?: CardioWorkout }) {
     Alert.alert('Radera pass?', `"${r.name}" tas bort. Det går inte att ångra.`, [
       { text: 'Avbryt', style: 'cancel' },
@@ -439,15 +484,7 @@ export default function StatsScreen() {
         text: 'Radera', style: 'destructive',
         onPress: () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {})
-          if (r.workout) {
-            const id = r.workout.id
-            setWorkouts(prev => prev.filter(w => w.id !== id))
-            deleteCardioWorkout(id).catch(() => {})
-          } else if (r.key.startsWith('g:')) {
-            const id = r.key.slice(2)
-            setCompletedSessions(prev => prev.filter(c => c.id !== id))
-            deleteCompletion(id).catch(() => {})
-          }
+          performDeleteSessionRow(r)
         },
       },
     ])
@@ -1396,7 +1433,10 @@ export default function StatsScreen() {
                       exiting={FadeOut.duration(160)}
                     >
                       {showMonth && <Text style={s.sessMonth}>{m}</Text>}
-                      <SwipeRow onDelete={() => deleteSessionRow(r)}>
+                      <SwipeRow
+                        onDelete={() => deleteSessionRow(r)}
+                        onFullSwipe={() => performDeleteSessionRow(r)}
+                      >
                         <TouchableOpacity
                           style={s.sessRow}
                           activeOpacity={0.7}
@@ -2055,10 +2095,13 @@ const s = StyleSheet.create({
     paddingVertical: 13, paddingHorizontal: 14,
   },
   sessIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  swipeDeleteWrap: { justifyContent: 'center', paddingLeft: 10 },
-  swipeDeleteBtn: {
-    width: 56, height: '100%', minHeight: 64,
-    borderRadius: 18, backgroundColor: RED,
+  swipeBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: RED, borderRadius: 18,
+    alignItems: 'flex-end', justifyContent: 'center',
+  },
+  swipeBgHit: {
+    width: SWIPE_BTN_W, height: '100%',
     alignItems: 'center', justifyContent: 'center',
   },
   sessName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
