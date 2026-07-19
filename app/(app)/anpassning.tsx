@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import MapView from 'react-native-maps'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE } from '@/lib/theme'
 import { GlassSegment } from '@/components/GlassSegment'
 import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
 import { getTabBarShrinkEnabled, setTabBarShrinkEnabled } from '@/lib/tabBar'
@@ -14,12 +15,28 @@ import {
   getCardioStatsTheme, setCardioStatsTheme, type CardioStatsTheme,
   getVoiceCues, setVoiceCues,
   getDefaultMapStyle, setDefaultMapStyle, type MapStyleKey,
+  getLastMapCoord,
 } from '@/lib/prefs'
 
 // =============================================================================
 // ANPASSNING — samlade stil- och beteendeinställningar:
 // navbar-minimering, enheter (km/miles) och cardio-skärmens utseende/röst.
 // =============================================================================
+
+// Samma stilar som löpvyns kartväljare (Apple Maps) — Terräng finns inte där
+const MAP_STYLES = [
+  { key: 'standard',  label: 'Karta',    icon: 'map-outline' as const },
+  { key: 'satellite', label: 'Satellit', icon: 'earth-outline' as const },
+  { key: 'dark',      label: 'Natt',     icon: 'moon-outline' as const },
+] as const
+const APPLE_MAP_TYPES: Record<string, 'standard' | 'satellite' | 'mutedStandard'> = {
+  standard: 'standard',
+  satellite: 'satellite',
+  dark: 'mutedStandard',
+}
+// Förhandsbilderna centreras på senast kända position; utan en sådan visas
+// centrala Stockholm — poängen är kartstilen, inte platsen
+const FALLBACK_COORD = { latitude: 59.3293, longitude: 18.0686 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -61,14 +78,23 @@ export default function AnpassningScreen() {
   const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
   const [voice, setVoice]           = useState(true)
   const [mapStyle, setMapStyle]     = useState<MapStyleKey>('satellite')
+  const [mapCoord, setMapCoord]     = useState<{ latitude: number; longitude: number } | null>(null)
 
   useEffect(() => {
     getTabBarShrinkEnabled().then(setNavShrink)
     getUnitSystem().then(setUnit)
     getCardioStatsTheme().then(setStatsTheme)
     getVoiceCues().then(setVoice)
-    getDefaultMapStyle().then(setMapStyle)
+    // Gamla 'terrain'-val finns inte i Apple Maps — visas som Karta
+    getDefaultMapStyle().then(m => setMapStyle(m === 'terrain' ? 'standard' : m))
+    getLastMapCoord().then(c => setMapCoord(c ?? FALLBACK_COORD)).catch(() => setMapCoord(FALLBACK_COORD))
   }, [])
+
+  function chooseMapStyle(key: MapStyleKey) {
+    Haptics.selectionAsync()
+    setMapStyle(key)
+    setDefaultMapStyle(key).catch(() => {})
+  }
 
   return (
     <SafeAreaView style={s.screen}>
@@ -118,16 +144,43 @@ export default function AnpassningScreen() {
               <Ionicons name="map-outline" size={20} color={TEXT_SECONDARY} />
               <Text style={s.rowLabel}>Standardkarta</Text>
             </View>
-            <GlassSegment
-              value={mapStyle}
-              options={[
-                { key: 'standard',  label: 'Karta' },
-                { key: 'satellite', label: 'Satellit' },
-                { key: 'terrain',   label: 'Terräng' },
-                { key: 'dark',      label: 'Natt' },
-              ]}
-              onChange={m => { setMapStyle(m); setDefaultMapStyle(m).catch(() => {}) }}
-            />
+            {/* Samma kartkort med förhandsbilder som i löpvyns "Välj karta" */}
+            <View style={s.mapGrid}>
+              {MAP_STYLES.map(ms => {
+                const active = mapStyle === ms.key
+                return (
+                  <TouchableOpacity
+                    key={ms.key}
+                    style={[s.mapCard, active && s.mapCardActive]}
+                    onPress={() => chooseMapStyle(ms.key)}
+                    activeOpacity={0.85}
+                  >
+                    {mapCoord ? (
+                      <View style={s.mapPreview} pointerEvents="none">
+                        <MapView
+                          style={StyleSheet.absoluteFill}
+                          mapType={APPLE_MAP_TYPES[ms.key] ?? 'standard'}
+                          userInterfaceStyle={ms.key === 'dark' ? 'dark' : 'light'}
+                          initialRegion={{ ...mapCoord, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
+                          scrollEnabled={false}
+                          zoomEnabled={false}
+                          rotateEnabled={false}
+                          pitchEnabled={false}
+                        />
+                      </View>
+                    ) : (
+                      <View style={[s.mapPreview, s.mapPreviewIcon]}>
+                        <Ionicons name={ms.icon} size={26} color={active ? CARDIO_BLUE : '#9BA0A6'} />
+                      </View>
+                    )}
+                    <View style={s.mapCardLabelRow}>
+                      <Text style={[s.mapCardLabel, active && { color: CARDIO_BLUE }]}>{ms.label}</Text>
+                      {active && <Ionicons name="checkmark-circle" size={15} color={CARDIO_BLUE} />}
+                    </View>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
             <Text style={s.segHint}>Kartan som visas när du startar ett cardiopass</Text>
           </View>
           <View style={[s.segBlock, s.rowBorder]}>
@@ -184,4 +237,40 @@ const s = StyleSheet.create({
   segBlock: { padding: 16, gap: 12 },
   segLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   segHint: { color: TEXT_SECONDARY, fontSize: 12 },
+
+  // Kartkort — samma utseende som löpvyns kartväljare
+  mapGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  mapCard: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: '#242426',
+    overflow: 'hidden',
+  },
+  mapCardActive: { borderColor: CARDIO_BLUE },
+  mapPreview: {
+    overflow: 'hidden',
+    width: '100%',
+    height: 96,
+    backgroundColor: '#2C2C2E',
+  },
+  mapPreviewIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
+  mapCardLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+  },
+  mapCardLabel: {
+    color: '#ccc',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 })
