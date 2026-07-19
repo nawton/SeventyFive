@@ -35,6 +35,7 @@ import {
 } from '@/services/progressPhotos'
 import { PhotoComposer } from '@/components/PhotoComposer'
 import { PhotoViewer } from '@/components/PhotoViewer'
+import { PhotoCompare } from '@/components/PhotoCompare'
 import { ORANGE, BG, CARD, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -81,6 +82,7 @@ export default function ProfileScreen() {
   const [loading, setLoading]       = useState(true)
   const [composerUri, setComposerUri] = useState<string | null>(null)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
+  const [compareOpen, setCompareOpen] = useState(false)
   const [refreshing, setRefreshing]   = useState(false)
   const refreshingRef = useRef(false)
   const pullArmedRef  = useRef(true)
@@ -318,12 +320,20 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        <View>
-          <Text style={s.sectionHead}>Framstegsfoton</Text>
-          {photos.length > 0 && (
-            <Text style={s.sectionSub}>
-              {photos.length} {photos.length === 1 ? 'foto' : 'foton'} · {new Set(photos.map(p => p.dayNumber)).size} av {currentDay} dagar
-            </Text>
+        <View style={s.sectionHeadRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.sectionHead}>Framstegsfoton</Text>
+            {photos.length > 0 && (
+              <Text style={s.sectionSub}>
+                {photos.length} {photos.length === 1 ? 'foto' : 'foton'} · {new Set(photos.map(p => p.dayNumber)).size} av {currentDay} dagar
+              </Text>
+            )}
+          </View>
+          {photos.length >= 2 && (
+            <TouchableOpacity style={s.compareChip} activeOpacity={0.8} onPress={() => setCompareOpen(true)}>
+              <Ionicons name="git-compare-outline" size={15} color={ORANGE} />
+              <Text style={s.compareChipText}>Jämför</Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -405,6 +415,12 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={onListScroll}
         scrollEventThrottle={16}
+      />
+
+      <PhotoCompare
+        visible={compareOpen}
+        photos={photos}
+        onClose={() => setCompareOpen(false)}
       />
 
       <PhotoViewer
@@ -507,6 +523,13 @@ const s = StyleSheet.create({
   sectionHead: {
     color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
   },
+  sectionHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  compareChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: ORANGE + '18', borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  compareChipText: { color: ORANGE, fontSize: 13, fontWeight: '700' },
   feedMonth: {
     color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', letterSpacing: -0.3,
     textTransform: 'capitalize', marginTop: 4,
