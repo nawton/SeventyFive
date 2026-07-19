@@ -36,7 +36,7 @@ import {
 import { PhotoComposer } from '@/components/PhotoComposer'
 import { PhotoViewer } from '@/components/PhotoViewer'
 import { PhotoCompare } from '@/components/PhotoCompare'
-import { ORANGE, BG, CARD, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
+import { ORANGE, GREEN, BG, CARD, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
@@ -267,6 +267,7 @@ export default function ProfileScreen() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   const initial = (name || '?')[0].toUpperCase()
+  const hasTodayPhoto = photos.some(p => p.dayNumber === currentDay)
 
   function renderHeader() {
     return (
@@ -312,13 +313,18 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
         </TouchableOpacity>
 
-        {/* Lägg till foto */}
-        {challenge && (
+        {/* Lägg till foto — grönt kvittoläge när dagens redan är taget */}
+        {challenge && (hasTodayPhoto ? (
+          <TouchableOpacity style={s.addButtonDone} onPress={handleAddPhoto} activeOpacity={0.85}>
+            <Ionicons name="checkmark-circle" size={18} color={GREEN} />
+            <Text style={s.addButtonDoneText}>Dagens foto taget · lägg till fler</Text>
+          </TouchableOpacity>
+        ) : (
           <TouchableOpacity style={s.addButton} onPress={handleAddPhoto} activeOpacity={0.85}>
             <Ionicons name="camera" size={18} color="#000" />
             <Text style={s.addButtonText}>Lägg till dagens foto</Text>
           </TouchableOpacity>
-        )}
+        ))}
 
         <View style={s.sectionHeadRow}>
           <View style={{ flex: 1 }}>
@@ -519,6 +525,11 @@ const s = StyleSheet.create({
     paddingVertical: 14,
   },
   addButtonText: { color: '#000', fontSize: 15, fontWeight: '700' },
+  addButtonDone: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: GREEN + '16', borderRadius: 14, paddingVertical: 14,
+  },
+  addButtonDoneText: { color: GREEN, fontSize: 15, fontWeight: '700' },
 
   sectionHead: {
     color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
