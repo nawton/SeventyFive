@@ -97,6 +97,19 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
     transform: [{ translateX: tasksX.value }],
     opacity: 1 - Math.abs(tasksX.value) / SCREEN_WIDTH,
   }))
+
+  // Kortet viker ihop sig när man scrollar i träningslistorna och
+  // kommer tillbaka när listan är i toppläge igen
+  const [tasksH, setTasksH] = useState(0)
+  const tasksCollapse = useSharedValue(0)
+  function onListScroll(e: { nativeEvent: { contentOffset: { y: number } } }) {
+    tasksCollapse.value = withTiming(e.nativeEvent.contentOffset.y > 16 ? 1 : 0, { duration: 220 })
+  }
+  const tasksOuterStyle = useAnimatedStyle(() => (
+    tasksH > 0
+      ? { height: (1 - tasksCollapse.value) * (tasksH + 12), opacity: 1 - tasksCollapse.value }
+      : {}
+  ))
   useEffect(() => {
     if (!challengeId || day.status === 'future') return
     let active = true
@@ -182,10 +195,15 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
           </View>
         </GestureDetector>
 
-        {/* Dagens uppgifter — missade markeras i rött, svep i sidled för att ta bort */}
+        {/* Dagens uppgifter — missade markeras i rött, svep i sidled för att ta
+            bort, kollapsar när man scrollar i träningslistan */}
         {tasks && tasks.length > 0 && !tasksHidden && (
+          <Animated.View style={[{ overflow: 'hidden' }, tasksOuterStyle]}>
           <GestureDetector gesture={tasksPan}>
-          <Animated.View style={[s.tasksWrap, tasksAnimStyle]}>
+          <Animated.View
+            style={[s.tasksWrap, tasksAnimStyle]}
+            onLayout={e => setTasksH(e.nativeEvent.layout.height)}
+          >
             <View style={s.tasksHead}>
               <Text style={s.tasksTitle}>Dagens uppgifter</Text>
               <Text style={[
@@ -212,6 +230,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
             })}
           </Animated.View>
           </GestureDetector>
+          </Animated.View>
         )}
 
         {!hasAny ? (
@@ -251,7 +270,14 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
               onMomentumScrollEnd={e => setPage(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH))}
             >
               {pages.map(p => (
-                <ScrollView key={p.key} style={{ width: SCREEN_WIDTH }} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                  key={p.key}
+                  style={{ width: SCREEN_WIDTH }}
+                  contentContainerStyle={s.scroll}
+                  showsVerticalScrollIndicator={false}
+                  onScroll={onListScroll}
+                  scrollEventThrottle={16}
+                >
                   {p.key === 'cardio' ? (
                     <>
                       {dayCardio.map((w, i) => (
