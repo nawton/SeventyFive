@@ -10,7 +10,8 @@ import WebView from 'react-native-webview'
 import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
-import { effortColor, effortLabel } from '@/components/EffortRating'
+import { updateCardioEffort } from '@/services/workouts'
+import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { getDefaultMapStyle } from '@/lib/prefs'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -66,6 +67,23 @@ function formatPace(secs: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+// Tre stigande staplar som fylls efter betyget — som Apples ansträngningsikon
+function EffortBars({ effort, color }: { effort: number; color: string }) {
+  return (
+    <View style={s.effortBars}>
+      {[0.45, 0.7, 1].map((h, i) => {
+        const filled = effort >= (i + 1) * 3
+        return (
+          <View
+            key={i}
+            style={[s.effortBar, { height: 26 * h, backgroundColor: filled ? color : 'rgba(255,255,255,0.18)' }]}
+          />
+        )
+      })}
+    </View>
+  )
+}
+
 function mapHtml(route: Array<[number, number]>, o: { compassTop: number; topPad: number; bottomPad: number; style: string }): string {
   const step = Math.max(1, Math.floor(route.length / 800))
   const pts = route.filter((_, i) => i % step === 0 || i === route.length - 1)
@@ -118,6 +136,23 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   const insets = useSafeAreaInsets()
   const d = workout.data
   const meta = TYPE_META[d.type] ?? TYPE_META.running
+
+  // Ansträngningsbetyget — klickbart kort längst ner, ändras via betygslagret
+  const [effort, setEffort] = useState<number | null>(
+    typeof d.effort === 'number' && d.effort >= 1 ? d.effort : null
+  )
+  const [effortOpen, setEffortOpen] = useState(false)
+  async function handleEffortDone(val: number | null) {
+    setEffortOpen(false)
+    if (typeof val !== 'number' || val === effort) return
+    const prev = effort
+    setEffort(val)
+    try {
+      await updateCardioEffort(workout.id, val)
+    } catch {
+      setEffort(prev)
+    }
+  }
 
   // Kartstil + slide-up-väljare — startar på användarens standardkarta
   const webRef = useRef<InstanceType<typeof WebView>>(null)
@@ -251,15 +286,6 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
             ))}
           </View>
 
-          {typeof d.effort === 'number' && d.effort >= 1 && (
-            <View style={s.effortRow}>
-              <View style={[s.effortBadge, { backgroundColor: effortColor(d.effort) + '26', borderColor: effortColor(d.effort) }]}>
-                <Text style={[s.effortBadgeText, { color: effortColor(d.effort) }]}>{d.effort}</Text>
-              </View>
-              <Text style={s.effortText}>Ansträngning · {effortLabel(d.effort)}</Text>
-            </View>
-          )}
-
           {splits.length > 0 && (
             <View style={s.splitsCard}>
               <Text style={s.splitsTitle}>Kilometersplittar</Text>
@@ -274,8 +300,31 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
               ))}
             </View>
           )}
+
+          {/* Ansträngning — Apple Fitness-stil, tryck för att sätta/ändra betyget */}
+          <TouchableOpacity style={s.effortCard} activeOpacity={0.8} onPress={() => setEffortOpen(true)}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.effortHeading}>Ansträngning</Text>
+              {effort ? (
+                <View style={s.effortValueRow}>
+                  <View style={[s.effortCircle, { backgroundColor: effortColor(effort) }]}>
+                    <Text style={s.effortCircleText}>{effort}</Text>
+                  </View>
+                  <Text style={[s.effortBigLabel, { color: effortColor(effort) }]}>{effortLabel(effort)}</Text>
+                </View>
+              ) : (
+                <Text style={s.effortEmpty}>Tryck för att betygsätta</Text>
+              )}
+            </View>
+            <EffortBars effort={effort ?? 0} color={effort ? effortColor(effort) : TEXT_SECONDARY} />
+            <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} style={{ marginLeft: 10 }} />
+          </TouchableOpacity>
         </Animated.View>
       </GestureDetector>
+
+      {effortOpen && (
+        <EffortRating visible initial={effort} onDone={handleEffortDone} />
+      )}
 
       {styleMenuOpen && (
         <>
@@ -350,17 +399,23 @@ const s = StyleSheet.create({
   },
   donePillText: { color: GREEN, fontSize: 12, fontWeight: '700' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 20, paddingHorizontal: 4, marginTop: 14 },
-  effortRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'center',
-    marginTop: 20, paddingVertical: 8, paddingHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20,
+  effortCard: {
+    backgroundColor: CARD, borderRadius: 20,
+    borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 18, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center',
   },
-  effortBadge: {
-    width: 24, height: 24, borderRadius: 12, borderWidth: 1.5,
+  effortHeading: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', opacity: 0.92 },
+  effortValueRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 7 },
+  effortCircle: {
+    width: 30, height: 30, borderRadius: 15,
     alignItems: 'center', justifyContent: 'center',
   },
-  effortBadgeText: { fontSize: 12, fontWeight: '800' },
-  effortText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  effortCircleText: { color: '#000', fontSize: 14, fontFamily: NUM_FONT },
+  effortBigLabel: { fontSize: 24, fontWeight: '800', letterSpacing: -0.3 },
+  effortEmpty: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600', marginTop: 7 },
+  effortBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
+  effortBar: { width: 7, borderRadius: 3 },
   statCell: { width: '50%', gap: 3, alignItems: 'center' },
   statValue: { color: TEXT_PRIMARY, fontSize: 20, fontFamily: NUM_FONT, letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
   statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },

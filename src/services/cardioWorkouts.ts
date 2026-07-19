@@ -87,6 +87,7 @@ export async function getCardioWorkoutById(userId: string, id: string): Promise<
       calories:         raw.calories         ?? 0,
       route:            raw.route,
       splits:           raw.splits,
+      effort:           raw.effort,
     } satisfies CardioData,
   }
 }
@@ -133,6 +134,7 @@ export async function getCardioWorkoutsForDate(userId: string, date: string): Pr
           calories:         raw.calories         ?? 0,
           route:            raw.route,
           splits:           raw.splits,
+          effort:           raw.effort,
         } satisfies CardioData,
       }
     })
@@ -164,7 +166,28 @@ export async function getCardioWorkouts(userId: string, limit = 30): Promise<Car
           calories:         raw.calories         ?? 0,
           route:            raw.route,
           splits:           raw.splits,
+          effort:           raw.effort,
         } satisfies CardioData,
       }
     })
+}
+
+/** Uppdaterar ansträngningsbetyget (RPE 1–10) på ett redan sparat cardio-pass */
+export async function updateCardioEffort(id: string, effort: number): Promise<void> {
+  const { data, error } = await supabase
+    .from('user_workouts')
+    .select('exercises')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  if (!data || !Array.isArray(data.exercises) || data.exercises[0]?.category !== 'cardio') {
+    throw new Error('Passet hittades inte')
+  }
+  const exercises = [...data.exercises]
+  exercises[0] = { ...exercises[0], effort }
+  const { error: upError } = await supabase
+    .from('user_workouts')
+    .update({ exercises })
+    .eq('id', id)
+  if (upError) throw upError
 }
