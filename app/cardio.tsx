@@ -28,7 +28,7 @@ import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
-import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, getDefaultMapStyle, type CardioStatsTheme } from '@/lib/prefs'
+import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getVoiceInterval, setVoiceInterval, getCardioGoal, setCardioGoal, getDefaultMapStyle, type CardioStatsTheme, type VoiceInterval } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -250,8 +250,13 @@ export default function CardioScreen() {
   // Röstguidning — talade besked om splittar och mål
   const voiceRef = useRef(true)
   const [voiceOn, setVoiceOn] = useState(true)
+  const [voiceInterval, setVoiceIntervalState] = useState<VoiceInterval>('km')
+  const [voiceSheetOpen, setVoiceSheetOpen] = useState(false)
+  const voiceIntervalRef = useRef<VoiceInterval>('km')
+  const lastVoiceMinute = useRef(0)
   useEffect(() => {
     getVoiceCues().then(on => { voiceRef.current = on; setVoiceOn(on) })
+    getVoiceInterval().then(v => { voiceIntervalRef.current = v; setVoiceIntervalState(v) })
     return () => { Speech.stop() }
   }, [])
   function speak(text: string) {
@@ -485,12 +490,21 @@ export default function CardioScreen() {
     setGoalModalOpen(false)
   }
 
-  function toggleVoice() {
+  function chooseVoice(mode: 'off' | VoiceInterval) {
     Haptics.selectionAsync()
-    const next = !voiceOn
-    setVoiceOn(next)
-    voiceRef.current = next
-    setVoiceCues(next).catch(() => {})
+    if (mode === 'off') {
+      setVoiceOn(false)
+      voiceRef.current = false
+      setVoiceCues(false).catch(() => {})
+    } else {
+      setVoiceOn(true)
+      voiceRef.current = true
+      setVoiceCues(true).catch(() => {})
+      setVoiceIntervalState(mode)
+      voiceIntervalRef.current = mode
+      setVoiceInterval(mode).catch(() => {})
+    }
+    setVoiceSheetOpen(false)
   }
 
   function openStyleSheet() {
@@ -670,6 +684,20 @@ export default function CardioScreen() {
         smoothedPaceRef.current = 0
         setCurrentPaceSec(0)
       }
+      // Statusbesked var 5:e/10:e minut (kilometersplittarna talar i km-läget)
+      const ivMin = voiceIntervalRef.current === 'min5' ? 5 : voiceIntervalRef.current === 'min10' ? 10 : 0
+      if (ivMin > 0) {
+        const minute = Math.floor(elapsedRef.current / 60)
+        if (minute > 0 && minute % ivMin === 0 && minute !== lastVoiceMinute.current) {
+          lastVoiceMinute.current = minute
+          const dist = distanceRef.current
+          const distTxt = `${dist.toFixed(2).replace('.', ' komma ')} kilometer`
+          const paceTxt = dist > 0.05
+            ? ` Snittempo ${formatPace(1, elapsedRef.current / dist).replace(':', ' och ')} per kilometer.`
+            : ''
+          speak(`${minute} minuter. Distans ${distTxt}.${paceTxt}`)
+        }
+      }
     }, 1000)
     locationSub.current = await Location.watchPositionAsync(
       { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 3 },
@@ -713,7 +741,9 @@ export default function CardioScreen() {
             if (splitToastTimer.current) clearTimeout(splitToastTimer.current)
             setSplitToast(label)
             splitToastTimer.current = setTimeout(() => setSplitToast(null), 3500)
-            speak(`Kilometer ${splitKm.current}. Total tid: ${spokenTime(elapsedRef.current)}. Senaste kilometern: ${spokenTime(splitTime)}.`)
+            if (voiceIntervalRef.current === 'km') {
+              speak(`Kilometer ${splitKm.current}. Total tid: ${spokenTime(elapsedRef.current)}. Senaste kilometern: ${spokenTime(splitTime)}.`)
+            }
             splitTimes.current.push(splitTime)
             lastSplitElapsed.current = elapsedRef.current
             splitKm.current += 1
@@ -1384,6 +1414,37 @@ export default function CardioScreen() {
         </View>
       </Modal>
 
+      {/* Röstguidningsväljare — vad och hur ofta rösten pratar */}
+      <Modal visible={voiceSheetOpen} transparent animationType="slide" onRequestClose={() => setVoiceSheetOpen(false)}>
+        <Pressable style={styles.goalModalOverlay} onPress={() => setVoiceSheetOpen(false)}>
+          <Pressable style={styles.goalModalSheet} onPress={() => {}}>
+            <Text style={styles.goalModalTitle}>Röstguidning</Text>
+            {([
+              { key: 'km' as const,   label: 'Varje kilometer',  sub: 'Splittid och total tid vid varje km' },
+              { key: 'min5' as const, label: 'Var 5:e minut',    sub: 'Tid, distans och snittempo' },
+              { key: 'min10' as const, label: 'Var 10:e minut',  sub: 'Tid, distans och snittempo' },
+              { key: 'off' as const,  label: 'Av',               sub: 'Ingen röst under passet' },
+            ]).map(opt => {
+              const active = opt.key === 'off' ? !voiceOn : voiceOn && voiceInterval === opt.key
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.voiceOption, active && styles.voiceOptionActive]}
+                  activeOpacity={0.8}
+                  onPress={() => chooseVoice(opt.key)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.voiceOptionLabel, active && { color: ORANGE }]}>{opt.label}</Text>
+                    <Text style={styles.voiceOptionSub}>{opt.sub}</Text>
+                  </View>
+                  {active && <Ionicons name="checkmark-circle" size={20} color={ORANGE} />}
+                </TouchableOpacity>
+              )
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Målväljare — km och/eller minuter */}
       <Modal visible={goalModalOpen} transparent animationType="slide" onRequestClose={() => setGoalModalOpen(false)}>
         <Pressable style={styles.goalModalOverlay} onPress={() => setGoalModalOpen(false)}>
@@ -1473,11 +1534,13 @@ export default function CardioScreen() {
               </View>
               <View style={styles.idleGridDivH} />
               <View style={styles.idleGrid}>
-                <TouchableOpacity style={styles.idleCell} onPress={toggleVoice} activeOpacity={0.75}>
+                <TouchableOpacity style={styles.idleCell} onPress={() => setVoiceSheetOpen(true)} activeOpacity={0.75}>
                   <Ionicons name={voiceOn ? 'volume-high-outline' : 'volume-mute-outline'} size={20} color={ORANGE} />
                   <View style={styles.idleCellText}>
                     <Text style={styles.idleCellLabel}>Röstguidning</Text>
-                    <Text style={styles.idleCellValue}>{voiceOn ? 'På' : 'Av'}</Text>
+                    <Text style={styles.idleCellValue}>
+                      {!voiceOn ? 'Av' : voiceInterval === 'km' ? 'Varje km' : voiceInterval === 'min5' ? 'Var 5:e min' : 'Var 10:e min'}
+                    </Text>
                   </View>
                 </TouchableOpacity>
                 <View style={styles.idleGridDivV} />
@@ -1581,6 +1644,17 @@ const styles = StyleSheet.create({
   pageDots: { flexDirection: 'row', justifyContent: 'center', gap: 7, paddingTop: 8, marginBottom: -2 },
   pageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)' },
   pageDotOn: { backgroundColor: '#fff' },
+
+  // Röstguidningsväljare
+  voiceOption: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#0A0A0C', borderRadius: 14,
+    borderWidth: 1.5, borderColor: '#2C2C2E',
+    paddingHorizontal: 14, paddingVertical: 12,
+  },
+  voiceOptionActive: { borderColor: ORANGE, backgroundColor: ORANGE + '10' },
+  voiceOptionLabel: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  voiceOptionSub: { color: '#9BA0A6', fontSize: 12, marginTop: 2 },
 
   // Målmodal
   goalModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },

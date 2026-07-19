@@ -37,6 +37,22 @@ export async function setVoiceCues(on: boolean): Promise<void> {
   await AsyncStorage.setItem(VOICE_KEY, on ? 'on' : 'off').catch(() => {})
 }
 
+// Röstguidningens intervall — vad som styr när status läses upp
+export type VoiceInterval = 'km' | 'min5' | 'min10'
+
+export async function getVoiceInterval(): Promise<VoiceInterval> {
+  try {
+    const v = await AsyncStorage.getItem('voiceInterval')
+    return v === 'min5' || v === 'min10' ? v : 'km'
+  } catch {
+    return 'km'
+  }
+}
+
+export async function setVoiceInterval(v: VoiceInterval): Promise<void> {
+  await AsyncStorage.setItem('voiceInterval', v).catch(() => {})
+}
+
 // Vilotimerns senast valda längd (sekunder) — förvalet i övningsloggen
 const REST_KEY = 'restTimerSeconds'
 
