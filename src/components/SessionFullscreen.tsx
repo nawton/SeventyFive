@@ -26,6 +26,14 @@ import { EffortRating, effortColor, effortLabel } from '@/components/EffortRatin
 
 type LogSet = { reps: string; weight: string; done: boolean }
 
+// Planerade reps för set nummer i — hanterar både "10" och "10/8/6"
+function plannedReps(reps: string | null | undefined, i: number): number {
+  if (!reps) return 0
+  const parts = reps.split('/').map(x => parseInt(x, 10))
+  const v = parts[Math.min(i, parts.length - 1)]
+  return Number.isFinite(v) ? v : 0
+}
+
 function fmtClock(secs: number): string {
   const m = Math.floor(secs / 60)
   const s = secs % 60
@@ -300,6 +308,31 @@ export function SessionFullscreen({
     then?.()
   }
 
+  // Rader med reps räknas — även om man glömt bocka dem. Ibockade rader utan
+  // ifyllda siffror sparas med de visade platshållarna (förra passets set,
+  // annars passets planerade reps) — annars försvinner hela loggen fast
+  // användaren bockat av allt som klart
+  function collectSets(assumeDone = false) {
+    if (!session) return []
+    return session.exercises.map(ex => {
+      const rows = logs[ex.id] ?? []
+      const prev = prevByName[ex.exercise_name]
+      const validSets = rows
+        .map((r, i) => {
+          const done = r.done || assumeDone
+          const p = done ? prev?.[i] : undefined
+          const fallbackReps = done ? (p && p.reps > 0 ? p.reps : plannedReps(ex.reps, i)) : 0
+          const fallbackKg   = p?.weight_kg ?? 0
+          return {
+            reps:      r.reps.trim()   === '' ? fallbackReps : (parseInt(r.reps)     || 0),
+            weight_kg: r.weight.trim() === '' ? fallbackKg   : (parseFloat(r.weight) || 0),
+          }
+        })
+        .filter(r => r.reps > 0)
+      return { ex, validSets }
+    })
+  }
+
   // Bekräfta innan passet slutförs — Spara på redan avklarade pass går direkt
   function confirmFinish() {
     if (!session || saving) return
@@ -308,7 +341,7 @@ export function SessionFullscreen({
       return
     }
     if (isCompleted) { finish(); return }
-    const anySets = session.exercises.some(ex => (logs[ex.id] ?? []).some(r => (parseInt(r.reps) || 0) > 0))
+    const anySets = collectSets().some(t => t.validSets.length > 0)
     if (!anySets) { finish(); return }
     Alert.alert('Är du klar med passet?', 'Passet markeras som avklarat och dina set sparas.', [
       { text: 'Avbryt', style: 'cancel' },
@@ -319,32 +352,38 @@ export function SessionFullscreen({
   // ── Slutför: spara allt, bocka övningar, markera passet klart ──
   async function finish() {
     if (!session || !userId || saving) return
-    // Rader med reps räknas — även om man glömt bocka dem
-    const toSave = session.exercises.map(ex => {
-      const rows = logs[ex.id] ?? []
-      const validSets = rows
-        .map(r => ({ reps: parseInt(r.reps) || 0, weight_kg: parseFloat(r.weight) || 0 }))
-        .filter(r => r.reps > 0)
-      return { ex, validSets }
-    })
-    const anySets = toSave.some(t => t.validSets.length > 0)
-    if (!anySets) {
-      if (isCompleted) { onClose(); return }
-      Alert.alert('Inga set ifyllda', 'Vill du markera passet som klart utan att logga set?', [
+    const toSave = collectSets()
+    if (toSave.some(t => t.validSets.length > 0)) { await saveAndFinish(toSave); return }
+    if (isCompleted) { onClose(); return }
+
+    // Helt tomt pass: Markera klart loggar de planerade seten — annars står
+    // passet som avklarat med tom statistik ("Ej loggad" på framsteg)
+    const planned = collectSets(true)
+    if (planned.some(t => t.validSets.length > 0)) {
+      Alert.alert('Inga set ifyllda', 'Markera passet som klart? De planerade seten loggas då åt dig.', [
         { text: 'Avbryt', style: 'cancel' },
-        { text: 'Markera klart', onPress: () => {
-          setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
-          clearPassStart(`${session.id}:${date}`).catch(() => {})
-          clearPassDraft(`${session.id}:${date}`).catch(() => {})
-          requestEffort(() => {
-            onComplete()
-            onClose()
-          })
-        } },
+        { text: 'Markera klart', onPress: () => { void saveAndFinish(planned) } },
       ])
       return
     }
 
+    Alert.alert('Inga set ifyllda', 'Vill du markera passet som klart utan att logga set?', [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Markera klart', onPress: () => {
+        setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
+        clearPassStart(`${session.id}:${date}`).catch(() => {})
+        clearPassDraft(`${session.id}:${date}`).catch(() => {})
+        requestEffort(() => {
+          onComplete()
+          onClose()
+        })
+      } },
+    ])
+  }
+
+  // Sparar seten, bockar övningarna och markerar passet klart
+  async function saveAndFinish(toSave: ReturnType<typeof collectSets>) {
+    if (!session || !userId) return
     setSaving(true)
     try {
       const records = await getPersonalRecords(userId).catch(() => [])
