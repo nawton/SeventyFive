@@ -40,6 +40,7 @@ import { ORANGE, GREEN, BG, CARD, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SE
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
+import { getAchievementSummary, type AchievementSummary } from '@/services/achievementSummary'
 import type { UserChallengeWithLevel } from '@/types/database'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ export default function ProfileScreen() {
   const [composerUri, setComposerUri] = useState<string | null>(null)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const [compareOpen, setCompareOpen] = useState(false)
+  const [achSummary, setAchSummary] = useState<AchievementSummary | null>(null)
   const [refreshing, setRefreshing]   = useState(false)
   const refreshingRef = useRef(false)
   const pullArmedRef  = useRef(true)
@@ -158,6 +160,10 @@ export default function ProfileScreen() {
       } else {
         console.warn('[profile] kunde inte hämta foton:', photoItems.reason?.message)
       }
+
+      // Medalj-/rekordsiffrorna till raden — bäst-effort, blockerar inget
+      const chId = active.status === 'fulfilled' ? active.value?.id ?? null : null
+      getAchievementSummary(uid, chId).then(setAchSummary).catch(() => {})
     } finally {
       setLoading(false)
     }
@@ -308,7 +314,11 @@ export default function ProfileScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.recordsTitle}>Rekord & medaljer</Text>
-            <Text style={s.recordsSub}>Dina personliga rekord och upplåsta mål</Text>
+            <Text style={s.recordsSub}>
+              {achSummary
+                ? `${achSummary.medalsUnlocked} av ${achSummary.medalsTotal} medaljer · ${achSummary.recordCount} rekord`
+                : 'Dina personliga rekord och upplåsta mål'}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
         </TouchableOpacity>
