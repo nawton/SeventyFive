@@ -236,6 +236,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
               unit={unit}
               selectedKey={selKey}
               onSelect={key => setSelKey(k => k === key ? null : key)}
+              onScrub={setSelKey}
             />
           </View>
 

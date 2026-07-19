@@ -1,4 +1,9 @@
+import { useRef } from 'react'
+import { View } from 'react-native'
 import Svg, { Path, Circle, Line as SvgLine, Text as SvgText, Rect, G } from 'react-native-svg'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { runOnJS } from 'react-native-reanimated'
+import * as Haptics from 'expo-haptics'
 import { CARD, ORANGE } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 
@@ -50,7 +55,7 @@ function smoothLine(pts: Array<{ x: number; y: number }>, minY: number, maxY: nu
 }
 
 export function DistanceAreaChart({
-  buckets, width, height, unit, color = ORANGE, selectedKey, onSelect,
+  buckets, width, height, unit, color = ORANGE, selectedKey, onSelect, onScrub, onScrubEnd, pagerRef,
 }: {
   buckets: AreaBucket[]
   width:   number
@@ -60,6 +65,12 @@ export function DistanceAreaChart({
   /** Vald punkt markeras med guide-linje och punkt — styrs av föräldern */
   selectedKey?: string | null
   onSelect?:    (key: string) => void
+  /** Håll fingret på grafen och dra mellan punkterna — sätter valet löpande */
+  onScrub?:     (key: string) => void
+  /** Anropas när fingret släpper — utelämna för att låta valet ligga kvar */
+  onScrubEnd?:  () => void
+  /** Flik-pagern måste vänta på scrubben — annars byter man sida i stället */
+  pagerRef?:    React.RefObject<unknown>
 }) {
   const unitLabel = distanceUnitLabel(unit)
   const vals    = buckets.map(b => toDisplayDistance(b.total, unit))
@@ -92,7 +103,33 @@ export function DistanceAreaChart({
   const hitLeft  = (i: number) => i === 0 ? 0 : (px(i - 1) + px(i)) / 2
   const hitRight = (i: number) => i === n - 1 ? plotW : (px(i) + px(i + 1)) / 2
 
-  return (
+  // ── Scrub: håll och dra över grafen → närmaste punkt väljs löpande ──
+  const scrubKey = useRef<string | null>(null)
+  function scrubAt(x: number) {
+    if (!onScrub || n === 0) return
+    const i = n === 1 ? 0 : Math.min(n - 1, Math.max(0, Math.round((x - 5) / ((plotW - 10) / (n - 1)))))
+    const key = buckets[i].key
+    if (key !== scrubKey.current) {
+      scrubKey.current = key
+      Haptics.selectionAsync().catch(() => {})
+      onScrub(key)
+    }
+  }
+  function scrubDone() {
+    scrubKey.current = null
+    onScrubEnd?.()
+  }
+  // Kort tryck-och-håll aktiverar — snabba svep lämnas åt scroll och pager
+  let scrubGesture = Gesture.Pan()
+    .enabled(!!onScrub)
+    .minDistance(0)
+    .activateAfterLongPress(180)
+    .onStart(e => { runOnJS(scrubAt)(e.x) })
+    .onUpdate(e => { runOnJS(scrubAt)(e.x) })
+    .onFinalize(() => { runOnJS(scrubDone)() })
+  if (pagerRef) scrubGesture = scrubGesture.blocksExternalGesture(pagerRef as never)
+
+  const chart = (
     <Svg width={width} height={height}>
       {/* Baslinje + rutnät med skaletiketter i högerkanten */}
       {[0, ...grids].map(v => (
@@ -117,6 +154,14 @@ export function DistanceAreaChart({
         <G>
           <SvgLine x1={px(selIdx)} x2={px(selIdx)} y1={TOP_PAD} y2={baseY} stroke="rgba(255,255,255,0.18)" strokeWidth={1} />
           <Circle cx={px(selIdx)} cy={py(vals[selIdx])} r={5} fill={color} stroke={CARD} strokeWidth={2} />
+          {/* Värdebubbla vid punkten — klämd så den inte hamnar utanför plotten */}
+          <SvgText
+            x={Math.min(plotW - 26, Math.max(26, px(selIdx)))}
+            y={Math.max(10, py(vals[selIdx]) - 13)}
+            fontSize={11} fontWeight="700" textAnchor="middle" fill="#fff"
+          >
+            {`${fmtV(vals[selIdx])} ${unitLabel}`}
+          </SvgText>
         </G>
       )}
 
@@ -144,5 +189,11 @@ export function DistanceAreaChart({
         />
       ))}
     </Svg>
+  )
+
+  return (
+    <GestureDetector gesture={scrubGesture}>
+      <View>{chart}</View>
+    </GestureDetector>
   )
 }

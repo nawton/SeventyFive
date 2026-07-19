@@ -102,6 +102,8 @@ export function CardioTab({
   const [cardioOffset, setCardioOffset]         = useState(0)
   const [cardioDetailsOpen, setCardioDetailsOpen] = useState(false)
   const [distDetailOpen, setDistDetailOpen]     = useState(false)
+  // Scrub på distansgrafen: punkten visas medan fingret ligger kvar
+  const [distScrubKey, setDistScrubKey]         = useState<string | null>(null)
 
   // Optimistisk radering — skalet äger listorna och databasanropen
   function performDeleteSessionRow(r: { key: string; name: string; workout?: CardioWorkout }) {
@@ -487,6 +489,10 @@ export function CardioTab({
                   width={STATS_SCREEN_W - 80}
                   height={170}
                   unit={unit}
+                  selectedKey={distScrubKey}
+                  onScrub={setDistScrubKey}
+                  onScrubEnd={() => setDistScrubKey(null)}
+                  pagerRef={pagerRef}
                 />
               </TouchableOpacity>
               </>
