@@ -237,72 +237,112 @@ function RingChart({ currentDay, completedDays }: { currentDay: number; complete
   )
 }
 
-// Svep vänster på en sessionsrad: hela ytan bakom är röd, kort svep fäller
-// ut soptunnan, drar man hela vägen raderas raden direkt (iOS Mail-stil)
-const SWIPE_BTN_W = 88
-const SWIPE_SPRING = { damping: 22, stiffness: 280, mass: 0.8 } as const
+// Svep vänster på en sessionsrad — samma tvåstegssystem som schemasidan:
+// steg 1 snäpper fram en rund soptunna, steg 2 expanderar den till en
+// "Ta bort"-pill, och full-svep utlöser samma bekräftelse som knappen.
+const SWIPE_SNAP_OPEN = 82
+const SWIPE_FULL = Math.round(STATS_SCREEN_W * 0.54)
+const SWIPE_BTN_H = 52
+const SWIPE_BTN_MAX_W = 170
+const SWIPE_SP = { damping: 22, stiffness: 180, mass: 1 } as const
 
-function SwipeRow({ children, onDelete, onFullSwipe, pagerRef }: {
+function SwipeRow({ children, name, onDelete, pagerRef }: {
   children: React.ReactNode
+  /** Passnamnet — används i bekräftelserutan */
+  name: string
   onDelete: () => void
-  onFullSwipe: () => void
   /** Flik-pagern måste vänta på radsvepet — annars byter man sida i stället */
   pagerRef?: React.RefObject<unknown>
 }) {
-  const x = useSharedValue(0)
-  const rowW = useSharedValue(1)
+  const tx       = useSharedValue(0)
+  const startTx  = useSharedValue(0)
+  const isOpen   = useSharedValue(0)
+  const overFull = useSharedValue(0)
 
-  function fireFull() {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {})
-    onFullSwipe()
+  function haptSnap() { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}) }
+  function haptFull() { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}) }
+
+  function requestDelete() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {})
+    Alert.alert('Vill du verkligen ta bort?', `"${name}" tas bort permanent. Det går inte att ångra.`, [
+      {
+        text: 'Avbryt', style: 'cancel',
+        onPress: () => { tx.value = withSpring(0, SWIPE_SP); isOpen.value = 0 },
+      },
+      { text: 'Ta bort', style: 'destructive', onPress: onDelete },
+    ])
   }
-  function closeRow() { x.value = withSpring(0, SWIPE_SPRING) }
 
   let pan = Gesture.Pan()
-    .activeOffsetX(-10)
+    .activeOffsetX([-8, 8])
     .failOffsetY([-12, 12])
+    .onBegin(() => { startTx.value = tx.value })
     .onUpdate(e => {
-      x.value = Math.min(0, e.translationX)
-    })
-    .onEnd(e => {
-      'worklet'
-      const w = rowW.value
-      const fullPull = e.translationX < -w * 0.55 ||
-        (e.velocityX < -1400 && e.translationX < -w * 0.3)
-      if (fullPull) {
-        x.value = withTiming(-w, { duration: 150 }, f => { if (f) runOnJS(fireFull)() })
-      } else if (e.translationX < -SWIPE_BTN_W * 0.6) {
-        x.value = withSpring(-SWIPE_BTN_W, SWIPE_SPRING)
-      } else {
-        x.value = withSpring(0, SWIPE_SPRING)
+      const raw = startTx.value + e.translationX
+      if (raw >= 0) { tx.value = 0; return }
+      // Motstånd bortom full-tröskeln
+      tx.value = raw < -SWIPE_FULL
+        ? -SWIPE_FULL - (Math.abs(raw) - SWIPE_FULL) * 0.18
+        : raw
+      const nowOver = Math.abs(tx.value) >= SWIPE_FULL ? 1 : 0
+      if (nowOver !== overFull.value) {
+        overFull.value = nowOver
+        if (nowOver === 1) runOnJS(haptFull)()
       }
+    })
+    .onEnd(() => {
+      const absX = Math.abs(tx.value)
+      if (absX >= SWIPE_FULL * 0.88) {
+        // Full svep → samma bekräftelse som knappen, raden stannar öppen
+        tx.value = withSpring(-SWIPE_SNAP_OPEN, SWIPE_SP)
+        isOpen.value = 1
+        runOnJS(requestDelete)()
+      } else if (tx.value > -(SWIPE_SNAP_OPEN * 0.45)) {
+        tx.value = withSpring(0, SWIPE_SP)
+        isOpen.value = 0
+      } else {
+        if (isOpen.value === 0) runOnJS(haptSnap)()
+        tx.value = withSpring(-SWIPE_SNAP_OPEN, SWIPE_SP)
+        isOpen.value = 1
+      }
+      overFull.value = 0
     })
   if (pagerRef) pan = pan.blocksExternalGesture(pagerRef as never)
 
-  const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }))
-  const bgStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(-x.value, [0, 28, SWIPE_BTN_W], [0, 0.6, 1], Extrapolation.CLAMP),
-  }))
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(-x.value, [0, SWIPE_BTN_W], [0.5, 1], Extrapolation.CLAMP) }],
+  const cardStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }))
+
+  // Cirkel → pill: bredden växer med draget, höjden är låst
+  const btnStyle = useAnimatedStyle(() => {
+    const dist = Math.abs(tx.value)
+    const w = dist <= SWIPE_SNAP_OPEN
+      ? interpolate(dist, [0, SWIPE_SNAP_OPEN], [0, SWIPE_BTN_H], Extrapolation.CLAMP)
+      : interpolate(dist, [SWIPE_SNAP_OPEN, SWIPE_FULL], [SWIPE_BTN_H, SWIPE_BTN_MAX_W], Extrapolation.CLAMP)
+    return {
+      width: w,
+      opacity: interpolate(dist, [0, SWIPE_SNAP_OPEN * 0.25], [0, 1], Extrapolation.CLAMP),
+    }
+  })
+
+  const labelWrapStyle = useAnimatedStyle(() => ({
+    width: interpolate(Math.abs(tx.value), [SWIPE_SNAP_OPEN + 14, SWIPE_SNAP_OPEN + 60], [0, 78], Extrapolation.CLAMP),
+    opacity: interpolate(Math.abs(tx.value), [SWIPE_SNAP_OPEN + 14, SWIPE_SNAP_OPEN + 56], [0, 1], Extrapolation.CLAMP),
+    overflow: 'hidden' as const,
   }))
 
   return (
-    <View onLayout={e => { rowW.value = e.nativeEvent.layout.width }}>
-      {/* Röd botten över hela ytan som friläggs */}
-      <Animated.View style={[s.swipeBg, bgStyle]}>
-        <TouchableOpacity
-          style={s.swipeBgHit}
-          activeOpacity={0.8}
-          onPress={() => { closeRow(); onDelete() }}
-        >
-          <Animated.View style={iconStyle}>
-            <Ionicons name="trash-outline" size={22} color="#fff" />
+    <View style={{ overflow: 'hidden' }}>
+      <View style={s.swipeBtnArea}>
+        <TouchableOpacity onPress={requestDelete} activeOpacity={0.78}>
+          <Animated.View style={[s.swipeBtn, btnStyle]}>
+            <Ionicons name="trash-outline" size={20} color="#fff" />
+            <Animated.View style={labelWrapStyle}>
+              <Text style={s.swipeBtnLabel} numberOfLines={1}>Ta bort</Text>
+            </Animated.View>
           </Animated.View>
         </TouchableOpacity>
-      </Animated.View>
+      </View>
       <GestureDetector gesture={pan}>
-        <Animated.View style={rowStyle}>{children}</Animated.View>
+        <Animated.View style={cardStyle}>{children}</Animated.View>
       </GestureDetector>
     </View>
   )
@@ -480,18 +520,6 @@ export default function StatsScreen() {
     }
   }
 
-  function deleteSessionRow(r: { key: string; name: string; workout?: CardioWorkout }) {
-    Alert.alert('Radera pass?', `"${r.name}" tas bort. Det går inte att ångra.`, [
-      { text: 'Avbryt', style: 'cancel' },
-      {
-        text: 'Radera', style: 'destructive',
-        onPress: () => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {})
-          performDeleteSessionRow(r)
-        },
-      },
-    ])
-  }
 
   useFocusEffect(useCallback(() => {
     loadStats()
@@ -1437,8 +1465,8 @@ export default function StatsScreen() {
                     >
                       {showMonth && <Text style={s.sessMonth}>{m}</Text>}
                       <SwipeRow
-                        onDelete={() => deleteSessionRow(r)}
-                        onFullSwipe={() => performDeleteSessionRow(r)}
+                        name={r.name}
+                        onDelete={() => performDeleteSessionRow(r)}
                         pagerRef={pagerRef}
                       >
                         <TouchableOpacity
@@ -2099,15 +2127,16 @@ const s = StyleSheet.create({
     paddingVertical: 13, paddingHorizontal: 14,
   },
   sessIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  swipeBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: RED, borderRadius: 18,
-    alignItems: 'flex-end', justifyContent: 'center',
+  swipeBtnArea: {
+    position: 'absolute', right: 12, top: 0, bottom: 0,
+    justifyContent: 'center', alignItems: 'flex-end',
   },
-  swipeBgHit: {
-    width: SWIPE_BTN_W, height: '100%',
-    alignItems: 'center', justifyContent: 'center',
+  swipeBtn: {
+    height: SWIPE_BTN_H, borderRadius: SWIPE_BTN_H / 2,
+    backgroundColor: RED, overflow: 'hidden',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
   },
+  swipeBtnLabel: { color: '#fff', fontSize: 14, fontWeight: '700', marginLeft: 4 },
   sessName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   sessValue: { color: LIME, fontSize: 23, fontFamily: 'Nunito_700Bold', marginTop: 1 },
   sessDate: { color: TEXT_SECONDARY, fontSize: 13, alignSelf: 'flex-end', marginBottom: 4 },
