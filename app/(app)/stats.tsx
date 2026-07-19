@@ -246,6 +246,7 @@ export default function StatsScreen() {
   const [days, setDays]                         = useState<DaySummary[]>([])
   const [currentDay, setCurrentDay]             = useState(1)
   const [startDate, setStartDate]               = useState<string | null>(null)
+  const [challengeId, setChallengeId]           = useState<string | null>(null)
   const [levelName, setLevelName]               = useState('')
   const [workouts, setWorkouts]                 = useState<CardioWorkout[]>([])
   const [strengthWorkouts, setStrengthWorkouts] = useState<StrengthWorkout[]>([])
@@ -381,6 +382,7 @@ export default function StatsScreen() {
       setCompletedSessions(sessionHistory)
       setLoadError(false)
       if (!challenge) return
+      setChallengeId(challenge.id)
       setStartDate(challenge.start_date)
       const day = calculateCurrentDay(challenge.start_date)
       setCurrentDay(day)
@@ -821,6 +823,7 @@ export default function StatsScreen() {
               days={days}
               startDate={startDate}
               currentDay={currentDay}
+              challengeId={challengeId}
               onPressDay={setSelectedDay}
               gestureRef={calSwipeRef}
               workouts={workouts}
@@ -1308,6 +1311,7 @@ export default function StatsScreen() {
           <DayWorkoutsModal
             day={selectedDay}
             startDate={startDate}
+            challengeId={challengeId}
             workouts={workouts}
             strengthWorkouts={strengthWorkouts}
             completedSessions={completedSessions}

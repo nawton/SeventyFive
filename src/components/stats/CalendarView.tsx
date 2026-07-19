@@ -81,11 +81,12 @@ function Legend() {
 export function CalendarView({
   days, startDate, currentDay, onPressDay, gestureRef,
   workouts = [], strengthWorkouts = [], completedSessions = [],
-  unit = 'metric', avatarUrl = null, onDeleteWorkout,
+  unit = 'metric', avatarUrl = null, onDeleteWorkout, challengeId = null,
 }: {
   days: DaySummary[]
   startDate: string | null
   currentDay: number
+  challengeId?: string | null
   onPressDay: (d: DaySummary) => void
   /** Skickas till omgivande pagers waitFor så månadssvepet vinner över flikbytet */
   gestureRef?: React.MutableRefObject<GestureType | undefined>
@@ -312,6 +313,7 @@ export function CalendarView({
               <DayWorkoutsModal
                 day={fsDay}
                 startDate={startDate}
+                challengeId={challengeId}
                 workouts={workouts}
                 strengthWorkouts={strengthWorkouts}
                 completedSessions={completedSessions}

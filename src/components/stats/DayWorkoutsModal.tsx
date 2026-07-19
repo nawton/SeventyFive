@@ -7,10 +7,10 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ORANGE, GREEN, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
+import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
-import type { DaySummary } from '@/services/dailyLog'
+import { getTasksForDay, type DaySummary, type TaskItem } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
 
@@ -47,9 +47,10 @@ function dayDate(startDate: string, dayNumber: number): Date {
   return d
 }
 
-export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, completedSessions, unit = 'metric', onClose, onSelectWorkout }: {
+export function DayWorkoutsModal({ day, startDate, challengeId, workouts, strengthWorkouts, completedSessions, unit = 'metric', onClose, onSelectWorkout }: {
   day: DaySummary
   startDate: string
+  challengeId?: string | null
   workouts: CardioWorkout[]
   strengthWorkouts: StrengthWorkout[]
   completedSessions?: CompletedSessionItem[]
@@ -69,6 +70,17 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, c
     sheetTop.value     = withSpring(SHEET_PARTIAL, SHEET_SP)
     backdropAnim.value = withTiming(1, { duration: 260 })
   }, [])
+
+  // Dagens fem uppgifter — så man ser exakt vad som missades en fälld dag
+  const [tasks, setTasks] = useState<TaskItem[] | null>(null)
+  useEffect(() => {
+    if (!challengeId || day.status === 'future') return
+    let active = true
+    getTasksForDay(challengeId, day.dayNumber)
+      .then(t => { if (active) setTasks(t) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [challengeId, day.dayNumber])
 
   function dismiss() {
     sheetTop.value     = withTiming(SCREEN_HEIGHT, { duration: 300 }, () => runOnJS(onClose)())
@@ -145,6 +157,36 @@ export function DayWorkoutsModal({ day, startDate, workouts, strengthWorkouts, c
             <Text style={s.sub}>Dag {day.dayNumber}</Text>
           </View>
         </GestureDetector>
+
+        {/* Dagens uppgifter — missade markeras i rött */}
+        {tasks && tasks.length > 0 && (
+          <View style={s.tasksWrap}>
+            <View style={s.tasksHead}>
+              <Text style={s.tasksTitle}>Dagens uppgifter</Text>
+              <Text style={[
+                s.tasksCount,
+                { color: tasks.every(t => t.completed) ? GREEN : day.status === 'failed' ? RED : TEXT_SECONDARY },
+              ]}>
+                {tasks.filter(t => t.completed).length} av {tasks.length}
+              </Text>
+            </View>
+            {tasks.map((t, i) => {
+              const missed = !t.completed && day.status === 'failed'
+              return (
+                <View key={t.completionId} style={[s.taskRow, i > 0 && s.taskRowBorder]}>
+                  <Ionicons
+                    name={t.completed ? 'checkmark-circle' : missed ? 'close-circle' : 'ellipse-outline'}
+                    size={20}
+                    color={t.completed ? GREEN : missed ? RED : 'rgba(255,255,255,0.25)'}
+                  />
+                  <Text style={[s.taskName, missed && { color: RED, fontWeight: '600' }]} numberOfLines={1}>
+                    {t.name}
+                  </Text>
+                </View>
+              )
+            })}
+          </View>
+        )}
 
         {!hasAny ? (
           <View style={s.empty}>
@@ -326,6 +368,22 @@ const s = StyleSheet.create({
     width: '100%',
   },
   empty:    { alignItems: 'center', paddingVertical: 24, gap: 10 },
+
+  tasksWrap: {
+    marginHorizontal: 20, marginBottom: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16,
+    paddingHorizontal: 14,
+  },
+  tasksHead: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 11,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.10)',
+  },
+  tasksTitle: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
+  tasksCount: { fontSize: 13, fontFamily: NUM_FONT_SEMI },
+  taskRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
+  taskRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.07)' },
+  taskName: { color: TEXT_PRIMARY, fontSize: 14, flex: 1 },
   emptyText:{ color: TEXT_SECONDARY, fontSize: 14 },
   item:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
   itemBorder:{ borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },

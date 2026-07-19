@@ -337,3 +337,25 @@ function toTaskItem(row: any): TaskItem {
     icon: row.task_templates?.icon ?? null,
   }
 }
+
+/** Uppgifterna för en historisk dag (read-only) — null om dagen saknar logg.
+ *  Används av kalenderns dagvy för att visa vilka utmaningar som missades. */
+export async function getTasksForDay(
+  challengeId: string,
+  dayNumber: number,
+): Promise<TaskItem[] | null> {
+  const { data: log } = await supabase
+    .from('daily_logs')
+    .select('id')
+    .eq('challenge_id', challengeId)
+    .eq('day_number', dayNumber)
+    .maybeSingle()
+  if (!log) return null
+
+  const { data } = await supabase
+    .from('task_completions')
+    .select('id, completed, task_template_id, details, task_templates(name, description, type, target_value, unit, icon)')
+    .eq('daily_log_id', log.id)
+  if (!data || data.length === 0) return null
+  return data.map(toTaskItem)
+}
