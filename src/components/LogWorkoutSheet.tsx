@@ -9,7 +9,7 @@ import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/th
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import type { Exercise } from '@/services/exercises'
 
-const CARDIO_GREEN = '#34C759'
+const CARDIO_BLUE = '#3FA7FF'
 
 type Step = 'choose' | 'cardio' | 'gymOverview'
 
@@ -140,19 +140,40 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
           <View style={s.chooseWrap}>
             <Text style={s.chooseSub}>Vad vill du logga?</Text>
             <View style={s.chooseCards}>
-              <TouchableOpacity style={s.chooseCard} onPress={() => setPickerOpen(true)} activeOpacity={0.85}>
-                <View style={[s.chooseIcon, { backgroundColor: ORANGE + '22' }]}>
-                  <Ionicons name="barbell" size={42} color={ORANGE} />
+              <TouchableOpacity
+                style={[s.chooseCard, { backgroundColor: ORANGE + '14' }]}
+                onPress={() => setPickerOpen(true)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="barbell" size={110} color={ORANGE} style={s.chooseWatermark} />
+                <View style={[s.chooseIcon, { backgroundColor: ORANGE }]}>
+                  <Ionicons name="barbell" size={26} color="#000" />
                 </View>
-                <Text style={s.chooseTitle}>Gym</Text>
-                <Text style={s.chooseHint}>Flera övningar i ett pass</Text>
+                <View style={s.chooseTextWrap}>
+                  <Text style={s.chooseTitle}>Gym</Text>
+                  <Text style={s.chooseHint}>Välj övningar och logga set</Text>
+                </View>
+                <View style={[s.chooseArrow, { backgroundColor: ORANGE + '26' }]}>
+                  <Ionicons name="arrow-forward" size={15} color={ORANGE} />
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity style={s.chooseCard} onPress={() => setStep('cardio')} activeOpacity={0.85}>
-                <View style={[s.chooseIcon, { backgroundColor: CARDIO_GREEN + '22' }]}>
-                  <Ionicons name="heart" size={42} color={CARDIO_GREEN} />
+
+              <TouchableOpacity
+                style={[s.chooseCard, { backgroundColor: CARDIO_BLUE + '14' }]}
+                onPress={() => setStep('cardio')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="fitness" size={110} color={CARDIO_BLUE} style={s.chooseWatermark} />
+                <View style={[s.chooseIcon, { backgroundColor: CARDIO_BLUE }]}>
+                  <Ionicons name="fitness" size={26} color="#fff" />
                 </View>
-                <Text style={s.chooseTitle}>Cardio</Text>
-                <Text style={s.chooseHint}>Ett eget pass med GPS</Text>
+                <View style={s.chooseTextWrap}>
+                  <Text style={s.chooseTitle}>Cardio</Text>
+                  <Text style={s.chooseHint}>GPS-pass med karta och tempo</Text>
+                </View>
+                <View style={[s.chooseArrow, { backgroundColor: CARDIO_BLUE + '26' }]}>
+                  <Ionicons name="arrow-forward" size={15} color={CARDIO_BLUE} />
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -163,8 +184,8 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
           <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
             {CARDIO_TYPES.map(t => (
               <TouchableOpacity key={t.key} style={s.cardioRow} onPress={() => onPickCardio(t.key, t.label)} activeOpacity={0.8}>
-                <View style={[s.cardioIcon, { backgroundColor: CARDIO_GREEN + '18' }]}>
-                  <Ionicons name={t.icon} size={22} color={CARDIO_GREEN} />
+                <View style={[s.cardioIcon, { backgroundColor: CARDIO_BLUE + '18' }]}>
+                  <Ionicons name={t.icon} size={22} color={CARDIO_BLUE} />
                 </View>
                 <Text style={s.cardioLabel}>{t.label}</Text>
                 <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
@@ -255,14 +276,27 @@ const s = StyleSheet.create({
 
   chooseWrap: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
   chooseSub: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', marginBottom: 26 },
-  chooseCards: { flexDirection: 'row', gap: 16 },
+  chooseCards: { gap: 14 },
   chooseCard: {
-    flex: 1, backgroundColor: CARD, borderRadius: 20, borderWidth: 1, borderColor: BORDER,
-    paddingVertical: 30, paddingHorizontal: 14, alignItems: 'center', gap: 10,
+    borderRadius: 24, padding: 20, minHeight: 150,
+    justifyContent: 'space-between', overflow: 'hidden',
   },
-  chooseIcon: { width: 78, height: 78, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  chooseTitle: { color: TEXT_PRIMARY, fontSize: 21, fontWeight: '800' },
-  chooseHint: { color: TEXT_SECONDARY, fontSize: 12, textAlign: 'center' },
+  chooseWatermark: {
+    position: 'absolute', right: -18, top: -14, opacity: 0.10,
+    transform: [{ rotate: '-12deg' }],
+  },
+  chooseIcon: {
+    width: 46, height: 46, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  chooseTextWrap: { gap: 3, marginTop: 14 },
+  chooseTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
+  chooseHint: { color: TEXT_SECONDARY, fontSize: 13 },
+  chooseArrow: {
+    position: 'absolute', right: 16, bottom: 16,
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   cardioRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
