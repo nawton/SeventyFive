@@ -12,7 +12,7 @@ import Animated, {
 import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
 import Svg, { Circle, Text as SvgText, Polyline, Polygon, Line as SvgLine, Rect, G } from 'react-native-svg'
-import { useFocusEffect } from 'expo-router'
+import { useFocusEffect, router } from 'expo-router'
 import Body from 'react-native-body-highlighter'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
@@ -248,6 +248,25 @@ const TABS: Array<{ key: StatsTab; label: string; icon: React.ComponentProps<typ
 
 export default function StatsScreen() {
   const onScrollShrink = useTabBarShrinkOnScroll()
+
+  // Dra ner för att uppdatera — samma overscroll-mönster som profilen
+  const [statsRefreshing, setStatsRefreshing] = useState(false)
+  const pullArmed = useRef(false)
+  function onTabScroll(e: { nativeEvent: { contentOffset: { y: number } } }) {
+    onScrollShrink(e as never)
+    if (e.nativeEvent.contentOffset.y < -70) pullArmed.current = true
+  }
+  function onTabScrollEnd() {
+    if (!pullArmed.current || statsRefreshing) return
+    pullArmed.current = false
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+    setStatsRefreshing(true)
+    const started = Date.now()
+    Promise.resolve(loadStats()).finally(() => {
+      const wait = Math.max(0, 1000 - (Date.now() - started))
+      setTimeout(() => setStatsRefreshing(false), wait)
+    })
+  }
   const [days, setDays]                         = useState<DaySummary[]>([])
   const [currentDay, setCurrentDay]             = useState(1)
   const [startDate, setStartDate]               = useState<string | null>(null)
@@ -855,6 +874,8 @@ export default function StatsScreen() {
         </View>
       </GestureDetector>
 
+      {statsRefreshing && <ActivityIndicator color={ORANGE} style={{ marginBottom: 8 }} />}
+
       <GHScrollView
         ref={pagerRef as never}
         horizontal
@@ -875,7 +896,8 @@ export default function StatsScreen() {
           style={{ width: STATS_SCREEN_W }}
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
-          onScroll={onScrollShrink}
+          onScroll={onTabScroll}
+          onScrollEndDrag={onTabScrollEnd}
           scrollEventThrottle={16}
         >
           <>
@@ -1019,9 +1041,22 @@ export default function StatsScreen() {
           style={{ width: STATS_SCREEN_W }}
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
-          onScroll={onScrollShrink}
+          onScroll={onTabScroll}
+          onScrollEndDrag={onTabScrollEnd}
           scrollEventThrottle={16}
         >
+          {workouts.length === 0 ? (
+            <View style={s.tabEmpty}>
+              <View style={s.tabEmptyIcon}><Ionicons name="walk-outline" size={30} color={ORANGE} /></View>
+              <Text style={s.tabEmptyTitle}>Inget cardio ännu</Text>
+              <Text style={s.tabEmptyText}>
+                Starta ett GPS-pass från schemat så vaknar statistiken: distans, tempo, grafer och rekord.
+              </Text>
+              <TouchableOpacity style={s.tabEmptyBtn} activeOpacity={0.85} onPress={() => router.push('/(app)/add')}>
+                <Text style={s.tabEmptyBtnText}>Till schemat</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
           <>
             {/* Periodfilter — dragbar glasslider som i Anpassning */}
             <GlassSegment
@@ -1366,6 +1401,7 @@ export default function StatsScreen() {
               </View>
             )}
           </>
+          )}
         </ScrollView>
 
         {/* ── GYMPASS ── */}
@@ -1373,9 +1409,22 @@ export default function StatsScreen() {
           style={{ width: STATS_SCREEN_W }}
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
-          onScroll={onScrollShrink}
+          onScroll={onTabScroll}
+          onScrollEndDrag={onTabScrollEnd}
           scrollEventThrottle={16}
         >
+          {strengthWorkouts.length === 0 && completedSessions.every(c => c.sessionType !== 'gym') ? (
+            <View style={s.tabEmpty}>
+              <View style={s.tabEmptyIcon}><Ionicons name="barbell-outline" size={30} color={ORANGE} /></View>
+              <Text style={s.tabEmptyTitle}>Inga gympass ännu</Text>
+              <Text style={s.tabEmptyText}>
+                Bocka av övningar i schemat och logga reps och vikt i passen — då fylls muskelkartan, volymen och rekorden på här.
+              </Text>
+              <TouchableOpacity style={s.tabEmptyBtn} activeOpacity={0.85} onPress={() => router.push('/(app)/add')}>
+                <Text style={s.tabEmptyBtnText}>Till schemat</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
           <>
             {/* Veckobläddring — samma pilnavigering som i Distans-detaljvyn */}
             <View style={s.weekNav}>
@@ -1697,6 +1746,7 @@ export default function StatsScreen() {
             )}
 
           </>
+          )}
         </ScrollView>
       </GHScrollView>
 
@@ -2035,6 +2085,19 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8,
   },
   modalTopTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
+
+  // Tomlägen för nya användare
+  tabEmpty: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 24, gap: 12 },
+  tabEmptyIcon: {
+    width: 64, height: 64, borderRadius: 32, backgroundColor: ORANGE + '18',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  tabEmptyTitle: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
+  tabEmptyText: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  tabEmptyBtn: {
+    backgroundColor: ORANGE, borderRadius: 12, paddingHorizontal: 22, paddingVertical: 11, marginTop: 4,
+  },
+  tabEmptyBtnText: { color: '#000', fontSize: 14, fontWeight: '700' },
   sessionsWeekLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', marginTop: 8 },
 
   // Week nav
