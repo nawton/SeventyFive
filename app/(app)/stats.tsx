@@ -23,6 +23,7 @@ import { getCompletedExerciseNamesForWeek, getCompletedSessionsHistory, type Com
 import { CalendarView } from '@/components/stats/CalendarView'
 import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
+import { GlassSegment } from '@/components/GlassSegment'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
@@ -744,28 +745,20 @@ export default function StatsScreen() {
           scrollEventThrottle={16}
         >
           <>
-            {/* Periodfilter */}
-            <View style={s.rangeRow}>
-              {([
+            {/* Periodfilter — dragbar glasslider som i Anpassning */}
+            <GlassSegment
+              value={cardioRange}
+              options={[
                 { key: 'week',  label: 'Vecka' },
                 { key: 'month', label: 'Månad' },
                 { key: 'all',   label: 'Totalt' },
-              ] as const).map(({ key, label }) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[s.rangePill, cardioRange === key && s.rangePillActive]}
-                  onPress={() => setCardioRange(key)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[s.rangePillText, cardioRange === key && s.rangePillTextActive]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+              ]}
+              onChange={setCardioRange}
+            />
 
             {/* Träningsdetaljer — Apple-stil, inga boxar */}
-            <View style={s.card}>
+            <Text style={s.sectionHead}>Träningsdetaljer</Text>
+            <View style={[s.card, s.cardPlain]}>
               <View>
                 <View style={[s.dtlRow, { paddingTop: 0 }]}>
                   <View style={s.dtlCell}>
@@ -827,9 +820,10 @@ export default function StatsScreen() {
               const py = (v: number) => 12 + ((v - minV) / span) * (CH_H - 24)
               const pts = paceVals.map((v, i) => `${px(i)},${py(v)}`).join(' ')
               return (
-                <View style={s.card}>
-                  <Text style={s.cardTitle}>Tempoutveckling</Text>
-                  <Text style={s.cardSub}>snitt min/{unitLabel} per vecka · snabbare är högre upp</Text>
+                <>
+                <Text style={s.sectionHead}>Tempoutveckling</Text>
+                <View style={[s.card, s.cardPlain]}>
+                  <Text style={[s.cardSub, { marginTop: 0 }]}>snitt min/{unitLabel} per vecka · snabbare är högre upp</Text>
                   <View style={s.paceChartRow}>
                     <View style={s.paceAxis}>
                       <Text style={s.paceAxisLbl}>{fmtPace(minV)}</Text>
@@ -856,13 +850,15 @@ export default function StatsScreen() {
                     ))}
                   </View>
                 </View>
+                </>
               )
             })()}
 
             {/* Stacked bar chart */}
             {weeklyBars.length > 0 && (
-              <View style={s.card}>
-                <Text style={s.cardTitle}>{unit === 'imperial' ? 'Miles' : 'Km'} per vecka</Text>
+              <>
+              <Text style={s.sectionHead}>{unit === 'imperial' ? 'Miles' : 'Km'} per vecka</Text>
+              <View style={[s.card, s.cardPlain]}>
                 <View style={s.barChart}>
                   {weeklyBars.map((bar, i) => (
                     <View key={i} style={s.barRow}>
@@ -909,12 +905,14 @@ export default function StatsScreen() {
                   ))}
                 </View>
               </View>
+              </>
             )}
 
             {/* Cardiorekord (all-time) */}
             {hasRecords && (
-              <View style={s.card}>
-                <Text style={s.cardTitle}>Cardiorekord</Text>
+              <>
+              <Text style={s.sectionHead}>Cardiorekord</Text>
+              <View style={[s.card, s.cardPlain]}>
                 <View style={s.recGrid}>
                   {([
                     {
@@ -946,11 +944,13 @@ export default function StatsScreen() {
                   ))}
                 </View>
               </View>
+              </>
             )}
 
             {/* Sessioner — blandad lista i Apple Fitness-stil */}
             {sessionRows.length > 0 ? (
               <View style={{ gap: 10 }}>
+                <Text style={[s.sectionHead, { marginBottom: -14 }]}>Sessioner</Text>
                 {sessionRows.map((r, i) => {
                   const m = monthLabel(r.dateStr)
                   const showMonth = i === 0 || monthLabel(sessionRows[i - 1].dateStr) !== m
@@ -1198,6 +1198,12 @@ const s = StyleSheet.create({
   statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '500', textAlign: 'center' },
 
   card:      { backgroundColor: CARD, borderRadius: 20, borderWidth: 1, borderColor: BORDER, padding: 20, gap: 14 },
+  // Cardio-fliken: rubriken utanför kortet (Apple Fitness) och kortet utan ram
+  cardPlain: { borderWidth: 0 },
+  sectionHead: {
+    color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
+    marginTop: 6, marginBottom: -6,
+  },
   cardTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
   cardSub:   { color: TEXT_SECONDARY, fontSize: 12, marginTop: -8 },
 
@@ -1210,15 +1216,6 @@ const s = StyleSheet.create({
   dtlSep:  { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
 
   // Periodfilter (cardio-fliken)
-  rangeRow: { flexDirection: 'row', gap: 8 },
-  rangePill: {
-    flex: 1, paddingVertical: 8, borderRadius: 18, alignItems: 'center',
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
-  },
-  rangePillActive:     { backgroundColor: BLUE + '22', borderColor: BLUE },
-  rangePillText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  rangePillTextActive: { color: BLUE },
-
   // Tempoutveckling
   paceChartRow: { flexDirection: 'row', alignItems: 'stretch', gap: 6 },
   paceAxis:     { justifyContent: 'space-between', paddingVertical: 6 },
