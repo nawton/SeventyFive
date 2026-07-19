@@ -60,8 +60,9 @@ function getWeekBounds(offset: number): { start: string; end: string; label: str
   }
 }
 
-/** Nästa milstolpe utifrån AVKLARADE dagar — missade dagar räknas inte som
- *  framsteg, och "Halvvägs" ligger på riktiga mitten (dag 38 av 75). */
+/** Nästa milstolpe utifrån dagarna bakom en (dag 19 = 18 avklarade).
+ *  Databasens logg-räknare funkar inte här: den som börjat mitt i utmaningen
+ *  saknar loggar för dagarna innan appen. "Halvvägs" på riktiga mitten (38). */
 function nextMilestone(completed: number): { day: number; label: string; daysLeft: number } | null {
   const stones = [
     { day: 7,  label: 'Första veckan klar!' },
@@ -482,7 +483,7 @@ export default function StatsScreen() {
   const avgPace    = pacedKm > 0 ? fmtPace(paceForUnit(pacedSecs / pacedKm, unit)) : '--:--'
   const bestPace   = bestPaceSec === Infinity ? '--:--' : fmtPace(paceForUnit(bestPaceSec, unit))
 
-  const milestone   = nextMilestone(completedDays)
+  const milestone   = nextMilestone(Math.max(0, currentDay - 1))
   const isEarlyDays = currentDay <= 7
   // Tempoutvecklingen räknas alltid på ALLA pass, oavsett periodfilter
   const weeklyBars  = buildWeeklyBars(workouts)
