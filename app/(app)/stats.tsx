@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, TouchableOpacity, Modal, Dimensions, Alert,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   useSharedValue, useAnimatedStyle, interpolate, runOnJS, Extrapolation,
@@ -248,6 +248,8 @@ const TABS: Array<{ key: StatsTab; label: string; icon: React.ComponentProps<typ
 
 export default function StatsScreen() {
   const onScrollShrink = useTabBarShrinkOnScroll()
+  // SafeAreaView rapporterar noll-insets inne i RN-modaler — använd explicit padding
+  const insets = useSafeAreaInsets()
 
   // Dra ner för att uppdatera — samma overscroll-mönster som profilen
   const [statsRefreshing, setStatsRefreshing] = useState(false)
@@ -1747,8 +1749,8 @@ export default function StatsScreen() {
 
       {/* Genomförda pass — egen vy i stället för att listan ligger på fliken */}
       <Modal visible={sessionsOpen} animationType="slide" onRequestClose={() => setSessionsOpen(false)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
-          <View style={s.modalTopBar}>
+        <View style={{ flex: 1, backgroundColor: BG }}>
+          <View style={[s.modalTopBar, { paddingTop: insets.top + 8 }]}>
             <GlassCircleButton icon="chevron-back" onPress={() => setSessionsOpen(false)} />
             <Text style={s.modalTopTitle}>Genomförda pass</Text>
             <View style={{ width: 44 }} />
@@ -1803,7 +1805,7 @@ export default function StatsScreen() {
               </View>
             )}
           </ScrollView>
-        </SafeAreaView>
+        </View>
 
         <Modal visible={!!gymDetail} animationType="slide" onRequestClose={() => setGymDetail(null)}>
           {gymDetail && (
@@ -1835,8 +1837,8 @@ export default function StatsScreen() {
 
       {/* Alla cardiodetaljer för vald period */}
       <Modal visible={cardioDetailsOpen} animationType="slide" onRequestClose={() => setCardioDetailsOpen(false)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
-          <View style={s.modalTopBar}>
+        <View style={{ flex: 1, backgroundColor: BG }}>
+          <View style={[s.modalTopBar, { paddingTop: insets.top + 8 }]}>
             <GlassCircleButton icon="chevron-back" onPress={() => setCardioDetailsOpen(false)} />
             <Text style={s.modalTopTitle}>Träningsdetaljer</Text>
             <View style={{ width: 44 }} />
@@ -1867,7 +1869,7 @@ export default function StatsScreen() {
               ))}
             </View>
           </ScrollView>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       <VolumeDetailModal
