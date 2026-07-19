@@ -1178,7 +1178,7 @@ export default function StatsScreen() {
                   <Text style={[s.dtlVal, { color: ORANGE }]}>{weekGymSessions.length}</Text>
                 </View>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Muskelgrupper</Text>
+                  <Text style={s.dtlLbl} numberOfLines={1}>Muskler</Text>
                   <Text style={[s.dtlVal, { color: PURPLE }]}>{weekMuscleFreq.size}</Text>
                 </View>
                 <View style={s.dtlCell}>
