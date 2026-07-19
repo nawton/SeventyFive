@@ -31,6 +31,26 @@ export function getWeekBounds(offset: number): { start: string; end: string; lab
   }
 }
 
+export /** Nästa milstolpe utifrån dagarna bakom en (dag 19 = 18 avklarade).
+ *  Databasens logg-räknare funkar inte här: den som börjat mitt i utmaningen
+ *  saknar loggar för dagarna innan appen. "Halvvägs" på riktiga mitten (38). */
+function nextMilestone(completed: number): { day: number; label: string; daysLeft: number } | null {
+  const stones = [
+    { day: 7,  label: 'Första veckan klar!' },
+    { day: 10, label: '10 dagar klara!' },
+    { day: 19, label: 'En fjärdedel klar!' },
+    { day: 25, label: 'En tredjedel klar!' },
+    { day: 38, label: 'Halvvägs!' },
+    { day: 50, label: 'Två tredjedelar klara!' },
+    { day: 60, label: '60 dagar klara!' },
+    { day: 68, label: 'Sista veckan!' },
+    { day: 75, label: 'MÅLET: 75 dagar!' },
+  ]
+  const next = stones.find(s => s.day > completed)
+  if (!next) return null
+  return { ...next, daysLeft: next.day - completed }
+}
+
 export function monthLabel(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })
 }
