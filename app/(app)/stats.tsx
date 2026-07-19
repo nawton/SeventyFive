@@ -537,7 +537,8 @@ export default function StatsScreen() {
       setUserId(uid)
       const [challenge, cardioWos, strengthWos, sessionHistory] = await Promise.all([
         getActiveChallenge(uid),
-        getCardioWorkouts(uid, 60),
+        // Rekord och detaljvyer räknar på hela historiken — snåla inte här
+        getCardioWorkouts(uid, 1000),
         getStrengthWorkouts(uid, 1000),
         getCompletedSessionsHistory(uid).catch(() => [] as CompletedSessionItem[]),
       ])
