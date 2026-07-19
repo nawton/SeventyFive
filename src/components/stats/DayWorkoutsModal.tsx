@@ -73,8 +73,30 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
     snapState.value    = 1
   }, [])
 
-  // Dagens fem uppgifter — så man ser exakt vad som missades en fälld dag
+  // Dagens fem uppgifter — så man ser exakt vad som missades en fälld dag.
+  // Kortet kan svepas bort i sidled om man bara vill se träningspassen.
   const [tasks, setTasks] = useState<TaskItem[] | null>(null)
+  const [tasksHidden, setTasksHidden] = useState(false)
+  const tasksX = useSharedValue(0)
+  const tasksPan = Gesture.Pan()
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-10, 10])
+    .onUpdate(e => { tasksX.value = e.translationX })
+    .onEnd(e => {
+      if (Math.abs(e.translationX) > SCREEN_WIDTH * 0.3 || Math.abs(e.velocityX) > 800) {
+        tasksX.value = withTiming(
+          Math.sign(e.translationX || 1) * SCREEN_WIDTH,
+          { duration: 180 },
+          () => runOnJS(setTasksHidden)(true),
+        )
+      } else {
+        tasksX.value = withSpring(0, SHEET_SP)
+      }
+    })
+  const tasksAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tasksX.value }],
+    opacity: 1 - Math.abs(tasksX.value) / SCREEN_WIDTH,
+  }))
   useEffect(() => {
     if (!challengeId || day.status === 'future') return
     let active = true
@@ -160,9 +182,10 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
           </View>
         </GestureDetector>
 
-        {/* Dagens uppgifter — missade markeras i rött */}
-        {tasks && tasks.length > 0 && (
-          <View style={s.tasksWrap}>
+        {/* Dagens uppgifter — missade markeras i rött, svep i sidled för att ta bort */}
+        {tasks && tasks.length > 0 && !tasksHidden && (
+          <GestureDetector gesture={tasksPan}>
+          <Animated.View style={[s.tasksWrap, tasksAnimStyle]}>
             <View style={s.tasksHead}>
               <Text style={s.tasksTitle}>Dagens uppgifter</Text>
               <Text style={[
@@ -187,7 +210,8 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                 </View>
               )
             })}
-          </View>
+          </Animated.View>
+          </GestureDetector>
         )}
 
         {!hasAny ? (
