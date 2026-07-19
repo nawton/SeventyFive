@@ -974,6 +974,20 @@ export default function StatsScreen() {
     )
   }
 
+  // Gympassdetaljen renderas i TVÅ modal-värdar (inuti Genomförda pass och på
+  // rotnivå) eftersom iOS bara kan presentera en modal ovanpå sin egen ägare —
+  // men själva vyn definieras en enda gång här
+  const gymDetailView = gymDetail && (
+    <GymSummaryView
+      name={gymDetail.name}
+      dateLabel={gymDetail.dateLabel}
+      logged={gymDetail.logged}
+      plannedNames={gymDetail.planned}
+      allWorkouts={strengthWorkouts}
+      onClose={() => setGymDetail(null)}
+    />
+  )
+
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.header}>
@@ -1947,31 +1961,12 @@ export default function StatsScreen() {
         </View>
 
         <Modal visible={!!gymDetail} animationType="slide" onRequestClose={() => setGymDetail(null)}>
-          {gymDetail && (
-            <GymSummaryView
-              name={gymDetail.name}
-              dateLabel={gymDetail.dateLabel}
-              logged={gymDetail.logged}
-              plannedNames={gymDetail.planned}
-              allWorkouts={strengthWorkouts}
-              onClose={() => setGymDetail(null)}
-            />
-          )}
+          {gymDetailView}
         </Modal>
       </Modal>
 
-      {/* Gympassdetalj öppnad utanför Genomförda pass (t.ex. från Styrkerekord) */}
       <Modal visible={!!gymDetail && !sessionsOpen} animationType="slide" onRequestClose={() => setGymDetail(null)}>
-        {gymDetail && (
-          <GymSummaryView
-            name={gymDetail.name}
-            dateLabel={gymDetail.dateLabel}
-            logged={gymDetail.logged}
-            plannedNames={gymDetail.planned}
-            allWorkouts={strengthWorkouts}
-            onClose={() => setGymDetail(null)}
-          />
-        )}
+        {gymDetailView}
       </Modal>
 
       {/* Alla cardiodetaljer för vald period */}
