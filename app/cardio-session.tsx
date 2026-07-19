@@ -513,7 +513,6 @@ const s = StyleSheet.create({
   heroIcon: {
     width: 76, height: 76, borderRadius: 38,
     backgroundColor: CARDIO_BLUE + '1C',
-    borderWidth: 1.5, borderColor: CARDIO_BLUE + '50',
     alignItems: 'center', justifyContent: 'center',
   },
   heroTitle:   { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800', textAlign: 'center' },
@@ -537,17 +536,15 @@ const s = StyleSheet.create({
   },
   card: {
     backgroundColor: CARD, borderRadius: 18,
-    borderWidth: 1, borderColor: BORDER,
     padding: 16, gap: 12,
   },
 
   goalTile: {
     alignItems: 'center', gap: 8,
     backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1.5, borderColor: BORDER,
     paddingVertical: 18,
   },
-  goalTileActive: { borderColor: CARDIO_BLUE + '70', backgroundColor: CARDIO_BLUE + '0C' },
+  goalTileActive: { backgroundColor: CARDIO_BLUE + '14' },
   goalTileLabel:  { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
   goalTileValue:  { color: TEXT_SECONDARY, fontSize: 38, fontFamily: NUM_FONT, textAlign: 'center', lineHeight: 42 },
   goalTileUnit:   { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', marginTop: -2 },
@@ -555,9 +552,9 @@ const s = StyleSheet.create({
   presetChip: {
     minWidth: 34, alignItems: 'center',
     paddingHorizontal: 8, paddingVertical: 5, borderRadius: 14,
-    borderWidth: 1.5, borderColor: BORDER,
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
-  presetChipActive: { borderColor: CARDIO_BLUE, backgroundColor: CARDIO_BLUE + '1C' },
+  presetChipActive: { backgroundColor: CARDIO_BLUE + '2E' },
   presetText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
   presetTextActive: { color: CARDIO_BLUE },
 
@@ -569,20 +566,18 @@ const s = StyleSheet.create({
   editCard: {
     width: '100%', maxWidth: 320,
     backgroundColor: CARD, borderRadius: 22,
-    borderWidth: 1, borderColor: BORDER,
     padding: 22, gap: 14,
   },
   editTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800', textAlign: 'center' },
   editInput: {
     backgroundColor: BG, borderRadius: 14,
-    borderWidth: 1, borderColor: CARDIO_BLUE + '55',
     color: TEXT_PRIMARY, fontSize: 26, fontFamily: NUM_FONT, textAlign: 'center',
     paddingVertical: 14,
   },
   editBtnRow:   { flexDirection: 'row', gap: 10 },
   editClearBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 13,
-    borderRadius: 14, borderWidth: 1, borderColor: BORDER,
+    borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.07)',
   },
   editClearText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
   editSaveBtn: {
@@ -600,9 +595,9 @@ const s = StyleSheet.create({
   unitRow: { flexDirection: 'row', gap: 8 },
   unitBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 12,
-    borderRadius: 14, borderWidth: 1.5, borderColor: BORDER,
+    borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.06)',
   },
-  unitBtnActive:     { borderColor: CARDIO_BLUE, backgroundColor: CARDIO_BLUE + '18' },
+  unitBtnActive:     { backgroundColor: CARDIO_BLUE + '2A' },
   unitBtnText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
   unitBtnTextActive: { color: CARDIO_BLUE, fontWeight: '700' },
 
