@@ -2,14 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, TouchableOpacity, Modal, Dimensions, Alert,
+  Animated as RNAnimated,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   useSharedValue, useAnimatedStyle, interpolate, runOnJS, Extrapolation,
-  withTiming, Easing,
+  withTiming, Easing, LinearTransition, FadeOut,
 } from 'react-native-reanimated'
-import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
+import { Gesture, GestureDetector, Swipeable, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
 import Svg, { Circle, Text as SvgText, Polyline, Polygon, Line as SvgLine, Rect, G } from 'react-native-svg'
 import { useFocusEffect, router } from 'expo-router'
@@ -19,7 +20,7 @@ import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getAllDays, getStreak, type DaySummary } from '@/services/dailyLog'
 import { getMusclesForName, MUSCLE_GROUPS_6, type Slug } from '@/lib/muscles'
 import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
-import { getCompletedExerciseNamesForWeek, getCompletedExerciseNamesByDay, getCompletedSessionsHistory, type CompletedSessionItem } from '@/services/workoutSchedule'
+import { getCompletedExerciseNamesForWeek, getCompletedExerciseNamesByDay, getCompletedSessionsHistory, deleteCompletion, type CompletedSessionItem } from '@/services/workoutSchedule'
 import { CalendarView } from '@/components/stats/CalendarView'
 import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
@@ -237,6 +238,40 @@ function RingChart({ currentDay, completedDays }: { currentDay: number; complete
   )
 }
 
+// Svep vänster på en sessionsrad → röd raderingsknapp som växer fram mjukt
+function SwipeRow({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
+  const ref = useRef<Swipeable>(null)
+  return (
+    <Swipeable
+      ref={ref}
+      friction={2}
+      rightThreshold={40}
+      overshootRight={false}
+      renderRightActions={(progress: RNAnimated.AnimatedInterpolation<number>) => (
+        <RNAnimated.View
+          style={[
+            s.swipeDeleteWrap,
+            {
+              opacity: progress.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0.6, 1] }),
+              transform: [{ scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1], extrapolate: 'clamp' }) }],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={s.swipeDeleteBtn}
+            activeOpacity={0.8}
+            onPress={() => { ref.current?.close(); onDelete() }}
+          >
+            <Ionicons name="trash-outline" size={20} color="#fff" />
+          </TouchableOpacity>
+        </RNAnimated.View>
+      )}
+    >
+      {children}
+    </Swipeable>
+  )
+}
+
 // ─── StatsScreen ───────────────────────────────────────────────────────────────
 
 type StatsTab = 'overview' | 'cardio' | 'gympass'
@@ -394,6 +429,29 @@ export default function StatsScreen() {
   const [dayIdx, setDayIdx]                     = useState<number | null>(null)
   const [weekLoading, setWeekLoading]           = useState(false)
   const [weekGymSessions, setWeekGymSessions]   = useState<GymSession[]>([])
+
+  // Svep-radering i sessionslistan: GPS-pass tas bort helt, avbockade
+  // schemapass får sin bock borttagen
+  function deleteSessionRow(r: { key: string; name: string; workout?: CardioWorkout }) {
+    Alert.alert('Radera pass?', `"${r.name}" tas bort. Det går inte att ångra.`, [
+      { text: 'Avbryt', style: 'cancel' },
+      {
+        text: 'Radera', style: 'destructive',
+        onPress: () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {})
+          if (r.workout) {
+            const id = r.workout.id
+            setWorkouts(prev => prev.filter(w => w.id !== id))
+            deleteCardioWorkout(id).catch(() => {})
+          } else if (r.key.startsWith('g:')) {
+            const id = r.key.slice(2)
+            setCompletedSessions(prev => prev.filter(c => c.id !== id))
+            deleteCompletion(id).catch(() => {})
+          }
+        },
+      },
+    ])
+  }
 
   useFocusEffect(useCallback(() => {
     loadStats()
@@ -1331,24 +1389,31 @@ export default function StatsScreen() {
                   const m = monthLabel(r.dateStr)
                   const showMonth = i === 0 || monthLabel(sessionRows[i - 1].dateStr) !== m
                   return (
-                    <View key={r.key} style={{ gap: 10 }}>
+                    <Animated.View
+                      key={r.key}
+                      style={{ gap: 10 }}
+                      layout={LinearTransition.duration(220)}
+                      exiting={FadeOut.duration(160)}
+                    >
                       {showMonth && <Text style={s.sessMonth}>{m}</Text>}
-                      <TouchableOpacity
-                        style={s.sessRow}
-                        activeOpacity={0.7}
-                        onPress={r.workout ? () => setSelectedWorkout(r.workout!) : undefined}
-                        disabled={!r.workout}
-                      >
-                        <View style={[s.sessIcon, { backgroundColor: r.color + '1E' }]}>
-                          <Ionicons name={r.icon} size={20} color={r.color} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={s.sessName} numberOfLines={1}>{r.name}</Text>
-                          <Text style={s.sessValue}>{r.value}</Text>
-                        </View>
-                        <Text style={s.sessDate}>{sessDateLabel(r.dateStr)}</Text>
-                      </TouchableOpacity>
-                    </View>
+                      <SwipeRow onDelete={() => deleteSessionRow(r)}>
+                        <TouchableOpacity
+                          style={s.sessRow}
+                          activeOpacity={0.7}
+                          onPress={r.workout ? () => setSelectedWorkout(r.workout!) : undefined}
+                          disabled={!r.workout}
+                        >
+                          <View style={[s.sessIcon, { backgroundColor: r.color + '1E' }]}>
+                            <Ionicons name={r.icon} size={20} color={r.color} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={s.sessName} numberOfLines={1}>{r.name}</Text>
+                            <Text style={s.sessValue}>{r.value}</Text>
+                          </View>
+                          <Text style={s.sessDate}>{sessDateLabel(r.dateStr)}</Text>
+                        </TouchableOpacity>
+                      </SwipeRow>
+                    </Animated.View>
                   )
                 })}
               </View>
@@ -1990,6 +2055,12 @@ const s = StyleSheet.create({
     paddingVertical: 13, paddingHorizontal: 14,
   },
   sessIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  swipeDeleteWrap: { justifyContent: 'center', paddingLeft: 10 },
+  swipeDeleteBtn: {
+    width: 56, height: '100%', minHeight: 64,
+    borderRadius: 18, backgroundColor: RED,
+    alignItems: 'center', justifyContent: 'center',
+  },
   sessName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   sessValue: { color: LIME, fontSize: 23, fontFamily: 'Nunito_700Bold', marginTop: 1 },
   sessDate: { color: TEXT_SECONDARY, fontSize: 13, alignSelf: 'flex-end', marginBottom: 4 },

@@ -591,3 +591,13 @@ export async function getCompletedExerciseNamesBetween(
     .map(c => nameById.get(c.exercise_id as string))
     .filter((n): n is string => !!n)
 }
+
+/** Tar bort en avbockning (workout_completions-rad) via dess id —
+ *  används av svep-för-att-radera i sessionslistan. */
+export async function deleteCompletion(completionId: string): Promise<void> {
+  const { error } = await supabase
+    .from('workout_completions')
+    .delete()
+    .eq('id', completionId)
+  if (error) throw error
+}
