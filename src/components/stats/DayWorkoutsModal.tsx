@@ -46,6 +46,70 @@ function dayDate(startDate: string, dayNumber: number): Date {
   return d
 }
 
+// Dagens uppgifter — ligger som första element i träningslistan så kortet
+// scrollar bort naturligt; kan även svepas bort i sidled
+function TasksCard({ tasks, failedDay, onDismiss, onHeight }: {
+  tasks: TaskItem[]
+  failedDay: boolean
+  onDismiss: () => void
+  onHeight?: (h: number) => void
+}) {
+  const x = useSharedValue(0)
+  const pan = Gesture.Pan()
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-10, 10])
+    .onUpdate(e => { x.value = e.translationX })
+    .onEnd(e => {
+      if (Math.abs(e.translationX) > SCREEN_WIDTH * 0.3 || Math.abs(e.velocityX) > 800) {
+        x.value = withTiming(
+          Math.sign(e.translationX || 1) * SCREEN_WIDTH,
+          { duration: 180 },
+          () => runOnJS(onDismiss)(),
+        )
+      } else {
+        x.value = withSpring(0, SHEET_SP)
+      }
+    })
+  const anim = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value }],
+    opacity: 1 - Math.abs(x.value) / SCREEN_WIDTH,
+  }))
+
+  return (
+    <GestureDetector gesture={pan}>
+      <Animated.View
+        style={[s.tasksWrap, anim]}
+        onLayout={e => onHeight?.(e.nativeEvent.layout.height)}
+      >
+        <View style={s.tasksHead}>
+          <Text style={s.tasksTitle}>Dagens uppgifter</Text>
+          <Text style={[
+            s.tasksCount,
+            { color: tasks.every(t => t.completed) ? GREEN : failedDay ? RED : TEXT_SECONDARY },
+          ]}>
+            {tasks.filter(t => t.completed).length} av {tasks.length}
+          </Text>
+        </View>
+        {tasks.map((t, i) => {
+          const missed = !t.completed && failedDay
+          return (
+            <View key={t.completionId} style={[s.taskRow, i > 0 && s.taskRowBorder]}>
+              <Ionicons
+                name={t.completed ? 'checkmark-circle' : missed ? 'close-circle' : 'ellipse-outline'}
+                size={20}
+                color={t.completed ? GREEN : missed ? RED : 'rgba(255,255,255,0.25)'}
+              />
+              <Text style={[s.taskName, missed && { color: RED, fontWeight: '600' }]} numberOfLines={1}>
+                {t.name}
+              </Text>
+            </View>
+          )
+        })}
+      </Animated.View>
+    </GestureDetector>
+  )
+}
+
 export function DayWorkoutsModal({ day, startDate, challengeId, workouts, strengthWorkouts, completedSessions, unit = 'metric', onClose, onSelectWorkout }: {
   day: DaySummary
   startDate: string
@@ -71,44 +135,14 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
   }, [])
 
   // Dagens fem uppgifter — så man ser exakt vad som missades en fälld dag.
-  // Kortet kan svepas bort i sidled om man bara vill se träningspassen.
+  // Kortet ligger först i träningslistan (scrollar bort naturligt) och
+  // kan svepas bort i sidled; extra scrollhöjd garanterar att det alltid
+  // går att dra upp listan över kortet, även med få övningar.
   const [tasks, setTasks] = useState<TaskItem[] | null>(null)
   const [tasksHidden, setTasksHidden] = useState(false)
-  const tasksX = useSharedValue(0)
-  const tasksPan = Gesture.Pan()
-    .activeOffsetX([-12, 12])
-    .failOffsetY([-10, 10])
-    .onUpdate(e => { tasksX.value = e.translationX })
-    .onEnd(e => {
-      if (Math.abs(e.translationX) > SCREEN_WIDTH * 0.3 || Math.abs(e.velocityX) > 800) {
-        tasksX.value = withTiming(
-          Math.sign(e.translationX || 1) * SCREEN_WIDTH,
-          { duration: 180 },
-          () => runOnJS(setTasksHidden)(true),
-        )
-      } else {
-        tasksX.value = withSpring(0, SHEET_SP)
-      }
-    })
-  const tasksAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: tasksX.value }],
-    opacity: 1 - Math.abs(tasksX.value) / SCREEN_WIDTH,
-  }))
-
-  // Kortet följer scrollen direkt (ingen på/av-animation = inget hack):
-  // listan glider upp ÖVER uppgifterna, och extra scrollhöjd garanterar att
-  // det alltid går även med få övningar
   const [tasksH, setTasksH] = useState(0)
-  const listY = useSharedValue(0)
-  function onListScroll(e: { nativeEvent: { contentOffset: { y: number } } }) {
-    listY.value = e.nativeEvent.contentOffset.y
-  }
-  const tasksOuterStyle = useAnimatedStyle(() => {
-    if (tasksH <= 0) return {}
-    const full = tasksH + 12
-    const h = Math.max(0, full - Math.max(0, listY.value))
-    return { height: h, opacity: h / full }
-  })
+  const [listVpH, setListVpH] = useState(0)
+  const showTasks = !!tasks && tasks.length > 0 && !tasksHidden
   useEffect(() => {
     if (!challengeId || day.status === 'future') return
     let active = true
@@ -185,49 +219,22 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
           </View>
         </GestureDetector>
 
-        {/* Dagens uppgifter — missade markeras i rött, svep i sidled för att ta
-            bort, kollapsar när man scrollar i träningslistan */}
-        {tasks && tasks.length > 0 && !tasksHidden && (
-          <Animated.View style={[{ overflow: 'hidden' }, tasksOuterStyle]}>
-          <GestureDetector gesture={tasksPan}>
-          <Animated.View
-            style={[s.tasksWrap, tasksAnimStyle]}
-            onLayout={e => setTasksH(e.nativeEvent.layout.height)}
-          >
-            <View style={s.tasksHead}>
-              <Text style={s.tasksTitle}>Dagens uppgifter</Text>
-              <Text style={[
-                s.tasksCount,
-                { color: tasks.every(t => t.completed) ? GREEN : day.status === 'failed' ? RED : TEXT_SECONDARY },
-              ]}>
-                {tasks.filter(t => t.completed).length} av {tasks.length}
-              </Text>
-            </View>
-            {tasks.map((t, i) => {
-              const missed = !t.completed && day.status === 'failed'
-              return (
-                <View key={t.completionId} style={[s.taskRow, i > 0 && s.taskRowBorder]}>
-                  <Ionicons
-                    name={t.completed ? 'checkmark-circle' : missed ? 'close-circle' : 'ellipse-outline'}
-                    size={20}
-                    color={t.completed ? GREEN : missed ? RED : 'rgba(255,255,255,0.25)'}
-                  />
-                  <Text style={[s.taskName, missed && { color: RED, fontWeight: '600' }]} numberOfLines={1}>
-                    {t.name}
-                  </Text>
-                </View>
-              )
-            })}
-          </Animated.View>
-          </GestureDetector>
-          </Animated.View>
-        )}
-
         {!hasAny ? (
+          <>
+          {showTasks && (
+            <View style={{ paddingHorizontal: 20 }}>
+              <TasksCard
+                tasks={tasks!}
+                failedDay={day.status === 'failed'}
+                onDismiss={() => setTasksHidden(true)}
+              />
+            </View>
+          )}
           <View style={s.empty}>
             <Ionicons name="fitness-outline" size={28} color="rgba(255,255,255,0.2)" />
             <Text style={s.emptyText}>Inga träningar sparade</Text>
           </View>
+          </>
         ) : (
           <>
             {/* Flikar — Cardio / Gym (swipa eller tryck) */}
@@ -257,6 +264,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               style={{ flex: 1 }}
+              onLayout={e => setListVpH(e.nativeEvent.layout.height)}
               onMomentumScrollEnd={e => setPage(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH))}
             >
               {pages.map(p => (
@@ -265,14 +273,21 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                   style={{ width: SCREEN_WIDTH }}
                   contentContainerStyle={[
                     s.scroll,
-                    tasks && tasks.length > 0 && !tasksHidden
-                      ? { flexGrow: 1, paddingBottom: tasksH + 72 }
+                    // Alltid minst en kortlängds scrollutrymme så kortet kan dras bort
+                    showTasks && listVpH > 0 && tasksH > 0
+                      ? { minHeight: listVpH + tasksH + 12 }
                       : null,
                   ]}
                   showsVerticalScrollIndicator={false}
-                  onScroll={onListScroll}
-                  scrollEventThrottle={16}
                 >
+                  {showTasks && (
+                    <TasksCard
+                      tasks={tasks!}
+                      failedDay={day.status === 'failed'}
+                      onDismiss={() => setTasksHidden(true)}
+                      onHeight={setTasksH}
+                    />
+                  )}
                   {p.key === 'cardio' ? (
                     <>
                       {dayCardio.map((w, i) => (
@@ -417,7 +432,7 @@ const s = StyleSheet.create({
   empty:    { alignItems: 'center', paddingVertical: 24, gap: 10 },
 
   tasksWrap: {
-    marginHorizontal: 20, marginBottom: 12,
+    marginBottom: 12,
     backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16,
     paddingHorizontal: 14,
   },
