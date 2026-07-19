@@ -16,7 +16,6 @@ import type { CompletedSessionItem } from '@/services/workoutSchedule'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 const SCREEN_WIDTH  = Dimensions.get('window').width
-const SHEET_PARTIAL = SCREEN_HEIGHT * 0.30
 const SHEET_SP      = { damping: 26, stiffness: 260, mass: 1 } as const
 const CARDIO_BLUE   = '#3BD5FF'
 
@@ -60,17 +59,15 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
 }) {
   const insets    = useSafeAreaInsets()
   const FULL_TOP  = insets.top + 8
-  const snapState    = useSharedValue(0)
   const sheetTop     = useSharedValue(SCREEN_HEIGHT)
   const backdropAnim = useSharedValue(0)
   const pagerRef  = useRef<ScrollView>(null)
   const [page, setPage] = useState(0)
 
   useEffect(() => {
-    // Öppnar i fullhöjd direkt — dra ner för halvläge eller stäng
+    // Öppnar i fullhöjd direkt — dra ner för att stänga
     sheetTop.value     = withSpring(FULL_TOP, SHEET_SP)
     backdropAnim.value = withTiming(1, { duration: 260 })
-    snapState.value    = 1
   }, [])
 
   // Dagens fem uppgifter — så man ser exakt vad som missades en fälld dag.
@@ -98,18 +95,20 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
     opacity: 1 - Math.abs(tasksX.value) / SCREEN_WIDTH,
   }))
 
-  // Kortet viker ihop sig när man scrollar i träningslistorna och
-  // kommer tillbaka när listan är i toppläge igen
+  // Kortet följer scrollen direkt (ingen på/av-animation = inget hack):
+  // listan glider upp ÖVER uppgifterna, och extra scrollhöjd garanterar att
+  // det alltid går även med få övningar
   const [tasksH, setTasksH] = useState(0)
-  const tasksCollapse = useSharedValue(0)
+  const listY = useSharedValue(0)
   function onListScroll(e: { nativeEvent: { contentOffset: { y: number } } }) {
-    tasksCollapse.value = withTiming(e.nativeEvent.contentOffset.y > 16 ? 1 : 0, { duration: 220 })
+    listY.value = e.nativeEvent.contentOffset.y
   }
-  const tasksOuterStyle = useAnimatedStyle(() => (
-    tasksH > 0
-      ? { height: (1 - tasksCollapse.value) * (tasksH + 12), opacity: 1 - tasksCollapse.value }
-      : {}
-  ))
+  const tasksOuterStyle = useAnimatedStyle(() => {
+    if (tasksH <= 0) return {}
+    const full = tasksH + 12
+    const h = Math.max(0, full - Math.max(0, listY.value))
+    return { height: h, opacity: h / full }
+  })
   useEffect(() => {
     if (!challengeId || day.status === 'future') return
     let active = true
@@ -124,30 +123,21 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
     backdropAnim.value = withTiming(0, { duration: 250 })
   }
 
+  // Två lägen: helt öppet eller stängt — drar man ner tillräckligt stängs
+  // arket direkt, inget halvvägsstopp
   const panGesture = Gesture.Pan()
     .activeOffsetY([-8, 8])
     .onUpdate(e => {
-      const base = snapState.value === 1 ? FULL_TOP : SHEET_PARTIAL
-      sheetTop.value = Math.max(FULL_TOP, Math.min(SCREEN_HEIGHT, base + e.translationY))
-      const belowPartial = Math.max(0, sheetTop.value - SHEET_PARTIAL)
-      backdropAnim.value = Math.max(0, 1 - belowPartial / (SCREEN_HEIGHT - SHEET_PARTIAL))
+      sheetTop.value = Math.max(FULL_TOP, Math.min(SCREEN_HEIGHT, FULL_TOP + e.translationY))
+      backdropAnim.value = Math.max(0, 1 - (sheetTop.value - FULL_TOP) / (SCREEN_HEIGHT - FULL_TOP))
     })
     .onEnd(e => {
-      const base   = snapState.value === 1 ? FULL_TOP : SHEET_PARTIAL
-      const endPos = base + e.translationY
-      if (e.velocityY < -600 || endPos < SHEET_PARTIAL * 0.45) {
-        sheetTop.value     = withSpring(FULL_TOP, SHEET_SP)
-        backdropAnim.value = withTiming(1, { duration: 200 })
-        snapState.value    = 1
-      } else if (snapState.value === 0 && (e.velocityY > 600 || endPos > SHEET_PARTIAL + 100)) {
-        sheetTop.value     = withTiming(SCREEN_HEIGHT, { duration: 280 }, () => runOnJS(onClose)())
+      const endPos = FULL_TOP + e.translationY
+      if (e.velocityY > 500 || endPos > SCREEN_HEIGHT * 0.4) {
+        sheetTop.value     = withTiming(SCREEN_HEIGHT, { duration: 260 }, () => runOnJS(onClose)())
         backdropAnim.value = withTiming(0, { duration: 230 })
-      } else if (snapState.value === 1 && (e.velocityY > 400 || endPos > SHEET_PARTIAL * 0.55)) {
-        sheetTop.value     = withSpring(SHEET_PARTIAL, SHEET_SP)
-        backdropAnim.value = withTiming(1, { duration: 200 })
-        snapState.value    = 0
       } else {
-        sheetTop.value     = withSpring(base, SHEET_SP)
+        sheetTop.value     = withSpring(FULL_TOP, SHEET_SP)
         backdropAnim.value = withTiming(1, { duration: 200 })
       }
     })
@@ -273,7 +263,12 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                 <ScrollView
                   key={p.key}
                   style={{ width: SCREEN_WIDTH }}
-                  contentContainerStyle={s.scroll}
+                  contentContainerStyle={[
+                    s.scroll,
+                    tasks && tasks.length > 0 && !tasksHidden
+                      ? { flexGrow: 1, paddingBottom: tasksH + 72 }
+                      : null,
+                  ]}
                   showsVerticalScrollIndicator={false}
                   onScroll={onListScroll}
                   scrollEventThrottle={16}
