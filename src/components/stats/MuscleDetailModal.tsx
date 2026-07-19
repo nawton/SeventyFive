@@ -121,7 +121,7 @@ export function MuscleDetailModal({ visible, onClose, workouts }: {
       <View style={s.root}>
         <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
           <GlassCircleButton icon="chevron-back" onPress={onClose} />
-          <Text style={s.topTitle}>Muskelstatistik</Text>
+          <Text style={s.topTitle}>Muskelfördelning</Text>
           <View style={{ width: 44 }} />
         </View>
 
@@ -138,39 +138,6 @@ export function MuscleDetailModal({ visible, onClose, workouts }: {
             onChange={setPeriod}
           />
           <Text style={s.periodLabel}>{periodLabel}</Text>
-
-          {/* Översikt */}
-          <Text style={s.sectionHead}>Översikt</Text>
-          <View style={s.card}>
-            <View style={s.dtlRow}>
-              <View style={s.dtlCell}>
-                <Text style={s.dtlLbl}>Set</Text>
-                <Text style={[s.dtlVal, { color: BLUE }]}>{cur.sets}</Text>
-                {prev && <Text style={s.dtlPrev}>förra: {prev.sets}</Text>}
-              </View>
-              <View style={s.dtlCell}>
-                <Text style={s.dtlLbl}>Reps</Text>
-                <Text style={[s.dtlVal, { color: TEAL }]}>{cur.reps}</Text>
-                {prev && <Text style={s.dtlPrev}>förra: {prev.reps}</Text>}
-              </View>
-            </View>
-            <View style={s.dtlSep} />
-            <View style={s.dtlRow}>
-              <View style={s.dtlCell}>
-                <Text style={s.dtlLbl}>Volym</Text>
-                <Text style={[s.dtlVal, { color: YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {Math.round(cur.volume).toLocaleString('sv-SE')}
-                  <Text style={s.dtlUnit}> KG</Text>
-                </Text>
-                {prev && <Text style={s.dtlPrev}>förra: {Math.round(prev.volume).toLocaleString('sv-SE')}</Text>}
-              </View>
-              <View style={s.dtlCell}>
-                <Text style={s.dtlLbl}>Träningsdagar</Text>
-                <Text style={[s.dtlVal, { color: ORANGE }]}>{cur.activeDays}</Text>
-                {prev && <Text style={s.dtlPrev}>förra: {prev.activeDays}</Text>}
-              </View>
-            </View>
-          </View>
 
           {/* Radar — set per muskelgrupp, denna period mot föregående */}
           <Text style={s.sectionHead}>Muskelfördelning</Text>
@@ -269,29 +236,6 @@ export function MuscleDetailModal({ visible, onClose, workouts }: {
               </View>
             ))}
           </View>
-
-          {/* Vanligaste övningarna */}
-          {cur.topExercises.length > 0 && (
-            <>
-            <Text style={s.sectionHead}>Vanligaste övningarna</Text>
-            <View style={[s.card, { paddingVertical: 6 }]}>
-              {cur.topExercises.map((ex, i) => (
-                <View key={ex.name} style={[s.exRow, i > 0 && s.grpRowBorder]}>
-                  <Text style={[s.exRank, { color: i === 0 ? YELLOW : i === 1 ? 'rgba(255,255,255,0.6)' : i === 2 ? '#C9834A' : TEXT_SECONDARY }]}>
-                    {i + 1}
-                  </Text>
-                  <Text style={s.exName} numberOfLines={1}>{ex.name}</Text>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={s.exSets}>{ex.sets} set</Text>
-                    {ex.volume > 0 && (
-                      <Text style={s.exVol}>{Math.round(ex.volume).toLocaleString('sv-SE')} kg</Text>
-                    )}
-                  </View>
-                </View>
-              ))}
-            </View>
-            </>
-          )}
 
           {cur.sets === 0 && (
             <Text style={s.hint}>

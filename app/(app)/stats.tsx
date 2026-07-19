@@ -28,6 +28,7 @@ import { DistanceDetailModal } from '@/components/stats/DistanceDetailModal'
 import { MilestoneAnalysisModal } from '@/components/stats/MilestoneAnalysisModal'
 import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import { MuscleDetailModal } from '@/components/stats/MuscleDetailModal'
+import { GlassCircleButton } from '@/components/GlassButton'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
@@ -262,6 +263,7 @@ export default function StatsScreen() {
   const [milestoneOpen, setMilestoneOpen]       = useState(false)
   const [gymDetail, setGymDetail] = useState<{ name: string; dateLabel: string; planned: string[]; logged: StrengthWorkout[] } | null>(null)
   const [muscleOpen, setMuscleOpen] = useState(false)
+  const [sessionsOpen, setSessionsOpen] = useState(false)
   const [avatarUrl, setAvatarUrl]               = useState<string | null>(null)
   const pagerRef = useRef<ScrollView>(null)
 
@@ -1332,95 +1334,36 @@ export default function StatsScreen() {
 
             </View>
 
-            {/* Avancerad statistik — tydliga ingångar till muskelstatistiken */}
+            {/* Avancerad statistik — muskelfördelningen och genomförda pass */}
             <Text style={s.sectionHead}>Avancerad statistik</Text>
             <View style={[s.card, s.cardPlain, { paddingVertical: 4 }]}>
-              {([
-                {
-                  icon: 'stats-chart-outline' as const,
-                  title: 'Set per muskelgrupp',
-                  sub: 'Antal loggade set för varje muskelgrupp',
-                },
-                {
-                  icon: 'analytics-outline' as const,
-                  title: 'Muskelfördelning',
-                  sub: 'Jämför perioden med den föregående',
-                },
-                {
-                  icon: 'list-outline' as const,
-                  title: 'Vanligaste övningarna',
-                  sub: 'Övningarna du loggar mest',
-                },
-              ]).map((r, i) => (
-                <TouchableOpacity
-                  key={r.title}
-                  style={[s.muscleLinkRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' }]}
-                  activeOpacity={0.7}
-                  onPress={() => setMuscleOpen(true)}
-                >
-                  <View style={s.muscleLinkIcon}>
-                    <Ionicons name={r.icon} size={17} color={ORANGE} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.muscleLinkTitle}>{r.title}</Text>
-                    <Text style={s.muscleLinkSub}>{r.sub}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Completed gym sessions */}
-            {weekLoading ? (
-              <ActivityIndicator color={ORANGE} style={{ marginVertical: 16 }} />
-            ) : weekGymSessions.length > 0 ? (
-              <>
-              <Text style={s.sectionHead}>Genomförda pass</Text>
-              <View style={[s.card, s.cardPlain]}>
-                <View style={s.gymList}>
-                  {weekGymSessions.map(gs => {
-                    const gymDay    = new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
-                    const exPreview = gs.exercises.slice(0, 3).join(' · ')
-                      + (gs.exercises.length > 3 ? ` · +${gs.exercises.length - 3}` : '')
-                    return (
-                      <TouchableOpacity
-                        key={gs.id}
-                        style={s.gymRow}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                          const logged = strengthWorkouts.filter(w => {
-                            const wDate = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
-                            return wDate === gs.completedDate && gs.exercises.includes(w.data.exercise_name)
-                          })
-                          setGymDetail({
-                            name: gs.sessionName,
-                            dateLabel: new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' }),
-                            planned: gs.exercises,
-                            logged,
-                          })
-                        }}
-                      >
-                        <View style={s.gymCheck}>
-                          <Ionicons name="checkmark" size={14} color={GREEN} />
-                        </View>
-                        <View style={s.gymInfo}>
-                          <Text style={s.gymName}>{gs.sessionName}</Text>
-                          {!!exPreview && <Text style={s.gymExs}>{exPreview}</Text>}
-                        </View>
-                        <Text style={s.gymDay}>{gymDay}</Text>
-                        <Ionicons name="chevron-forward" size={15} color="rgba(255,255,255,0.25)" />
-                      </TouchableOpacity>
-                    )
-                  })}
+              <TouchableOpacity style={s.muscleLinkRow} activeOpacity={0.7} onPress={() => setMuscleOpen(true)}>
+                <View style={s.muscleLinkIcon}>
+                  <Ionicons name="analytics-outline" size={17} color={ORANGE} />
                 </View>
-              </View>
-              </>
-            ) : (
-              <View style={s.empty}>
-                <Ionicons name="barbell-outline" size={40} color="rgba(255,255,255,0.12)" />
-                <Text style={s.emptyText}>Inga gympass klarade denna vecka</Text>
-              </View>
-            )}
+                <View style={{ flex: 1 }}>
+                  <Text style={s.muscleLinkTitle}>Muskelfördelning</Text>
+                  <Text style={s.muscleLinkSub}>Muskeltyperna du tränat · 1 V till Allt</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.muscleLinkRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' }]}
+                activeOpacity={0.7}
+                onPress={() => setSessionsOpen(true)}
+              >
+                <View style={[s.muscleLinkIcon, { backgroundColor: GREEN + '18' }]}>
+                  <Ionicons name="checkmark-done-outline" size={17} color={GREEN} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.muscleLinkTitle}>Genomförda pass</Text>
+                  <Text style={s.muscleLinkSub}>
+                    {weekGymSessions.length} pass {weekOffset === 0 ? 'denna vecka' : 'vald vecka'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            </View>
 
           </>
         </ScrollView>
@@ -1463,16 +1406,77 @@ export default function StatsScreen() {
         unit={unit}
       />
 
-      <Modal visible={!!gymDetail} animationType="slide" onRequestClose={() => setGymDetail(null)}>
-        {gymDetail && (
-          <GymSummaryView
-            name={gymDetail.name}
-            dateLabel={gymDetail.dateLabel}
-            logged={gymDetail.logged}
-            plannedNames={gymDetail.planned}
-            onClose={() => setGymDetail(null)}
-          />
-        )}
+      {/* Genomförda pass — egen vy i stället för att listan ligger på fliken */}
+      <Modal visible={sessionsOpen} animationType="slide" onRequestClose={() => setSessionsOpen(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top']}>
+          <View style={s.modalTopBar}>
+            <GlassCircleButton icon="chevron-back" onPress={() => setSessionsOpen(false)} />
+            <Text style={s.modalTopTitle}>Genomförda pass</Text>
+            <View style={{ width: 44 }} />
+          </View>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+            <Text style={s.sessionsWeekLabel}>
+              {weekBounds.label} · {weekGymSessions.length} pass
+            </Text>
+            {weekGymSessions.length > 0 ? (
+              <View style={[s.card, s.cardPlain, { marginTop: 12 }]}>
+                <View style={s.gymList}>
+                  {weekGymSessions.map(gs => {
+                    const gymDay    = new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
+                    const exPreview = gs.exercises.slice(0, 3).join(' · ')
+                      + (gs.exercises.length > 3 ? ` · +${gs.exercises.length - 3}` : '')
+                    return (
+                      <TouchableOpacity
+                        key={gs.id}
+                        style={s.gymRow}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          const logged = strengthWorkouts.filter(w => {
+                            const wDate = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
+                            return wDate === gs.completedDate && gs.exercises.includes(w.data.exercise_name)
+                          })
+                          setGymDetail({
+                            name: gs.sessionName,
+                            dateLabel: new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' }),
+                            planned: gs.exercises,
+                            logged,
+                          })
+                        }}
+                      >
+                        <View style={s.gymCheck}>
+                          <Ionicons name="checkmark" size={14} color={GREEN} />
+                        </View>
+                        <View style={s.gymInfo}>
+                          <Text style={s.gymName}>{gs.sessionName}</Text>
+                          {!!exPreview && <Text style={s.gymExs}>{exPreview}</Text>}
+                        </View>
+                        <Text style={s.gymDay}>{gymDay}</Text>
+                        <Ionicons name="chevron-forward" size={15} color="rgba(255,255,255,0.25)" />
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              </View>
+            ) : (
+              <View style={s.empty}>
+                <Ionicons name="barbell-outline" size={40} color="rgba(255,255,255,0.12)" />
+                <Text style={s.emptyText}>Inga gympass klarade vald vecka</Text>
+              </View>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+
+        <Modal visible={!!gymDetail} animationType="slide" onRequestClose={() => setGymDetail(null)}>
+          {gymDetail && (
+            <GymSummaryView
+              name={gymDetail.name}
+              dateLabel={gymDetail.dateLabel}
+              logged={gymDetail.logged}
+              plannedNames={gymDetail.planned}
+              onClose={() => setGymDetail(null)}
+            />
+          )}
+        </Modal>
       </Modal>
 
       <MuscleDetailModal
@@ -1667,6 +1671,12 @@ const s = StyleSheet.create({
   },
   muscleLinkTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   muscleLinkSub:   { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+  modalTopBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8,
+  },
+  modalTopTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
+  sessionsWeekLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', marginTop: 8 },
 
   // Week nav
   weekNav: {
