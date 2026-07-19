@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import WebView from 'react-native-webview'
 import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
+import { fmtTime, fmtPace } from '@/lib/format'
 import type { CardioWorkout } from '@/services/workouts'
 import { updateCardioEffort } from '@/services/workouts'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
@@ -50,21 +51,6 @@ const TYPE_META: Record<string, { label: string; icon: React.ComponentProps<type
   cycling:  { label: 'Cykling',    icon: 'bicycle-outline' },
   walking:  { label: 'Promenad',   icon: 'walk-outline' },
   interval: { label: 'Intervaller', icon: 'flash-outline' },
-}
-
-function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-  return h > 0
-    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-    : `${m}:${String(s).padStart(2, '0')}`
-}
-function formatPace(secs: number): string {
-  if (!Number.isFinite(secs) || secs <= 0) return '--:--'
-  const m = Math.floor(secs / 60)
-  const s = Math.floor(secs % 60)
-  return `${m}:${String(s).padStart(2, '0')}`
 }
 
 // Tre stigande staplar som fylls efter betyget — som Apples ansträngningsikon
@@ -218,8 +204,8 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
 
   const stats: { label: string; value: string; color: string }[] = [
     { label: `Distans (${unitLabel})`, value: toDisplayDistance(distKm, unit).toFixed(2), color: CARDIO_BLUE },
-    { label: 'Tid',                    value: formatTime(dur),                            color: STAT_YELLOW },
-    { label: `Snitt /${unitLabel}`,    value: formatPace(avgPaceSec),                     color: STAT_TEAL },
+    { label: 'Tid',                    value: fmtTime(dur),                            color: STAT_YELLOW },
+    { label: `Snitt /${unitLabel}`,    value: fmtPace(avgPaceSec),                     color: STAT_TEAL },
     { label: 'Kcal',                   value: String(d.calories ?? 0),                    color: STAT_PINK },
   ]
   const splits = d.splits ?? []
@@ -295,7 +281,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
                   <View style={s.splitBarTrack}>
                     <View style={[s.splitBar, { width: `${sp.paceSec > 0 ? Math.max(10, (fastestSplit / sp.paceSec) * 100) : 10}%` as never }]} />
                   </View>
-                  <Text style={s.splitPace}>{formatPace(sp.paceSec)}</Text>
+                  <Text style={s.splitPace}>{fmtPace(sp.paceSec)}</Text>
                 </View>
               ))}
             </View>

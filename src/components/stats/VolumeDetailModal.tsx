@@ -6,7 +6,7 @@ import Svg, { Text as SvgText, Line as SvgLine, Rect, G } from 'react-native-svg
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
-import { toLocalDateString, parseLocalDate, weekdayOf, startOfWeek } from '@/lib/date'
+import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
 
 // =============================================================================
@@ -26,11 +26,6 @@ interface Bucket {
   sets: number
   days: Set<string>
   isCurrent: boolean
-}
-
-function isoWeekNum(mon: Date): number {
-  const jan4 = new Date(mon.getFullYear(), 0, 4)
-  return Math.ceil((((mon.getTime() - jan4.getTime()) / 86400000) + weekdayOf(jan4) - 1) / 7)
 }
 
 function workoutDate(w: StrengthWorkout): string {

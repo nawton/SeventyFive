@@ -6,7 +6,8 @@ import Svg, { Text as SvgText, Line as SvgLine, Rect, G } from 'react-native-svg
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
-import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
+import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/lib/date'
+import { fmtPace, fmtDuration } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
 
@@ -34,24 +35,6 @@ interface Bucket {
   cals: number
   longest: number      // längsta enskilda pass (km) i perioden
   isCurrent: boolean
-}
-
-function fmtDuration(totalSecs: number): string {
-  const h = Math.floor(totalSecs / 3600)
-  const m = Math.floor((totalSecs % 3600) / 60)
-  return h > 0 ? `${h} h ${m} min` : `${m} min`
-}
-
-function fmtPace(secsPerUnit: number): string {
-  if (!Number.isFinite(secsPerUnit) || secsPerUnit <= 0) return '--:--'
-  const m = Math.floor(secsPerUnit / 60)
-  const s = Math.floor(secsPerUnit % 60)
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
-function isoWeekNum(mon: Date): number {
-  const jan4 = new Date(mon.getFullYear(), 0, 4)
-  return Math.ceil((((mon.getTime() - jan4.getTime()) / 86400000) + weekdayOf(jan4) - 1) / 7)
 }
 
 /** Bygger staplarna för en "sida": offset 0 = nu, -1 = föregående sida osv. */
@@ -132,8 +115,8 @@ function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Buck
 function pageLabel(res: Res, buckets: Bucket[], offset: number): string {
   if (res === 'day') {
     if (offset === 0) return 'Denna vecka'
-    const first = parseLocal(buckets[0].key)
-    const last  = parseLocal(buckets[6].key)
+    const first = parseLocalDate(buckets[0].key)
+    const last  = parseLocalDate(buckets[6].key)
     const sameMonth = first.getMonth() === last.getMonth()
     const fmt = (d: Date, withMonth: boolean) =>
       withMonth ? d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '') : String(d.getDate())
@@ -145,10 +128,7 @@ function pageLabel(res: Res, buckets: Bucket[], offset: number): string {
   return `${short(buckets[0])} – ${short(last)}`
 }
 
-function parseLocal(key: string): Date {
-  const [y, m, d] = key.split('-').map(Number)
-  return new Date(y, (m ?? 1) - 1, d ?? 1)
-}
+
 
 export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
   visible: boolean

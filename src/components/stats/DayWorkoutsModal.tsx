@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
+import { fmtTime } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import { getTasksForDay, type DaySummary, type TaskItem } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
@@ -25,14 +26,6 @@ const EXERCISE_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name
   cycling:  'bicycle-outline',
   interval: 'flash-outline',
   walking:  'walk-outline',
-}
-
-function fmtTime(secs: number): string {
-  const h = Math.floor(secs / 3600)
-  const m = Math.floor((secs % 3600) / 60)
-  const s = secs % 60
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  return `${m}:${String(s).padStart(2, '0')}`
 }
 
 function sameDay(a: Date, b: Date): boolean {

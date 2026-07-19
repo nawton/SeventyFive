@@ -33,3 +33,9 @@ export function startOfWeek(d: Date = new Date()): Date {
   mon.setHours(0, 0, 0, 0)
   return mon
 }
+
+/** ISO-veckonummer för en måndag (veckans start) */
+export function isoWeekNum(mon: Date): number {
+  const jan4 = new Date(mon.getFullYear(), 0, 4)
+  return Math.ceil((((mon.getTime() - jan4.getTime()) / 86400000) + weekdayOf(jan4) - 1) / 7)
+}

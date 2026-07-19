@@ -35,7 +35,8 @@ import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
-import { toLocalDateString, parseLocalDate, weekdayOf, startOfWeek } from '@/lib/date'
+import { toLocalDateString, parseLocalDate, weekdayOf, startOfWeek, isoWeekNum } from '@/lib/date'
+import { fmtPace, fmtDuration } from '@/lib/format'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 
@@ -86,18 +87,6 @@ function nextMilestone(completed: number): { day: number; label: string; daysLef
   return { ...next, daysLeft: next.day - completed }
 }
 
-function fmtPace(secsPerKm: number): string {
-  const m = Math.floor(secsPerKm / 60)
-  const s = Math.floor(secsPerKm % 60)
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
-function fmtDuration(totalSecs: number): string {
-  const h = Math.floor(totalSecs / 3600)
-  const m = Math.round((totalSecs % 3600) / 60)
-  return h > 0 ? `${h}h ${m}m` : `${m} min`
-}
-
 // ─── weekly bar data ───────────────────────────────────────────────────────────
 
 interface WeekBar {
@@ -111,11 +100,6 @@ interface WeekBar {
   paceSec:   number
   pacedKm:   number
   pacedSecs: number
-}
-
-function isoWeekNum(mon: Date): number {
-  const jan4 = new Date(mon.getFullYear(), 0, 4)
-  return Math.ceil((((mon.getTime() - jan4.getTime()) / 86400000) + weekdayOf(jan4) - 1) / 7)
 }
 
 function buildWeeklyBars(workouts: CardioWorkout[]): WeekBar[] {
