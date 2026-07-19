@@ -6,7 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { clamp, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
-import WebView from 'react-native-webview'
+import MapView, { Polyline, Marker } from 'react-native-maps'
 import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { fmtTime, fmtPace } from '@/lib/format'
@@ -24,27 +24,6 @@ const STAT_YELLOW = '#FFE60A'
 const STAT_PINK   = '#FF3D73'
 const STAT_TEAL   = '#40F5E9'
 const { height: SCREEN_H } = Dimensions.get('window')
-
-const TILE_URLS: Record<string, { url: string; opts: object }> = {
-  standard:  { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',    opts: { maxZoom:20, subdomains:'abcd' } },
-  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opts: { maxZoom:20, maxNativeZoom:18 } },
-  terrain:   { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                           opts: { maxZoom:20, maxNativeZoom:17, subdomains:'abc' } },
-  dark:      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',              opts: { maxZoom:20, subdomains:'abcd' } },
-}
-const MAP_STYLES = [
-  { key: 'standard',  label: 'Karta' },
-  { key: 'satellite', label: 'Satellit' },
-  { key: 'terrain',   label: 'Terräng' },
-  { key: 'dark',      label: 'Natt' },
-]
-const PREVIEW_TILE = { z: 13, x: 4506, y: 2409 }
-function previewUrl(key: string): string {
-  return TILE_URLS[key].url
-    .replace('{s}', 'a').replace('{r}', '')
-    .replace('{z}', String(PREVIEW_TILE.z))
-    .replace('{x}', String(PREVIEW_TILE.x))
-    .replace('{y}', String(PREVIEW_TILE.y))
-}
 
 const TYPE_META: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
   running:  { label: 'Löpning',    icon: 'fitness-outline' },
@@ -70,44 +49,16 @@ function EffortBars({ effort, color }: { effort: number; color: string }) {
   )
 }
 
-function mapHtml(route: Array<[number, number]>, o: { compassTop: number; topPad: number; bottomPad: number; style: string }): string {
-  const step = Math.max(1, Math.floor(route.length / 800))
-  const pts = route.filter((_, i) => i % step === 0 || i === route.length - 1)
-  const tile = TILE_URLS[o.style] ?? TILE_URLS.standard
-  return `<!DOCTYPE html><html><head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
-  <style>
-    *{margin:0;padding:0}#map{width:100vw;height:100vh;background:#e6e3dd}
-    .leaflet-control-attribution{display:none}
-    .leaflet-top.leaflet-right{ top:${o.compassTop}px; right:16px; }
-    .leaflet-control-rotate{ margin:0!important; border:none!important; border-radius:50%!important;
-      overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.35); pointer-events:none!important; }
-    .leaflet-control-rotate .leaflet-control-rotate-toggle{ display:block; width:44px!important; height:44px!important;
-      background:#161618!important; border:none!important; border-radius:50%!important; }
-    .leaflet-control-rotate-arrow{ background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10.5 14l4-8 4 8h-8z' fill='%23FF453A'/%3E%3Cpath d='M10.5 16l4 8 4-8h-8z' fill='%23fff'/%3E%3C/svg%3E")!important; }
-  </style>
-  </head><body><div id="map"></div><script>
-    var pts = ${JSON.stringify(pts)};
-    var map = L.map('map',{zoomControl:false,attributionControl:false,rotate:true,touchRotate:true,
-      rotateControl:{closeOnZeroBearing:false, position:'topright'}});
-    var tileLayer = L.tileLayer(${JSON.stringify(tile.url)}, ${JSON.stringify(tile.opts)}).addTo(map);
-    var glow  = L.polyline(pts,{color:'#FF6A00',weight:9,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(map);
-    var line  = L.polyline(pts,{color:'#FC4C02',weight:5,lineCap:'round',lineJoin:'round'}).addTo(map);
-    var startM = L.circleMarker(pts[0],{radius:7,color:'#fff',weight:3,fillColor:'#22C55E',fillOpacity:1}).addTo(map);
-    var endM   = L.circleMarker(pts[pts.length-1],{radius:7,color:'#fff',weight:3,fillColor:'#EF4444',fillOpacity:1}).addTo(map);
-    map.fitBounds(line.getBounds(),{paddingTopLeft:[36,${o.topPad}],paddingBottomRight:[36,${o.bottomPad}]});
-    function reprojectVectors(){ [glow, line, startM, endM].forEach(function(l){ try { l._project(); l._update(); } catch(e){} }); }
-    map.on('rotate', reprojectVectors);
-    window.addEventListener('message', function(e){
-      try { var msg = JSON.parse(e.data);
-        if (msg.type === 'style') { map.removeLayer(tileLayer);
-          tileLayer = L.tileLayer(msg.url, msg.opts).addTo(map); tileLayer.bringToBack(); }
-      } catch(err){}
-    });
-  </script></body></html>`
+// Apple Maps — samma stilmappning som liveskärmen ('terrain' föll bort)
+const MAP_STYLES = [
+  { key: 'standard',  label: 'Karta',    icon: 'map-outline' as const },
+  { key: 'satellite', label: 'Satellit', icon: 'earth-outline' as const },
+  { key: 'dark',      label: 'Natt',     icon: 'moon-outline' as const },
+]
+const APPLE_MAP_TYPES: Record<string, 'standard' | 'satellite' | 'mutedStandard'> = {
+  standard: 'standard',
+  satellite: 'satellite',
+  dark: 'mutedStandard',
 }
 
 export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, onClose, onDelete }: {
@@ -141,14 +92,12 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   }
 
   // Kartstil + slide-up-väljare — startar på användarens standardkarta
-  const webRef = useRef<InstanceType<typeof WebView>>(null)
-  const startStyle = useRef('satellite')
+  const mapRef = useRef<MapView>(null)
   const [activeStyle, setActiveStyle] = useState('satellite')
   const [styleLoaded, setStyleLoaded] = useState(false)
   useEffect(() => {
     getDefaultMapStyle().then(k => {
-      startStyle.current = k
-      setActiveStyle(k)
+      setActiveStyle(k === 'terrain' ? 'standard' : k)
       setStyleLoaded(true)
     })
   }, [])
@@ -164,11 +113,9 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
     })
   const styleSheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: styleY.value }] }))
   function changeStyle(key: string) {
-    const st = TILE_URLS[key]; if (!st) return
-    setActiveStyle(key); closeStyleSheet()
-    webRef.current?.injectJavaScript(
-      `window.dispatchEvent(new MessageEvent('message',{data:JSON.stringify({type:'style',url:${JSON.stringify(st.url)},opts:${JSON.stringify(st.opts)}})}));true;`
-    )
+    if (!APPLE_MAP_TYPES[key]) return
+    setActiveStyle(key)
+    closeStyleSheet()
   }
 
   // Detalj-ark: FULL / MID / PEEK
@@ -214,13 +161,37 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   return (
     <View style={s.root}>
       {hasRoute && styleLoaded && (
-        <WebView
-          ref={webRef}
+        <MapView
+          ref={mapRef}
           style={StyleSheet.absoluteFill}
-          source={{ html: mapHtml(route, { compassTop: insets.top + 68, topPad: insets.top + 70, bottomPad: SCREEN_H - MID, style: startStyle.current }) }}
-          javaScriptEnabled
-          originWhitelist={['*']}
-        />
+          mapType={APPLE_MAP_TYPES[activeStyle] ?? 'standard'}
+          userInterfaceStyle={activeStyle === 'dark' ? 'dark' : 'light'}
+          showsCompass
+          compassOffset={{ x: -6, y: insets.top + 52 }}
+          onMapReady={() => {
+            mapRef.current?.fitToCoordinates(
+              route.map(([la, ln]) => ({ latitude: la, longitude: ln })),
+              { edgePadding: { top: insets.top + 80, bottom: SCREEN_H - MID + 30, left: 50, right: 50 }, animated: false },
+            )
+          }}
+        >
+          <Polyline
+            coordinates={route.map(([la, ln]) => ({ latitude: la, longitude: ln }))}
+            strokeColor="#FC4C02"
+            strokeWidth={5}
+            lineCap="round"
+            lineJoin="round"
+          />
+          <Marker coordinate={{ latitude: route[0][0], longitude: route[0][1] }} anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={[s.routeDot, { backgroundColor: '#22C55E' }]} />
+          </Marker>
+          <Marker
+            coordinate={{ latitude: route[route.length - 1][0], longitude: route[route.length - 1][1] }}
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <View style={[s.routeDot, { backgroundColor: '#EF4444' }]} />
+          </Marker>
+        </MapView>
       )}
 
       {/* Tillbaka + (radera) + lager — liquid glass över kartan (iOS 26) */}
@@ -334,7 +305,9 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
                       onPress={() => changeStyle(ms.key)}
                       activeOpacity={0.85}
                     >
-                      <Image source={{ uri: previewUrl(ms.key) }} style={s.mapPreview} />
+                      <View style={[s.mapPreview, s.mapPreviewIcon]}>
+                        <Ionicons name={ms.icon} size={26} color={active ? ORANGE : '#9BA0A6'} />
+                      </View>
                       <View style={s.mapCardLabelRow}>
                         <Text style={[s.mapCardLabel, active && { color: ORANGE }]}>{ms.label}</Text>
                         {active && <Ionicons name="checkmark-circle" size={15} color={ORANGE} />}
@@ -437,6 +410,8 @@ const s = StyleSheet.create({
     backgroundColor: '#242426', overflow: 'hidden',
   },
   mapCardActive: { borderColor: ORANGE },
+  mapPreviewIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
+  routeDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: '#fff' },
   mapPreview: { width: '100%', height: 96, backgroundColor: '#2C2C2E' },
   mapCardLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9 },
   mapCardLabel: { color: '#ccc', fontSize: 13, fontWeight: '700' },

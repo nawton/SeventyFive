@@ -20,7 +20,7 @@ import {
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import WebView from 'react-native-webview'
+import MapView, { Polyline } from 'react-native-maps'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated'
 import { ORANGE, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
@@ -103,128 +103,18 @@ function haversineDistance(a: Coord, b: Coord): number {
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))
 }
 
-const TILE_URLS: Record<string, { url: string; opts: object }> = {
-  standard:  { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',    opts: { maxZoom:20, subdomains:'abcd' } },
-  // Skala upp från maxNativeZoom i glesbygd istället för saknade tiles
-  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opts: { maxZoom:20, maxNativeZoom:18 } },
-  terrain:   { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                           opts: { maxZoom:20, maxNativeZoom:17, subdomains:'abc' } },
-  dark:      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',              opts: { maxZoom:20, subdomains:'abcd' } },
-}
-
+// Apple Maps (MapKit) via react-native-maps — stilarna mappar till mapType.
+// Terräng finns inte hos Apple; sparade 'terrain'-val faller tillbaka på Karta.
 const MAP_STYLES = [
-  { key: 'standard',  label: 'Karta' },
-  { key: 'satellite', label: 'Satellit' },
-  { key: 'terrain',   label: 'Terräng' },
-  { key: 'dark',      label: 'Natt' },
+  { key: 'standard',  label: 'Karta',    icon: 'map-outline' as const },
+  { key: 'satellite', label: 'Satellit', icon: 'earth-outline' as const },
+  { key: 'dark',      label: 'Natt',     icon: 'moon-outline' as const },
 ]
-
-// Förhandsvisning: en riktig kartruta från respektive leverantör (Stockholm)
-const PREVIEW_TILE = { z: 13, x: 4506, y: 2409 }
-function previewUrl(key: string): string {
-  return TILE_URLS[key].url
-    .replace('{s}', 'a')
-    .replace('{r}', '')
-    .replace('{z}', String(PREVIEW_TILE.z))
-    .replace('{x}', String(PREVIEW_TILE.x))
-    .replace('{y}', String(PREVIEW_TILE.y))
+const APPLE_MAP_TYPES: Record<string, 'standard' | 'satellite' | 'mutedStandard'> = {
+  standard: 'standard',
+  satellite: 'satellite',
+  dark: 'mutedStandard',
 }
-
-const MAP_HTML = `<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#f0ede8; }
-    #map { width:100vw; height:100vh; }
-    .leaflet-control-attribution { display:none; }
-    .gps-wrap { position:relative; width:22px; height:22px; }
-    .gps-dot {
-      width:18px; height:18px;
-      background:#FFA817; border:3px solid #fff; border-radius:50%;
-      box-shadow:0 2px 10px rgba(255,143,0,0.5);
-      position:absolute; top:2px; left:2px;
-    }
-    .gps-ring {
-      width:22px; height:22px;
-      border:2px solid #FFA817; border-radius:50%;
-      position:absolute; top:0; left:0;
-      animation:gps-pulse 2s ease-out infinite;
-    }
-    @keyframes gps-pulse {
-      0%   { transform:scale(1);   opacity:0.7; }
-      100% { transform:scale(2.8); opacity:0; }
-    }
-  </style>
-</head>
-<body>
-<div id="map"></div>
-<script>
-  var map = L.map('map', {
-    zoomControl:false, attributionControl:false,
-    rotate:true, touchRotate:true, rotateControl:false
-  }).setView([59.33, 18.06], 4);
-
-  var tileLayer = L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { maxZoom:20, maxNativeZoom:18 }
-  ).addTo(map);
-
-  var gpsIcon = L.divIcon({
-    html: '<div class="gps-wrap"><div class="gps-ring"></div><div class="gps-dot"></div></div>',
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
-    className: ''
-  });
-
-  var marker = null;
-  var polyline = L.polyline([], { color:'#FFA817', weight:5, lineCap:'round', lineJoin:'round' }).addTo(map);
-
-  window.addEventListener('message', function(e) {
-    try {
-      var msg = JSON.parse(e.data);
-
-      if (msg.type === 'style') {
-        map.removeLayer(tileLayer);
-        tileLayer = L.tileLayer(msg.url, msg.opts).addTo(map);
-        tileLayer.bringToBack();
-        return;
-      }
-
-      var ll = [msg.lat, msg.lng];
-
-      if (msg.type === 'center') {
-        map.setBearing(0);
-        map.setView(ll, 16, { animate:true });
-        return;
-      }
-
-      if (msg.type === 'init') {
-        if (!marker) {
-          marker = L.marker(ll, { icon: gpsIcon, zIndexOffset: 1000 }).addTo(map);
-        } else {
-          marker.setLatLng(ll);
-        }
-        map.setView(ll, 16, { animate:true });
-        return;
-      }
-
-      if (msg.type === 'loc') {
-        if (marker) marker.setLatLng(ll);
-        if (msg.track) {
-          var coords = polyline.getLatLngs();
-          coords.push(ll);
-          polyline.setLatLngs(coords);
-        }
-      }
-    } catch(err) {}
-  });
-</script>
-</body>
-</html>`
 
 
 export default function CardioScreen() {
@@ -328,7 +218,9 @@ export default function CardioScreen() {
     opacity: interpolate(pulseV.value, [0.3, 1], [0.3, 1]),
   }))
 
-  const webRef = useRef<InstanceType<typeof WebView>>(null)
+  const mapRef = useRef<MapView>(null)
+  const followRef = useRef(true)
+  const [routeLine, setRouteLine] = useState<Coord[]>([])
   const locationSub = useRef<Location.LocationSubscription | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -354,19 +246,10 @@ export default function CardioScreen() {
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
   const [activeStyle, setActiveStyle] = useState<string>('satellite')
   // Vald standardkarta appliceras när kartan laddat (satellit är html-default)
-  const desiredStyle = useRef<string>('satellite')
   useEffect(() => {
     getDefaultMapStyle().then(k => {
-      desiredStyle.current = k
-      if (k !== 'satellite') {
-        setActiveStyle(k)
-        const st = TILE_URLS[k]
-        if (st) setTimeout(() => webRef.current?.injectJavaScript(
-          `window.dispatchEvent(new MessageEvent('message', {
-            data: JSON.stringify({ type:'style', url:${'${JSON.stringify(st.url)}'}, opts:${'${JSON.stringify(st.opts)}'} })
-          })); true;`
-        ), 900)
-      }
+      // Terräng utgick i Apple Maps-bytet
+      setActiveStyle(k === 'terrain' ? 'standard' : k)
     })
   }, [])
   const [summary, setSummary] = useState<{
@@ -628,45 +511,30 @@ export default function CardioScreen() {
   }
 
   function sendInit(coord: Coord) {
-    const js = `window.dispatchEvent(new MessageEvent('message', {
-      data: JSON.stringify({ type:'init', lat:${coord.latitude}, lng:${coord.longitude} })
-    })); true;`
-    if (mapReady.current) {
-      webRef.current?.injectJavaScript(js)
-    } else {
-      // Kö tills kartan är redo
-      setTimeout(() => webRef.current?.injectJavaScript(js), 800)
-    }
+    const center = () => mapRef.current?.animateCamera({ center: coord, zoom: 16 }, { duration: 0 })
+    if (mapReady.current) center()
+    else setTimeout(center, 600)
   }
 
   function changeStyle(key: string) {
-    const s = TILE_URLS[key]
-    if (!s) return
+    if (!APPLE_MAP_TYPES[key]) return
     setActiveStyle(key)
     closeStyleSheet()
-    webRef.current?.injectJavaScript(
-      `window.dispatchEvent(new MessageEvent('message', {
-        data: JSON.stringify({ type:'style', url:${JSON.stringify(s.url)}, opts:${JSON.stringify(s.opts)} })
-      })); true;`
-    )
   }
 
   function centerOnUser() {
     const c = latestCoord.current
     if (!c) return
-    webRef.current?.injectJavaScript(
-      `window.dispatchEvent(new MessageEvent('message', {
-        data: JSON.stringify({ type:'center', lat:${c.latitude}, lng:${c.longitude} })
-      })); true;`
-    )
+    followRef.current = true
+    mapRef.current?.animateCamera({ center: c, zoom: 16 }, { duration: 500 })
   }
 
   function sendToMap(lat: number, lng: number, track: boolean) {
-    webRef.current?.injectJavaScript(
-      `window.dispatchEvent(new MessageEvent('message', {
-        data: JSON.stringify({ type:'loc', lat:${lat}, lng:${lng}, track:${track} })
-      })); true;`
-    )
+    if (track) setRouteLine(routeCoords.current.map(([la, ln]) => ({ latitude: la, longitude: ln })))
+    // Kameran följer med tills användaren panorerar själv — locate slår på igen
+    if (followRef.current) {
+      mapRef.current?.animateCamera({ center: { latitude: lat, longitude: lng } }, { duration: 700 })
+    }
   }
 
   async function startTracking() {
@@ -894,16 +762,34 @@ export default function CardioScreen() {
   return (
     <View style={styles.root}>
 
-      {/* ── Fullscreen map ── */}
-      <WebView
-        ref={webRef}
+      {/* ── Fullscreen Apple Maps ── */}
+      <MapView
+        ref={mapRef}
         style={StyleSheet.absoluteFill}
-        source={{ html: MAP_HTML }}
-        scrollEnabled={false}
-        javaScriptEnabled
-        originWhitelist={['*']}
-        onLoadEnd={() => { mapReady.current = true }}
-      />
+        mapType={APPLE_MAP_TYPES[activeStyle] ?? 'standard'}
+        userInterfaceStyle={activeStyle === 'dark' ? 'dark' : 'light'}
+        showsUserLocation
+        showsMyLocationButton={false}
+        showsCompass={false}
+        pitchEnabled
+        rotateEnabled
+        onPanDrag={() => { followRef.current = false }}
+        onMapReady={() => {
+          mapReady.current = true
+          const c = latestCoord.current
+          if (c) mapRef.current?.animateCamera({ center: c, zoom: 16 }, { duration: 0 })
+        }}
+      >
+        {routeLine.length > 1 && (
+          <Polyline
+            coordinates={routeLine}
+            strokeColor={CARDIO_ACCENT}
+            strokeWidth={5}
+            lineCap="round"
+            lineJoin="round"
+          />
+        )}
+      </MapView>
 
       {/* ── Nedräkning 3-2-1 innan start ── */}
       {countdown !== null && (
@@ -1265,7 +1151,9 @@ export default function CardioScreen() {
                       onPress={() => changeStyle(ms.key)}
                       activeOpacity={0.85}
                     >
-                      <Image source={{ uri: previewUrl(ms.key) }} style={styles.mapPreview} />
+                      <View style={[styles.mapPreview, styles.mapPreviewIcon]}>
+                        <Ionicons name={ms.icon} size={26} color={active ? CARDIO_ACCENT : '#9BA0A6'} />
+                      </View>
                       <View style={styles.mapCardLabelRow}>
                         <Text style={[styles.mapCardLabel, active && { color: CARDIO_ACCENT }]}>{ms.label}</Text>
                         {active && <Ionicons name="checkmark-circle" size={15} color={CARDIO_ACCENT} />}
@@ -2163,6 +2051,7 @@ const styles = StyleSheet.create({
   mapCardActive: {
     borderColor: CARDIO_ACCENT,
   },
+  mapPreviewIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
   mapPreview: {
     width: '100%',
     height: 96,
