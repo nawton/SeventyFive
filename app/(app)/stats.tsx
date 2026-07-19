@@ -641,6 +641,50 @@ export default function StatsScreen() {
   })()
   const hasRecords = workouts.length > 0
 
+  // ── Styrkerekord (all-time) — från loggade set, klickbara till passet ──
+  type LiftRec = { name: string; kg: number; date: string }
+  let recTopLift: LiftRec | null = null
+  let recOneRm: LiftRec | null = null
+  const volByDate = new Map<string, number>()
+  const setsByWeekMap = new Map<string, number>()
+  for (const w of strengthWorkouts) {
+    const d = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
+    let vol = 0
+    for (const st of w.data.sets) {
+      vol += st.reps * (st.weight_kg || 0)
+      if (st.weight_kg > 0 && (!recTopLift || st.weight_kg > recTopLift.kg)) {
+        recTopLift = { name: w.data.exercise_name, kg: st.weight_kg, date: d }
+      }
+      // Epley: vikt × (1 + reps/30)
+      const orm = st.weight_kg > 0 && st.reps > 0 ? st.weight_kg * (1 + st.reps / 30) : 0
+      if (orm > 0 && (!recOneRm || orm > recOneRm.kg)) {
+        recOneRm = { name: w.data.exercise_name, kg: orm, date: d }
+      }
+    }
+    volByDate.set(d, (volByDate.get(d) ?? 0) + vol)
+    const wk = toLocalDateString(startOfWeek(parseLocalDate(d)))
+    setsByWeekMap.set(wk, (setsByWeekMap.get(wk) ?? 0) + w.data.sets.length)
+  }
+  let recBigDay: { date: string; vol: number } | null = null
+  for (const [d, v] of volByDate) {
+    if (v > 0 && (!recBigDay || v > recBigDay.vol)) recBigDay = { date: d, vol: v }
+  }
+  let recWeekSets = 0
+  for (const v of setsByWeekMap.values()) recWeekSets = Math.max(recWeekSets, v)
+  const hasGymRecords = recTopLift !== null || recWeekSets > 0
+
+  // Öppnar gympassdetaljen för alla loggade övningar ett visst datum
+  function openGymDay(date: string, title: string) {
+    const logged = strengthWorkouts.filter(w =>
+      (w.data.workout_date ?? toLocalDateString(new Date(w.created_at))) === date)
+    setGymDetail({
+      name: title,
+      dateLabel: parseLocalDate(date).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' }),
+      planned: [],
+      logged,
+    })
+  }
+
   // ── Tempoutveckling: veckosnitt (endast veckor med distanspass) ──
   const paceWeeks = weeklyBars.filter(b => b.paceSec > 0)
   const paceVals  = paceWeeks.map(b => paceForUnit(b.paceSec, unit))
@@ -1411,6 +1455,68 @@ export default function StatsScreen() {
               <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
             </TouchableOpacity>
 
+            {/* Styrkerekord — all-time, klickbara till passet där rekordet sattes */}
+            {hasGymRecords && (
+              <>
+              <Text style={s.sectionHead}>Styrkerekord</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginHorizontal: -GRID_PADDING }}
+                contentContainerStyle={s.recScroll}
+              >
+                {([
+                  recTopLift && {
+                    icon: 'barbell-outline' as const, color: ORANGE,
+                    label: `Tyngsta lyft · ${recTopLift.name}`,
+                    value: `${recTopLift.kg} kg`,
+                    onPress: () => openGymDay(recTopLift!.date, recTopLift!.name),
+                  },
+                  recOneRm && {
+                    icon: 'speedometer-outline' as const, color: PURPLE,
+                    label: `Bästa 1RM · ${recOneRm.name}`,
+                    value: `${Math.round(recOneRm.kg)} kg`,
+                    onPress: () => openGymDay(recOneRm!.date, recOneRm!.name),
+                  },
+                  recBigDay && {
+                    icon: 'trophy-outline' as const, color: YELLOW,
+                    label: 'Största passet (volym)',
+                    value: `${Math.round(recBigDay.vol).toLocaleString('sv-SE')} kg`,
+                    onPress: () => openGymDay(recBigDay!.date, 'Största passet'),
+                  },
+                  recWeekSets > 0 && {
+                    icon: 'layers-outline' as const, color: BLUE,
+                    label: 'Flest set en vecka',
+                    value: `${recWeekSets} set`,
+                    onPress: undefined,
+                  },
+                ].filter(Boolean) as Array<{
+                  icon: React.ComponentProps<typeof Ionicons>['name']
+                  color: string; label: string; value: string; onPress?: () => void
+                }>).map(r => (
+                  <TouchableOpacity
+                    key={r.label}
+                    style={s.recCard}
+                    activeOpacity={0.75}
+                    disabled={!r.onPress}
+                    onPress={r.onPress}
+                  >
+                    <View style={s.recCardTop}>
+                      <View style={[s.recIconWrap, { backgroundColor: r.color + '1A' }]}>
+                        <Ionicons name={r.icon} size={16} color={r.color} />
+                      </View>
+                      {r.onPress && <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.28)" />}
+                    </View>
+                    <Text style={[s.recCardVal, { color: r.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                      {r.value}
+                    </Text>
+                    <Text style={s.recCardLbl} numberOfLines={2}>{r.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              </>
+            )}
+
           </>
         </ScrollView>
       </GHScrollView>
@@ -1523,6 +1629,19 @@ export default function StatsScreen() {
             />
           )}
         </Modal>
+      </Modal>
+
+      {/* Gympassdetalj öppnad utanför Genomförda pass (t.ex. från Styrkerekord) */}
+      <Modal visible={!!gymDetail && !sessionsOpen} animationType="slide" onRequestClose={() => setGymDetail(null)}>
+        {gymDetail && (
+          <GymSummaryView
+            name={gymDetail.name}
+            dateLabel={gymDetail.dateLabel}
+            logged={gymDetail.logged}
+            plannedNames={gymDetail.planned}
+            onClose={() => setGymDetail(null)}
+          />
+        )}
       </Modal>
 
       <MuscleDetailModal
