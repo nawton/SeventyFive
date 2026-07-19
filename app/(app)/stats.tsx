@@ -1136,15 +1136,11 @@ export default function StatsScreen() {
                   <Text style={[s.dtlVal, { color: GREEN }]}>{weekReport.daysCleared}</Text>
                 </View>
               </View>
-            </View>
-
-            {/* Statistik — bara det ringen inte redan visar */}
-            <Text style={s.sectionHead}>Statistik</Text>
-            <View style={[s.card, s.cardPlain]}>
-              <View style={[s.dtlRow, { paddingVertical: 0 }]}>
+              <View style={s.dtlSep} />
+              <View style={[s.dtlRow, { paddingBottom: 0 }]}>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Dagar i streak</Text>
-                  <Text style={[s.dtlVal, { color: ORANGE }]}>{streak}</Text>
+                  <Text style={[s.dtlVal, { color: '#FF6B35' }]}>{streak}</Text>
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>{isEarlyDays ? 'Till dag 10' : 'Kvar till mål'}</Text>
@@ -1294,8 +1290,15 @@ export default function StatsScreen() {
               const pts = paceVals.map((v, i) => `${px(i)},${py(v)}`).join(' ')
               return (
                 <>
-                <Text style={s.sectionHead}>Tempoutveckling</Text>
-                <View style={[s.card, s.cardPlain]}>
+                <View style={s.sectionHeadRow}>
+                  <Text style={[s.sectionHead, s.sectionHeadInline]}>Tempoutveckling</Text>
+                  <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
+                </View>
+                <TouchableOpacity
+                  style={[s.card, s.cardPlain]}
+                  activeOpacity={0.85}
+                  onPress={() => setCardioDetailsOpen(true)}
+                >
                   <Text style={[s.cardSub, { marginTop: 0 }]}>snitt min/{unitLabel} per vecka · snabbare är högre upp</Text>
                   <View style={s.paceChartRow}>
                     <View style={s.paceAxis}>
@@ -1322,7 +1325,7 @@ export default function StatsScreen() {
                       <Text key={i} style={[s.paceWeekLbl, b.isCurrent && { color: BLUE }]}>{b.label}</Text>
                     ))}
                   </View>
-                </View>
+                </TouchableOpacity>
                 </>
               )
             })()}
