@@ -805,6 +805,7 @@ const s = StyleSheet.create({
   label: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, paddingHorizontal: 4 },
   input: {
     backgroundColor: CARD, borderRadius: 12,
+    borderWidth: 1, borderColor: BORDER,
     color: TEXT_PRIMARY, fontSize: 16,
     paddingHorizontal: 14, paddingVertical: 14,
   },
@@ -815,9 +816,10 @@ const s = StyleSheet.create({
   repeatRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1, borderColor: BORDER,
     padding: 14, marginTop: 4,
   },
-  repeatRowActive: { backgroundColor: ORANGE + '14' },
+  repeatRowActive: { backgroundColor: ORANGE + '14', borderColor: ORANGE + '40' },
   repeatIcon: {
     width: 34, height: 34, borderRadius: 10,
     backgroundColor: BG, alignItems: 'center', justifyContent: 'center',
@@ -846,14 +848,16 @@ const s = StyleSheet.create({
   dayBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10,
     backgroundColor: CARD,
+    borderWidth: 1, borderColor: BORDER,
   },
-  dayBtnActive:  { backgroundColor: ORANGE },
+  dayBtnActive:  { backgroundColor: ORANGE, borderColor: ORANGE },
   dayText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
   dayTextActive: { color: '#000', fontWeight: '700' },
 
   exRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: CARD, borderRadius: 10, padding: 10,
+    borderWidth: 1, borderColor: BORDER,
   },
   exName: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
   cardioBadge: {
@@ -872,6 +876,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingVertical: 10, paddingHorizontal: 14,
     backgroundColor: ORANGE + '16', borderRadius: 10, marginTop: 4,
+    borderWidth: 1, borderColor: ORANGE + '40',
   },
   pickerToggleText: { color: ORANGE, fontSize: 14, fontWeight: '600' },
 
@@ -887,6 +892,7 @@ const s = StyleSheet.create({
     marginHorizontal: 16, marginVertical: 10,
     paddingHorizontal: 14, height: 46,
     backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1, borderColor: BORDER,
   },
   pickerSearchInput:    { flex: 1, color: TEXT_PRIMARY, fontSize: 15, padding: 0 },
   pickerFilterStrip:    { height: 60, flexGrow: 0, marginBottom: 10 },
@@ -894,8 +900,9 @@ const s = StyleSheet.create({
   pickerPill: {
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20,
     backgroundColor: CARD,
+    borderWidth: 1, borderColor: BORDER,
   },
-  pickerPillActive:     { backgroundColor: ORANGE },
+  pickerPillActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
   pickerPillText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
   pickerPillTextActive: { color: '#000', fontWeight: '700' },
   pickerCount: {
@@ -923,8 +930,6 @@ const s = StyleSheet.create({
   saveBtn: {
     backgroundColor: ORANGE, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center',
-    shadowColor: ORANGE, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 10,
   },
   saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 
@@ -935,8 +940,9 @@ const s = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 7, paddingVertical: 12, borderRadius: 12,
     backgroundColor: CARD,
+    borderWidth: 1, borderColor: BORDER,
   },
-  typeBtnActive:     { backgroundColor: ORANGE },
+  typeBtnActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
   typeBtnText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
   typeBtnTextActive: { color: '#000', fontWeight: '700' },
 
@@ -947,8 +953,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 7,
     paddingVertical: 11, paddingHorizontal: 14,
     borderRadius: 12, backgroundColor: CARD,
+    borderWidth: 1, borderColor: BORDER,
   },
-  cardioTypeBtnActive:  { backgroundColor: ORANGE },
+  cardioTypeBtnActive:  { backgroundColor: ORANGE, borderColor: ORANGE },
   cardioTypeTxt:        { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
   cardioTypeTxtActive:  { color: '#000', fontWeight: '700' },
 
@@ -972,6 +979,7 @@ const s = StyleSheet.create({
 
   infoCard: {
     backgroundColor: CARD, borderRadius: 16, padding: 16, gap: 12,
+    borderWidth: 1, borderColor: BORDER,
   },
   infoCardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   infoCardTitle:    { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },

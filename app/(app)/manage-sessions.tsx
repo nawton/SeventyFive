@@ -27,7 +27,8 @@ import {
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { GlassCircleButton } from '@/components/GlassButton'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE } from '@/lib/theme'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -53,6 +54,29 @@ function displayName(s: WorkoutSession): string {
   return s.name
 }
 
+// Typikon per pass — samma färgspråk som passkorten (orange gym, blå kondition)
+function sessionIcon(sess: WorkoutSession): {
+  name: React.ComponentProps<typeof Ionicons>['name']
+  color: string
+} {
+  if (sess.session_type !== 'cardio') return { name: 'barbell-outline', color: ORANGE }
+  switch (sess.cardio_type) {
+    case 'cycling':  return { name: 'bicycle-outline', color: CARDIO_BLUE }
+    case 'walking':  return { name: 'walk-outline',    color: CARDIO_BLUE }
+    case 'interval': return { name: 'flash-outline',   color: CARDIO_BLUE }
+    default:         return { name: 'fitness-outline', color: CARDIO_BLUE }
+  }
+}
+
+function cardioLabel(type: string | null): string {
+  switch (type) {
+    case 'cycling':  return 'Cykling'
+    case 'interval': return 'Intervall'
+    case 'walking':  return 'Promenad'
+    default:         return 'Löpning'
+  }
+}
+
 // ── DayCard ───────────────────────────────────────────────────────────────────
 
 function DayCard({
@@ -70,7 +94,7 @@ function DayCard({
 }) {
   const hasSession    = daySessions.length > 0
   const exerciseCount = daySessions.reduce((n, s) => n + s.exercises.length, 0)
-  const multiPass     = daySessions.length > 1
+  const firstCardio   = daySessions.find(x => x.session_type === 'cardio')
 
   return (
     <TouchableOpacity
@@ -94,28 +118,27 @@ function DayCard({
 
       {hasSession ? (
         <>
-          <Text style={s.sessionLabel} numberOfLines={2}>
-            {displayName(daySessions[0])}
-          </Text>
-          <View style={s.cardBottom}>
-            {daySessions[0].session_type === 'cardio' ? (
-              <Ionicons
-                name={
-                  daySessions[0].cardio_type === 'cycling'  ? 'bicycle-outline' :
-                  daySessions[0].cardio_type === 'walking'  ? 'walk-outline'    :
-                  daySessions[0].cardio_type === 'interval' ? 'flash-outline'   :
-                  'fitness-outline'
-                }
-                size={13}
-                color={ORANGE}
-              />
-            ) : (
-              <Text style={s.metaText}>
-                {exerciseCount} övn{multiPass ? ` · ${daySessions.length} pass` : ''}
-              </Text>
+          {/* Alla dagens pass med varsin typikon — inget göms bakom "· 2 pass" */}
+          <View style={s.sessionList}>
+            {daySessions.slice(0, 3).map(sess => {
+              const icon = sessionIcon(sess)
+              return (
+                <View key={sess.id} style={s.sessionRow}>
+                  <Ionicons name={icon.name} size={12} color={icon.color} />
+                  <Text style={s.sessionLabel} numberOfLines={1}>{displayName(sess)}</Text>
+                </View>
+              )
+            })}
+            {daySessions.length > 3 && (
+              <Text style={s.moreText}>+{daySessions.length - 3} pass till</Text>
             )}
-            <View style={[s.activeDot, multiPass && s.activeDotMulti]} />
           </View>
+          <Text style={s.metaText}>
+            {[
+              exerciseCount > 0 && `${exerciseCount} övningar`,
+              firstCardio && cardioLabel(firstCardio.cardio_type),
+            ].filter(Boolean).join(' · ')}
+          </Text>
         </>
       ) : (
         <>
@@ -265,18 +288,13 @@ export default function ManageSessionsScreen() {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
 
-      {/* Header */}
+      {/* Header — samma mönster som Rekord & medaljer */}
       <View style={s.header}>
-        <TouchableOpacity
-          style={s.backBtn}
-          onPress={() => router.navigate('/(app)/add')}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={22} color={TEXT_PRIMARY} />
-        </TouchableOpacity>
-        <View style={s.titleWrap} pointerEvents="none">
-          <Text style={s.title}>Veckoschemma</Text>
-        </View>
+        <GlassCircleButton
+          icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
+          onPress={() => router.navigate('/(app)/add')} fallbackStyle={s.iconBtn}
+        />
+        <Text style={s.title}>Veckoschema</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -378,13 +396,12 @@ const s = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: PAD, paddingTop: 8, paddingBottom: 14,
+    paddingHorizontal: PAD, paddingTop: 8, paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)',
   },
-  backBtn:  { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  titleWrap: {
-    position: 'absolute', left: 0, right: 0,
-    alignItems: 'center', justifyContent: 'center', height: 56,
+  iconBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
   },
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
 
@@ -409,25 +426,24 @@ const s = StyleSheet.create({
   },
   lastCard: { width: CARD_W },
 
-  // Day card
+  // Day card — ram istället för glow; idag markeras med orange ram
   dayCard: {
     width: CARD_W,
     minHeight: 120,
     backgroundColor: CARD,
     borderRadius: 18,
+    borderWidth: 1,
+    borderColor: BORDER,
     padding: 14,
     gap: 6,
     justifyContent: 'space-between',
   },
   dayCardActive: {
     backgroundColor: '#1A1510',
-    shadowColor: ORANGE,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    borderColor: ORANGE + '40',
   },
   dayCardToday: {
-    shadowOpacity: 0.25,
+    borderColor: ORANGE,
   },
 
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -442,20 +458,17 @@ const s = StyleSheet.create({
     backgroundColor: ORANGE,
   },
 
+  sessionList: { flex: 1, gap: 5, justifyContent: 'center' },
+  sessionRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   sessionLabel: {
     color: TEXT_PRIMARY, fontSize: 14,
     fontWeight: '700', lineHeight: 18,
     flex: 1,
   },
-  cardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  metaText:   { color: TEXT_SECONDARY, fontSize: 11 },
-  activeDot: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: ORANGE,
-  },
-  activeDotMulti: { backgroundColor: '#AB47BC' },
+  moreText: { color: TEXT_SECONDARY, fontSize: 11, marginLeft: 18 },
+  metaText: { color: TEXT_SECONDARY, fontSize: 11 },
 
-  restLabel: { color: '#333', fontSize: 13, fontWeight: '500', flex: 1 },
+  restLabel: { color: 'rgba(255,255,255,0.28)', fontSize: 13, fontWeight: '500', flex: 1 },
   addCircle: {
     width: 26, height: 26, borderRadius: 13,
     borderWidth: 1, borderColor: ORANGE + '40',
@@ -465,7 +478,7 @@ const s = StyleSheet.create({
   },
 
   hint: {
-    color: '#2A2A2C', fontSize: 11,
+    color: 'rgba(255,255,255,0.30)', fontSize: 11,
     textAlign: 'center', marginTop: 20,
   },
 
