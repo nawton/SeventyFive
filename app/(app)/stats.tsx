@@ -223,23 +223,6 @@ function RingChart({ currentDay, completedDays }: { currentDay: number; complete
   )
 }
 
-// ─── StatCard ──────────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, icon, color }: {
-  label: string; value: string | number
-  icon: React.ComponentProps<typeof Ionicons>['name']; color: string
-}) {
-  return (
-    <View style={s.statCard}>
-      <View style={[s.statIconBox, { backgroundColor: color + '22' }]}>
-        <Ionicons name={icon} size={18} color={color} />
-      </View>
-      <Text style={[s.statValue, { color }]}>{value}</Text>
-      <Text style={s.statLabel}>{label}</Text>
-    </View>
-  )
-}
-
 // ─── StatsScreen ───────────────────────────────────────────────────────────────
 
 type StatsTab = 'overview' | 'cardio' | 'gympass'
@@ -723,7 +706,8 @@ export default function StatsScreen() {
         >
           <>
             {/* Ring chart */}
-            <View style={s.card}>
+            <Text style={s.sectionHead}>Utmaningen</Text>
+            <View style={[s.card, s.cardPlain]}>
               <View style={s.ringWrap}>
                 <RingChart currentDay={currentDay} completedDays={completedDays} />
                 <View style={s.ringInfo}>
@@ -769,14 +753,38 @@ export default function StatsScreen() {
               </View>
             )}
 
-            {/* Stat row */}
-            <View style={s.statsRow}>
-              <StatCard label="dagar streak" value={streak}       icon="flame-outline"            color={ORANGE} />
-              <StatCard label="klarade"      value={completedDays} icon="checkmark-circle-outline" color={GREEN} />
-              {isEarlyDays
-                ? <StatCard label="till dag 10"  value={Math.max(0, 10 - currentDay)} icon="flag-outline" color={PURPLE} />
-                : <StatCard label="kvar till mål" value={Math.max(0, 75 - currentDay)} icon="flag-outline" color={PURPLE} />
-              }
+            {/* Statistikrutnät — samma Apple-stil som cardio-flikens Träningsdetaljer */}
+            <Text style={s.sectionHead}>Statistik</Text>
+            <View style={[s.card, s.cardPlain]}>
+              <View>
+                <View style={[s.dtlRow, { paddingTop: 0 }]}>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Dagar i streak</Text>
+                    <Text style={[s.dtlVal, { color: ORANGE }]}>{streak}</Text>
+                  </View>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Klarade dagar</Text>
+                    <Text style={[s.dtlVal, { color: GREEN }]}>{completedDays}</Text>
+                  </View>
+                </View>
+                <View style={s.dtlSep} />
+                <View style={[s.dtlRow, { paddingBottom: 0 }]}>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>{isEarlyDays ? 'Till dag 10' : 'Kvar till mål'}</Text>
+                    <Text style={[s.dtlVal, { color: PURPLE }]}>
+                      {isEarlyDays ? Math.max(0, 10 - currentDay) : Math.max(0, 75 - currentDay)}
+                      <Text style={s.dtlUnit}> DAGAR</Text>
+                    </Text>
+                  </View>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Framgång</Text>
+                    <Text style={[s.dtlVal, { color: TEAL }]}>
+                      {currentDay > 1 ? Math.round((completedDays / (currentDay - 1)) * 100) : 0}
+                      <Text style={s.dtlUnit}> %</Text>
+                    </Text>
+                  </View>
+                </View>
+              </View>
             </View>
 
             {/* Milestone — normal position dag 8+ */}
@@ -792,6 +800,7 @@ export default function StatsScreen() {
             )}
 
             {/* Calendar */}
+            <Text style={s.sectionHead}>Kalender</Text>
             <CalendarView
               days={days}
               startDate={startDate}
@@ -1139,10 +1148,23 @@ export default function StatsScreen() {
           scrollEventThrottle={16}
         >
           <>
-            <View style={s.statsRow}>
-              <StatCard label="pass denna vecka"   value={weekGymSessions.length} icon="barbell-outline"          color={ORANGE} />
-              <StatCard label="muskelgrupper"       value={weekMuscleFreq.size}    icon="body-outline"             color={PURPLE} />
-              <StatCard label="övningar totalt"     value={weekExNames.length}     icon="checkmark-circle-outline" color={GREEN} />
+            {/* Veckostatistik — samma Apple-rutnät som övriga flikar */}
+            <Text style={s.sectionHead}>Veckans träning</Text>
+            <View style={[s.card, s.cardPlain]}>
+              <View style={[s.dtlRow, { paddingVertical: 0 }]}>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Pass</Text>
+                  <Text style={[s.dtlVal, { color: ORANGE }]}>{weekGymSessions.length}</Text>
+                </View>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Muskelgrupper</Text>
+                  <Text style={[s.dtlVal, { color: PURPLE }]}>{weekMuscleFreq.size}</Text>
+                </View>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Övningar</Text>
+                  <Text style={[s.dtlVal, { color: GREEN }]}>{weekExNames.length}</Text>
+                </View>
+              </View>
             </View>
 
             {/* Week nav */}
@@ -1162,12 +1184,10 @@ export default function StatsScreen() {
             </View>
 
             {/* Body map */}
-            <View style={s.card}>
+            <Text style={s.sectionHead}>Tränade muskler</Text>
+            <View style={[s.card, s.cardPlain]}>
               <View style={s.muscleHeader}>
-                <View>
-                  <Text style={s.cardTitle}>Tränade muskler</Text>
-                  <Text style={s.muscleAuto}>Automatisk från schema</Text>
-                </View>
+                <Text style={s.muscleAuto}>Automatisk från schema</Text>
                 <View style={s.bodyToggle}>
                   {(['front', 'back'] as const).map(side => (
                     <TouchableOpacity
@@ -1232,8 +1252,9 @@ export default function StatsScreen() {
             {weekLoading ? (
               <ActivityIndicator color={ORANGE} style={{ marginVertical: 16 }} />
             ) : weekGymSessions.length > 0 ? (
-              <View style={s.card}>
-                <Text style={s.cardTitle}>Genomförda pass</Text>
+              <>
+              <Text style={s.sectionHead}>Genomförda pass</Text>
+              <View style={[s.card, s.cardPlain]}>
                 <View style={s.gymList}>
                   {weekGymSessions.map(gs => {
                     const gymDay    = new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
@@ -1254,6 +1275,7 @@ export default function StatsScreen() {
                   })}
                 </View>
               </View>
+              </>
             ) : (
               <View style={s.empty}>
                 <Ionicons name="barbell-outline" size={40} color="rgba(255,255,255,0.12)" />
@@ -1341,11 +1363,6 @@ const s = StyleSheet.create({
   },
 
   statsGrid: { gap: 10 },
-  statsRow:  { flexDirection: 'row', gap: 10 },
-  statCard:  { flex: 1, backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 14, alignItems: 'center', gap: 6 },
-  statIconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  statValue: { color: TEXT_PRIMARY, fontSize: 22, fontFamily: NUM_FONT },
-  statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '500', textAlign: 'center' },
 
   card:      { backgroundColor: CARD, borderRadius: 20, borderWidth: 1, borderColor: BORDER, padding: 20, gap: 14 },
   // Cardio-fliken: rubriken utanför kortet (Apple Fitness) och kortet utan ram
@@ -1414,8 +1431,7 @@ const s = StyleSheet.create({
   // Milestone
   milestone: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: ORANGE + '12',
-    borderWidth: 1, borderColor: ORANGE + '35',
+    backgroundColor: ORANGE + '14',
     borderRadius: 18, padding: 16,
   },
   msIcon:    { width: 40, height: 40, borderRadius: 12, backgroundColor: ORANGE + '20', alignItems: 'center', justifyContent: 'center' },
