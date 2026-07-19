@@ -137,11 +137,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: ORANGE + '12',
     borderRadius: 16,
     padding: 20,
-    borderWidth: 1,
-    borderColor: ORANGE + '40',
     marginTop: 8,
   },
   cardText: {
@@ -165,8 +163,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: BORDER,
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
   continueButtonText: {
     color: TEXT_SECONDARY,

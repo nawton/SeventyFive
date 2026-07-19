@@ -183,8 +183,6 @@ const styles = StyleSheet.create({
     padding: 16,
     color: TEXT_PRIMARY,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
     minHeight: 120,
     marginTop: 8,
   },
@@ -211,11 +209,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   responseCard: {
-    backgroundColor: CARD,
+    backgroundColor: ORANGE + '12',
     borderRadius: 16,
     padding: 20,
-    borderWidth: 1,
-    borderColor: ORANGE + '40',
     marginTop: 8,
   },
   responseText: {

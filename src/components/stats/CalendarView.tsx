@@ -348,7 +348,6 @@ export function CalendarView({
 const s = StyleSheet.create({
   calCard: {
     backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1, borderColor: BORDER,
     padding: 20, gap: 16,
   },
   calHeader:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

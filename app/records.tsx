@@ -802,7 +802,7 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   iconBtn: {
     width: 40, height: 40, borderRadius: 20,
@@ -836,8 +836,7 @@ const s = StyleSheet.create({
   levelPtsBig: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT_SEMI, flexShrink: 1 },
   historyBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: CARD, borderRadius: 18,
-    borderWidth: 1, borderColor: ORANGE + '44',
+    backgroundColor: ORANGE + '16', borderRadius: 18,
     paddingHorizontal: 12, paddingVertical: 7,
   },
   historyBtnText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
@@ -880,7 +879,6 @@ const s = StyleSheet.create({
   medal: {
     width: '31%', flexGrow: 1,
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER,
     padding: 12, alignItems: 'center', gap: 6,
   },
   // Låst-känslan bärs av den mörka metallen i badgen — lätt dimning räcker
@@ -893,11 +891,10 @@ const s = StyleSheet.create({
 
   recordCard: {
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER,
     overflow: 'hidden',
   },
   recordRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  recordBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
+  recordBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.10)' },
   recordIcon: {
     width: 34, height: 34, borderRadius: 10,
     backgroundColor: GOLD + '1E',
@@ -932,7 +929,6 @@ const s = StyleSheet.create({
   modalCard: {
     width: '100%', maxWidth: 340,
     backgroundColor: CARD, borderRadius: 24,
-    borderWidth: 1, borderColor: BORDER,
     padding: 28, alignItems: 'center', gap: 8,
   },
   modalTitle:    { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', marginTop: 8, textAlign: 'center' },

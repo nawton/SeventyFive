@@ -225,7 +225,6 @@ const s = StyleSheet.create({
   },
   input: {
     backgroundColor: '#0F0F11', borderRadius: 14,
-    borderWidth: 1, borderColor: CARD_BORDER,
     color: '#FFFFFF', fontSize: 16,
     paddingHorizontal: 16, paddingVertical: 14,
   },
@@ -234,11 +233,10 @@ const s = StyleSheet.create({
   iconBtn: {
     flexDirection: 'column', alignItems: 'center', gap: 4,
     backgroundColor: '#0F0F11', borderRadius: 12,
-    borderWidth: 1, borderColor: CARD_BORDER,
     paddingHorizontal: 10, paddingVertical: 10, minWidth: 60,
   },
   // Tintad markering i regelfärgen — samma stil som ikonboxarna på korten
-  iconBtnActive:   { backgroundColor: CUSTOM + '1C', borderColor: CUSTOM },
+  iconBtnActive:   { backgroundColor: CUSTOM + '26' },
   iconLabel:       { color: '#4A4A50', fontSize: 10, fontWeight: '500' },
   iconLabelActive: { color: CUSTOM, fontWeight: '700' },
   saveBtn: {
