@@ -367,14 +367,17 @@ export function WorkoutSection({
   const hasBody =
     (!isCardio && (total > 0 || !!onAddExercise)) ||
     (isCardio && (!isCompleted || !!onViewCardioSummary))
-  // Passen startar alltid hopfällda — tryck på namnet fäller ut
-  const [collapsed, setCollapsed] = useState(true)
+  // Passen startar hopfällda — utom ostartade cardiopass: deras enda innehåll
+  // är startknappen, och den ska synas direkt utan att man känner till
+  // utfällningen (kroppen är en enda rad, så direktmontering kostar inget)
+  const startOpen = isCardio && !isCompleted
+  const [collapsed, setCollapsed] = useState(!startOpen)
   const [bodyH, setBodyH]         = useState(0)
   // Latmontering: kroppen (övningsrader med gester m.m.) är dyr att montera —
   // skapa den först när kortet fälls ut första gången. Gör dagbyten mycket
   // billigare eftersom pagern monterar flera dagars kort åt gången.
-  const [bodyMounted, setBodyMounted] = useState(false)
-  const collapseV = useSharedValue(0)   // 1 = utfälld
+  const [bodyMounted, setBodyMounted] = useState(startOpen)
+  const collapseV = useSharedValue(startOpen ? 1 : 0)   // 1 = utfälld
 
   function toggleCollapse() {
     if (!hasBody) return
