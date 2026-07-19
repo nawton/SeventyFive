@@ -170,8 +170,7 @@ const s = StyleSheet.create({
     letterSpacing: 0.5, textTransform: 'uppercase', paddingHorizontal: 4,
   },
   sectionCard: {
-    backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER, overflow: 'hidden',
+    backgroundColor: CARD, borderRadius: 16, overflow: 'hidden',
   },
 
   row: {

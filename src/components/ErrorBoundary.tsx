@@ -54,7 +54,7 @@ const s = StyleSheet.create({
   },
   iconCircle: {
     width: 80, height: 80, borderRadius: 40,
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: CARD,
     alignItems: 'center', justifyContent: 'center', marginBottom: 8,
   },
   title: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800' },

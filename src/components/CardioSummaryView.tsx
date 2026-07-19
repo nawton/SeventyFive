@@ -359,7 +359,6 @@ const s = StyleSheet.create({
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 20, paddingHorizontal: 4, marginTop: 14 },
   effortCard: {
     backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1, borderColor: BORDER,
     paddingHorizontal: 18, paddingVertical: 14,
     flexDirection: 'row', alignItems: 'center',
   },
@@ -379,7 +378,6 @@ const s = StyleSheet.create({
   statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   splitsCard: {
     backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1, borderColor: BORDER,
     paddingHorizontal: 18, paddingVertical: 16, gap: 4,
   },
   splitsTitle: {

@@ -299,7 +299,7 @@ const s = StyleSheet.create({
 
   cardioRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 14,
+    backgroundColor: CARD, borderRadius: 16, padding: 14,
   },
   cardioIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   cardioLabel: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
@@ -324,10 +324,10 @@ const s = StyleSheet.create({
 
   fieldLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: 8, paddingHorizontal: 4 },
   nameInput: {
-    backgroundColor: CARD, borderRadius: 14, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: CARD, borderRadius: 14,
     color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600', paddingHorizontal: 14, paddingVertical: 14,
   },
-  exListCard: { backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER, overflow: 'hidden' },
+  exListCard: { backgroundColor: CARD, borderRadius: 18, overflow: 'hidden' },
   exListRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 13 },
   exListBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
   exListIcon: {
