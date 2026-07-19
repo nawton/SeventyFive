@@ -60,16 +60,23 @@ function getWeekBounds(offset: number): { start: string; end: string; label: str
   }
 }
 
-function nextMilestone(day: number): { day: number; label: string; daysLeft: number } | null {
+/** Nästa milstolpe utifrån AVKLARADE dagar — missade dagar räknas inte som
+ *  framsteg, och "Halvvägs" ligger på riktiga mitten (dag 38 av 75). */
+function nextMilestone(completed: number): { day: number; label: string; daysLeft: number } | null {
   const stones = [
+    { day: 7,  label: 'Första veckan klar!' },
     { day: 10, label: '10 dagar klara!' },
+    { day: 19, label: 'En fjärdedel klar!' },
     { day: 25, label: 'En tredjedel klar!' },
-    { day: 50, label: 'Halvvägs!' },
-    { day: 75, label: 'MÅLET!' },
+    { day: 38, label: 'Halvvägs!' },
+    { day: 50, label: 'Två tredjedelar klara!' },
+    { day: 60, label: '60 dagar klara!' },
+    { day: 68, label: 'Sista veckan!' },
+    { day: 75, label: 'MÅLET: 75 dagar!' },
   ]
-  const next = stones.find(s => s.day > day)
+  const next = stones.find(s => s.day > completed)
   if (!next) return null
-  return { ...next, daysLeft: next.day - day }
+  return { ...next, daysLeft: next.day - completed }
 }
 
 function fmtPace(secsPerKm: number): string {
@@ -475,7 +482,7 @@ export default function StatsScreen() {
   const avgPace    = pacedKm > 0 ? fmtPace(paceForUnit(pacedSecs / pacedKm, unit)) : '--:--'
   const bestPace   = bestPaceSec === Infinity ? '--:--' : fmtPace(paceForUnit(bestPaceSec, unit))
 
-  const milestone   = nextMilestone(currentDay)
+  const milestone   = nextMilestone(completedDays)
   const isEarlyDays = currentDay <= 7
   // Tempoutvecklingen räknas alltid på ALLA pass, oavsett periodfilter
   const weeklyBars  = buildWeeklyBars(workouts)
@@ -747,8 +754,10 @@ export default function StatsScreen() {
                 <View style={s.msIcon}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
                   <Text style={s.msEyebrow}>NÄSTA MILSTOLPE</Text>
-                  <Text style={s.msTitle}>Dag {milestone.day}: {milestone.label}</Text>
-                  <Text style={s.msSub}>{milestone.daysLeft} dagar kvar · Du är på väg!</Text>
+                  <Text style={s.msTitle}>{milestone.label}</Text>
+                  <Text style={s.msSub}>
+                    {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`} · Du är på väg!
+                  </Text>
                 </View>
               </View>
             )}
@@ -793,8 +802,10 @@ export default function StatsScreen() {
                 <View style={s.msIcon}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
                   <Text style={s.msEyebrow}>NÄSTA MILSTOLPE</Text>
-                  <Text style={s.msTitle}>Dag {milestone.day}: {milestone.label}</Text>
-                  <Text style={s.msSub}>{milestone.daysLeft} dagar kvar · Håll ut</Text>
+                  <Text style={s.msTitle}>{milestone.label}</Text>
+                  <Text style={s.msSub}>
+                    {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`} · Håll ut
+                  </Text>
                 </View>
               </View>
             )}
