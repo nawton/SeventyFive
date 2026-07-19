@@ -128,8 +128,7 @@ const s = StyleSheet.create({
   sub:   { color: TEXT_SECONDARY, fontSize: 15, textAlign: 'center', lineHeight: 22 },
   inputWrapper: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER, paddingHorizontal: 14, marginTop: 10,
+    backgroundColor: CARD, borderRadius: 12, paddingHorizontal: 14, marginTop: 10,
   },
   input: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, paddingVertical: 14 },
   primaryBtn: {

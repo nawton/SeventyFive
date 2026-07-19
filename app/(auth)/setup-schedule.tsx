@@ -120,8 +120,6 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: CARD,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
     overflow: 'hidden',
   },
   featureRow: {

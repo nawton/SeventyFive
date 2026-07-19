@@ -57,7 +57,7 @@ export default function Welcome() {
         {/* ── Task icon strip ── */}
         <Animated.View entering={FadeInDown.duration(500).delay(250)} style={s.iconStrip}>
           {TASK_ICONS.map((t, i) => (
-            <View key={i} style={[s.iconBubble, { backgroundColor: t.color + '1A', borderColor: t.color + '30' }]}>
+            <View key={i} style={[s.iconBubble, { backgroundColor: t.color + '1A' }]}>
               <Ionicons name={t.icon} size={22} color={t.color} />
             </View>
           ))}
@@ -188,7 +188,6 @@ const s = StyleSheet.create({
   iconBubble: {
     width: 48, height: 48,
     borderRadius: 14,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -213,8 +212,7 @@ const s = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 15,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2C2C2E',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   secondaryBtnText: { color: '#555', fontSize: 14, fontWeight: '500' },
 
@@ -239,10 +237,10 @@ const s = StyleSheet.create({
   dayBtn: {
     width: (width - 40 - 8 * 6) / 7,
     aspectRatio: 1, borderRadius: 10,
-    backgroundColor: BG, borderWidth: 1.5, borderColor: BORDER,
+    backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center',
   },
-  dayBtnActive:     { backgroundColor: ORANGE + '20', borderColor: ORANGE },
+  dayBtnActive:     { backgroundColor: ORANGE + '26' },
   dayBtnText:       { color: '#888', fontSize: 13, fontWeight: '600' },
   dayBtnTextActive: { color: ORANGE, fontWeight: '700' },
 
@@ -255,7 +253,7 @@ const s = StyleSheet.create({
   confirmBtnText: { color: '#000', fontSize: 15, fontWeight: '700' },
   cancelBtn: {
     borderRadius: 14, paddingVertical: 13, alignItems: 'center',
-    borderWidth: 1, borderColor: BORDER,
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   cancelBtnText: { color: '#666', fontSize: 14 },
 })

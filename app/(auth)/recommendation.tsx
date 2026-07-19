@@ -137,8 +137,7 @@ export default function RecommendationScreen() {
                 style={[
                   styles.switcherButton,
                   selectedLevel === slug && {
-                    borderColor: level.color,
-                    backgroundColor: level.color + '18',
+                    backgroundColor: level.color + '22',
                   },
                 ]}
                 onPress={() => setSelectedLevel(slug)}
@@ -225,8 +224,6 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
     borderRadius: 16,
     padding: 20,
-    borderWidth: 1,
-    borderColor: BORDER,
     gap: 16,
   },
   rulesTitle: {
@@ -268,8 +265,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: BORDER,
     backgroundColor: CARD,
   },
   switcherButtonText: {

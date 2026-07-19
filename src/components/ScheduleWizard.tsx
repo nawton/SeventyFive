@@ -358,7 +358,7 @@ export function ScheduleWizard({
                       key={mg.key}
                       style={[
                         s.muscleChip,
-                        selected && { borderColor: mg.color, backgroundColor: mg.color + '22' },
+                        selected && { backgroundColor: mg.color + '26' },
                         maxed && { opacity: 0.4 },
                       ]}
                       onPress={() => !maxed && toggleFocusGroup(mg.key)}
@@ -562,10 +562,9 @@ const s = StyleSheet.create({
   // Big goal cards
   bigCard: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
-    backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1.5, borderColor: BORDER, padding: 20,
+    backgroundColor: CARD, borderRadius: 20, padding: 20,
   },
-  bigCardActive: { borderColor: ORANGE, backgroundColor: 'rgba(255,149,0,0.07)' },
+  bigCardActive: { backgroundColor: ORANGE + '16' },
   bigCardIcon:   { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   bigCardTitle:  { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginBottom: 3 },
   bigCardSub:    { color: TEXT_SECONDARY, fontSize: 13 },
@@ -573,10 +572,9 @@ const s = StyleSheet.create({
   // Option cards (run distance)
   optCard: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
-    backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1.5, borderColor: BORDER, padding: 16,
+    backgroundColor: CARD, borderRadius: 16, padding: 16,
   },
-  optCardActive: { borderColor: ORANGE, backgroundColor: 'rgba(255,149,0,0.07)' },
+  optCardActive: { backgroundColor: ORANGE + '16' },
   optIcon:       { width: 52, height: 52, borderRadius: 14, backgroundColor: BORDER, alignItems: 'center', justifyContent: 'center' },
   optIconActive: { backgroundColor: 'rgba(255,149,0,0.15)' },
   optTitle:      { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginBottom: 2 },
@@ -586,10 +584,9 @@ const s = StyleSheet.create({
   dayRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1.5, borderColor: BORDER,
     paddingHorizontal: 18, paddingVertical: 14,
   },
-  dayRowActive:  { borderColor: ORANGE, backgroundColor: 'rgba(255,149,0,0.07)' },
+  dayRowActive:  { backgroundColor: ORANGE + '16' },
   dayRowLabel:   { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
   dayCheck: {
     width: 22, height: 22, borderRadius: 11,
@@ -605,10 +602,9 @@ const s = StyleSheet.create({
   // Plan cards (muscle plan)
   planCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: CARD, borderRadius: 18,
-    borderWidth: 1.5, borderColor: BORDER, padding: 20,
+    backgroundColor: CARD, borderRadius: 18, padding: 20,
   },
-  planCardActive:  { borderColor: ORANGE, backgroundColor: 'rgba(255,149,0,0.07)' },
+  planCardActive:  { backgroundColor: ORANGE + '16' },
   planRecommended: { color: ORANGE, fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 3 },
   planTitle:       { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', marginBottom: 2 },
   planSub:         { color: TEXT_SECONDARY, fontSize: 13 },
@@ -619,7 +615,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 7,
     paddingHorizontal: 16, paddingVertical: 11,
     backgroundColor: CARD, borderRadius: 30,
-    borderWidth: 1.5, borderColor: BORDER,
   },
   muscleDot:     { width: 9, height: 9, borderRadius: 5 },
   muscleChipText:{ color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
@@ -638,7 +633,6 @@ const s = StyleSheet.create({
   summaryCards: { flexDirection: 'row', gap: 12 },
   summaryCard: {
     flex: 1, backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER,
     padding: 18, alignItems: 'center', gap: 6,
   },
   summaryCardTitle: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },

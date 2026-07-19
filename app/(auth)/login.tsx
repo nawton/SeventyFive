@@ -279,8 +279,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     color: '#FFFFFF',
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#2C2C2E',
   },
   primaryButton: {
     backgroundColor: ORANGE,

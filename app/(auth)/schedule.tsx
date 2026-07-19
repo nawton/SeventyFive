@@ -439,13 +439,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     backgroundColor: CARD,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
     overflow: 'hidden',
   },
   divider: {
-    height: 1,
-    backgroundColor: BORDER,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.10)',
     marginHorizontal: 16,
   },
 
@@ -461,14 +459,11 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1.5,
-    borderColor: BORDER,
     gap: 6,
     overflow: 'hidden',
   },
   templateCardSelected: {
-    borderColor: ORANGE,
-    backgroundColor: ORANGE + '10',
+    backgroundColor: ORANGE + '16',
   },
   templateAccent: {
     position: 'absolute',

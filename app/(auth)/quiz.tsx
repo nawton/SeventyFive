@@ -222,12 +222,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    borderWidth: 1.5,
-    borderColor: BORDER,
   },
   optionSelected: {
-    borderColor: ORANGE,
-    backgroundColor: ORANGE + '12',
+    backgroundColor: ORANGE + '16',
   },
   radio: {
     width: 22,
