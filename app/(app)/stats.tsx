@@ -24,6 +24,7 @@ import { CalendarView } from '@/components/stats/CalendarView'
 import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { GlassSegment } from '@/components/GlassSegment'
+import { DistanceDetailModal } from '@/components/stats/DistanceDetailModal'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
@@ -262,6 +263,7 @@ export default function StatsScreen() {
   const [activeTab, setActiveTab]               = useState<StatsTab>('overview')
   const [unit, setUnit]                         = useState<UnitSystem>('metric')
   const [cardioRange, setCardioRange]           = useState<'week' | 'month' | 'all'>('all')
+  const [distDetailOpen, setDistDetailOpen]     = useState(false)
   const [avatarUrl, setAvatarUrl]               = useState<string | null>(null)
   const pagerRef = useRef<ScrollView>(null)
 
@@ -937,11 +939,18 @@ export default function StatsScreen() {
               )
             })()}
 
-            {/* Distansgraf — vertikala staplar som följer periodfiltret */}
+            {/* Distansgraf — vertikala staplar som följer periodfiltret; tryck för detaljvyn */}
             {distBuckets.some(b => b.total > 0) && (
               <>
-              <Text style={s.sectionHead}>Distans</Text>
-              <View style={[s.card, s.cardPlain]}>
+              <View style={s.sectionHeadRow}>
+                <Text style={[s.sectionHead, s.sectionHeadInline]}>Distans</Text>
+                <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
+              </View>
+              <TouchableOpacity
+                style={[s.card, s.cardPlain]}
+                activeOpacity={0.85}
+                onPress={() => setDistDetailOpen(true)}
+              >
                 <Text style={[s.cardSub, { marginTop: 0 }]}>
                   {unitLabel} {cardioRange === 'week' ? 'per dag denna vecka' : cardioRange === 'month' ? 'per vecka, senaste 5 veckorna' : 'per månad, senaste 6 månaderna'}
                 </Text>
@@ -1018,7 +1027,7 @@ export default function StatsScreen() {
                     </View>
                   ))}
                 </View>
-              </View>
+              </TouchableOpacity>
               </>
             )}
 
@@ -1026,7 +1035,12 @@ export default function StatsScreen() {
             {hasRecords && (
               <>
               <Text style={s.sectionHead}>Cardiorekord</Text>
-              <View style={[s.card, s.cardPlain, { paddingVertical: 8, gap: 0 }]}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginHorizontal: -GRID_PADDING }}
+                contentContainerStyle={s.recScroll}
+              >
                 {([
                   {
                     icon: 'map-outline' as const, color: ORANGE, label: 'Längsta pass',
@@ -1060,16 +1074,18 @@ export default function StatsScreen() {
                     icon: 'checkmark-done-outline' as const, color: LIME, label: 'Pass totalt',
                     value: String(workouts.length),
                   },
-                ]).map((r, i) => (
-                  <View key={r.label} style={[s.recRow, i > 0 && s.recRowBorder]}>
+                ]).map(r => (
+                  <View key={r.label} style={s.recCard}>
                     <View style={[s.recIconWrap, { backgroundColor: r.color + '1A' }]}>
                       <Ionicons name={r.icon} size={16} color={r.color} />
                     </View>
-                    <Text style={s.recRowLbl}>{r.label}</Text>
-                    <Text style={[s.recRowVal, { color: r.color }]} numberOfLines={1}>{r.value}</Text>
+                    <Text style={[s.recCardVal, { color: r.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                      {r.value}
+                    </Text>
+                    <Text style={s.recCardLbl} numberOfLines={2}>{r.label}</Text>
                   </View>
                 ))}
-              </View>
+              </ScrollView>
               </>
             )}
 
@@ -1276,6 +1292,13 @@ export default function StatsScreen() {
           />
         )}
       </Modal>
+
+      <DistanceDetailModal
+        visible={distDetailOpen}
+        onClose={() => setDistDetailOpen(false)}
+        workouts={workouts}
+        unit={unit}
+      />
     </SafeAreaView>
   )
 }
@@ -1330,6 +1353,8 @@ const s = StyleSheet.create({
     color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
     marginTop: 6, marginBottom: -6,
   },
+  sectionHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: -6 },
+  sectionHeadInline: { marginTop: 0, marginBottom: 0 },
   cardTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
   cardSub:   { color: TEXT_SECONDARY, fontSize: 12, marginTop: -8 },
 
@@ -1362,10 +1387,13 @@ const s = StyleSheet.create({
   sessDate: { color: TEXT_SECONDARY, fontSize: 13, alignSelf: 'flex-end', marginBottom: 4 },
 
   // Cardiorekord
-  recRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  recRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
-  recRowLbl: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', flex: 1 },
-  recRowVal: { fontSize: 18, fontFamily: 'Nunito_700Bold', fontVariant: ['tabular-nums'] as any },
+  recScroll: { paddingHorizontal: GRID_PADDING, gap: 10, flexDirection: 'row' },
+  recCard: {
+    width: 130, backgroundColor: CARD, borderRadius: 18,
+    padding: 14, gap: 8,
+  },
+  recCardVal: { fontSize: 19, fontFamily: 'Nunito_700Bold', fontVariant: ['tabular-nums'] as any },
+  recCardLbl: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', lineHeight: 14 },
   recIconWrap: {
     width: 32, height: 32, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
