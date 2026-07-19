@@ -92,6 +92,8 @@ export default function SchemaScreen() {
   const [challengeDay, setChallengeDay]     = useState<number | null>(null)
   // Genomföranden per övning — underlag för progressionsskalning av reps
   const [exerciseProgress, setExerciseProgress] = useState<Record<string, number>>({})
+  // Genomföranden per pass — driver löpplanernas distansprogression
+  const [sessionDoneCounts, setSessionDoneCounts] = useState<Record<string, number>>({})
   const pagerRef    = useRef<FlatList<number>>(null)
   const [refreshing, setRefreshing] = useState(false)
   const refreshingRef = useRef(false)
@@ -156,6 +158,13 @@ export default function SchemaScreen() {
       const out: Record<string, Set<string>> = {}
       for (const [d, ids] of Object.entries(completedAll)) out[d] = new Set(ids)
       return out
+    })
+    setSessionDoneCounts(() => {
+      const counts: Record<string, number> = {}
+      for (const ids of Object.values(completedAll)) {
+        for (const id of ids) counts[id] = (counts[id] ?? 0) + 1
+      }
+      return counts
     })
     setCardioStatsByDate(prev => ({ ...prev, [date]: cardioStats }))
     setCheckedByDate(prev => ({ ...prev, [date]: exChecked }))
@@ -506,6 +515,7 @@ export default function SchemaScreen() {
               exercises={exercises}
               checked={checkedByDate[dateStr] ?? EMPTY_CHECKED}
               progress={exerciseProgress}
+              doneCounts={sessionDoneCounts}
               completed={completedByDate[dateStr] ?? EMPTY_COMPLETED}
               cardioStats={cardioStatsByDate[dateStr] ?? EMPTY_CARDIO_STATS}
               cardioLogs={cardioLogsByDate[dateStr] ?? EMPTY_CARDIO_LOGS}

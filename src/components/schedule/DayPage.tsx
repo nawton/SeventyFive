@@ -17,6 +17,7 @@ import { router } from 'expo-router'
 import { WorkoutSection } from '@/components/WorkoutSection'
 import { WEEKDAYS } from '@/components/SessionEditor'
 import { scaledReps } from '@/lib/progression'
+import { resolveRunProgression } from '@/lib/runProgression'
 import { weekdayOf } from '@/lib/date'
 import { isoDate, todayMidnight, indexToDate, DAY_SHORT } from '@/lib/scheduleDates'
 import { ORANGE, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
@@ -53,13 +54,15 @@ export interface DayPageApi {
 // vars props faktiskt ändrats — inte alla monterade sidor i pagern.
 
 export const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, userId, dayAnimStyle, api,
+  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, doneCounts, userId, dayAnimStyle, api,
 }: {
   idx: number
   sessions: WorkoutSession[]
   exercises: Exercise[]
   checked: Record<string, boolean>
   progress: Record<string, number>
+  /** Genomföranden per pass — driver löpplanernas distansprogression */
+  doneCounts: Record<string, number>
   completed: Set<string>
   cardioStats: Record<string, { distanceKm: number; durationSeconds: number }>
   cardioLogs: CardioWorkout[]
@@ -169,7 +172,12 @@ export const DayPage = React.memo(function DayPage({
                       const { reps, progressed } = scaledReps(ex.reps, progress[ex.id] ?? 0)
                       return { ex: progressed ? { ...ex, reps } : ex, progressed }
                     })
-                    const displaySession = { ...s, name: sessionDisplayName(s), exercises: scaled.map(x => x.ex) }
+                    // Löpplanens progression: notes-formatet "Start … · max …"
+                    // löses till dagens mål utifrån antal genomförda pass
+                    const displayNotes = s.session_type === 'cardio'
+                      ? resolveRunProgression(s.notes, doneCounts[s.id] ?? 0)
+                      : s.notes
+                    const displaySession = { ...s, name: sessionDisplayName(s), notes: displayNotes, exercises: scaled.map(x => x.ex) }
                     // Faktisk statistik för avklarade gympass (från loggade set)
                     const gymStats = (s.session_type !== 'cardio' && isCompleted) ? (() => {
                       const names = new Set(s.exercises.map(ex => ex.exercise_name))
@@ -202,7 +210,7 @@ export const DayPage = React.memo(function DayPage({
                             sessionId: s.id,
                             name: sessionDisplayName(s),
                             cardioType: s.cardio_type ?? 'running',
-                            notes: s.notes ?? '',
+                            notes: displayNotes ?? '',
                             date: dateStr,
                           } })
                           }

@@ -22,31 +22,36 @@ interface PlannedSession {
 }
 
 // ─── Löpprogram ───────────────────────────────────────────────────────────────
-// Tis intervaller, Tor lugnt pass, Lör långpass — halvmara/mara får även tempopass.
-// Skapas som riktiga cardio-pass (session_type 'cardio') med passbeskrivningen i notes.
+// Runna-stil: fyra passtyper (långpass, tempopass, intervaller, återhämtning)
+// som börjar lågt och växer lite per genomfört pass — progressionen skrivs i
+// notes på formatet som resolveRunProgression läser ("Start … · +… per vecka
+// · max …") och nivån styrs av antal avklarade pass, inte kalendern.
+// Skapas som riktiga cardio-pass (session_type 'cardio').
 
 const RUN_PLANS: Record<string, PlannedSession[]> = {
   '5k': [
-    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: '6×400 m' },
-    { name: 'Lugn löpning', weekdays: [4], exercises: [], cardioType: 'running',  notes: '20–25 min' },
-    { name: 'Långpass',     weekdays: [6], exercises: [], cardioType: 'running',  notes: '4–5 km' },
+    { name: 'Långpass',     weekdays: [6], exercises: [], cardioType: 'running',  notes: 'Start 3 km · +0,5 km per vecka · max 7 km' },
+    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: 'Start 5×400 m · +1 per vecka · max 8×400 m' },
+    { name: 'Återhämtning', weekdays: [4], exercises: [], cardioType: 'running',  notes: '20–25 min i lugnt tempo' },
+    { name: 'Tempopass',    weekdays: [5], exercises: [], cardioType: 'running',  notes: 'Start 2 km · +0,5 km per vecka · max 4 km i tempofart' },
   ],
   '10k': [
-    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: '5×800 m' },
-    { name: 'Lugn löpning', weekdays: [4], exercises: [], cardioType: 'running',  notes: '30–40 min' },
-    { name: 'Långpass',     weekdays: [6], exercises: [], cardioType: 'running',  notes: '7–9 km' },
+    { name: 'Långpass',     weekdays: [6], exercises: [], cardioType: 'running',  notes: 'Start 5 km · +1 km per vecka · max 12 km' },
+    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: 'Start 4×800 m · +1 per vecka · max 7×800 m' },
+    { name: 'Återhämtning', weekdays: [4], exercises: [], cardioType: 'running',  notes: '25–35 min i lugnt tempo' },
+    { name: 'Tempopass',    weekdays: [5], exercises: [], cardioType: 'running',  notes: 'Start 3 km · +0,5 km per vecka · max 6 km i tempofart' },
   ],
   half: [
-    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: '6×1000 m' },
-    { name: 'Tempopass',    weekdays: [4], exercises: [], cardioType: 'running',  notes: '8 km i tempofart' },
-    { name: 'Lugn löpning', weekdays: [5], exercises: [], cardioType: 'running',  notes: '40 min' },
-    { name: 'Långpass',     weekdays: [7], exercises: [], cardioType: 'running',  notes: '12–16 km' },
+    { name: 'Långpass',     weekdays: [7], exercises: [], cardioType: 'running',  notes: 'Start 6 km · +1,5 km per vecka · max 18 km' },
+    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: 'Start 5×800 m · +1 per vecka · max 8×800 m' },
+    { name: 'Återhämtning', weekdays: [5], exercises: [], cardioType: 'running',  notes: '30–40 min i lugnt tempo' },
+    { name: 'Tempopass',    weekdays: [4], exercises: [], cardioType: 'running',  notes: 'Start 4 km · +1 km per vecka · max 8 km i tempofart' },
   ],
   marathon: [
-    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: '8×1000 m' },
-    { name: 'Tempopass',    weekdays: [4], exercises: [], cardioType: 'running',  notes: '10–12 km i tempofart' },
-    { name: 'Lugn löpning', weekdays: [5], exercises: [], cardioType: 'running',  notes: '45–60 min' },
-    { name: 'Långpass',     weekdays: [7], exercises: [], cardioType: 'running',  notes: '20–30 km' },
+    { name: 'Långpass',     weekdays: [7], exercises: [], cardioType: 'running',  notes: 'Start 10 km · +2 km per vecka · max 30 km' },
+    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: 'Start 5×1000 m · +1 per vecka · max 10×1000 m' },
+    { name: 'Återhämtning', weekdays: [5], exercises: [], cardioType: 'running',  notes: '30–45 min i lugnt tempo' },
+    { name: 'Tempopass',    weekdays: [4], exercises: [], cardioType: 'running',  notes: 'Start 5 km · +1 km per vecka · max 12 km i tempofart' },
   ],
 }
 
@@ -304,20 +309,24 @@ function buildPlan(result: WizardResult): PlannedSession[] {
 
   if (result.goal === 'running') {
     const base = RUN_PLANS[result.runDistance ?? '5k'] ?? RUN_PLANS['5k']
-    // Prioritera långpass + intervaller vid få dagar; fyll ut med lugn löpning vid många
-    const priority = [...base].sort((a, b) => {
-      const rank = (s: PlannedSession) =>
-        s.name === 'Långpass' ? 0 : s.name === 'Intervaller' ? 1 : s.name === 'Tempopass' ? 2 : 3
-      return rank(a) - rank(b)
-    })
-    const picked = priority.slice(0, numDays)
+    // Få dagar: långpass + intervaller + återhämtning före tempopass;
+    // många dagar fylls ut med extra återhämtningspass
+    const pickRank = (s: PlannedSession) =>
+      s.name === 'Långpass' ? 0 : s.name === 'Intervaller' ? 1 : s.name === 'Återhämtning' ? 2 : 3
+    const picked = [...base].sort((a, b) => pickRank(a) - pickRank(b)).slice(0, numDays)
     while (picked.length < numDays) {
       picked.push({
-        name: `Lugn löpning ${picked.length}`, weekdays: [], exercises: [],
+        name: `Återhämtning ${picked.length}`, weekdays: [], exercises: [],
         cardioType: 'running', notes: '20–30 min i lugnt tempo',
       })
     }
-    return picked.map((s, i) => ({ ...s, weekdays: [days[i]] }))
+    // Kvalitetspassen tidigt i veckan, återhämtning emellan, långpasset sist
+    // (hamnar på helgen när man valt en helgdag)
+    const weekRank = (s: PlannedSession) =>
+      s.name === 'Intervaller' ? 0 : s.name === 'Tempopass' ? 1 : s.name === 'Långpass' ? 3 : 2
+    return picked
+      .sort((a, b) => weekRank(a) - weekRank(b))
+      .map((s, i) => ({ ...s, weekdays: [days[i]] }))
   }
 
   // Styrka: ihophängande split där varje dag har ett tydligt muskeltema
