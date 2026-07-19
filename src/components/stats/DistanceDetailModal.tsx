@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { View, Text, StyleSheet, Modal, ScrollView, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, Modal, ScrollView, Dimensions, TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import Svg, { Text as SvgText, Line as SvgLine, Rect, G } from 'react-native-svg'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -37,7 +38,8 @@ function isoWeekNum(mon: Date): number {
   return Math.ceil((((mon.getTime() - jan4.getTime()) / 86400000) + weekdayOf(jan4) - 1) / 7)
 }
 
-function buildBuckets(workouts: CardioWorkout[], res: Res): Bucket[] {
+/** Bygger staplarna för en "sida": offset 0 = nu, -1 = föregående sida osv. */
+function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Bucket[] {
   const catOf = (t: string) => t === 'cycling' ? 'cycle' as const : t === 'walking' ? 'walk' as const : 'run' as const
   const add = (buckets: Bucket[], key: string, w: CardioWorkout) => {
     const b = buckets.find(x => x.key === key)
@@ -48,16 +50,19 @@ function buildBuckets(workouts: CardioWorkout[], res: Res): Bucket[] {
   }
 
   if (res === 'day') {
-    const today = new Date(); today.setHours(0, 0, 0, 0)
-    const buckets = Array.from({ length: 14 }, (_, i) => {
-      const d = new Date(today); d.setDate(d.getDate() - (13 - i))
+    // En vecka i taget, Mån–Sön — som i träningsappar
+    const mon = startOfWeek()
+    mon.setDate(mon.getDate() + offset * 7)
+    const today = toLocalDateString(new Date())
+    const buckets = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(mon); d.setDate(d.getDate() + i)
       const key = toLocalDateString(d)
       return {
         key,
-        label: String(d.getDate()),
+        label: ['M', 'T', 'O', 'T', 'F', 'L', 'S'][i],
         fullLabel: d.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' }),
         run: 0, cycle: 0, walk: 0, total: 0, passes: 0,
-        isCurrent: i === 13,
+        isCurrent: key === today,
       }
     })
     workouts.forEach(w => add(buckets, toLocalDateString(new Date(w.created_at)), w))
@@ -66,15 +71,18 @@ function buildBuckets(workouts: CardioWorkout[], res: Res): Bucket[] {
 
   if (res === 'week') {
     const cur = startOfWeek()
+    cur.setDate(cur.getDate() + offset * 12 * 7)
+    const thisMon = toLocalDateString(startOfWeek())
     const buckets = Array.from({ length: 12 }, (_, i) => {
       const mon = new Date(cur); mon.setDate(mon.getDate() - (11 - i) * 7)
       const wn = isoWeekNum(mon)
+      const key = toLocalDateString(mon)
       return {
-        key: toLocalDateString(mon),
+        key,
         label: String(wn),
         fullLabel: `Vecka ${wn}`,
         run: 0, cycle: 0, walk: 0, total: 0, passes: 0,
-        isCurrent: i === 11,
+        isCurrent: key === thisMon,
       }
     })
     workouts.forEach(w => add(buckets, toLocalDateString(startOfWeek(new Date(w.created_at))), w))
@@ -82,14 +90,16 @@ function buildBuckets(workouts: CardioWorkout[], res: Res): Bucket[] {
   }
 
   const now = new Date()
+  const nowKey = `${now.getFullYear()}-${now.getMonth()}`
   const buckets = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1)
+    const d = new Date(now.getFullYear(), now.getMonth() + offset * 12 - (11 - i), 1)
+    const key = `${d.getFullYear()}-${d.getMonth()}`
     return {
-      key: `${d.getFullYear()}-${d.getMonth()}`,
+      key,
       label: d.toLocaleDateString('sv-SE', { month: 'narrow' }),
       fullLabel: d.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' }),
       run: 0, cycle: 0, walk: 0, total: 0, passes: 0,
-      isCurrent: i === 11,
+      isCurrent: key === nowKey,
     }
   })
   workouts.forEach(w => {
@@ -97,6 +107,27 @@ function buildBuckets(workouts: CardioWorkout[], res: Res): Bucket[] {
     add(buckets, `${d.getFullYear()}-${d.getMonth()}`, w)
   })
   return buckets
+}
+
+/** Rubrik för sidan man bläddrat till, t.ex. "14–20 juli" eller "V18 – V29" */
+function pageLabel(res: Res, buckets: Bucket[], offset: number): string {
+  if (res === 'day') {
+    if (offset === 0) return 'Denna vecka'
+    const first = parseLocal(buckets[0].key)
+    const last  = parseLocal(buckets[6].key)
+    const sameMonth = first.getMonth() === last.getMonth()
+    const fmt = (d: Date, withMonth: boolean) =>
+      withMonth ? d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '') : String(d.getDate())
+    return `${fmt(first, !sameMonth)}–${fmt(last, true)}`
+  }
+  if (res === 'week') return `V${buckets[0].label} – V${buckets[11].label}`
+  const short = (b: Bucket) => b.fullLabel.replace(/^(\w{3})\w*/, '$1')
+  return `${short(buckets[0])} – ${short(buckets[11])}`
+}
+
+function parseLocal(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, (m ?? 1) - 1, d ?? 1)
 }
 
 export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
@@ -107,9 +138,10 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
 }) {
   const insets = useSafeAreaInsets()
   const [res, setRes] = useState<Res>('day')
+  const [offset, setOffset] = useState(0)
   const [selKey, setSelKey] = useState<string | null>(null)
 
-  const buckets = useMemo(() => buildBuckets(workouts, res), [workouts, res])
+  const buckets = useMemo(() => buildBuckets(workouts, res, offset), [workouts, res, offset])
   const unitLabel = distanceUnitLabel(unit)
 
   const sel = selKey ? buckets.find(b => b.key === selKey) ?? null : null
@@ -118,9 +150,9 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
   const activeCount  = buckets.filter(b => b.total > 0).length
   const best = buckets.reduce<Bucket | null>((b, x) => (x.total > (b?.total ?? 0) ? x : b), null)
 
-  // Det som visas i rubriken + fördelningen: vald stapel eller hela perioden
+  // Det som visas i rubriken + fördelningen: vald stapel eller hela sidan
   const shown = sel ?? {
-    fullLabel: res === 'day' ? 'Senaste 14 dagarna' : res === 'week' ? 'Senaste 12 veckorna' : 'Senaste 12 månaderna',
+    fullLabel: 'Totalt',
     run:   buckets.reduce((s, b) => s + b.run, 0),
     cycle: buckets.reduce((s, b) => s + b.cycle, 0),
     walk:  buckets.reduce((s, b) => s + b.walk, 0),
@@ -132,6 +164,11 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
 
   function changeRes(r: Res) {
     setRes(r)
+    setOffset(0)
+    setSelKey(null)
+  }
+  function nav(dir: -1 | 1) {
+    setOffset(o => Math.min(0, o + dir))
     setSelKey(null)
   }
 
@@ -154,6 +191,22 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
             ]}
             onChange={changeRes}
           />
+
+          {/* Bläddra bakåt/framåt i tiden — som i träningsappar */}
+          <View style={s.navRow}>
+            <TouchableOpacity style={s.navBtn} onPress={() => nav(-1)} activeOpacity={0.7}>
+              <Ionicons name="chevron-back" size={20} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
+            <Text style={s.navLabel}>{pageLabel(res, buckets, offset)}</Text>
+            <TouchableOpacity
+              style={s.navBtn}
+              onPress={() => nav(1)}
+              disabled={offset >= 0}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-forward" size={20} color={offset >= 0 ? 'rgba(255,255,255,0.18)' : TEXT_PRIMARY} />
+            </TouchableOpacity>
+          </View>
 
           {/* Rubrik: vald stapel eller hela perioden */}
           <View style={s.readout}>
@@ -226,9 +279,9 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
                     })}
                   </Svg>
                   <View style={s.lblRow}>
-                    {buckets.map((b, i) => (
+                    {buckets.map(b => (
                       <Text key={b.key} style={[s.lbl, b.isCurrent && { color: ORANGE }, sel?.key === b.key && { color: TEXT_PRIMARY }]}>
-                        {res === 'day' && n > 7 && i % 2 === 1 ? '' : b.label}
+                        {b.label}
                       </Text>
                     ))}
                   </View>
@@ -300,7 +353,11 @@ const s = StyleSheet.create({
   topTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
   scroll: { paddingHorizontal: 20, paddingTop: 8, gap: 16 },
 
-  readout: { gap: 2, marginTop: 6 },
+  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
+  navBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: CARD, alignItems: 'center', justifyContent: 'center' },
+  navLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
+
+  readout: { gap: 2, marginTop: -4 },
   readoutLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
   readoutValue: { color: TEXT_PRIMARY, fontSize: 40, fontFamily: NUM_FONT, letterSpacing: -0.5 },
   readoutUnit: { fontSize: 18, fontFamily: NUM_FONT_SEMI, color: TEXT_SECONDARY },
