@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Modal } from 'react-native'
 import Animated, {
   useSharedValue, useAnimatedStyle,
   withSpring, withTiming, runOnJS,
@@ -13,6 +13,7 @@ import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/uni
 import { getTasksForDay, type DaySummary, type TaskItem } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
+import { GymSummaryView } from './GymSummaryView'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 const SCREEN_WIDTH  = Dimensions.get('window').width
@@ -140,6 +141,8 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
   // går att dra upp listan över kortet, även med få övningar.
   const [tasks, setTasks] = useState<TaskItem[] | null>(null)
   const [tasksHidden, setTasksHidden] = useState(false)
+  // Gympassets detaljvy — samma Apple-stil som cardiopassens
+  const [gymDetail, setGymDetail] = useState<{ name: string; planned: string[]; logged: StrengthWorkout[] } | null>(null)
   const [tasksH, setTasksH] = useState(0)
   const [listVpH, setListVpH] = useState(0)
   const showTasks = !!tasks && tasks.length > 0 && !tasksHidden
@@ -341,7 +344,11 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                         <>
                           {passBlocks.map(({ c, sub }, i) => (
                             <View key={c.id} style={[(i < passBlocks.length - 1 || loose.length > 0) && s.itemBorder, { paddingVertical: 6 }]}>
-                              <View style={s.item}>
+                              <TouchableOpacity
+                                style={s.item}
+                                activeOpacity={0.7}
+                                onPress={() => setGymDetail({ name: c.name, planned: c.exerciseNames, logged: sub })}
+                              >
                                 <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ORANGE} /></View>
                                 <View style={s.itemBody}>
                                   <Text style={s.itemName}>{c.name}</Text>
@@ -352,7 +359,8 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                                   </View>
                                 </View>
                                 <Ionicons name="checkmark-circle" size={18} color={GREEN} style={{ alignSelf: 'center' }} />
-                              </View>
+                                <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.25)" style={{ alignSelf: 'center' }} />
+                              </TouchableOpacity>
                               {sub.map(w => {
                                 const topKg = w.data.sets.reduce((m, r) => Math.max(m, r.weight_kg || 0), 0)
                                 const totalReps = w.data.sets.reduce((sum, r) => sum + r.reps, 0)
@@ -371,7 +379,12 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                           {loose.map((w, i) => {
                             const totalReps = w.data.sets.reduce((sum, r) => sum + r.reps, 0)
                             return (
-                              <View key={w.id} style={[s.item, i < loose.length - 1 && s.itemBorder]}>
+                              <TouchableOpacity
+                                key={w.id}
+                                style={[s.item, i < loose.length - 1 && s.itemBorder]}
+                                activeOpacity={0.7}
+                                onPress={() => setGymDetail({ name: w.name, planned: [], logged: [w] })}
+                              >
                                 <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ORANGE} /></View>
                                 <View style={s.itemBody}>
                                   <Text style={s.itemName}>{w.name}</Text>
@@ -380,7 +393,8 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                                     {totalReps > 0 && (<><Text style={s.itemDot}>·</Text><Text style={s.itemStat}>{totalReps} reps</Text></>)}
                                   </View>
                                 </View>
-                              </View>
+                                <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.25)" style={{ alignSelf: 'center' }} />
+                              </TouchableOpacity>
                             )
                           })}
                         </>
@@ -393,6 +407,18 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
           </>
         )}
       </Animated.View>
+
+      <Modal visible={!!gymDetail} animationType="slide" onRequestClose={() => setGymDetail(null)}>
+        {gymDetail && (
+          <GymSummaryView
+            name={gymDetail.name}
+            dateLabel={dateStr}
+            logged={gymDetail.logged}
+            plannedNames={gymDetail.planned}
+            onClose={() => setGymDetail(null)}
+          />
+        )}
+      </Modal>
     </View>
   )
 }

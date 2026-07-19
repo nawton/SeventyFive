@@ -26,6 +26,7 @@ import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { GlassSegment } from '@/components/GlassSegment'
 import { DistanceDetailModal } from '@/components/stats/DistanceDetailModal'
 import { MilestoneAnalysisModal } from '@/components/stats/MilestoneAnalysisModal'
+import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
@@ -258,6 +259,7 @@ export default function StatsScreen() {
   const [cardioRange, setCardioRange]           = useState<'week' | 'month' | 'all'>('all')
   const [distDetailOpen, setDistDetailOpen]     = useState(false)
   const [milestoneOpen, setMilestoneOpen]       = useState(false)
+  const [gymDetail, setGymDetail] = useState<{ name: string; dateLabel: string; planned: string[]; logged: StrengthWorkout[] } | null>(null)
   const [avatarUrl, setAvatarUrl]               = useState<string | null>(null)
   const pagerRef = useRef<ScrollView>(null)
 
@@ -1280,7 +1282,23 @@ export default function StatsScreen() {
                     const exPreview = gs.exercises.slice(0, 3).join(' · ')
                       + (gs.exercises.length > 3 ? ` · +${gs.exercises.length - 3}` : '')
                     return (
-                      <View key={gs.id} style={s.gymRow}>
+                      <TouchableOpacity
+                        key={gs.id}
+                        style={s.gymRow}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          const logged = strengthWorkouts.filter(w => {
+                            const wDate = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
+                            return wDate === gs.completedDate && gs.exercises.includes(w.data.exercise_name)
+                          })
+                          setGymDetail({
+                            name: gs.sessionName,
+                            dateLabel: new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' }),
+                            planned: gs.exercises,
+                            logged,
+                          })
+                        }}
+                      >
                         <View style={s.gymCheck}>
                           <Ionicons name="checkmark" size={14} color={GREEN} />
                         </View>
@@ -1289,7 +1307,8 @@ export default function StatsScreen() {
                           {!!exPreview && <Text style={s.gymExs}>{exPreview}</Text>}
                         </View>
                         <Text style={s.gymDay}>{gymDay}</Text>
-                      </View>
+                        <Ionicons name="chevron-forward" size={15} color="rgba(255,255,255,0.25)" />
+                      </TouchableOpacity>
                     )
                   })}
                 </View>
@@ -1342,6 +1361,18 @@ export default function StatsScreen() {
         workouts={workouts}
         unit={unit}
       />
+
+      <Modal visible={!!gymDetail} animationType="slide" onRequestClose={() => setGymDetail(null)}>
+        {gymDetail && (
+          <GymSummaryView
+            name={gymDetail.name}
+            dateLabel={gymDetail.dateLabel}
+            logged={gymDetail.logged}
+            plannedNames={gymDetail.planned}
+            onClose={() => setGymDetail(null)}
+          />
+        )}
+      </Modal>
 
       <MilestoneAnalysisModal
         visible={milestoneOpen}
