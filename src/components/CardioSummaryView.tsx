@@ -102,7 +102,7 @@ function mapHtml(route: Array<[number, number]>, o: { compassTop: number; topPad
     var map = L.map('map',{zoomControl:false,attributionControl:false,
       ${o.interactive
         ? "rotate:true,touchRotate:true,rotateControl:{closeOnZeroBearing:false, position:'topright'}"
-        : 'rotate:false,dragging:false,touchZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,scrollWheelZoom:false'}});
+        : 'rotate:false,rotateControl:false,dragging:false,touchZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,scrollWheelZoom:false'}});
     var tileLayer = L.tileLayer(${JSON.stringify(tile.url)}, ${JSON.stringify(tile.opts)}).addTo(map);
     var glow  = L.polyline(pts,{color:'#FF6A00',weight:9,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(map);
     var line  = L.polyline(pts,{color:'#FC4C02',weight:5,lineCap:'round',lineJoin:'round'}).addTo(map);
