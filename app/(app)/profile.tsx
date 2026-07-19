@@ -34,6 +34,7 @@ import {
   type ProgressPhotoItem,
 } from '@/services/progressPhotos'
 import { PhotoComposer } from '@/components/PhotoComposer'
+import { PhotoViewer } from '@/components/PhotoViewer'
 import { ORANGE, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -75,6 +76,7 @@ export default function ProfileScreen() {
   const [photos, setPhotos]         = useState<ProgressPhotoItem[]>([])
   const [loading, setLoading]       = useState(true)
   const [composerUri, setComposerUri] = useState<string | null>(null)
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const [refreshing, setRefreshing]   = useState(false)
   const refreshingRef = useRef(false)
   const pullArmedRef  = useRef(true)
@@ -244,24 +246,16 @@ export default function ProfileScreen() {
     }
   }
 
-  function handleDeletePhoto(photo: ProgressPhotoItem) {
-    Alert.alert('Ta bort foto', 'Fotot och texten tas bort permanent.', [
-      { text: 'Avbryt', style: 'cancel' },
-      {
-        text: 'Ta bort',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteProgressPhoto(photo.id, photo.path)
-            const remaining = photos.filter(p => p.id !== photo.id)
-            setPhotos(remaining)
-            await syncPhotoTaskAfterDelete(remaining)
-          } catch (e: any) {
-            Alert.alert('Något gick fel', e.message)
-          }
-        },
-      },
-    ])
+  // Raderingen bor i fullskärmsvisaren — den bekräftar själv innan anropet
+  async function performDeletePhoto(photo: ProgressPhotoItem) {
+    try {
+      await deleteProgressPhoto(photo.id, photo.path)
+      const remaining = photos.filter(p => p.id !== photo.id)
+      setPhotos(remaining)
+      await syncPhotoTaskAfterDelete(remaining)
+    } catch (e: any) {
+      Alert.alert('Något gick fel', e.message)
+    }
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -333,7 +327,7 @@ export default function ProfileScreen() {
     )
   }
 
-  function renderPhoto({ item }: { item: ProgressPhotoItem }) {
+  function renderPhoto({ item, index }: { item: ProgressPhotoItem; index: number }) {
     return (
       <View style={s.card}>
         <View style={s.cardHeader}>
@@ -342,18 +336,17 @@ export default function ProfileScreen() {
             <Text style={s.cardName}>{name}</Text>
             <Text style={s.cardMeta}>Dag {item.dayNumber} · {formatFeedDate(item.createdAt)}</Text>
           </View>
-          <TouchableOpacity onPress={() => handleDeletePhoto(item)} hitSlop={10}>
-            <Ionicons name="trash-outline" size={17} color={TEXT_SECONDARY} />
-          </TouchableOpacity>
         </View>
 
-        {item.url ? (
-          <Image source={{ uri: item.url }} style={s.cardImage} resizeMode="cover" />
-        ) : (
-          <View style={[s.cardImage, s.cardImageMissing]}>
-            <Ionicons name="image-outline" size={28} color={TEXT_SECONDARY} />
-          </View>
-        )}
+        <TouchableOpacity activeOpacity={0.9} onPress={() => setViewerIndex(index)}>
+          {item.url ? (
+            <Image source={{ uri: item.url }} style={s.cardImage} resizeMode="cover" />
+          ) : (
+            <View style={[s.cardImage, s.cardImageMissing]}>
+              <Ionicons name="image-outline" size={28} color={TEXT_SECONDARY} />
+            </View>
+          )}
+        </TouchableOpacity>
 
         {item.caption ? <Text style={s.cardCaption}>{item.caption}</Text> : null}
       </View>
@@ -394,6 +387,13 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={onListScroll}
         scrollEventThrottle={16}
+      />
+
+      <PhotoViewer
+        photos={photos}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerIndex(null)}
+        onDelete={performDeletePhoto}
       />
 
       <PhotoComposer
