@@ -503,6 +503,17 @@ export default function StatsScreen() {
   // schemapass får sin bock borttagen
   // Optimistisk radering — misslyckas databasen läggs raden tillbaka och
   // användaren får veta det, i stället för att passet spöklikt återuppstår
+  // Svep-radering i Genomförda pass: tar bort avbockningen (inte passmallen)
+  function deleteGymCompletion(id: string) {
+    setWeekGymSessions(prev => prev.filter(x => x.id !== id))
+    setCompletedSessions(prev => prev.filter(c => c.id !== id))
+    deleteCompletion(id).catch(() => {
+      Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
+      if (userId) loadWeekData(userId)
+      loadStats()
+    })
+  }
+
   function performDeleteSessionRow(r: { key: string; name: string; workout?: CardioWorkout }) {
     const restore = () => {
       Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
@@ -1932,8 +1943,8 @@ export default function StatsScreen() {
                     const exPreview = gs.exercises.slice(0, 3).join(' · ')
                       + (gs.exercises.length > 3 ? ` · +${gs.exercises.length - 3}` : '')
                     return (
+                      <SwipeRow key={gs.id} name={gs.sessionName} onDelete={() => deleteGymCompletion(gs.id)}>
                       <TouchableOpacity
-                        key={gs.id}
                         style={s.gymRow}
                         activeOpacity={0.7}
                         onPress={() => {
@@ -1959,6 +1970,7 @@ export default function StatsScreen() {
                         <Text style={s.gymDay}>{gymDay}</Text>
                         <Ionicons name="chevron-forward" size={15} color="rgba(255,255,255,0.25)" />
                       </TouchableOpacity>
+                      </SwipeRow>
                     )
                   })}
                 </View>
