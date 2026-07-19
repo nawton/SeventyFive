@@ -1347,8 +1347,13 @@ export default function StatsScreen() {
               ) : (
                 <>
                   <GestureDetector gesture={bodyFlip}>
-                    <View style={s.bodyWrap}>
-                      <Animated.View style={bodyAnimStyle}>
+                    {/* Tryck på gubben öppnar muskeldetaljen — svep i sidled vänder honom */}
+                    <TouchableOpacity
+                      style={s.bodyWrap}
+                      activeOpacity={0.85}
+                      onPress={() => setMuscleOpen(true)}
+                    >
+                      <Animated.View style={bodyAnimStyle} pointerEvents="none">
                         <Body
                           data={weekMuscleData}
                           side={bodyView}
@@ -1359,7 +1364,7 @@ export default function StatsScreen() {
                           border="rgba(255,255,255,0.10)"
                         />
                       </Animated.View>
-                    </View>
+                    </TouchableOpacity>
                   </GestureDetector>
                   {weekMuscleData.length > 0 && (
                     <View style={s.legend}>
