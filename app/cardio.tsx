@@ -1447,7 +1447,7 @@ export default function CardioScreen() {
       {/* Röstguidning — fullskärmsinställningar i Runkeeper-stil */}
       <Modal visible={voiceModalOpen} animationType="slide" onRequestClose={() => setVoiceModalOpen(false)}>
         <View style={styles.voiceRoot}>
-          <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+          <View style={{ flex: 1, paddingTop: insets.top + 8 }}>
             <View style={styles.voiceHeader}>
               <TouchableOpacity
                 onPress={() => (voicePage === 'main' ? setVoiceModalOpen(false) : setVoicePage('main'))}
@@ -1457,7 +1457,9 @@ export default function CardioScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.voiceIconWrap}>
-              <Ionicons name="volume-high-outline" size={44} color={CARDIO_ACCENT} />
+              <View style={styles.voiceIconCircle}>
+                <Ionicons name="volume-high-outline" size={36} color={CARDIO_ACCENT} />
+              </View>
               <Text style={styles.voiceTitle}>
                 {voicePage === 'main' ? 'Röstguidning' : voicePage === 'freq' ? 'Hur ofta?' : 'Vilken statistik?'}
               </Text>
@@ -1594,7 +1596,7 @@ export default function CardioScreen() {
                 ))}
               </View>
             )}
-          </SafeAreaView>
+          </View>
         </View>
       </Modal>
 
@@ -1804,29 +1806,34 @@ const styles = StyleSheet.create({
 
   // Röstguidning — fullskärm
   voiceRoot: { flex: 1, backgroundColor: '#0A0A0C' },
-  voiceHeader: { paddingHorizontal: 20, paddingTop: 8 },
-  voiceIconWrap: { alignItems: 'center', gap: 10, marginTop: 8, marginBottom: 22 },
-  voiceTitle: { color: '#fff', fontSize: 26, fontWeight: '800', letterSpacing: -0.3 },
-  voiceList: { paddingHorizontal: 20, gap: 4 },
-  voiceRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-    paddingVertical: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.12)',
-  },
-  voiceRowPlain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  voiceRowLabel: { color: '#fff', fontSize: 17, fontWeight: '700' },
-  voiceRowValue: { color: '#9BA0A6', fontSize: 14, marginTop: 3 },
-  voiceFreqBlock: {
-    paddingVertical: 18, gap: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.12)',
-  },
-  voiceStepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
-  voiceStepBtn: {
-    width: 54, height: 54, borderRadius: 27, backgroundColor: '#1C1C1E',
+  voiceHeader: { paddingHorizontal: 20 },
+  voiceIconWrap: { alignItems: 'center', gap: 12, marginTop: 4, marginBottom: 22 },
+  voiceIconCircle: {
+    width: 78, height: 78, borderRadius: 39,
+    backgroundColor: CARDIO_ACCENT + '1C',
     alignItems: 'center', justifyContent: 'center',
   },
-  voiceStepValue: { color: '#fff', fontSize: 44, fontWeight: '800', lineHeight: 48 },
-  voiceStepUnit: { color: '#9BA0A6', fontSize: 15, fontWeight: '600', marginTop: -2 },
+  voiceTitle: { color: '#fff', fontSize: 26, fontWeight: '800', letterSpacing: -0.3 },
+  voiceList: { paddingHorizontal: 16, gap: 12 },
+  voiceRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+    backgroundColor: '#161618', borderRadius: 18,
+    paddingVertical: 15, paddingHorizontal: 16,
+  },
+  voiceRowPlain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  voiceRowLabel: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  voiceRowValue: { color: '#9BA0A6', fontSize: 13, marginTop: 3 },
+  voiceFreqBlock: {
+    backgroundColor: '#161618', borderRadius: 20,
+    padding: 18, gap: 18,
+  },
+  voiceStepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
+  voiceStepBtn: {
+    width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  voiceStepValue: { color: CARDIO_ACCENT, fontSize: 46, fontFamily: NUM_FONT, lineHeight: 52 },
+  voiceStepUnit: { color: '#9BA0A6', fontSize: 14, fontWeight: '600', marginTop: -4 },
 
   // Röstguidningsväljare
   voiceOption: {
