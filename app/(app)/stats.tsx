@@ -547,41 +547,45 @@ export default function StatsScreen() {
     return buckets
   })()
 
-  // ── Cardiorekord (all-time) ──
+  // ── Cardiorekord (all-time) — vi sparar även PASSET bakom varje rekord så
+  // korten kan öppna det direkt ──
   const allPaced = workouts.filter(w => w.data.distance_km > 0.1)
-  const recLongestKm = workouts.reduce((b, w) => Math.max(b, w.data.distance_km), 0)
-  const recBestPaceSec = allPaced
-    .map(w => w.data.duration_seconds / w.data.distance_km)
-    .reduce((b, p) => p < b ? p : b, Infinity)
+  const recLongestW = workouts.reduce<CardioWorkout | null>(
+    (b, w) => w.data.distance_km > (b?.data.distance_km ?? 0) ? w : b, null)
+  const recLongestKm = recLongestW?.data.distance_km ?? 0
+  const recBestPaceW = allPaced.reduce<CardioWorkout | null>((b, w) => {
+    const p  = w.data.duration_seconds / w.data.distance_km
+    const bp = b ? b.data.duration_seconds / b.data.distance_km : Infinity
+    return p < bp ? w : b
+  }, null)
+  const recBestPaceSec = recBestPaceW
+    ? recBestPaceW.data.duration_seconds / recBestPaceW.data.distance_km
+    : Infinity
   // Snabbaste hela km från sparade splits ("1 km", "2 km" …)
-  const recFastestSplitSec = workouts.reduce((best, w) => {
+  let recFastestSplitSec = Infinity
+  let recFastestSplitW: CardioWorkout | null = null
+  for (const w of workouts) {
     for (const sp of w.data.splits ?? []) {
-      if (/^\d+\s*(km|mi)$/.test(sp.label) && sp.paceSec > 0 && sp.paceSec < best) best = sp.paceSec
+      if (/^\d+\s*(km|mi)$/.test(sp.label) && sp.paceSec > 0 && sp.paceSec < recFastestSplitSec) {
+        recFastestSplitSec = sp.paceSec
+        recFastestSplitW = w
+      }
     }
-    return best
-  }, Infinity)
-  const recBiggestWeek = (() => {
+  }
+  const { recBiggestWeek, recBiggestWeekW } = (() => {
     const byWeek = new Map<string, number>()
     for (const w of workouts) {
       const key = toLocalDateString(startOfWeek(new Date(w.created_at)))
       byWeek.set(key, (byWeek.get(key) ?? 0) + w.data.distance_km)
     }
-    let max = 0
-    byWeek.forEach(v => { if (v > max) max = v })
-    return max
+    let max = 0, maxKey = ''
+    byWeek.forEach((v, k) => { if (v > max) { max = v; maxKey = k } })
+    // Längsta passet under rekordveckan blir kortets mål
+    const inWeek = workouts.filter(w => toLocalDateString(startOfWeek(new Date(w.created_at))) === maxKey)
+    const best = inWeek.reduce<CardioWorkout | null>(
+      (b, w) => w.data.distance_km > (b?.data.distance_km ?? 0) ? w : b, null)
+    return { recBiggestWeek: max, recBiggestWeekW: best }
   })()
-  const recMostWeekPasses = (() => {
-    const byWeek = new Map<string, number>()
-    for (const w of workouts) {
-      const key = toLocalDateString(startOfWeek(new Date(w.created_at)))
-      byWeek.set(key, (byWeek.get(key) ?? 0) + 1)
-    }
-    let max = 0
-    byWeek.forEach(v => { if (v > max) max = v })
-    return max
-  })()
-  const recTotalKm   = workouts.reduce((s, w) => s + w.data.distance_km, 0)
-  const recTotalSecs = workouts.reduce((s, w) => s + w.data.duration_seconds, 0)
   const hasRecords = workouts.length > 0
 
   // ── Tempoutveckling: veckosnitt (endast veckor med distanspass) ──
@@ -1045,45 +1049,42 @@ export default function StatsScreen() {
                   {
                     icon: 'map-outline' as const, color: ORANGE, label: 'Längsta pass',
                     value: recLongestKm > 0 ? `${toDisplayDistance(recLongestKm, unit).toFixed(2)} ${unitLabel}` : '–',
+                    workout: recLongestW,
                   },
                   {
                     icon: 'flash-outline' as const, color: YELLOW, label: 'Snabbaste km',
                     value: recFastestSplitSec === Infinity ? '–' : fmtPace(recFastestSplitSec),
+                    workout: recFastestSplitW,
                   },
                   {
                     icon: 'stopwatch-outline' as const, color: RED, label: `Bästa tempo /${unitLabel}`,
                     value: recBestPaceSec === Infinity ? '–' : fmtPace(paceForUnit(recBestPaceSec, unit)),
+                    workout: recBestPaceW,
                   },
                   {
                     icon: 'trending-up-outline' as const, color: GREEN, label: 'Längsta vecka',
                     value: recBiggestWeek > 0 ? `${toDisplayDistance(recBiggestWeek, unit).toFixed(1)} ${unitLabel}` : '–',
-                  },
-                  {
-                    icon: 'calendar-outline' as const, color: PURPLE, label: 'Flest pass en vecka',
-                    value: `${recMostWeekPasses} pass`,
-                  },
-                  {
-                    icon: 'earth-outline' as const, color: BLUE, label: 'Total distans',
-                    value: `${toDisplayDistance(recTotalKm, unit).toFixed(1)} ${unitLabel}`,
-                  },
-                  {
-                    icon: 'time-outline' as const, color: TEAL, label: 'Total tid',
-                    value: fmtDuration(recTotalSecs),
-                  },
-                  {
-                    icon: 'checkmark-done-outline' as const, color: LIME, label: 'Pass totalt',
-                    value: String(workouts.length),
+                    workout: recBiggestWeekW,
                   },
                 ]).map(r => (
-                  <View key={r.label} style={s.recCard}>
-                    <View style={[s.recIconWrap, { backgroundColor: r.color + '1A' }]}>
-                      <Ionicons name={r.icon} size={16} color={r.color} />
+                  <TouchableOpacity
+                    key={r.label}
+                    style={s.recCard}
+                    activeOpacity={0.75}
+                    disabled={!r.workout}
+                    onPress={() => r.workout && setSelectedWorkout(r.workout)}
+                  >
+                    <View style={s.recCardTop}>
+                      <View style={[s.recIconWrap, { backgroundColor: r.color + '1A' }]}>
+                        <Ionicons name={r.icon} size={16} color={r.color} />
+                      </View>
+                      {r.workout && <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.28)" />}
                     </View>
                     <Text style={[s.recCardVal, { color: r.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                       {r.value}
                     </Text>
                     <Text style={s.recCardLbl} numberOfLines={2}>{r.label}</Text>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
               </>
@@ -1392,6 +1393,7 @@ const s = StyleSheet.create({
     width: 130, backgroundColor: CARD, borderRadius: 18,
     padding: 14, gap: 8,
   },
+  recCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   recCardVal: { fontSize: 19, fontFamily: 'Nunito_700Bold', fontVariant: ['tabular-nums'] as any },
   recCardLbl: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', lineHeight: 14 },
   recIconWrap: {
