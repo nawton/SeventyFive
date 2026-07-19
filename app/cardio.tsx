@@ -28,7 +28,7 @@ import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
-import { getCardioStatsTheme, getVoiceCues, getDefaultMapStyle, type CardioStatsTheme } from '@/lib/prefs'
+import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, getDefaultMapStyle, type CardioStatsTheme } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -230,8 +230,11 @@ export default function CardioScreen() {
   const insets = useSafeAreaInsets()
 
   const { name, sessionId, sessionDate, goalKm, goalMin } = useLocalSearchParams<{ name?: string; sessionId?: string; sessionDate?: string; goalKm?: string; goalMin?: string }>()
-  const goalKmNum  = goalKm  ? parseFloat(goalKm)  : 0
-  const goalMinNum = goalMin ? parseInt(goalMin, 10) : 0
+  const [goalKmNum, setGoalKmNum]   = useState(goalKm ? parseFloat(goalKm) : 0)
+  const [goalMinNum, setGoalMinNum] = useState(goalMin ? parseInt(goalMin, 10) : 0)
+  const [goalModalOpen, setGoalModalOpen] = useState(false)
+  const [goalKmDraft, setGoalKmDraft]   = useState('')
+  const [goalMinDraft, setGoalMinDraft] = useState('')
 
   // Enhetsval (km/miles) — lagring sker alltid i km, bara visningen konverteras
   const [unit, setUnit] = useState<UnitSystem>('metric')
@@ -245,8 +248,9 @@ export default function CardioScreen() {
 
   // Röstguidning — talade besked om splittar och mål
   const voiceRef = useRef(true)
+  const [voiceOn, setVoiceOn] = useState(true)
   useEffect(() => {
-    getVoiceCues().then(on => { voiceRef.current = on })
+    getVoiceCues().then(on => { voiceRef.current = on; setVoiceOn(on) })
     return () => { Speech.stop() }
   }, [])
   function speak(text: string) {
@@ -439,6 +443,36 @@ export default function CardioScreen() {
 
   // Kartvals-sheeten: samma beteende som aktivitetsväljaren
   const styleY = useSharedValue(420)
+  // Målväljaren på startvyn — förifylls med senaste målet för aktiviteten
+  async function openGoalModal() {
+    if (goalKmNum > 0 || goalMinNum > 0) {
+      setGoalKmDraft(goalKmNum > 0 ? String(goalKmNum).replace('.', ',') : '')
+      setGoalMinDraft(goalMinNum > 0 ? String(goalMinNum) : '')
+    } else {
+      const saved = await getCardioGoal(exercise)
+      setGoalKmDraft(saved && saved.km > 0 ? String(saved.km).replace('.', ',') : '')
+      setGoalMinDraft(saved && saved.min > 0 ? String(saved.min) : '')
+    }
+    setGoalModalOpen(true)
+  }
+
+  function saveGoal() {
+    const km  = parseFloat(goalKmDraft.replace(',', '.')) || 0
+    const min = parseInt(goalMinDraft, 10) || 0
+    setGoalKmNum(km)
+    setGoalMinNum(min)
+    if (km > 0 || min > 0) setCardioGoal(exercise, { km, min }).catch(() => {})
+    setGoalModalOpen(false)
+  }
+
+  function toggleVoice() {
+    Haptics.selectionAsync()
+    const next = !voiceOn
+    setVoiceOn(next)
+    voiceRef.current = next
+    setVoiceCues(next).catch(() => {})
+  }
+
   function openStyleSheet() {
     setStyleMenuOpen(true)
     styleY.value = 420
@@ -1329,33 +1363,104 @@ export default function CardioScreen() {
         </View>
       </Modal>
 
+      {/* Målväljare — km och/eller minuter */}
+      <Modal visible={goalModalOpen} transparent animationType="slide" onRequestClose={() => setGoalModalOpen(false)}>
+        <Pressable style={styles.goalModalOverlay} onPress={() => setGoalModalOpen(false)}>
+          <Pressable style={styles.goalModalSheet} onPress={() => {}}>
+            <Text style={styles.goalModalTitle}>Sätt mål</Text>
+            <View style={styles.goalModalRow}>
+              <View style={styles.goalModalField}>
+                <Text style={styles.goalModalLabel}>Distans ({unitLabel})</Text>
+                <TextInput
+                  style={styles.goalModalInput}
+                  value={goalKmDraft}
+                  onChangeText={v => setGoalKmDraft(v.replace(/[^0-9.,]/g, ''))}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor="#555"
+                />
+              </View>
+              <View style={styles.goalModalField}>
+                <Text style={styles.goalModalLabel}>Tid (min)</Text>
+                <TextInput
+                  style={styles.goalModalInput}
+                  value={goalMinDraft}
+                  onChangeText={v => setGoalMinDraft(v.replace(/[^0-9]/g, ''))}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  placeholderTextColor="#555"
+                />
+              </View>
+            </View>
+            <TouchableOpacity style={styles.goalModalSave} onPress={saveGoal} activeOpacity={0.85}>
+              <Text style={styles.goalModalSaveText}>Spara mål</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.goalModalClear}
+              onPress={() => { setGoalKmNum(0); setGoalMinNum(0); setGoalModalOpen(false) }}
+            >
+              <Text style={styles.goalModalClearText}>Inget mål</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <SafeAreaView style={[styles.bottomBar, LIQUID_GLASS && styles.glassSurface]} edges={['bottom']}>
         {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
         <View style={styles.bottomInner}>
 
           {status === 'idle' ? (
-            <>
-              <TouchableOpacity
-                style={styles.idleCol}
-                onPress={openPicker}
-                activeOpacity={0.8}
-              >
-                <View style={styles.typeCircle}>
-                  <Ionicons name={selectedExercise.icon} size={26} color={ORANGE} />
-                  <View style={styles.typeBadge}>
-                    <Ionicons name="checkmark" size={11} color="#fff" />
+            <View style={styles.idleWrap}>
+              {/* Inställningsrutnät i Runkeeper-stil: 2×2 celler */}
+              <View style={styles.idleGrid}>
+                <TouchableOpacity style={styles.idleCell} onPress={openPicker} activeOpacity={0.75}>
+                  <Ionicons name={selectedExercise.icon} size={20} color={ORANGE} />
+                  <View style={styles.idleCellText}>
+                    <Text style={styles.idleCellLabel}>Aktivitet</Text>
+                    <Text style={styles.idleCellValue}>{selectedExercise.label}</Text>
                   </View>
-                </View>
-                <Text style={styles.idleColLabel}>{selectedExercise.label}</Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
+                <View style={styles.idleGridDivV} />
+                <TouchableOpacity style={styles.idleCell} onPress={openGoalModal} activeOpacity={0.75}>
+                  <Ionicons name="flag-outline" size={20} color={ORANGE} />
+                  <View style={styles.idleCellText}>
+                    <Text style={styles.idleCellLabel}>Mål</Text>
+                    <Text style={styles.idleCellValue} numberOfLines={1}>
+                      {goalKmNum > 0 || goalMinNum > 0
+                        ? [
+                            goalKmNum > 0 ? `${String(goalKmNum).replace('.', ',')} ${unitLabel}` : null,
+                            goalMinNum > 0 ? `${goalMinNum} min` : null,
+                          ].filter(Boolean).join(' · ')
+                        : 'Inget'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.idleGridDivH} />
+              <View style={styles.idleGrid}>
+                <TouchableOpacity style={styles.idleCell} onPress={toggleVoice} activeOpacity={0.75}>
+                  <Ionicons name={voiceOn ? 'volume-high-outline' : 'volume-mute-outline'} size={20} color={ORANGE} />
+                  <View style={styles.idleCellText}>
+                    <Text style={styles.idleCellLabel}>Röstguidning</Text>
+                    <Text style={styles.idleCellValue}>{voiceOn ? 'På' : 'Av'}</Text>
+                  </View>
+                </TouchableOpacity>
+                <View style={styles.idleGridDivV} />
+                <TouchableOpacity style={styles.idleCell} onPress={openStyleSheet} activeOpacity={0.75}>
+                  <Ionicons name="layers-outline" size={20} color={ORANGE} />
+                  <View style={styles.idleCellText}>
+                    <Text style={styles.idleCellLabel}>Karta</Text>
+                    <Text style={styles.idleCellValue}>
+                      {MAP_STYLES.find(m => m.key === activeStyle)?.label ?? 'Karta'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
 
-              <TouchableOpacity style={styles.idleCol} onPress={beginCountdown} activeOpacity={0.85}>
-                <View style={styles.startCircle}>
-                  <Ionicons name="play" size={36} color="#fff" style={{ marginLeft: 4 }} />
-                </View>
-                <Text style={styles.startLabel}>Starta</Text>
+              <TouchableOpacity style={styles.startWide} onPress={beginCountdown} activeOpacity={0.85}>
+                <Text style={styles.startWideText}>Start</Text>
               </TouchableOpacity>
-            </>
+            </View>
           ) : status === 'running' ? (
             // Under passet: bara en bred pausknapp
             <TouchableOpacity style={styles.pausePill} onPress={pauseTracking} activeOpacity={0.85}>
@@ -1385,6 +1490,45 @@ export default function CardioScreen() {
 }
 
 const styles = StyleSheet.create({
+
+  // ── Idle: inställningsrutnät + bred Start (Runkeeper-inspirerad) ──
+  idleWrap: { width: '100%', gap: 12 },
+  idleGrid: { flexDirection: 'row', alignItems: 'stretch' },
+  idleGridDivH: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: -4 },
+  idleGridDivV: { width: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)' },
+  idleCell: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 10, paddingHorizontal: 12,
+  },
+  idleCellText: { flex: 1 },
+  idleCellLabel: { color: '#9BA0A6', fontSize: 11, fontWeight: '600' },
+  idleCellValue: { color: '#fff', fontSize: 15, fontWeight: '700', marginTop: 1 },
+  startWide: {
+    backgroundColor: ORANGE, borderRadius: 16,
+    paddingVertical: 16, alignItems: 'center',
+  },
+  startWideText: { color: '#000', fontSize: 18, fontWeight: '800', letterSpacing: 0.3 },
+
+  // Målmodal
+  goalModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  goalModalSheet: {
+    backgroundColor: '#1C1C1E', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 20, paddingBottom: 40, gap: 14,
+  },
+  goalModalTitle: { color: '#fff', fontSize: 19, fontWeight: '800', textAlign: 'center' },
+  goalModalRow: { flexDirection: 'row', gap: 10 },
+  goalModalField: { flex: 1, gap: 6 },
+  goalModalLabel: { color: '#9BA0A6', fontSize: 12, fontWeight: '600' },
+  goalModalInput: {
+    backgroundColor: '#0A0A0C', borderRadius: 12, borderWidth: 1, borderColor: '#2C2C2E',
+    color: '#fff', fontSize: 18, paddingVertical: 12, paddingHorizontal: 14,
+  },
+  goalModalSave: {
+    backgroundColor: ORANGE, borderRadius: 14, paddingVertical: 14, alignItems: 'center',
+  },
+  goalModalSaveText: { color: '#000', fontSize: 15, fontWeight: '700' },
+  goalModalClear: { alignItems: 'center', paddingVertical: 8 },
+  goalModalClearText: { color: '#9BA0A6', fontSize: 13 },
   root: { flex: 1, backgroundColor: '#e8e8e8' },
 
   // ── Stats overlay ──
