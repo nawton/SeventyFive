@@ -1,4 +1,4 @@
-import Svg, { Polygon, Polyline, Circle, Line as SvgLine, Text as SvgText, Rect, G } from 'react-native-svg'
+import Svg, { Path, Circle, Line as SvgLine, Text as SvgText, Rect, G } from 'react-native-svg'
 import { CARD, ORANGE } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 
@@ -26,6 +26,27 @@ function niceStep(yMax: number): number {
     if (yMax / c <= 3.2) return c
   }
   return 1000
+}
+
+// Mjuk kurva genom punkterna (Catmull-Rom → bezier). Kontrollpunkterna kläms
+// till plottens höjd så kurvan aldrig dippar under nollinjen vid en ensam
+// topp eller skjuter över taket — platta nollperioder förblir helt platta.
+function smoothLine(pts: Array<{ x: number; y: number }>, minY: number, maxY: number): string {
+  if (pts.length === 0) return ''
+  const clamp = (y: number) => Math.min(maxY, Math.max(minY, y))
+  let d = `M ${pts[0].x} ${pts[0].y}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[i + 2] ?? p2
+    const c1x = p1.x + (p2.x - p0.x) / 6
+    const c1y = clamp(p1.y + (p2.y - p0.y) / 6)
+    const c2x = p2.x - (p3.x - p1.x) / 6
+    const c2y = clamp(p2.y - (p3.y - p1.y) / 6)
+    d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`
+  }
+  return d
 }
 
 export function DistanceAreaChart({
@@ -60,9 +81,12 @@ export function DistanceAreaChart({
   const fmtV = (v: number) =>
     v >= 10 ? String(Math.round(v)) : String(Math.round(v * 10) / 10).replace('.', ',')
 
-  const linePts = vals.map((v, i) => `${px(i)},${py(v)}`).join(' ')
-  const areaPts = `${px(0)},${baseY} ${linePts} ${px(n - 1)},${baseY}`
-  const selIdx  = selectedKey ? buckets.findIndex(b => b.key === selectedKey) : -1
+  const pts      = vals.map((v, i) => ({ x: px(i), y: py(v) }))
+  const linePath = smoothLine(pts, TOP_PAD, baseY)
+  const areaPath = linePath
+    ? `${linePath} L ${px(n - 1)} ${baseY} L ${px(0)} ${baseY} Z`
+    : ''
+  const selIdx = selectedKey ? buckets.findIndex(b => b.key === selectedKey) : -1
 
   // Träffytor: kolumnen kring varje punkt, delad vid mittpunkterna
   const hitLeft  = (i: number) => i === 0 ? 0 : (px(i - 1) + px(i)) / 2
@@ -86,8 +110,8 @@ export function DistanceAreaChart({
         </SvgText>
       )}
 
-      <Polygon points={areaPts} fill={color} fillOpacity={0.18} />
-      <Polyline points={linePts} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+      <Path d={areaPath} fill={color} fillOpacity={0.18} />
+      <Path d={linePath} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
 
       {selIdx >= 0 && (
         <G>
