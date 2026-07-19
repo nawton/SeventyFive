@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   restText:   { color: TEXT_SECONDARY, fontSize: 14 },
   restAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 12, borderWidth: 1, borderColor: ORANGE + '60',
+    marginTop: 12, backgroundColor: ORANGE + '1E',
     borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9,
   },
   restAddText: { color: ORANGE, fontSize: 14, fontWeight: '600' },

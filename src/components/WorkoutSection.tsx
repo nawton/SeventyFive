@@ -17,12 +17,11 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, CARDIO_BLUE } from '@/lib/theme'
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
 
 const GREEN    = '#3BE862'
 // Kondition har egen accentfärg så gym- och cardiopass skiljer sig direkt
-const CARDIO_BLUE = '#3BD5FF'
 const SCREEN_W = Dimensions.get('window').width
 
 const GPS_KEYWORDS = ['löpning', 'running', 'jogging', 'cykling', 'cycling', 'promenad', 'walking', 'spring', 'intervallspring', 'gång']
@@ -398,7 +397,6 @@ export function WorkoutSection({
 
   // Hela kortets ram och bakgrund tonar mot grönt när passet är klart
   const cardOuterStyle = useAnimatedStyle(() => ({
-    borderColor:     interpolateColor(completedV.value, [0, 1], [BORDER, GREEN + '45']),
     backgroundColor: interpolateColor(completedV.value, [0, 1], [CARD, '#0A2416']),
   }))
 
@@ -643,7 +641,6 @@ const s = StyleSheet.create({
   // Ett kort per pass — rubrik, progress, övningar och lägg-till bor innanför
   card: {
     borderRadius: 18,
-    borderWidth:  1,
     overflow:     'hidden',
   },
 
@@ -674,10 +671,8 @@ const s = StyleSheet.create({
     flexDirection:     'row',
     alignItems:        'center',
     gap:               5,
-    backgroundColor:   GREEN + '18',
+    backgroundColor:   GREEN + '1E',
     borderRadius:      10,
-    borderWidth:       1,
-    borderColor:       GREEN + '40',
     paddingHorizontal: 9,
     paddingVertical:   5,
   },
@@ -687,17 +682,16 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical:   6,
     borderRadius:      10,
-    borderWidth:       1,
-    borderColor:       BORDER,
+    backgroundColor:   'rgba(255,255,255,0.07)',
   },
-  completeBtnHot:     { borderColor: ORANGE + '80', backgroundColor: ORANGE + '15' },
+  completeBtnHot:     { backgroundColor: ORANGE + '22' },
   completeBtnText:    { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   completeBtnTextHot: { color: ORANGE },
 
   openBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
-    borderWidth: 1, borderColor: ORANGE + '80', backgroundColor: ORANGE + '15',
+    backgroundColor: ORANGE + '22',
   },
   openBtnText: { color: ORANGE, fontSize: 13, fontWeight: '700' },
 

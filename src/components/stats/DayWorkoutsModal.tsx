@@ -7,7 +7,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
+import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { fmtTime } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
@@ -19,7 +19,6 @@ import { GymSummaryView } from './GymSummaryView'
 const SCREEN_HEIGHT = Dimensions.get('window').height
 const SCREEN_WIDTH  = Dimensions.get('window').width
 const SHEET_SP      = { damping: 26, stiffness: 260, mass: 1 } as const
-const CARDIO_BLUE   = '#3BD5FF'
 
 const EXERCISE_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   running:  'fitness-outline',

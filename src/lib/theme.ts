@@ -10,3 +10,6 @@ export const TEXT_SECONDARY = '#888888'
 // Rundad sifferfont (SF Rounded-känsla) — laddas i app/_layout.tsx
 export const NUM_FONT      = 'Nunito_700Bold'
 export const NUM_FONT_SEMI = 'Nunito_600SemiBold'
+
+/** Cardions accentfärg — GPS-skärmen, schemakorten och detaljvyerna delar den */
+export const CARDIO_BLUE = '#3FA7FF'

@@ -91,7 +91,7 @@ interface MedalInfo {
   unlocked: boolean
   progress?: string
 }
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, { runOnJS, useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
@@ -100,7 +100,6 @@ import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { GlassCircleButton } from '@/components/GlassButton'
 
 const GOLD = '#FFD54F'
-const CARDIO_BLUE = '#3BD5FF'
 const LIME = '#BDFF3B'
 
 type CardioRecs = {

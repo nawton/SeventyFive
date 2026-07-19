@@ -23,7 +23,7 @@ import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline } from 'react-native-maps'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated'
-import { ORANGE, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { ORANGE, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
@@ -57,7 +57,7 @@ function nameToType(name: string): ExerciseType {
 const DIAL = Math.min(Dimensions.get('window').width - 70, 320)
 const LIVE_W = Dimensions.get('window').width
 // Cardioskärmens blå accent — ersätter appens orange på just den här ytan
-const CARDIO_ACCENT = '#3FA7FF'
+const CARDIO_ACCENT = CARDIO_BLUE
 
 function cardinalLabel(deg: number): string {
   const dirs = ['N', 'NÖ', 'Ö', 'SÖ', 'S', 'SV', 'V', 'NV']
@@ -1940,12 +1940,12 @@ const styles = StyleSheet.create({
   goalOne: { gap: 5 },
   goalTextRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   goalText:      { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600' },
-  goalPct:       { color: '#3BD5FF', fontSize: 12, fontWeight: '800' },
+  goalPct:       { color: CARDIO_BLUE, fontSize: 12, fontWeight: '800' },
   goalTrack: {
     height: 4, borderRadius: 2, overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  goalFill: { height: '100%', backgroundColor: '#3BD5FF', borderRadius: 2 },
+  goalFill: { height: '100%', backgroundColor: CARDIO_BLUE, borderRadius: 2 },
 
   statsRow: {
     flexDirection: 'row',

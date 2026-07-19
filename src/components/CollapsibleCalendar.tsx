@@ -8,12 +8,11 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 
 const GREEN       = '#3BE862'
-const CARDIO_BLUE = '#3BD5FF'
 const SCREEN_W    = Dimensions.get('window').width
 // Kompakta höjder — kalendern ska ta så lite plats som möjligt från passlistan
 const ROW_H   = 46    // height of one week row

@@ -20,7 +20,7 @@ import { runOnJS } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/workouts'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, CARDIO_BLUE } from '@/lib/theme'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { parseLocalDate } from '@/lib/date'
 import {
@@ -29,7 +29,6 @@ import {
 } from '@/lib/units'
 import { getCardioStatsTheme, setCardioStatsTheme, getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, type CardioStatsTheme } from '@/lib/prefs'
 
-const CARDIO_BLUE = '#3BD5FF'
 const SCREEN_W    = Dimensions.get('window').width
 const GOAL_PAGE_W = SCREEN_W - 40   // scrollens padding är 20 per sida
 const GOAL_GAP    = 12
