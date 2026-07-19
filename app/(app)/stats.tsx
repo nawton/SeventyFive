@@ -515,6 +515,28 @@ export default function StatsScreen() {
   const prevGroupCount   = groupCount(prevWeekExNames)
 
   const completedDays = days.filter(d => d.status === 'completed').length
+
+  // ── Din vecka: tvärsummering över cardio + gym, innevarande kalendervecka ──
+  const nowWeekStart = toLocalDateString(startOfWeek())
+  const nowWeekEnd = (() => { const d = startOfWeek(); d.setDate(d.getDate() + 7); return toLocalDateString(d) })()
+  const inNowWeek = (iso: string) => iso >= nowWeekStart && iso < nowWeekEnd
+  const reportCardio = workouts.filter(w => inNowWeek(toLocalDateString(new Date(w.created_at))))
+  const weekReport = {
+    passes: reportCardio.length
+      + completedSessions.filter(c => c.sessionType === 'gym' && inNowWeek(c.completedDate)).length,
+    km: reportCardio.reduce((s, w) => s + w.data.distance_km, 0),
+    volume: strengthWorkouts
+      .filter(w => inNowWeek(w.data.workout_date ?? toLocalDateString(new Date(w.created_at))))
+      .reduce((s, w) => s + w.data.sets.reduce((x, r) => x + r.reps * (r.weight_kg || 0), 0), 0),
+    daysCleared: startDate
+      ? days.filter(d => {
+          if (d.status !== 'completed') return false
+          const dt = parseLocalDate(startDate)
+          dt.setDate(dt.getDate() + d.dayNumber - 1)
+          return inNowWeek(toLocalDateString(dt))
+        }).length
+      : 0,
+  }
   const missedDays    = days.filter(d => d.status === 'failed').length
 
   const unitLabel  = distanceUnitLabel(unit)
@@ -772,7 +794,9 @@ export default function StatsScreen() {
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.header}>
         <Text style={s.title}>Framsteg</Text>
-        <Text style={s.subtitle}>{levelName}</Text>
+        <Text style={s.subtitle}>
+          {currentDay > 0 ? `Dag ${currentDay} av 75${levelName ? ` · ${levelName}` : ''}` : levelName}
+        </Text>
       </View>
 
       <GestureDetector gesture={tabPan}>
@@ -872,36 +896,52 @@ export default function StatsScreen() {
               </TouchableOpacity>
             )}
 
-            {/* Statistikrutnät — samma Apple-stil som cardio-flikens Träningsdetaljer */}
+            {/* Din vecka — tvärsummering över cardio och gym */}
+            <Text style={s.sectionHead}>Din vecka</Text>
+            <View style={[s.card, s.cardPlain]}>
+              <View style={[s.dtlRow, { paddingTop: 0 }]}>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Träningspass</Text>
+                  <Text style={[s.dtlVal, { color: ORANGE }]}>{weekReport.passes}</Text>
+                </View>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Distans</Text>
+                  <Text style={[s.dtlVal, { color: BLUE }]}>
+                    {toDisplayDistance(weekReport.km, unit).toFixed(1).replace('.', ',')}
+                    <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
+                  </Text>
+                </View>
+              </View>
+              <View style={s.dtlSep} />
+              <View style={[s.dtlRow, { paddingBottom: 0 }]}>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Volym</Text>
+                  <Text style={[s.dtlVal, { color: YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {Math.round(weekReport.volume).toLocaleString('sv-SE')}
+                    <Text style={s.dtlUnit}> KG</Text>
+                  </Text>
+                </View>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Klarade dagar</Text>
+                  <Text style={[s.dtlVal, { color: GREEN }]}>{weekReport.daysCleared}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Statistik — bara det ringen inte redan visar */}
             <Text style={s.sectionHead}>Statistik</Text>
             <View style={[s.card, s.cardPlain]}>
-              <View>
-                <View style={[s.dtlRow, { paddingTop: 0 }]}>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Dagar i streak</Text>
-                    <Text style={[s.dtlVal, { color: ORANGE }]}>{streak}</Text>
-                  </View>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Klarade dagar</Text>
-                    <Text style={[s.dtlVal, { color: GREEN }]}>{completedDays}</Text>
-                  </View>
+              <View style={[s.dtlRow, { paddingVertical: 0 }]}>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Dagar i streak</Text>
+                  <Text style={[s.dtlVal, { color: ORANGE }]}>{streak}</Text>
                 </View>
-                <View style={s.dtlSep} />
-                <View style={[s.dtlRow, { paddingBottom: 0 }]}>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>{isEarlyDays ? 'Till dag 10' : 'Kvar till mål'}</Text>
-                    <Text style={[s.dtlVal, { color: PURPLE }]}>
-                      {isEarlyDays ? Math.max(0, 10 - currentDay) : Math.max(0, 75 - currentDay)}
-                      <Text style={s.dtlUnit}> DAGAR</Text>
-                    </Text>
-                  </View>
-                  <View style={s.dtlCell}>
-                    <Text style={s.dtlLbl}>Framgång</Text>
-                    <Text style={[s.dtlVal, { color: TEAL }]}>
-                      {currentDay > 1 ? Math.round((completedDays / (currentDay - 1)) * 100) : 0}
-                      <Text style={s.dtlUnit}> %</Text>
-                    </Text>
-                  </View>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>{isEarlyDays ? 'Till dag 10' : 'Kvar till mål'}</Text>
+                  <Text style={[s.dtlVal, { color: PURPLE }]}>
+                    {isEarlyDays ? Math.max(0, 10 - currentDay) : Math.max(0, 75 - currentDay)}
+                    <Text style={s.dtlUnit}> DAGAR</Text>
+                  </Text>
                 </View>
               </View>
             </View>
