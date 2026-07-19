@@ -242,10 +242,12 @@ function RingChart({ currentDay, completedDays }: { currentDay: number; complete
 const SWIPE_BTN_W = 88
 const SWIPE_SPRING = { damping: 22, stiffness: 280, mass: 0.8 } as const
 
-function SwipeRow({ children, onDelete, onFullSwipe }: {
+function SwipeRow({ children, onDelete, onFullSwipe, pagerRef }: {
   children: React.ReactNode
   onDelete: () => void
   onFullSwipe: () => void
+  /** Flik-pagern måste vänta på radsvepet — annars byter man sida i stället */
+  pagerRef?: React.RefObject<unknown>
 }) {
   const x = useSharedValue(0)
   const rowW = useSharedValue(1)
@@ -256,8 +258,8 @@ function SwipeRow({ children, onDelete, onFullSwipe }: {
   }
   function closeRow() { x.value = withSpring(0, SWIPE_SPRING) }
 
-  const pan = Gesture.Pan()
-    .activeOffsetX(-14)
+  let pan = Gesture.Pan()
+    .activeOffsetX(-10)
     .failOffsetY([-12, 12])
     .onUpdate(e => {
       x.value = Math.min(0, e.translationX)
@@ -275,6 +277,7 @@ function SwipeRow({ children, onDelete, onFullSwipe }: {
         x.value = withSpring(0, SWIPE_SPRING)
       }
     })
+  if (pagerRef) pan = pan.blocksExternalGesture(pagerRef as never)
 
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }))
   const bgStyle = useAnimatedStyle(() => ({
@@ -1436,6 +1439,7 @@ export default function StatsScreen() {
                       <SwipeRow
                         onDelete={() => deleteSessionRow(r)}
                         onFullSwipe={() => performDeleteSessionRow(r)}
+                        pagerRef={pagerRef}
                       >
                         <TouchableOpacity
                           style={s.sessRow}
