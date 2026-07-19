@@ -1,120 +1,130 @@
-import { useMemo, useState } from 'react'
-import { View, Text, StyleSheet, Modal, ScrollView, Dimensions } from 'react-native'
+import { useEffect, useMemo, useState } from 'react'
+import { View, Text, StyleSheet, Modal, ScrollView, Dimensions, ActivityIndicator } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Text as SvgText, Polygon, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassSegment } from '@/components/GlassSegment'
-import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
-import { toLocalDateString } from '@/lib/date'
-import { getMusclesForName, type Slug } from '@/lib/muscles'
+import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { toLocalDateString, parseLocalDate } from '@/lib/date'
+import { getMusclesForName, MUSCLE_GROUPS_6 } from '@/lib/muscles'
+import { getCompletedExerciseNamesBetween } from '@/services/workoutSchedule'
 import type { StrengthWorkout } from '@/services/workouts'
 
 // =============================================================================
-// MUSKELSTATISTIK — räknar EXAKT på loggade set (inte schemanamn):
-// varje sparat set tillskrivs övningens muskelgrupper. Periodväljare
-// 1V/1M/3M/1ÅR/ALLT, alltid jämfört med föregående lika lång period.
+// MUSKELFÖRDELNING — öppnas med flikens valda vecka/dag som förvalt läge så
+// grafen alltid visar det man just tittade på. Radarn räknar på samma källa
+// som kroppskartan (avbockade övningar); set-tabellen på loggade set.
 // =============================================================================
 
 const SCREEN_W = Dimensions.get('window').width
-const BLUE   = '#3FBBFF'
-const TEAL   = '#40F5E9'
-const YELLOW = '#FFE60A'
-const PURPLE = '#D65CFF'
 
-type Period = 'w' | 'm' | '3m' | 'y' | 'all'
-const PERIOD_DAYS: Record<Exclude<Period, 'all'>, number> = { w: 7, m: 30, '3m': 90, y: 365 }
+type Period = 'sel' | 'm' | '3m' | 'y' | 'all'
+const ROLLING_DAYS: Record<'m' | '3m' | 'y', number> = { m: 30, '3m': 90, y: 365 }
 
-const MUSCLE_GROUPS_6: Array<{ label: string; slugs: Slug[] }> = [
-  { label: 'Bröst', slugs: ['chest'] as Slug[] },
-  { label: 'Rygg',  slugs: ['upper-back', 'lower-back', 'trapezius'] as Slug[] },
-  { label: 'Ben',   slugs: ['quadriceps', 'hamstring', 'gluteal', 'calves'] as Slug[] },
-  { label: 'Axlar', slugs: ['deltoids'] as Slug[] },
-  { label: 'Armar', slugs: ['biceps', 'triceps'] as Slug[] },
-  { label: 'Mage',  slugs: ['abs', 'obliques'] as Slug[] },
-]
-
-function workoutDate(w: StrengthWorkout): string {
-  return w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
+function addDays(iso: string, n: number): string {
+  const d = parseLocalDate(iso)
+  d.setDate(d.getDate() + n)
+  return toLocalDateString(d)
 }
 
-interface PeriodStats {
-  sets: number
-  reps: number
-  volume: number
-  activeDays: number
-  perGroup: number[]
-  topExercises: Array<{ name: string; sets: number; volume: number }>
+function groupHits(names: string[]): number[] {
+  return MUSCLE_GROUPS_6.map(g =>
+    names.reduce((s, n) => s + (getMusclesForName(n).some(sl => g.slugs.includes(sl)) ? 1 : 0), 0))
 }
 
-function computeStats(workouts: StrengthWorkout[], from: string | null, to: string | null): PeriodStats {
-  const inRange = workouts.filter(w => {
-    const d = workoutDate(w)
-    return (from === null || d >= from) && (to === null || d < to)
-  })
-  const perGroup = MUSCLE_GROUPS_6.map(() => 0)
-  const byExercise = new Map<string, { sets: number; volume: number }>()
-  let sets = 0, reps = 0, volume = 0
-  const days = new Set<string>()
-
-  for (const w of inRange) {
-    const muscles = getMusclesForName(w.data.exercise_name)
-    const wSets = w.data.sets.length
-    const wReps = w.data.sets.reduce((s, r) => s + r.reps, 0)
-    const wVol  = w.data.sets.reduce((s, r) => s + r.reps * (r.weight_kg || 0), 0)
-    sets += wSets
-    reps += wReps
-    volume += wVol
-    days.add(workoutDate(w))
-    MUSCLE_GROUPS_6.forEach((g, i) => {
-      if (muscles.some(sl => g.slugs.includes(sl))) perGroup[i] += wSets
-    })
-    const ex = byExercise.get(w.data.exercise_name) ?? { sets: 0, volume: 0 }
-    ex.sets += wSets
-    ex.volume += wVol
-    byExercise.set(w.data.exercise_name, ex)
-  }
-
-  const topExercises = Array.from(byExercise.entries())
-    .map(([name, v]) => ({ name, ...v }))
-    .sort((a, b) => b.sets - a.sets)
-    .slice(0, 6)
-
-  return { sets, reps, volume, activeDays: days.size, perGroup, topExercises }
-}
-
-export function MuscleDetailModal({ visible, onClose, workouts }: {
+export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStart, weekLabel, day, dayLabel }: {
   visible: boolean
   onClose: () => void
+  userId: string | null
   workouts: StrengthWorkout[]
+  /** Flikens valda vecka (måndagens datum) och dess etikett */
+  weekStart: string
+  weekLabel: string
+  /** Vald dag på fliken — null när hela veckan visas */
+  day: string | null
+  dayLabel: string | null
 }) {
   const insets = useSafeAreaInsets()
-  const [period, setPeriod] = useState<Period>('m')
+  const [period, setPeriod] = useState<Period>('sel')
+  const [curNames, setCurNames] = useState<string[]>([])
+  const [prevNames, setPrevNames] = useState<string[] | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  const { cur, prev, periodLabel } = useMemo(() => {
-    if (period === 'all') {
+  // Öppnas alltid i det läge man kom ifrån (vald dag/vecka)
+  useEffect(() => {
+    if (visible) setPeriod('sel')
+  }, [visible])
+
+  // Periodens datumintervall + jämförelseperiod av samma längd
+  const range = useMemo(() => {
+    if (period === 'sel') {
+      if (day) {
+        return {
+          from: day, to: addDays(day, 1),
+          prevFrom: addDays(day, -7), prevTo: addDays(day, -6),
+          label: dayLabel ?? day,
+          curLegend: 'Vald dag', prevLegend: 'Samma dag förra veckan',
+        }
+      }
       return {
-        cur: computeStats(workouts, null, null),
-        prev: null,
-        periodLabel: 'Hela historiken',
+        from: weekStart, to: addDays(weekStart, 7),
+        prevFrom: addDays(weekStart, -7), prevTo: weekStart,
+        label: weekLabel,
+        curLegend: 'Vald vecka', prevLegend: 'Förra veckan',
       }
     }
-    const days = PERIOD_DAYS[period]
+    if (period === 'all') {
+      return {
+        from: null, to: null, prevFrom: null, prevTo: null,
+        label: 'Hela historiken', curLegend: 'Alla pass', prevLegend: '',
+      }
+    }
+    const days = ROLLING_DAYS[period]
     const today = new Date(); today.setHours(0, 0, 0, 0)
-    const from = new Date(today); from.setDate(from.getDate() - (days - 1))
-    const prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - days)
-    const fromStr = toLocalDateString(from)
-    const prevFromStr = toLocalDateString(prevFrom)
-    const labels: Record<Exclude<Period, 'all'>, string> = {
-      w: 'Senaste 7 dagarna', m: 'Senaste 30 dagarna', '3m': 'Senaste 3 månaderna', y: 'Senaste året',
-    }
+    const todayIso = toLocalDateString(today)
+    const from = addDays(todayIso, -(days - 1))
+    const labels = { m: 'Senaste 30 dagarna', '3m': 'Senaste 3 månaderna', y: 'Senaste året' } as const
     return {
-      cur: computeStats(workouts, fromStr, null),
-      prev: computeStats(workouts, prevFromStr, fromStr),
-      periodLabel: labels[period],
+      from, to: addDays(todayIso, 1),
+      prevFrom: addDays(from, -days), prevTo: from,
+      label: labels[period],
+      curLegend: 'Perioden', prevLegend: 'Föregående period',
     }
-  }, [workouts, period])
+  }, [period, day, dayLabel, weekStart, weekLabel])
 
-  const maxGroupSets = Math.max(...cur.perGroup, 1)
+  // Avbockade övningar för perioden — samma källa som kroppskartan
+  useEffect(() => {
+    if (!visible || !userId) return
+    let active = true
+    setLoading(true)
+    Promise.all([
+      getCompletedExerciseNamesBetween(userId, range.from, range.to).catch(() => [] as string[]),
+      range.prevFrom !== null || period !== 'all'
+        ? getCompletedExerciseNamesBetween(userId, range.prevFrom, range.prevTo).catch(() => [] as string[])
+        : Promise.resolve(null),
+    ]).then(([cur, prev]) => {
+      if (!active) return
+      setCurNames(cur)
+      setPrevNames(period === 'all' ? null : prev)
+    }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [visible, userId, range, period])
+
+  const radarCur  = groupHits(curNames)
+  const radarPrev = prevNames ? groupHits(prevNames) : null
+
+  // Loggade set i perioden — vikterna man faktiskt skrivit in
+  const setsPerGroup = useMemo(() => {
+    const inRange = workouts.filter(w => {
+      const d = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
+      return (range.from === null || d >= range.from) && (range.to === null || d < range.to)
+    })
+    return MUSCLE_GROUPS_6.map(g =>
+      inRange.reduce((s, w) =>
+        s + (getMusclesForName(w.data.exercise_name).some(sl => g.slugs.includes(sl)) ? w.data.sets.length : 0), 0))
+  }, [workouts, range])
+  const totalSets = setsPerGroup.reduce((a, b) => a + b, 0)
+  const maxGroupSets = Math.max(...setsPerGroup, 1)
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -129,7 +139,7 @@ export function MuscleDetailModal({ visible, onClose, workouts }: {
           <GlassSegment
             value={period}
             options={[
-              { key: 'w',   label: '1 V' },
+              { key: 'sel', label: day ? 'Dag' : 'Vecka' },
               { key: 'm',   label: '1 M' },
               { key: '3m',  label: '3 M' },
               { key: 'y',   label: '1 ÅR' },
@@ -137,19 +147,20 @@ export function MuscleDetailModal({ visible, onClose, workouts }: {
             ]}
             onChange={setPeriod}
           />
-          <Text style={s.periodLabel}>{periodLabel}</Text>
+          <Text style={s.periodLabel}>{range.label}</Text>
 
-          {/* Radar — set per muskelgrupp, denna period mot föregående */}
-          <Text style={s.sectionHead}>Muskelfördelning</Text>
-          <View style={[s.card, { alignItems: 'center', paddingVertical: 12 }]}>
-            {(() => {
+          {/* Radar — övningar per muskelgrupp, samma räkning som kroppskartan */}
+          <View style={[s.card, { alignItems: 'center', paddingVertical: 12, marginTop: 14 }]}>
+            {loading ? (
+              <ActivityIndicator color={ORANGE} style={{ marginVertical: 110 }} />
+            ) : (() => {
               const W = SCREEN_W - 72
               const H = 260
               const cx = W / 2
               const cy = H / 2
               const R = 90
-              const prevGroups = prev?.perGroup ?? MUSCLE_GROUPS_6.map(() => 0)
-              const maxV = Math.max(...cur.perGroup, ...prevGroups, 1)
+              const prevVals = radarPrev ?? MUSCLE_GROUPS_6.map(() => 0)
+              const maxV = Math.max(...radarCur, ...prevVals, 1)
               const pt = (i: number, v: number) => {
                 const a = (-90 + i * 60) * (Math.PI / 180)
                 const r = (v / maxV) * R
@@ -172,15 +183,15 @@ export function MuscleDetailModal({ visible, onClose, workouts }: {
                       />
                     )
                   })}
-                  {prev && prev.perGroup.some(v => v > 0) && (
+                  {radarPrev && radarPrev.some(v => v > 0) && (
                     <Polygon
-                      points={prev.perGroup.map((v, i) => pt(i, v)).join(' ')}
+                      points={radarPrev.map((v, i) => pt(i, v)).join(' ')}
                       fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.30)" strokeWidth={1.5}
                     />
                   )}
-                  {cur.perGroup.some(v => v > 0) && (
+                  {radarCur.some(v => v > 0) && (
                     <Polygon
-                      points={cur.perGroup.map((v, i) => pt(i, v)).join(' ')}
+                      points={radarCur.map((v, i) => pt(i, v)).join(' ')}
                       fill={ORANGE + '33'} stroke={ORANGE} strokeWidth={2}
                     />
                   )}
@@ -203,43 +214,45 @@ export function MuscleDetailModal({ visible, onClose, workouts }: {
             <View style={s.legend}>
               <View style={s.legItem}>
                 <View style={[s.legDot, { backgroundColor: ORANGE }]} />
-                <Text style={s.legText}>Denna period</Text>
+                <Text style={s.legText}>{range.curLegend}</Text>
               </View>
-              {prev && (
+              {radarPrev && !!range.prevLegend && (
                 <View style={s.legItem}>
                   <View style={[s.legDot, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
-                  <Text style={s.legText}>Föregående period</Text>
+                  <Text style={s.legText}>{range.prevLegend}</Text>
                 </View>
               )}
             </View>
           </View>
+          {!loading && curNames.length === 0 && (
+            <Text style={s.hint}>Inga avbockade övningar i perioden.</Text>
+          )}
 
-          {/* Set per muskelgrupp */}
+          {/* Set per muskelgrupp — från loggade set med reps/vikt */}
           <Text style={s.sectionHead}>Set per muskelgrupp</Text>
           <View style={[s.card, { paddingVertical: 6 }]}>
             <View style={s.grpRow}>
               <Text style={[s.grpLbl, { fontWeight: '700' }]}>Totalt</Text>
               <View style={s.grpTrack} />
-              <Text style={s.grpVal}>{cur.sets}</Text>
+              <Text style={s.grpVal}>{totalSets}</Text>
             </View>
             {MUSCLE_GROUPS_6.map((g, i) => (
               <View key={g.label} style={[s.grpRow, s.grpRowBorder]}>
                 <Text style={s.grpLbl}>{g.label}</Text>
                 <View style={s.grpTrack}>
-                  {cur.perGroup[i] > 0 && (
-                    <View style={[s.grpFill, { width: `${Math.max(6, (cur.perGroup[i] / maxGroupSets) * 100)}%` as never }]} />
+                  {setsPerGroup[i] > 0 && (
+                    <View style={[s.grpFill, { width: `${Math.max(6, (setsPerGroup[i] / maxGroupSets) * 100)}%` as never }]} />
                   )}
                 </View>
-                <Text style={[s.grpVal, cur.perGroup[i] === 0 && { color: TEXT_SECONDARY }]}>
-                  {cur.perGroup[i]}
+                <Text style={[s.grpVal, setsPerGroup[i] === 0 && { color: TEXT_SECONDARY }]}>
+                  {setsPerGroup[i]}
                 </Text>
               </View>
             ))}
           </View>
-
-          {cur.sets === 0 && (
+          {totalSets === 0 && (
             <Text style={s.hint}>
-              Inga loggade set i perioden. Logga reps och vikt i dina gympass så byggs statistiken av exakt det du lyft.
+              Set räknas från reps och vikt du loggar i passen — fyll i dem så växer tabellen.
             </Text>
           )}
         </ScrollView>
@@ -256,21 +269,13 @@ const s = StyleSheet.create({
   },
   topTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
   scroll: { paddingHorizontal: 20, paddingTop: 8 },
-  periodLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', marginTop: 12 },
+  periodLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', marginTop: 12, textTransform: 'capitalize' },
 
   sectionHead: {
     color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
     marginTop: 20, marginBottom: 12,
   },
   card: { backgroundColor: CARD, borderRadius: 20, paddingHorizontal: 18 },
-
-  dtlRow: { flexDirection: 'row', paddingVertical: 14 },
-  dtlCell: { flex: 1, gap: 3 },
-  dtlLbl: { color: TEXT_SECONDARY, fontSize: 14 },
-  dtlVal: { fontSize: 26, fontFamily: NUM_FONT },
-  dtlUnit: { fontSize: 14, fontFamily: NUM_FONT_SEMI },
-  dtlSep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
-  dtlPrev: { color: TEXT_SECONDARY, fontSize: 11, fontFamily: NUM_FONT_SEMI, marginTop: 1 },
 
   legend: { flexDirection: 'row', gap: 16, paddingBottom: 6 },
   legItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -284,11 +289,5 @@ const s = StyleSheet.create({
   grpFill: { height: '100%', borderRadius: 5, backgroundColor: ORANGE },
   grpVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'] },
 
-  exRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
-  exRank: { fontSize: 15, fontFamily: NUM_FONT, width: 20, textAlign: 'center' },
-  exName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', flex: 1 },
-  exSets: { color: TEXT_PRIMARY, fontSize: 14, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
-  exVol: { color: TEXT_SECONDARY, fontSize: 11, fontFamily: NUM_FONT_SEMI, marginTop: 1 },
-
-  hint: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 18, marginTop: 16, textAlign: 'center' },
+  hint: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 18, marginTop: 12, textAlign: 'center' },
 })

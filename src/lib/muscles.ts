@@ -90,3 +90,13 @@ export function getExerciseMuscleGroup(name: string): MuscleGroup {
   }
   return 'all'
 }
+
+/** De sex huvudgrupperna som muskelstatistiken (radar, tabeller, rutnät) räknar på */
+export const MUSCLE_GROUPS_6: Array<{ label: string; slugs: Slug[] }> = [
+  { label: 'Bröst', slugs: ['chest'] as Slug[] },
+  { label: 'Rygg',  slugs: ['upper-back', 'lower-back', 'trapezius'] as Slug[] },
+  { label: 'Ben',   slugs: ['quadriceps', 'hamstring', 'gluteal', 'calves'] as Slug[] },
+  { label: 'Axlar', slugs: ['deltoids'] as Slug[] },
+  { label: 'Armar', slugs: ['biceps', 'triceps'] as Slug[] },
+  { label: 'Mage',  slugs: ['abs', 'obliques'] as Slug[] },
+]

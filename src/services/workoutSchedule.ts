@@ -564,3 +564,30 @@ export async function uncompleteSession(sessionId: string, date: string): Promis
     .eq('completed_date', date)
   if (error) throw error
 }
+
+/** Avklarade övningsnamn i ett datumintervall (null = obegränsat) —
+ *  muskelstatistikens periodlägen räknar på samma källa som kroppskartan */
+export async function getCompletedExerciseNamesBetween(
+  userId: string,
+  start: string | null,
+  end: string | null,
+): Promise<string[]> {
+  let q = supabase
+    .from('exercise_completions')
+    .select('exercise_id')
+    .eq('user_id', userId)
+  if (start) q = q.gte('completed_date', start)
+  if (end) q = q.lt('completed_date', end)
+  const { data: completions } = await q
+  const rows = completions ?? []
+  if (rows.length === 0) return []
+  const ids = Array.from(new Set(rows.map(c => c.exercise_id as string)))
+  const { data: exRows } = await supabase
+    .from('session_exercises')
+    .select('id, exercise_name')
+    .in('id', ids)
+  const nameById = new Map((exRows ?? []).map(e => [e.id as string, e.exercise_name as string]))
+  return rows
+    .map(c => nameById.get(c.exercise_id as string))
+    .filter((n): n is string => !!n)
+}

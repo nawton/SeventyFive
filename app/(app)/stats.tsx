@@ -17,7 +17,7 @@ import Body from 'react-native-body-highlighter'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getAllDays, getStreak, type DaySummary } from '@/services/dailyLog'
-import { getMusclesForName, type Slug } from '@/lib/muscles'
+import { getMusclesForName, MUSCLE_GROUPS_6, type Slug } from '@/lib/muscles'
 import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
 import { getCompletedExerciseNamesForWeek, getCompletedExerciseNamesByDay, getCompletedSessionsHistory, type CompletedSessionItem } from '@/services/workoutSchedule'
 import { CalendarView } from '@/components/stats/CalendarView'
@@ -506,14 +506,11 @@ export default function StatsScreen() {
     intensity: (count >= 4 ? 3 : count >= 2 ? 2 : 1) as 1 | 2 | 3,
   }))
 
-  // Förra veckans muskelantal — jämförelsesiffran i Veckans träning-rutnätet
-  // (radar och set-tabell bor i MuscleDetailModal och räknar på loggade set)
-  const prevNames = [...prevWeekExNames, ...prevStrength.map(w => w.data.exercise_name)]
-  const prevMuscleCount = (() => {
-    const set = new Set<Slug>()
-    prevNames.forEach(n => getMusclesForName(n).forEach(sl => set.add(sl)))
-    return set.size
-  })()
+  // Muskelgrupper (av de 6) som tränats — samma taxonomi som radarn använder
+  const groupCount = (names: string[]) => MUSCLE_GROUPS_6.filter(g =>
+    names.some(n => getMusclesForName(n).some(sl => g.slugs.includes(sl)))).length
+  const scopedGroupCount = groupCount(scopedExNames)
+  const prevGroupCount   = groupCount(prevWeekExNames)
 
   const completedDays = days.filter(d => d.status === 'completed').length
   const missedDays    = days.filter(d => d.status === 'failed').length
@@ -1247,14 +1244,12 @@ export default function StatsScreen() {
             {/* Dagremsa — V = veckosammanfattning, dagrutor zoomar in på en dag */}
             <View style={s.dayStrip}>
               <TouchableOpacity
-                style={[s.dayBox, dayIdx === null && s.dayBoxActive]}
+                style={[s.dayBox, s.dayBoxWeek, dayIdx === null && s.dayBoxActive]}
                 activeOpacity={0.8}
                 onPress={() => setDayIdx(null)}
               >
-                <Text style={[s.dayBoxLetter, dayIdx === null && s.dayBoxTextActive]}>V</Text>
-                <Text style={[s.dayBoxNum, dayIdx === null && s.dayBoxTextActive]}>
-                  {isoWeekNum(parseLocalDate(weekBounds.start))}
-                </Text>
+                <Ionicons name="calendar-clear-outline" size={14} color={dayIdx === null ? '#000' : TEXT_SECONDARY} />
+                <Text style={[s.dayBoxLetter, dayIdx === null && s.dayBoxTextActive]}>Vecka</Text>
               </TouchableOpacity>
               {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((l, i) => {
                 const d = parseLocalDate(weekBounds.start)
@@ -1284,17 +1279,20 @@ export default function StatsScreen() {
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Pass</Text>
                   <Text style={[s.dtlVal, { color: ORANGE }]}>{scopedPassCount}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {prevPassCount}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevPassCount}</Text>}
                 </View>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl} numberOfLines={1}>Muskler</Text>
-                  <Text style={[s.dtlVal, { color: PURPLE }]}>{weekMuscleFreq.size}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {prevMuscleCount}</Text>}
+                  <Text style={s.dtlLbl} numberOfLines={1} adjustsFontSizeToFit>Muskelgrupper</Text>
+                  <Text style={[s.dtlVal, { color: PURPLE }]}>
+                    {scopedGroupCount}
+                    <Text style={s.dtlUnit}> AV 6</Text>
+                  </Text>
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevGroupCount}</Text>}
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Övningar</Text>
                   <Text style={[s.dtlVal, { color: GREEN }]}>{scopedExNames.length}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {prevWeekExNames.length}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevWeekExNames.length}</Text>}
                 </View>
               </View>
               <View style={s.dtlSep} />
@@ -1302,12 +1300,12 @@ export default function StatsScreen() {
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Set</Text>
                   <Text style={[s.dtlVal, { color: BLUE }]}>{weekSums.sets}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {prevSums.sets}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevSums.sets}</Text>}
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Reps</Text>
                   <Text style={[s.dtlVal, { color: TEAL }]}>{weekSums.reps}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {prevSums.reps}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevSums.reps}</Text>}
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Volym</Text>
@@ -1315,7 +1313,7 @@ export default function StatsScreen() {
                     {Math.round(weekSums.volume).toLocaleString('sv-SE')}
                     <Text style={s.dtlUnit}> KG</Text>
                   </Text>
-                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {Math.round(prevSums.volume).toLocaleString('sv-SE')}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {Math.round(prevSums.volume).toLocaleString('sv-SE')}</Text>}
                 </View>
               </View>
             </View>
@@ -1327,7 +1325,7 @@ export default function StatsScreen() {
             </TouchableOpacity>
             <View style={[s.card, s.cardPlain]}>
               <View style={s.muscleHeader}>
-                <Text style={s.muscleAuto}>Automatisk från schema</Text>
+                <Text style={s.muscleAuto}>Från dina avbockade övningar</Text>
                 <View style={s.bodyToggle}>
                   {(['front', 'back'] as const).map(side => (
                     <TouchableOpacity
@@ -1366,9 +1364,9 @@ export default function StatsScreen() {
                   {weekMuscleData.length > 0 && (
                     <View style={s.legend}>
                       {([
-                        { color: BLUE,   label: 'Lite (1×)' },
-                        { color: YELLOW, label: 'Medel (2–3×)' },
-                        { color: ORANGE, label: 'Mycket (4×+)' },
+                        { color: BLUE,   label: '1 övning' },
+                        { color: YELLOW, label: '2–3 övningar' },
+                        { color: ORANGE, label: '4+ övningar' },
                       ] as const).map(({ color, label }) => (
                         <View key={label} style={s.legendItem}>
                           <View style={[s.legendDot, { backgroundColor: color }]} />
@@ -1390,36 +1388,23 @@ export default function StatsScreen() {
 
             </View>
 
-            {/* Avancerad statistik — muskelfördelningen och genomförda pass */}
-            <Text style={s.sectionHead}>Avancerad statistik</Text>
-            <View style={[s.card, s.cardPlain, { paddingVertical: 4 }]}>
-              <TouchableOpacity style={s.muscleLinkRow} activeOpacity={0.7} onPress={() => setMuscleOpen(true)}>
-                <View style={s.muscleLinkIcon}>
-                  <Ionicons name="analytics-outline" size={17} color={ORANGE} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.muscleLinkTitle}>Muskelfördelning</Text>
-                  <Text style={s.muscleLinkSub}>Muskeltyperna du tränat · 1 V till Allt</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.muscleLinkRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' }]}
-                activeOpacity={0.7}
-                onPress={() => setSessionsOpen(true)}
-              >
-                <View style={[s.muscleLinkIcon, { backgroundColor: GREEN + '18' }]}>
-                  <Ionicons name="checkmark-done-outline" size={17} color={GREEN} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.muscleLinkTitle}>Genomförda pass</Text>
-                  <Text style={s.muscleLinkSub}>
-                    {weekGymSessions.length} pass {weekOffset === 0 ? 'denna vecka' : 'vald vecka'}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
-              </TouchableOpacity>
-            </View>
+            {/* Genomförda pass — arkivet bakom en enkel rad */}
+            <TouchableOpacity
+              style={[s.card, s.cardPlain, s.muscleLinkRow]}
+              activeOpacity={0.7}
+              onPress={() => setSessionsOpen(true)}
+            >
+              <View style={[s.muscleLinkIcon, { backgroundColor: GREEN + '18' }]}>
+                <Ionicons name="checkmark-done-outline" size={17} color={GREEN} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.muscleLinkTitle}>Genomförda pass</Text>
+                <Text style={s.muscleLinkSub}>
+                  {weekGymSessions.length} pass {weekOffset === 0 ? 'denna vecka' : 'vald vecka'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
+            </TouchableOpacity>
 
           </>
         </ScrollView>
@@ -1538,7 +1523,14 @@ export default function StatsScreen() {
       <MuscleDetailModal
         visible={muscleOpen}
         onClose={() => setMuscleOpen(false)}
+        userId={userId}
         workouts={strengthWorkouts}
+        weekStart={weekBounds.start}
+        weekLabel={weekBounds.label}
+        day={selDayDate}
+        dayLabel={selDayDate
+          ? parseLocalDate(selDayDate).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
+          : null}
       />
 
       <MilestoneAnalysisModal
@@ -1741,6 +1733,7 @@ const s = StyleSheet.create({
     flex: 1, alignItems: 'center', gap: 2,
     backgroundColor: CARD, borderRadius: 12, paddingVertical: 8,
   },
+  dayBoxWeek: { flexBasis: 54, flexGrow: 0, justifyContent: 'center' },
   dayBoxActive: { backgroundColor: ORANGE },
   dayBoxLetter: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
   dayBoxNum: { color: TEXT_PRIMARY, fontSize: 14, fontFamily: 'Nunito_700Bold', fontVariant: ['tabular-nums'] as any },
