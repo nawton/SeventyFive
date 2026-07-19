@@ -25,6 +25,7 @@ import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { GlassSegment } from '@/components/GlassSegment'
 import { DistanceDetailModal } from '@/components/stats/DistanceDetailModal'
+import { MilestoneAnalysisModal } from '@/components/stats/MilestoneAnalysisModal'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
@@ -255,6 +256,7 @@ export default function StatsScreen() {
   const [unit, setUnit]                         = useState<UnitSystem>('metric')
   const [cardioRange, setCardioRange]           = useState<'week' | 'month' | 'all'>('all')
   const [distDetailOpen, setDistDetailOpen]     = useState(false)
+  const [milestoneOpen, setMilestoneOpen]       = useState(false)
   const [avatarUrl, setAvatarUrl]               = useState<string | null>(null)
   const pagerRef = useRef<ScrollView>(null)
 
@@ -751,7 +753,7 @@ export default function StatsScreen() {
 
             {/* Milestone — framträdande dag 1–7 */}
             {isEarlyDays && milestone && (
-              <View style={s.milestone}>
+              <TouchableOpacity style={s.milestone} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)}>
                 <View style={s.msIcon}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
                   <Text style={s.msEyebrow}>NÄSTA MILSTOLPE</Text>
@@ -760,7 +762,8 @@ export default function StatsScreen() {
                     {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`} · Du är på väg!
                   </Text>
                 </View>
-              </View>
+                <Ionicons name="chevron-forward" size={17} color={ORANGE} />
+              </TouchableOpacity>
             )}
 
             {/* Statistikrutnät — samma Apple-stil som cardio-flikens Träningsdetaljer */}
@@ -799,7 +802,7 @@ export default function StatsScreen() {
 
             {/* Milestone — normal position dag 8+ */}
             {!isEarlyDays && milestone && (
-              <View style={s.milestone}>
+              <TouchableOpacity style={s.milestone} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)}>
                 <View style={s.msIcon}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
                   <Text style={s.msEyebrow}>NÄSTA MILSTOLPE</Text>
@@ -808,7 +811,8 @@ export default function StatsScreen() {
                     {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`} · Håll ut
                   </Text>
                 </View>
-              </View>
+                <Ionicons name="chevron-forward" size={17} color={ORANGE} />
+              </TouchableOpacity>
             )}
 
             {/* Calendar */}
@@ -1332,6 +1336,19 @@ export default function StatsScreen() {
         visible={distDetailOpen}
         onClose={() => setDistDetailOpen(false)}
         workouts={workouts}
+        unit={unit}
+      />
+
+      <MilestoneAnalysisModal
+        visible={milestoneOpen}
+        onClose={() => setMilestoneOpen(false)}
+        days={days}
+        currentDay={currentDay}
+        streak={streak}
+        milestone={milestone}
+        startDate={startDate}
+        workouts={workouts}
+        completedSessions={completedSessions}
         unit={unit}
       />
     </SafeAreaView>
