@@ -30,6 +30,7 @@ import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import { MuscleDetailModal } from '@/components/stats/MuscleDetailModal'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { VolumeDetailModal } from '@/components/stats/VolumeDetailModal'
+import { effortColor } from '@/components/EffortRating'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
@@ -260,6 +261,7 @@ export default function StatsScreen() {
   const [activeTab, setActiveTab]               = useState<StatsTab>('overview')
   const [unit, setUnit]                         = useState<UnitSystem>('metric')
   const [cardioRange, setCardioRange]           = useState<'week' | 'month' | 'all'>('all')
+  const [cardioOffset, setCardioOffset]         = useState(0)
   const [distDetailOpen, setDistDetailOpen]     = useState(false)
   const [milestoneOpen, setMilestoneOpen]       = useState(false)
   const [gymDetail, setGymDetail] = useState<{ name: string; dateLabel: string; planned: string[]; logged: StrengthWorkout[] } | null>(null)
@@ -541,20 +543,47 @@ export default function StatsScreen() {
 
   const unitLabel  = distanceUnitLabel(unit)
 
-  // Periodfilter för cardio-fliken: vecka (denna vecka) / månad (30 dagar) / totalt
-  const rangeStart = (() => {
-    if (cardioRange === 'week') return startOfWeek()
-    if (cardioRange === 'month') {
-      const d = new Date()
-      d.setHours(0, 0, 0, 0)
-      d.setDate(d.getDate() - 29)
-      return d
+  // Periodfilter för cardio-fliken: kalendervecka / kalendermånad / totalt,
+  // med pilbläddring bakåt precis som på gympass-fliken
+  const cardioBounds = (() => {
+    if (cardioRange === 'week') {
+      const mon = startOfWeek()
+      mon.setDate(mon.getDate() + cardioOffset * 7)
+      const end = new Date(mon); end.setDate(end.getDate() + 7)
+      const sun = new Date(mon); sun.setDate(sun.getDate() + 6)
+      const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
+      return {
+        start: toLocalDateString(mon) as string | null,
+        end: toLocalDateString(end) as string | null,
+        label: cardioOffset === 0 ? 'Denna vecka' : `${fmt(mon)} till ${fmt(sun)}`,
+      }
     }
-    return null
+    if (cardioRange === 'month') {
+      const now = new Date()
+      const first = new Date(now.getFullYear(), now.getMonth() + cardioOffset, 1)
+      const next  = new Date(first.getFullYear(), first.getMonth() + 1, 1)
+      return {
+        start: toLocalDateString(first) as string | null,
+        end: toLocalDateString(next) as string | null,
+        label: cardioOffset === 0
+          ? 'Denna månad'
+          : first.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' }),
+      }
+    }
+    return { start: null as string | null, end: null as string | null, label: 'Hela historiken' }
   })()
-  const cardioW = rangeStart
-    ? workouts.filter(w => new Date(w.created_at) >= rangeStart)
-    : workouts
+  const cardioW = workouts.filter(w => {
+    const d = toLocalDateString(new Date(w.created_at))
+    return (cardioBounds.start === null || d >= cardioBounds.start)
+      && (cardioBounds.end === null || d < cardioBounds.end)
+  })
+
+  // Snittansträngning (RPE) och aktiva dagar för perioden
+  const effortVals = cardioW
+    .map(w => w.data.effort)
+    .filter((e): e is number => typeof e === 'number' && e >= 1)
+  const avgEffort = effortVals.length ? effortVals.reduce((a, b) => a + b, 0) / effortVals.length : 0
+  const activeCardioDays = new Set(cardioW.map(w => toLocalDateString(new Date(w.created_at)))).size
 
   const totalKm    = cardioW.reduce((sum, w) => sum + w.data.distance_km, 0)
   const totalSecs  = cardioW.reduce((sum, w) => sum + w.data.duration_seconds, 0)
@@ -589,7 +618,8 @@ export default function StatsScreen() {
       b.total += w.data.distance_km
     }
     if (cardioRange === 'week') {
-      const start = startOfWeek()
+      // Den valda kalenderveckans sju dagar
+      const start = parseLocalDate(cardioBounds.start!)
       const today = toLocalDateString(new Date())
       const buckets = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(start); d.setDate(d.getDate() + i)
@@ -600,11 +630,15 @@ export default function StatsScreen() {
       return buckets
     }
     if (cardioRange === 'month') {
-      const cur = startOfWeek()
-      const buckets = Array.from({ length: 5 }, (_, i) => {
-        const mon = new Date(cur); mon.setDate(mon.getDate() - (4 - i) * 7)
-        return { key: toLocalDateString(mon), label: `V${isoWeekNum(mon)}`, run: 0, cycle: 0, walk: 0, total: 0, isCurrent: i === 4 }
-      })
+      // Den valda kalendermånadens veckor
+      const thisMon = toLocalDateString(startOfWeek())
+      const buckets: DistBucket[] = []
+      const mon = startOfWeek(parseLocalDate(cardioBounds.start!))
+      while (toLocalDateString(mon) < cardioBounds.end!) {
+        const key = toLocalDateString(mon)
+        buckets.push({ key, label: `V${isoWeekNum(mon)}`, run: 0, cycle: 0, walk: 0, total: 0, isCurrent: key === thisMon })
+        mon.setDate(mon.getDate() + 7)
+      }
       workouts.forEach(w => add(buckets, toLocalDateString(startOfWeek(new Date(w.created_at))), w))
       return buckets
     }
@@ -720,7 +754,6 @@ export default function StatsScreen() {
     walking:  { icon: 'walk',     color: GREEN },
     interval: { icon: 'flash',    color: YELLOW },
   }
-  const rangeStartStr = rangeStart ? toLocalDateString(rangeStart) : null
   type SessRow = {
     key: string
     name: string
@@ -751,7 +784,8 @@ export default function StatsScreen() {
     ...completedSessions
       .filter(c =>
         c.sessionType === 'cardio' && c.distanceKm == null &&
-        (!rangeStartStr || c.completedDate >= rangeStartStr))
+        (cardioBounds.start === null || c.completedDate >= cardioBounds.start) &&
+        (cardioBounds.end === null || c.completedDate < cardioBounds.end))
       .map((c): SessRow => {
         const meta = CARDIO_META[c.cardioType ?? ''] ?? { icon: 'fitness' as const, color: BLUE }
         return {
@@ -997,8 +1031,26 @@ export default function StatsScreen() {
                 { key: 'month', label: 'Månad' },
                 { key: 'all',   label: 'Totalt' },
               ]}
-              onChange={setCardioRange}
+              onChange={k => { setCardioRange(k); setCardioOffset(0) }}
             />
+
+            {/* Bläddra bakåt i tiden — samma pilar som på gympass-fliken */}
+            {cardioRange !== 'all' && (
+              <View style={s.weekNav}>
+                <TouchableOpacity style={s.weekNavBtn} onPress={() => setCardioOffset(o => o - 1)} activeOpacity={0.7}>
+                  <Ionicons name="chevron-back" size={20} color={TEXT_PRIMARY} />
+                </TouchableOpacity>
+                <Text style={s.weekNavLabel}>{cardioBounds.label}</Text>
+                <TouchableOpacity
+                  style={s.weekNavBtn}
+                  onPress={() => setCardioOffset(o => o + 1)}
+                  disabled={cardioOffset >= 0}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="chevron-forward" size={20} color={cardioOffset >= 0 ? 'rgba(255,255,255,0.18)' : TEXT_PRIMARY} />
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Träningsdetaljer — Apple-stil, inga boxar */}
             <Text style={s.sectionHead}>Träningsdetaljer</Text>
@@ -1049,7 +1101,7 @@ export default function StatsScreen() {
                   </View>
                 </View>
                 <View style={s.dtlSep} />
-                <View style={[s.dtlRow, { paddingBottom: 0 }]}>
+                <View style={s.dtlRow}>
                   <View style={s.dtlCell}>
                     <Text style={s.dtlLbl}>Snittdistans</Text>
                     <Text style={[s.dtlVal, { color: LIME }]}>
@@ -1063,6 +1115,20 @@ export default function StatsScreen() {
                       {toDisplayDistance(longestPassKm, unit).toFixed(2).replace('.', ',')}
                       <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
                     </Text>
+                  </View>
+                </View>
+                <View style={s.dtlSep} />
+                <View style={[s.dtlRow, { paddingBottom: 0 }]}>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Snittansträngning</Text>
+                    <Text style={[s.dtlVal, { color: avgEffort > 0 ? effortColor(Math.round(avgEffort)) : TEXT_SECONDARY }]}>
+                      {avgEffort > 0 ? avgEffort.toFixed(1).replace('.', ',') : '–'}
+                      {avgEffort > 0 && <Text style={s.dtlUnit}> / 10</Text>}
+                    </Text>
+                  </View>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Aktiva dagar</Text>
+                    <Text style={[s.dtlVal, { color: TEXT_PRIMARY }]}>{activeCardioDays}</Text>
                   </View>
                 </View>
               </View>
@@ -1128,7 +1194,7 @@ export default function StatsScreen() {
                 onPress={() => setDistDetailOpen(true)}
               >
                 <Text style={[s.cardSub, { marginTop: 0 }]}>
-                  {unitLabel} {cardioRange === 'week' ? 'per dag denna vecka' : cardioRange === 'month' ? 'per vecka, senaste 5 veckorna' : 'per månad, senaste 6 månaderna'}
+                  {unitLabel} {cardioRange === 'week' ? 'per dag, vald vecka' : cardioRange === 'month' ? 'per vecka, vald månad' : 'per månad, senaste 6 månaderna'}
                 </Text>
                 {(() => {
                   const CH_W = STATS_SCREEN_W - 80
