@@ -225,7 +225,10 @@ export default function SchemaScreen() {
     const action = wasChecked
       ? uncompleteExercise(exId, userId, date)
       : completeExercise(exId, userId, date)
-    action.catch(() => setCheckedByDate(prev => ({ ...prev, [date]: { ...(prev[date] ?? {}), [exId]: wasChecked } })))
+    action.catch((e: Error) => {
+      setCheckedByDate(prev => ({ ...prev, [date]: { ...(prev[date] ?? {}), [exId]: wasChecked } }))
+      Alert.alert('Kunde inte spara avbockningen', e.message)
+    })
   }
 
   function handleComplete(sessionId: string, date: string) {

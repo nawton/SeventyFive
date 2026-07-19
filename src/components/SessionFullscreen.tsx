@@ -349,6 +349,8 @@ export function SessionFullscreen({
     try {
       const records = await getPersonalRecords(userId).catch(() => [])
       const prs: string[] = []
+      // Sparfel får inte sväljas — utan set/avbockningar blir statistiken tom
+      const saveErrors: string[] = []
       const isOneTime = (session.weekdays?.length ?? 0) === 0
 
       for (const { ex, validSets } of toSave) {
@@ -361,8 +363,9 @@ export function SessionFullscreen({
           category: (exInfo?.category === 'mobility' || exInfo?.category === 'hiit') ? exInfo.category : 'strength',
           sets: validSets,
           workoutDate: date,
-        }).catch(() => false)
-        await completeExercise(ex.id, userId, date).catch(() => {})
+        }).catch((e: Error) => { saveErrors.push(`${ex.exercise_name} · set: ${e.message}`); return false })
+        await completeExercise(ex.id, userId, date)
+          .catch((e: Error) => { saveErrors.push(`${ex.exercise_name} · avbockning: ${e.message}`) })
         // Spegla till passets rad — bara för engångspass (mallar lämnas orörda)
         if (isOneTime) {
           const repsStr = validSets.every(r => r.reps === validSets[0].reps)
@@ -394,6 +397,15 @@ export function SessionFullscreen({
 
       const wrapUp = () => {
         onClose()
+        if (saveErrors.length > 0) {
+          console.warn('Sparfel vid Slutför:', saveErrors)
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+          setTimeout(() => Alert.alert(
+            'Allt sparades inte',
+            'Passet markerades som klart men delar av loggen kunde inte sparas:\n\n' + saveErrors.join('\n'),
+          ), 400)
+          return
+        }
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
         setTimeout(() => Alert.alert('Pass sparat 💪', summaryLines.join('\n')), 400)
       }

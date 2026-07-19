@@ -43,7 +43,8 @@ export async function saveStrengthWorkout(params: {
     is_favorite: false,
     exercises: [entry],
   })
-  return !error
+  if (error) throw new Error(error.message)
+  return true
 }
 
 export async function deleteWorkout(id: string): Promise<boolean> {
