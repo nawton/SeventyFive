@@ -19,7 +19,7 @@ import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getAllDays, getStreak, type DaySummary } from '@/services/dailyLog'
 import { getMusclesForName, type Slug } from '@/lib/muscles'
 import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
-import { getCompletedExerciseNamesForWeek, getCompletedSessionsHistory, type CompletedSessionItem } from '@/services/workoutSchedule'
+import { getCompletedExerciseNamesForWeek, getCompletedExerciseNamesByDay, getCompletedSessionsHistory, type CompletedSessionItem } from '@/services/workoutSchedule'
 import { CalendarView } from '@/components/stats/CalendarView'
 import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
@@ -33,7 +33,7 @@ import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
 import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
-import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
+import { toLocalDateString, parseLocalDate, weekdayOf, startOfWeek } from '@/lib/date'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 
@@ -362,7 +362,10 @@ export default function StatsScreen() {
   const [userId, setUserId]                     = useState<string | null>(null)
   const [weekOffset, setWeekOffset]             = useState(0)
   const [weekExNames, setWeekExNames]           = useState<string[]>([])
+  const [weekExByDay, setWeekExByDay]           = useState<Record<string, string[]>>({})
   const [prevWeekExNames, setPrevWeekExNames]   = useState<string[]>([])
+  // null = hela veckan, 0–6 = vald veckodag (Mån–Sön)
+  const [dayIdx, setDayIdx]                     = useState<number | null>(null)
   const [weekLoading, setWeekLoading]           = useState(false)
   const [weekGymSessions, setWeekGymSessions]   = useState<GymSession[]>([])
 
@@ -410,15 +413,17 @@ export default function StatsScreen() {
   useEffect(() => {
     if (!userId) return
     setWeekLoading(true)
+    setDayIdx(null)
     const { start, end } = getWeekBounds(weekOffset)
     const prev = getWeekBounds(weekOffset - 1)
     Promise.all([
-      getCompletedExerciseNamesForWeek(userId, start, end),
+      getCompletedExerciseNamesByDay(userId, start, end).catch(() => ({} as Record<string, string[]>)),
       fetchGymSessions(userId, start, end),
       getCompletedExerciseNamesForWeek(userId, prev.start, prev.end).catch(() => [] as string[]),
     ])
-      .then(([names, , prevNames]) => {
-        setWeekExNames(names)
+      .then(([byDay, , prevNames]) => {
+        setWeekExByDay(byDay)
+        setWeekExNames(Object.values(byDay).flat())
         setPrevWeekExNames(prevNames)
       })
       .finally(() => setWeekLoading(false))
@@ -454,16 +459,6 @@ export default function StatsScreen() {
 
   // ── derived ────────────────────────────────────────────────────────────────
 
-  const weekMuscleFreq = new Map<Slug, number>()
-  weekExNames.forEach(name => {
-    getMusclesForName(name).forEach(slug => {
-      weekMuscleFreq.set(slug, (weekMuscleFreq.get(slug) || 0) + 1)
-    })
-  })
-  const weekMuscleData = Array.from(weekMuscleFreq.entries()).map(([slug, count]) => ({
-    slug,
-    intensity: (count >= 4 ? 3 : count >= 2 ? 2 : 1) as 1 | 2 | 3,
-  }))
   const weekBounds   = getWeekBounds(weekOffset)
   const prevBounds   = getWeekBounds(weekOffset - 1)
 
@@ -479,11 +474,37 @@ export default function StatsScreen() {
     reps:   list.reduce((s, w) => s + w.data.sets.reduce((x, r) => x + r.reps, 0), 0),
     volume: list.reduce((s, w) => s + w.data.sets.reduce((x, r) => x + r.reps * (r.weight_kg || 0), 0), 0),
   })
-  const weekSums = strengthSums(weekStrength)
   const prevSums = strengthSums(prevStrength)
   const gymPassCount = (b: { start: string; end: string }) =>
     completedSessions.filter(c => c.sessionType === 'gym' && c.completedDate >= b.start && c.completedDate <= b.end).length
   const prevPassCount = gymPassCount(prevBounds)
+
+  // ── Dagval: V-knappen visar hela veckan, dagrutorna zoomar in på en dag ──
+  const selDayDate = (() => {
+    if (dayIdx === null) return null
+    const d = parseLocalDate(weekBounds.start)
+    d.setDate(d.getDate() + dayIdx)
+    return toLocalDateString(d)
+  })()
+  const scopedExNames  = selDayDate ? (weekExByDay[selDayDate] ?? []) : weekExNames
+  const scopedStrength = selDayDate
+    ? weekStrength.filter(w => (w.data.workout_date ?? toLocalDateString(new Date(w.created_at))) === selDayDate)
+    : weekStrength
+  const weekSums = strengthSums(scopedStrength)
+  const scopedPassCount = selDayDate
+    ? weekGymSessions.filter(gs => gs.completedDate === selDayDate).length
+    : weekGymSessions.length
+
+  const weekMuscleFreq = new Map<Slug, number>()
+  scopedExNames.forEach(name => {
+    getMusclesForName(name).forEach(slug => {
+      weekMuscleFreq.set(slug, (weekMuscleFreq.get(slug) || 0) + 1)
+    })
+  })
+  const weekMuscleData = Array.from(weekMuscleFreq.entries()).map(([slug, count]) => ({
+    slug,
+    intensity: (count >= 4 ? 3 : count >= 2 ? 2 : 1) as 1 | 2 | 3,
+  }))
 
   // Förra veckans muskelantal — jämförelsesiffran i Veckans träning-rutnätet
   // (radar och set-tabell bor i MuscleDetailModal och räknar på loggade set)
@@ -1223,24 +1244,57 @@ export default function StatsScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Dagremsa — V = veckosammanfattning, dagrutor zoomar in på en dag */}
+            <View style={s.dayStrip}>
+              <TouchableOpacity
+                style={[s.dayBox, dayIdx === null && s.dayBoxActive]}
+                activeOpacity={0.8}
+                onPress={() => setDayIdx(null)}
+              >
+                <Text style={[s.dayBoxLetter, dayIdx === null && s.dayBoxTextActive]}>V</Text>
+                <Text style={[s.dayBoxNum, dayIdx === null && s.dayBoxTextActive]}>
+                  {isoWeekNum(parseLocalDate(weekBounds.start))}
+                </Text>
+              </TouchableOpacity>
+              {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((l, i) => {
+                const d = parseLocalDate(weekBounds.start)
+                d.setDate(d.getDate() + i)
+                const iso = toLocalDateString(d)
+                const future = iso > toLocalDateString(new Date())
+                const active = dayIdx === i
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    style={[s.dayBox, active && s.dayBoxActive, future && { opacity: 0.3 }]}
+                    activeOpacity={0.8}
+                    disabled={future}
+                    onPress={() => setDayIdx(active ? null : i)}
+                  >
+                    <Text style={[s.dayBoxLetter, active && s.dayBoxTextActive]}>{l}</Text>
+                    <Text style={[s.dayBoxNum, active && s.dayBoxTextActive]}>{d.getDate()}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+
             {/* Veckostatistik — samma Apple-rutnät, med förra veckan som jämförelse */}
-            <Text style={s.sectionHead}>Veckans träning</Text>
+            <Text style={s.sectionHead}>{dayIdx === null ? 'Veckans träning' : 'Dagens träning'}</Text>
             <View style={[s.card, s.cardPlain]}>
               <View style={[s.dtlRow, { paddingTop: 0 }]}>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Pass</Text>
-                  <Text style={[s.dtlVal, { color: ORANGE }]}>{weekGymSessions.length}</Text>
-                  <Text style={s.dtlPrev}>förra: {prevPassCount}</Text>
+                  <Text style={[s.dtlVal, { color: ORANGE }]}>{scopedPassCount}</Text>
+                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {prevPassCount}</Text>}
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl} numberOfLines={1}>Muskler</Text>
                   <Text style={[s.dtlVal, { color: PURPLE }]}>{weekMuscleFreq.size}</Text>
-                  <Text style={s.dtlPrev}>förra: {prevMuscleCount}</Text>
+                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {prevMuscleCount}</Text>}
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Övningar</Text>
-                  <Text style={[s.dtlVal, { color: GREEN }]}>{weekExNames.length}</Text>
-                  <Text style={s.dtlPrev}>förra: {prevWeekExNames.length}</Text>
+                  <Text style={[s.dtlVal, { color: GREEN }]}>{scopedExNames.length}</Text>
+                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {prevWeekExNames.length}</Text>}
                 </View>
               </View>
               <View style={s.dtlSep} />
@@ -1248,12 +1302,12 @@ export default function StatsScreen() {
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Set</Text>
                   <Text style={[s.dtlVal, { color: BLUE }]}>{weekSums.sets}</Text>
-                  <Text style={s.dtlPrev}>förra: {prevSums.sets}</Text>
+                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {prevSums.sets}</Text>}
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Reps</Text>
                   <Text style={[s.dtlVal, { color: TEAL }]}>{weekSums.reps}</Text>
-                  <Text style={s.dtlPrev}>förra: {prevSums.reps}</Text>
+                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {prevSums.reps}</Text>}
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Volym</Text>
@@ -1261,7 +1315,7 @@ export default function StatsScreen() {
                     {Math.round(weekSums.volume).toLocaleString('sv-SE')}
                     <Text style={s.dtlUnit}> KG</Text>
                   </Text>
-                  <Text style={s.dtlPrev}>förra: {Math.round(prevSums.volume).toLocaleString('sv-SE')}</Text>
+                  {dayIdx === null && <Text style={s.dtlPrev}>förra: {Math.round(prevSums.volume).toLocaleString('sv-SE')}</Text>}
                 </View>
               </View>
             </View>
@@ -1326,9 +1380,11 @@ export default function StatsScreen() {
                 </>
               )}
 
-              {!weekLoading && weekExNames.length === 0 && (
+              {!weekLoading && scopedExNames.length === 0 && (
                 <Text style={s.muscleEmpty}>
-                  {weekOffset === 0 ? 'Inga avklarade övningar denna vecka' : 'Inga avklarade övningar vald vecka'}
+                  {dayIdx !== null
+                    ? 'Inga avklarade övningar vald dag'
+                    : weekOffset === 0 ? 'Inga avklarade övningar denna vecka' : 'Inga avklarade övningar vald vecka'}
                 </Text>
               )}
 
@@ -1679,6 +1735,17 @@ const s = StyleSheet.create({
   sessionsWeekLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', marginTop: 8 },
 
   // Week nav
+  // Dagremsa: V-knapp + Mån–Sön
+  dayStrip: { flexDirection: 'row', gap: 6 },
+  dayBox: {
+    flex: 1, alignItems: 'center', gap: 2,
+    backgroundColor: CARD, borderRadius: 12, paddingVertical: 8,
+  },
+  dayBoxActive: { backgroundColor: ORANGE },
+  dayBoxLetter: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
+  dayBoxNum: { color: TEXT_PRIMARY, fontSize: 14, fontFamily: 'Nunito_700Bold', fontVariant: ['tabular-nums'] as any },
+  dayBoxTextActive: { color: '#000' },
+
   // Samma pilnavigering som i Distans-detaljvyn
   weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   weekNavBtn: {

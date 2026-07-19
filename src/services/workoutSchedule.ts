@@ -367,6 +367,36 @@ export async function getCompletedExerciseNamesForWeek(
   return (exRows ?? []).map(e => e.exercise_name as string)
 }
 
+/** Avklarade övningsnamn grupperade per dag — driver dagvalet i gym-statistiken */
+export async function getCompletedExerciseNamesByDay(
+  userId: string,
+  weekStart: string,
+  weekEnd: string,
+): Promise<Record<string, string[]>> {
+  const { data: completions } = await supabase
+    .from('exercise_completions')
+    .select('exercise_id, completed_date')
+    .eq('user_id', userId)
+    .gte('completed_date', weekStart)
+    .lte('completed_date', weekEnd)
+  const rows = completions ?? []
+  const ids = Array.from(new Set(rows.map(c => c.exercise_id as string)))
+  if (ids.length === 0) return {}
+  const { data: exRows } = await supabase
+    .from('session_exercises')
+    .select('id, exercise_name')
+    .in('id', ids)
+  const nameById = new Map((exRows ?? []).map(e => [e.id as string, e.exercise_name as string]))
+  const out: Record<string, string[]> = {}
+  for (const c of rows) {
+    const name = nameById.get(c.exercise_id as string)
+    if (!name) continue
+    const date = c.completed_date as string
+    ;(out[date] ??= []).push(name)
+  }
+  return out
+}
+
 export async function getCompletedExerciseIds(userId: string, date: string): Promise<string[]> {
   const { data, error } = await supabase
     .from('exercise_completions')
