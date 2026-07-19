@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, TouchableOpacity, Modal, Dimensions, Alert,
@@ -11,58 +11,29 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
-import Svg, { Circle, Text as SvgText, Polyline, Polygon, Line as SvgLine, Rect, G } from 'react-native-svg'
-import { useFocusEffect, router } from 'expo-router'
-import Body from 'react-native-body-highlighter'
+import { useFocusEffect } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getAllDays, getStreak, type DaySummary } from '@/services/dailyLog'
-import { getMusclesForName, MUSCLE_GROUPS_6, type Slug } from '@/lib/muscles'
 import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
-import { getCompletedExerciseNamesForWeek, getCompletedExerciseNamesByDay, getCompletedSessionsHistory, deleteCompletion, type CompletedSessionItem } from '@/services/workoutSchedule'
-import { CalendarView } from '@/components/stats/CalendarView'
-import { DayWorkoutsModal } from '@/components/stats/DayWorkoutsModal'
+import { getCompletedSessionsHistory, deleteCompletion, type CompletedSessionItem } from '@/services/workoutSchedule'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
-import { GlassSegment } from '@/components/GlassSegment'
-import { DistanceDetailModal } from '@/components/stats/DistanceDetailModal'
-import { MilestoneAnalysisModal } from '@/components/stats/MilestoneAnalysisModal'
-import { GymSummaryView } from '@/components/stats/GymSummaryView'
-import { MuscleDetailModal } from '@/components/stats/MuscleDetailModal'
-import { GlassCircleButton } from '@/components/GlassButton'
-import { VolumeDetailModal } from '@/components/stats/VolumeDetailModal'
-import { effortColor } from '@/components/EffortRating'
 import {
   GRID_PADDING, STATS_SCREEN_W, BLUE, RED, YELLOW, PURPLE, TEAL, LIME,
   getWeekBounds, monthLabel, sessDateLabel, s, type GymSession,
 } from '@/components/stats/statsShared'
-import { SwipeRow } from '@/components/stats/SwipeRow'
 import { GymTab } from '@/components/stats/GymTab'
 import { CardioTab } from '@/components/stats/CardioTab'
 import { OverviewTab } from '@/components/stats/OverviewTab'
 import { getProfile } from '@/services/profile'
-import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
+import { getUnitSystem, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
-import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
-import { toLocalDateString, parseLocalDate, weekdayOf, startOfWeek, isoWeekNum } from '@/lib/date'
-import { fmtPace, fmtDuration } from '@/lib/format'
-import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { ORANGE, BG } from '@/lib/theme'
+import { toLocalDateString } from '@/lib/date'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 
 const TAB_BAR_W = STATS_SCREEN_W - GRID_PADDING * 2
 const SEG_W     = TAB_BAR_W / 3      // en flik-kolumns bredd
-
-// ─── helpers ──────────────────────────────────────────────────────────────────
-
-
-// ─── weekly bar data ───────────────────────────────────────────────────────────
-
-
-// ─── Sessioner-listan ──────────────────────────────────────────────────────────
-
-// ─── GymSession ────────────────────────────────────────────────────────────────
-
-
-// ─── RingChart ─────────────────────────────────────────────────────────────────
 
 
 
