@@ -27,6 +27,7 @@ import { GlassSegment } from '@/components/GlassSegment'
 import { DistanceDetailModal } from '@/components/stats/DistanceDetailModal'
 import { MilestoneAnalysisModal } from '@/components/stats/MilestoneAnalysisModal'
 import { GymSummaryView } from '@/components/stats/GymSummaryView'
+import { MuscleDetailModal } from '@/components/stats/MuscleDetailModal'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
@@ -260,6 +261,7 @@ export default function StatsScreen() {
   const [distDetailOpen, setDistDetailOpen]     = useState(false)
   const [milestoneOpen, setMilestoneOpen]       = useState(false)
   const [gymDetail, setGymDetail] = useState<{ name: string; dateLabel: string; planned: string[]; logged: StrengthWorkout[] } | null>(null)
+  const [muscleOpen, setMuscleOpen] = useState(false)
   const [avatarUrl, setAvatarUrl]               = useState<string | null>(null)
   const pagerRef = useRef<ScrollView>(null)
 
@@ -1280,87 +1282,11 @@ export default function StatsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Muskelfördelning — radar: vald vecka mot förra veckan */}
-            {hasRadar && (
-              <>
-              <Text style={s.sectionHead}>Muskelfördelning</Text>
-              <View style={[s.card, s.cardPlain, { alignItems: 'center' }]}>
-                {(() => {
-                  const W = STATS_SCREEN_W - 80
-                  const H = 240
-                  const cx = W / 2
-                  const cy = H / 2
-                  const R = 82
-                  const maxV = Math.max(...radarCur, ...radarPrev, 1)
-                  const pt = (i: number, v: number) => {
-                    const a = (-90 + i * 60) * (Math.PI / 180)
-                    const r = (v / maxV) * R
-                    return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`
-                  }
-                  const ring = (f: number) =>
-                    MUSCLE_GROUPS_6.map((_, i) => pt(i, maxV * f)).join(' ')
-                  return (
-                    <Svg width={W} height={H}>
-                      {[0.25, 0.5, 0.75, 1].map(f => (
-                        <Polygon key={f} points={ring(f)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
-                      ))}
-                      {MUSCLE_GROUPS_6.map((_, i) => {
-                        const a = (-90 + i * 60) * (Math.PI / 180)
-                        return (
-                          <SvgLine
-                            key={i}
-                            x1={cx} y1={cy}
-                            x2={cx + R * Math.cos(a)} y2={cy + R * Math.sin(a)}
-                            stroke="rgba(255,255,255,0.07)" strokeWidth={1}
-                          />
-                        )
-                      })}
-                      {radarPrev.some(v => v > 0) && (
-                        <Polygon
-                          points={radarPrev.map((v, i) => pt(i, v)).join(' ')}
-                          fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.30)" strokeWidth={1.5}
-                        />
-                      )}
-                      {radarCur.some(v => v > 0) && (
-                        <Polygon
-                          points={radarCur.map((v, i) => pt(i, v)).join(' ')}
-                          fill={ORANGE + '33'} stroke={ORANGE} strokeWidth={2}
-                        />
-                      )}
-                      {MUSCLE_GROUPS_6.map((g, i) => {
-                        const a = (-90 + i * 60) * (Math.PI / 180)
-                        const lx = cx + (R + 22) * Math.cos(a)
-                        const ly = cy + (R + 22) * Math.sin(a)
-                        return (
-                          <SvgText
-                            key={g.label}
-                            x={lx} y={ly + 4}
-                            fontSize={12} fontWeight="600" textAnchor="middle"
-                            fill="rgba(255,255,255,0.65)"
-                          >
-                            {g.label}
-                          </SvgText>
-                        )
-                      })}
-                    </Svg>
-                  )
-                })()}
-                <View style={s.barLegend}>
-                  <View style={s.legItem}>
-                    <View style={[s.legDot, { backgroundColor: ORANGE }]} />
-                    <Text style={s.legText}>Vald vecka</Text>
-                  </View>
-                  <View style={s.legItem}>
-                    <View style={[s.legDot, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
-                    <Text style={s.legText}>Förra veckan</Text>
-                  </View>
-                </View>
-              </View>
-              </>
-            )}
-
-            {/* Body map */}
-            <Text style={s.sectionHead}>Tränade muskler</Text>
+            {/* Body map — rubriken öppnar muskeldetaljen (radar + set per grupp) */}
+            <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setMuscleOpen(true)}>
+              <Text style={[s.sectionHead, s.sectionHeadInline]}>Tränade muskler</Text>
+              <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
+            </TouchableOpacity>
             <View style={[s.card, s.cardPlain]}>
               <View style={s.muscleHeader}>
                 <Text style={s.muscleAuto}>Automatisk från schema</Text>
@@ -1423,33 +1349,6 @@ export default function StatsScreen() {
               )}
 
             </View>
-
-            {/* Set per muskelgrupp — från loggade styrkeövningar i vald vecka */}
-            {weekSums.sets > 0 && (
-              <>
-              <Text style={s.sectionHead}>Set per muskelgrupp</Text>
-              <View style={[s.card, s.cardPlain, { paddingVertical: 6, gap: 0 }]}>
-                <View style={s.grpRow}>
-                  <Text style={[s.grpLbl, { fontWeight: '700', color: TEXT_PRIMARY }]}>Totalt</Text>
-                  <View style={s.grpTrack} />
-                  <Text style={[s.grpVal, { color: TEXT_PRIMARY }]}>{weekSums.sets}</Text>
-                </View>
-                {MUSCLE_GROUPS_6.map((g, i) => (
-                  <View key={g.label} style={[s.grpRow, s.grpRowBorder]}>
-                    <Text style={s.grpLbl}>{g.label}</Text>
-                    <View style={s.grpTrack}>
-                      {setsPerGroup[i] > 0 && (
-                        <View style={[s.grpFill, { width: `${Math.max(6, (setsPerGroup[i] / maxGroupSets) * 100)}%` as never }]} />
-                      )}
-                    </View>
-                    <Text style={[s.grpVal, setsPerGroup[i] === 0 && { color: TEXT_SECONDARY }]}>
-                      {setsPerGroup[i]}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-              </>
-            )}
 
             {/* Completed gym sessions */}
             {weekLoading ? (
@@ -1555,6 +1454,17 @@ export default function StatsScreen() {
           />
         )}
       </Modal>
+
+      <MuscleDetailModal
+        visible={muscleOpen}
+        onClose={() => setMuscleOpen(false)}
+        weekLabel={weekBounds.label}
+        groups={MUSCLE_GROUPS_6.map(g => g.label)}
+        radarCur={radarCur}
+        radarPrev={radarPrev}
+        setsPerGroup={setsPerGroup}
+        totalSets={weekSums.sets}
+      />
 
       <MilestoneAnalysisModal
         visible={milestoneOpen}

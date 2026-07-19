@@ -154,3 +154,22 @@ export async function getDefaultMapStyle(): Promise<MapStyleKey> {
 export async function setDefaultMapStyle(v: MapStyleKey): Promise<void> {
   await AsyncStorage.setItem('defaultMapStyle', v).catch(() => {})
 }
+
+// Utkast av passets set-logg (reps/kg per rad) — sparas medan man skriver så
+// inget försvinner om appen stängs mitt i passet; rensas när passet slutförs
+export async function setPassDraft(id: string, draft: unknown): Promise<void> {
+  await AsyncStorage.setItem(`passDraft:${id}`, JSON.stringify(draft)).catch(() => {})
+}
+
+export async function getPassDraft<T>(id: string): Promise<T | null> {
+  try {
+    const raw = await AsyncStorage.getItem(`passDraft:${id}`)
+    return raw ? (JSON.parse(raw) as T) : null
+  } catch {
+    return null
+  }
+}
+
+export async function clearPassDraft(id: string): Promise<void> {
+  await AsyncStorage.removeItem(`passDraft:${id}`).catch(() => {})
+}

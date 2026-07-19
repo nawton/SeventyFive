@@ -20,6 +20,7 @@ import {
   getOrInitPassStart, getPassStart, clearPassStart,
   setPassDuration, getPassDuration,
   setPassEffort, getPassEffort,
+  setPassDraft, getPassDraft, clearPassDraft,
 } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 
@@ -69,6 +70,29 @@ export function SessionFullscreen({
       return out
     })
   }, [visible, exIdsKey])
+
+  // Utkast: allt man skrivit in (reps/kg/bockar) sparas löpande på enheten
+  // och läses tillbaka om vyn/appen stängts mitt i passet
+  useEffect(() => {
+    if (!visible || !session || isCompleted) return
+    getPassDraft<Record<string, LogSet[]>>(`${session.id}:${date}`).then(draft => {
+      if (!draft) return
+      setLogs(prev => {
+        const out = { ...prev }
+        for (const ex of session.exercises) {
+          if (draft[ex.id]?.length) out[ex.id] = draft[ex.id]
+        }
+        return out
+      })
+    })
+  }, [visible, session?.id, isCompleted])
+
+  useEffect(() => {
+    if (!visible || !session || isCompleted) return
+    const hasInput = Object.values(logs).some(rows =>
+      rows.some(r => r.reps !== '' || r.weight !== '' || r.done))
+    if (hasInput) setPassDraft(`${session.id}:${date}`, logs)
+  }, [logs])
 
   // Starttiden sparas per pass + dag så räknaren överlever att vyn stängs/öppnas.
   // Avklarade pass visar den sparade sluttiden statiskt — timern tickar inte.
@@ -311,6 +335,7 @@ export function SessionFullscreen({
         { text: 'Markera klart', onPress: () => {
           setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
           clearPassStart(`${session.id}:${date}`).catch(() => {})
+          clearPassDraft(`${session.id}:${date}`).catch(() => {})
           requestEffort(() => {
             onComplete()
             onClose()
@@ -352,14 +377,25 @@ export function SessionFullscreen({
       cancelRest()
       if (!isCompleted) setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
       clearPassStart(`${session.id}:${date}`).catch(() => {})
+      clearPassDraft(`${session.id}:${date}`).catch(() => {})
       onSaved?.()
+
+      // Summering av vad som lyftes — visas direkt efter att passet sparats
+      const savedSets = toSave.flatMap(t => t.validSets)
+      const totalKgLifted = savedSets.reduce((s, r) => s + r.reps * r.weight_kg, 0)
+      const totalReps = savedSets.reduce((s, r) => s + r.reps, 0)
+      const summaryLines = [
+        totalKgLifted > 0
+          ? `Totalt lyft: ${Math.round(totalKgLifted).toLocaleString('sv-SE')} kg`
+          : null,
+        `${savedSets.length} set · ${totalReps} reps`,
+        ...(prs.length > 0 ? ['', '🏆 Nya personliga rekord:', ...prs] : []),
+      ].filter((l): l is string => l !== null)
 
       const wrapUp = () => {
         onClose()
-        if (prs.length > 0) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-          setTimeout(() => Alert.alert('🏆 Nytt personligt rekord!', prs.join('\n')), 400)
-        }
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        setTimeout(() => Alert.alert('Pass sparat 💪', summaryLines.join('\n')), 400)
       }
       if (!isCompleted) {
         // Nytt avklarat pass → betygsätt ansträngningen innan vi stänger
