@@ -63,6 +63,8 @@ export function GymTab({
   const [prevWeekExNames, setPrevWeekExNames]   = useState<string[]>([])
   // null = hela veckan, 0–6 = vald veckodag (Mån–Sön)
   const [dayIdx, setDayIdx]                     = useState<number | null>(null)
+  // Dagrutorna är gömda som standard — veckovyn räcker oftast
+  const [dayPickerOpen, setDayPickerOpen]       = useState(false)
   const [weekLoading, setWeekLoading]           = useState(false)
   const [weekGymSessions, setWeekGymSessions]   = useState<GymSession[]>([])
 
@@ -314,36 +316,53 @@ export function GymTab({
               </TouchableOpacity>
             </View>
 
-            {/* Dagremsa — V = veckosammanfattning, dagrutor zoomar in på en dag */}
-            <View style={s.dayStrip}>
-              <TouchableOpacity
-                style={[s.dayBox, s.dayBoxWeek, dayIdx === null && s.dayBoxActive]}
-                activeOpacity={0.8}
-                onPress={() => setDayIdx(null)}
-              >
-                <Ionicons name="calendar-clear-outline" size={14} color={dayIdx === null ? '#000' : TEXT_SECONDARY} />
-                <Text style={[s.dayBoxLetter, dayIdx === null && s.dayBoxTextActive]}>Vecka</Text>
-              </TouchableOpacity>
-              {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((l, i) => {
-                const d = parseLocalDate(weekBounds.start)
-                d.setDate(d.getDate() + i)
-                const iso = toLocalDateString(d)
-                const future = iso > toLocalDateString(new Date())
-                const active = dayIdx === i
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    style={[s.dayBox, active && s.dayBoxActive, future && { opacity: 0.3 }]}
-                    activeOpacity={0.8}
-                    disabled={future}
-                    onPress={() => setDayIdx(active ? null : i)}
-                  >
-                    <Text style={[s.dayBoxLetter, active && s.dayBoxTextActive]}>{l}</Text>
-                    <Text style={[s.dayBoxNum, active && s.dayBoxTextActive]}>{d.getDate()}</Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
+            {/* Dagval — veckovyn är standard; knappen fäller ut dagrutorna
+                när man vill zooma in på en specifik dag */}
+            <TouchableOpacity
+              style={[s.dayPickToggle, dayIdx !== null && s.dayPickToggleActive]}
+              activeOpacity={0.8}
+              onPress={() => {
+                Haptics.selectionAsync()
+                if (dayPickerOpen) { setDayPickerOpen(false); setDayIdx(null) }
+                else setDayPickerOpen(true)
+              }}
+            >
+              <Ionicons name="calendar-clear-outline" size={14} color={dayIdx !== null ? '#000' : TEXT_SECONDARY} />
+              <Text style={[s.dayPickToggleText, dayIdx !== null && s.dayPickToggleTextActive]}>
+                {selDayDate
+                  ? parseLocalDate(selDayDate).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
+                  : dayPickerOpen ? 'Visa hela veckan' : 'Välj specifik dag'}
+              </Text>
+              <Ionicons
+                name={dayPickerOpen ? 'chevron-up' : 'chevron-down'}
+                size={13}
+                color={dayIdx !== null ? '#000' : TEXT_SECONDARY}
+              />
+            </TouchableOpacity>
+
+            {dayPickerOpen && (
+              <View style={s.dayStrip}>
+                {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((l, i) => {
+                  const d = parseLocalDate(weekBounds.start)
+                  d.setDate(d.getDate() + i)
+                  const iso = toLocalDateString(d)
+                  const future = iso > toLocalDateString(new Date())
+                  const active = dayIdx === i
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[s.dayBox, active && s.dayBoxActive, future && { opacity: 0.3 }]}
+                      activeOpacity={0.8}
+                      disabled={future}
+                      onPress={() => setDayIdx(active ? null : i)}
+                    >
+                      <Text style={[s.dayBoxLetter, active && s.dayBoxTextActive]}>{l}</Text>
+                      <Text style={[s.dayBoxNum, active && s.dayBoxTextActive]}>{d.getDate()}</Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            )}
 
             {/* Veckostatistik — samma Apple-rutnät, med förra veckan som jämförelse */}
             <Text style={s.sectionHead}>{dayIdx === null ? 'Veckans träning' : 'Dagens träning'}</Text>

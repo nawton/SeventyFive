@@ -290,13 +290,19 @@ export const s = StyleSheet.create({
   cdVal: { fontSize: 17, fontFamily: 'Nunito_700Bold', fontVariant: ['tabular-nums'] as any },
 
   // Week nav
-  // Dagremsa: V-knapp + Mån–Sön
+  // Dagval: knapp som fäller ut dagremsan Mån–Sön (veckovyn är standard)
+  dayPickToggle: {
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: 6,
+    backgroundColor: CARD, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8,
+  },
+  dayPickToggleActive: { backgroundColor: ORANGE },
+  dayPickToggleText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  dayPickToggleTextActive: { color: '#000', textTransform: 'capitalize' },
   dayStrip: { flexDirection: 'row', gap: 6 },
   dayBox: {
     flex: 1, alignItems: 'center', gap: 2,
     backgroundColor: CARD, borderRadius: 12, paddingVertical: 8,
   },
-  dayBoxWeek: { flexBasis: 54, flexGrow: 0, justifyContent: 'center' },
   dayBoxActive: { backgroundColor: ORANGE },
   dayBoxLetter: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
   dayBoxNum: { color: TEXT_PRIMARY, fontSize: 14, fontFamily: 'Nunito_700Bold', fontVariant: ['tabular-nums'] as any },
