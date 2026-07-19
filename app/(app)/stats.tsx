@@ -377,7 +377,10 @@ export default function StatsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
     setStatsRefreshing(true)
     const started = Date.now()
-    Promise.resolve(loadStats()).finally(() => {
+    Promise.all([
+      Promise.resolve(loadStats()),
+      userId ? loadWeekData(userId).catch(() => {}) : Promise.resolve(),
+    ]).finally(() => {
       const wait = Math.max(0, 1000 - (Date.now() - started))
       setTimeout(() => setStatsRefreshing(false), wait)
     })
@@ -569,20 +572,22 @@ export default function StatsScreen() {
     if (!userId) return
     setWeekLoading(true)
     setDayIdx(null)
+    loadWeekData(userId).finally(() => setWeekLoading(false))
+  }, [userId, weekOffset])
+
+  // Gymveckans data — körs både vid veckobyte och vid dra-för-att-uppdatera
+  async function loadWeekData(uid: string) {
     const { start, end } = getWeekBounds(weekOffset)
     const prev = getWeekBounds(weekOffset - 1)
-    Promise.all([
-      getCompletedExerciseNamesByDay(userId, start, end).catch(() => ({} as Record<string, string[]>)),
-      fetchGymSessions(userId, start, end),
-      getCompletedExerciseNamesForWeek(userId, prev.start, prev.end).catch(() => [] as string[]),
+    const [byDay, , prevNames] = await Promise.all([
+      getCompletedExerciseNamesByDay(uid, start, end).catch(() => ({} as Record<string, string[]>)),
+      fetchGymSessions(uid, start, end),
+      getCompletedExerciseNamesForWeek(uid, prev.start, prev.end).catch(() => [] as string[]),
     ])
-      .then(([byDay, , prevNames]) => {
-        setWeekExByDay(byDay)
-        setWeekExNames(Object.values(byDay).flat())
-        setPrevWeekExNames(prevNames)
-      })
-      .finally(() => setWeekLoading(false))
-  }, [userId, weekOffset])
+    setWeekExByDay(byDay)
+    setWeekExNames(Object.values(byDay).flat())
+    setPrevWeekExNames(prevNames)
+  }
 
   async function fetchGymSessions(uid: string, start: string, end: string) {
     const { data } = await supabase
