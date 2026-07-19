@@ -92,6 +92,7 @@ function ExerciseRow({
   done,
   divider,
   progressed,
+  lastKg,
   onDelete,
 }: {
   ex:          SessionExercise
@@ -99,6 +100,8 @@ function ExerciseRow({
   /** Tunn linje ovanför raden — alla utom första i kortet */
   divider?:    boolean
   progressed?: boolean
+  /** Senast loggade toppvikt för övningen */
+  lastKg?:     number
   onDelete:    () => void
 }) {
   // ── Shared values ─────────────────────────────────────────────────────────
@@ -231,7 +234,11 @@ function ExerciseRow({
               </Text>
               {(ex.sets || ex.reps) && (
                 <Text style={r.meta}>
-                  {[ex.sets && `${ex.sets} set`, ex.reps && `${ex.reps} reps`]
+                  {[
+                    ex.sets && `${ex.sets} set`,
+                    ex.reps && `${ex.reps} reps`,
+                    lastKg && `${lastKg % 1 === 0 ? lastKg : lastKg.toFixed(1).replace('.', ',')} kg senast`,
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
                   {progressed && (
@@ -300,6 +307,8 @@ const r = StyleSheet.create({
 
 export interface WorkoutSectionProps {
   session:           WorkoutSession
+  /** Senast loggade toppvikt per övningsnamn — visas på raderna */
+  lastWeights?:      Record<string, number>
   checked:           Record<string, boolean>
   isCompleted:       boolean
   /** Används inte längre av korten — interaktionen sker i passvyn (Öppna) */
@@ -329,6 +338,7 @@ export interface WorkoutSectionProps {
 
 export function WorkoutSection({
   session,
+  lastWeights,
   checked,
   isCompleted,
   onToggleExercise,
@@ -606,6 +616,7 @@ export function WorkoutSection({
         <View style={s.exList}>
           {session.exercises.map((ex, i) => (
             <ExerciseRow
+              lastKg={lastWeights?.[ex.exercise_name]}
               key={ex.id}
               ex={ex}
               divider={i > 0}

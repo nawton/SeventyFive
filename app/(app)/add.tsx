@@ -51,7 +51,7 @@ import { SessionEditor } from '@/components/SessionEditor'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import { LogWorkoutSheet } from '@/components/LogWorkoutSheet'
 import { SessionFullscreen } from '@/components/SessionFullscreen'
-import { getCardioWorkoutsForDate, getWorkoutsForDate, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
+import { getCardioWorkoutsForDate, getWorkoutsForDate, getStrengthWorkouts, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
@@ -79,6 +79,8 @@ export default function SchemaScreen() {
   const [cardioLogsByDate, setCardioLogsByDate] = useState<Record<string, CardioWorkout[]>>({})
   // Loggade styrkepass per datum — statraden på avklarade gympass
   const [loggedByDate, setLoggedByDate] = useState<Record<string, StrengthWorkout[]>>({})
+  // Senast loggade vikt per övning — visas på övningsraderna i schemakorten
+  const [lastWeights, setLastWeights] = useState<Record<string, number>>({})
   const [pickerSession, setPickerSession]   = useState<WorkoutSession | null>(null)
   const [logSheetOpen, setLogSheetOpen]     = useState(false)
   const [fullscreenTarget, setFullscreenTarget] = useState<{ session: WorkoutSession; date: string } | null>(null)
@@ -132,6 +134,17 @@ export default function SchemaScreen() {
     ])
     getCardioWorkoutsForDate(uid, date).then(cl => setCardioLogsByDate(prev => ({ ...prev, [date]: cl }))).catch(() => {})
     getWorkoutsForDate(uid, date).then(lw => setLoggedByDate(prev => ({ ...prev, [date]: lw }))).catch(() => {})
+    getStrengthWorkouts(uid, 300).then(ws => {
+      const map: Record<string, number> = {}
+      // Nyast först — första viktade träffen per övning vinner
+      for (const w of ws) {
+        const name = w.data.exercise_name
+        if (map[name] !== undefined) continue
+        const top = w.data.sets.reduce((m, st) => Math.max(m, st.weight_kg || 0), 0)
+        if (top > 0) map[name] = top
+      }
+      setLastWeights(map)
+    }).catch(() => {})
     setExercises(exs)
     setSessions(sess)
     setExerciseProgress(progressCounts)
@@ -494,6 +507,7 @@ export default function SchemaScreen() {
               cardioStats={cardioStatsByDate[dateStr] ?? EMPTY_CARDIO_STATS}
               cardioLogs={cardioLogsByDate[dateStr] ?? EMPTY_CARDIO_LOGS}
               logged={loggedByDate[dateStr] ?? EMPTY_LOGGED}
+              lastWeights={lastWeights}
               userId={userId}
               dayAnimStyle={dayAnimStyle}
               api={api}

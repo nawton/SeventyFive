@@ -53,7 +53,7 @@ export interface DayPageApi {
 // vars props faktiskt ändrats — inte alla monterade sidor i pagern.
 
 export const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, progress, userId, dayAnimStyle, api,
+  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, userId, dayAnimStyle, api,
 }: {
   idx: number
   sessions: WorkoutSession[]
@@ -64,6 +64,7 @@ export const DayPage = React.memo(function DayPage({
   cardioStats: Record<string, { distanceKm: number; durationSeconds: number }>
   cardioLogs: CardioWorkout[]
   logged: StrengthWorkout[]
+  lastWeights: Record<string, number>
   userId: string | null
   dayAnimStyle: AnimatedStyle<ViewStyle>
   api: DayPageApi
@@ -181,6 +182,7 @@ export const DayPage = React.memo(function DayPage({
                     return (
                     <WorkoutSection
                       key={s.id}
+                      lastWeights={lastWeights}
                       session={displaySession}
                       progressedIds={new Set(scaled.filter(x => x.progressed).map(x => x.ex.id))}
                       checked={checked}
