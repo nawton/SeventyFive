@@ -408,25 +408,16 @@ export default function CardioScreen() {
     splitsV.value = withTiming(0, { duration: 220 })
   }
 
-  // Tresidig livevy som Runkeeper: [Splits] ← [Karta] → [Statistik].
-  // Svep på statskortet: vänster = statistik, höger = splits, ner = statistik.
-  const expandGesture = Gesture.Pan()
-    .activeOffsetX([-15, 15])
-    .activeOffsetY([-15, 15])
-    .onEnd(e => {
-      if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
-        if (e.translationX < -40) runOnJS(openStats)()
-        else if (e.translationX > 40) runOnJS(openSplits)()
-      } else if (e.translationY > 30) {
-        runOnJS(openStats)()
-      }
-    })
+  // Tresidig livevy: [Karta] [Detaljvy] [Splits]. Kartan navigeras med
+  // kantknappen (svep skulle krocka med kartpanorering); mellan detaljvyn
+  // och splits sveper man som vanligt.
   const collapseGesture = Gesture.Pan()
     .activeOffsetX([-15, 15])
     .activeOffsetY([-15, 15])
     .onEnd(e => {
       if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
         if (e.translationX > 40) runOnJS(closeStats)()
+        else if (e.translationX < -40) runOnJS(openSplits)()
       } else if (e.translationY < -30) {
         runOnJS(closeStats)()
       }
@@ -436,7 +427,7 @@ export default function CardioScreen() {
     .activeOffsetY([-15, 15])
     .onEnd(e => {
       if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
-        if (e.translationX < -40) runOnJS(closeSplits)()
+        if (e.translationX > 40) runOnJS(openStats)()
       } else if (e.translationY < -30) {
         runOnJS(closeSplits)()
       }
@@ -448,7 +439,7 @@ export default function CardioScreen() {
   }))
   const splitsStyle = useAnimatedStyle(() => ({
     opacity: splitsV.value,
-    transform: [{ translateX: interpolate(splitsV.value, [0, 1], [-60, 0]) }],
+    transform: [{ translateX: interpolate(splitsV.value, [0, 1], [60, 0]) }],
   }))
 
   // Aktivitetsväljaren: inline-sheet utan mörk overlay, dras i handtaget
@@ -935,17 +926,12 @@ export default function CardioScreen() {
         </SafeAreaView>
       ) : (
         <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
-          <GestureDetector gesture={expandGesture}>
-          <View style={[styles.statsCard, lightCard && styles.statsCardLight]}>
-            {/* Dölj-knapp — krymper kortet så kartan syns */}
-            <TouchableOpacity
-              style={[styles.hudHideBtn, lightCard && { backgroundColor: 'rgba(0,0,0,0.07)' }]}
-              onPress={() => setHudHidden(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="eye-off-outline" size={13} color={lightCard ? '#555' : '#bbb'} />
-              <Text style={[styles.hudHideText, lightCard && { color: '#555' }]}>Dölj</Text>
-            </TouchableOpacity>
+          {/* Tryck på kortet krymper det till miniläget — tryck på minit växer igen */}
+          <TouchableOpacity
+            activeOpacity={0.95}
+            onPress={() => setHudHidden(true)}
+            style={[styles.statsCard, lightCard && styles.statsCardLight]}
+          >
             <View style={styles.timerRow}>
               <Text style={[styles.timerText, lightCard && { color: '#000' }]}>{formatTime(elapsed)}</Text>
               {status === 'paused' && (
@@ -991,8 +977,7 @@ export default function CardioScreen() {
               </View>
             </View>
             <Ionicons name="chevron-down" size={14} color={lightCard ? '#999' : '#666'} style={{ marginTop: -2 }} />
-          </View>
-          </GestureDetector>
+          </TouchableOpacity>
         </SafeAreaView>
       )}
 
@@ -1022,7 +1007,14 @@ export default function CardioScreen() {
       </View>
 
       {/* ── Tillbaka-knapp — bara innan passet startats ── */}
-      {/* ── Splits-sidan (svep höger från kartan) — kilometrar i block ── */}
+      {/* Kantflik — kartan går inte att svepa, knappen byter till detaljvyn */}
+      {!statsExpanded && !splitsOpen && (
+        <TouchableOpacity style={styles.edgeTab} onPress={openStats} activeOpacity={0.85}>
+          <Ionicons name="chevron-back" size={26} color="#000" />
+        </TouchableOpacity>
+      )}
+
+      {/* ── Splits-sidan (tredje sliden) — kilometrar i block ── */}
       <Animated.View
         style={[styles.expandedStats, splitsStyle]}
         pointerEvents={splitsOpen ? 'auto' : 'none'}
@@ -1032,7 +1024,7 @@ export default function CardioScreen() {
             <SafeAreaView style={styles.expandedInner} edges={['top']}>
               <TouchableOpacity style={styles.expandedHandleWrap} onPress={closeSplits} activeOpacity={0.7}>
                 <View style={styles.sheetHandle} />
-                <Text style={styles.expandedHint}>Svep vänster för karta</Text>
+                <Text style={styles.expandedHint}>Svep höger för detaljvyn</Text>
               </TouchableOpacity>
               <Text style={styles.splitsPageTitle}>Splits</Text>
               <ScrollView contentContainerStyle={styles.splitsList} showsVerticalScrollIndicator={false}>
@@ -1079,7 +1071,7 @@ export default function CardioScreen() {
             <SafeAreaView style={styles.expandedInner} edges={['top']}>
               <TouchableOpacity style={styles.expandedHandleWrap} onPress={closeStats} activeOpacity={0.7}>
                 <View style={styles.sheetHandle} />
-                <Text style={styles.expandedHint}>Svep upp för karta</Text>
+                <Text style={styles.expandedHint}>Svep höger för karta · vänster för splits</Text>
               </TouchableOpacity>
 
               {(goalKmNum > 0 || goalMinNum > 0) && (
@@ -1455,7 +1447,7 @@ export default function CardioScreen() {
         {/* Tre sidor: Splits · Karta · Statistik */}
         <View style={styles.pageDots}>
           {[0, 1, 2].map(i => {
-            const active = splitsOpen ? i === 0 : statsExpanded ? i === 2 : i === 1
+            const active = splitsOpen ? i === 2 : statsExpanded ? i === 1 : i === 0
             return <View key={i} style={[styles.pageDot, active && styles.pageDotOn]} />
           })}
         </View>
@@ -1575,6 +1567,17 @@ const styles = StyleSheet.create({
   splitBlockDist: { color: '#9BA0A6', fontSize: 14, fontWeight: '600', marginTop: 2 },
   splitBlockDistActive: { color: 'rgba(0,0,0,0.6)', fontSize: 14, fontWeight: '700', marginTop: 2 },
 
+  // Kantflik på kartan → detaljvyn
+  edgeTab: {
+    position: 'absolute', right: 0, top: '58%',
+    width: 46, height: 68,
+    backgroundColor: ORANGE,
+    borderTopLeftRadius: 18, borderBottomLeftRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    zIndex: 8,
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+  },
+
   // Punktindikator för de tre sidorna
   pageDots: { flexDirection: 'row', justifyContent: 'center', gap: 7, paddingTop: 8, marginBottom: -2 },
   pageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)' },
@@ -1629,24 +1632,6 @@ const styles = StyleSheet.create({
   statsCardLight: {
     backgroundColor: 'rgba(255,255,255,0.92)',
     shadowOpacity: 0.12,
-  },
-  hudHideBtn: {
-    position: 'absolute',
-    top: 10,
-    right: 12,
-    zIndex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  hudHideText: {
-    color: '#bbb',
-    fontSize: 12,
-    fontWeight: '700',
   },
   hudMiniLayout: {
     flexDirection: 'row',
