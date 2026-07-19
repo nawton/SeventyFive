@@ -21,7 +21,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import WebView from 'react-native-webview'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
-import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
+import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated'
 import { ORANGE, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { saveCardioWorkout } from '@/services/workouts'
@@ -54,6 +54,7 @@ function nameToType(name: string): ExerciseType {
 }
 
 const DIAL = Math.min(Dimensions.get('window').width - 70, 320)
+const LIVE_W = Dimensions.get('window').width
 
 function cardinalLabel(deg: number): string {
   const dirs = ['N', 'NÖ', 'Ö', 'SÖ', 'S', 'SV', 'V', 'NV']
@@ -321,10 +322,10 @@ export default function CardioScreen() {
   const [exercise, setExercise] = useState<ExerciseType>(() => nameToType(name ?? ''))
   const [pickerOpen, setPickerOpen] = useState(false)
   // Fullskärms-stats: dra ner på statskortet för att dölja kartan
-  const [statsExpanded, setStatsExpanded] = useState(false)
-  const [splitsOpen, setSplitsOpen] = useState(false)
-  const expandV = useSharedValue(0)
-  const splitsV = useSharedValue(0)
+  const [page, setPage] = useState(0)
+  const statsExpanded = page === 1
+  const splitsOpen = page === 2
+  const pageV = useSharedValue(0)
   // Dölj statskortet till en liten tidspill när man vill se kartan
   const [hudHidden, setHudHidden] = useState(false)
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
@@ -387,26 +388,16 @@ export default function CardioScreen() {
   const selectedExercise = EXERCISES.find(e => e.key === exercise)!
   const calories = Math.round(distanceKm * 65)
 
-  function openStats() {
-    setSplitsOpen(false)
-    splitsV.value = withTiming(0, { duration: 200 })
-    setStatsExpanded(true)
-    expandV.value = withTiming(1, { duration: 260 })
+  // En gemensam sidvariabel (0 karta · 1 detaljvy · 2 splits) — sidorna
+  // glider in från sidan i stället för att poppa upp
+  function goPage(pg: number) {
+    setPage(pg)
+    pageV.value = withTiming(pg, { duration: 320, easing: Easing.out(Easing.cubic) })
   }
-  function closeStats() {
-    setStatsExpanded(false)
-    expandV.value = withTiming(0, { duration: 220 })
-  }
-  function openSplits() {
-    setStatsExpanded(false)
-    expandV.value = withTiming(0, { duration: 200 })
-    setSplitsOpen(true)
-    splitsV.value = withTiming(1, { duration: 260 })
-  }
-  function closeSplits() {
-    setSplitsOpen(false)
-    splitsV.value = withTiming(0, { duration: 220 })
-  }
+  function openStats() { goPage(1) }
+  function closeStats() { goPage(0) }
+  function openSplits() { goPage(2) }
+  function closeSplits() { goPage(0) }
 
   // Tresidig livevy: [Karta] [Detaljvy] [Splits]. Kartan navigeras med
   // kantknappen (svep skulle krocka med kartpanorering); mellan detaljvyn
@@ -434,12 +425,10 @@ export default function CardioScreen() {
     })
 
   const expandedStyle = useAnimatedStyle(() => ({
-    opacity: expandV.value,
-    transform: [{ translateX: interpolate(expandV.value, [0, 1], [60, 0]) }],
+    transform: [{ translateX: interpolate(pageV.value, [0, 1, 2], [LIVE_W, 0, -LIVE_W]) }],
   }))
   const splitsStyle = useAnimatedStyle(() => ({
-    opacity: splitsV.value,
-    transform: [{ translateX: interpolate(splitsV.value, [0, 1], [60, 0]) }],
+    transform: [{ translateX: interpolate(pageV.value, [0, 1, 2], [LIVE_W * 2, LIVE_W, 0]) }],
   }))
 
   // Aktivitetsväljaren: inline-sheet utan mörk overlay, dras i handtaget
@@ -998,11 +987,6 @@ export default function CardioScreen() {
             <Ionicons name="caret-down" size={17} color="#fff" style={{ marginTop: -5 }} />
           </Animated.View>
         </GlassCircleButton>
-        <GlassCircleButton
-          icon="layers-outline"
-          draggable
-          onPress={() => (styleMenuOpen ? closeStyleSheet() : openStyleSheet())}
-        />
         <GlassCircleButton icon="locate" draggable onPress={centerOnUser} />
       </View>
 
@@ -1442,8 +1426,14 @@ export default function CardioScreen() {
         </Pressable>
       </Modal>
 
-      <SafeAreaView style={[styles.bottomBar, LIQUID_GLASS && styles.glassSurface]} edges={['bottom']}>
-        {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
+      <SafeAreaView
+        style={[
+          status === 'idle' ? styles.bottomBarIdle : styles.bottomBar,
+          status !== 'idle' && LIQUID_GLASS && styles.glassSurface,
+        ]}
+        edges={['bottom']}
+      >
+        {status !== 'idle' && LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
         {/* Tre sidor: Splits · Karta · Statistik */}
         <View style={styles.pageDots}>
           {[0, 1, 2].map(i => {
@@ -1455,7 +1445,8 @@ export default function CardioScreen() {
 
           {status === 'idle' ? (
             <View style={styles.idleWrap}>
-              {/* Inställningsrutnät i Runkeeper-stil: 2×2 celler */}
+              {/* Inställningsrutnät i eget flytande kort, Start separat under */}
+              <View style={styles.idleCard}>
               <View style={styles.idleGrid}>
                 <TouchableOpacity style={styles.idleCell} onPress={openPicker} activeOpacity={0.75}>
                   <Ionicons name={selectedExercise.icon} size={20} color={ORANGE} />
@@ -1501,6 +1492,8 @@ export default function CardioScreen() {
                 </TouchableOpacity>
               </View>
 
+              </View>
+
               <TouchableOpacity style={styles.startWide} onPress={beginCountdown} activeOpacity={0.85}>
                 <Text style={styles.startWideText}>Start</Text>
               </TouchableOpacity>
@@ -1536,7 +1529,13 @@ export default function CardioScreen() {
 const styles = StyleSheet.create({
 
   // ── Idle: inställningsrutnät + bred Start (Runkeeper-inspirerad) ──
-  idleWrap: { width: '100%', gap: 12 },
+  idleWrap: { width: '100%', gap: 12, paddingBottom: 6 },
+  idleCard: {
+    backgroundColor: 'rgba(18,18,20,0.92)',
+    borderRadius: 20,
+    overflow: 'hidden',
+    paddingVertical: 4,
+  },
   idleGrid: { flexDirection: 'row', alignItems: 'stretch' },
   idleGridDivH: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: -4 },
   idleGridDivV: { width: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)' },
@@ -1569,7 +1568,7 @@ const styles = StyleSheet.create({
 
   // Kantflik på kartan → detaljvyn
   edgeTab: {
-    position: 'absolute', right: 0, top: '58%',
+    position: 'absolute', right: 0, top: '66%',
     width: 46, height: 68,
     backgroundColor: ORANGE,
     borderTopLeftRadius: 18, borderBottomLeftRadius: 18,
@@ -1779,7 +1778,7 @@ const styles = StyleSheet.create({
   rightBtns: {
     position: 'absolute',
     right: 16,
-    bottom: 235,
+    bottom: 320,
     gap: 10,
     zIndex: 10,
   },
@@ -1941,6 +1940,13 @@ const styles = StyleSheet.create({
   },
 
   // ── Bottom bar ──
+  bottomBarIdle: {
+    position: 'absolute',
+    bottom: 0,
+    left: 16,
+    right: 16,
+    backgroundColor: 'transparent',
+  },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
