@@ -398,7 +398,7 @@ export default function SchemaScreen() {
 
         <TouchableOpacity style={styles.addBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
           <Ionicons name="add" size={18} color="#000" />
-          <Text style={styles.addBtnText}>Nytt pass</Text>
+          <Text style={styles.addBtnText}>Planera pass</Text>
         </TouchableOpacity>
       </View>
 
