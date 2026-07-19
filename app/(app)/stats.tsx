@@ -379,7 +379,7 @@ export default function StatsScreen() {
       const [challenge, cardioWos, strengthWos, sessionHistory] = await Promise.all([
         getActiveChallenge(uid),
         getCardioWorkouts(uid, 60),
-        getStrengthWorkouts(uid),
+        getStrengthWorkouts(uid, 1000),
         getCompletedSessionsHistory(uid).catch(() => [] as CompletedSessionItem[]),
       ])
       setWorkouts(cardioWos)
@@ -483,32 +483,14 @@ export default function StatsScreen() {
     completedSessions.filter(c => c.sessionType === 'gym' && c.completedDate >= b.start && c.completedDate <= b.end).length
   const prevPassCount = gymPassCount(prevBounds)
 
-  // Sex huvudgrupper för radar och set-tabell
-  const MUSCLE_GROUPS_6: Array<{ label: string; slugs: Slug[] }> = [
-    { label: 'Bröst', slugs: ['chest'] as Slug[] },
-    { label: 'Rygg',  slugs: ['upper-back', 'lower-back', 'trapezius'] as Slug[] },
-    { label: 'Ben',   slugs: ['quadriceps', 'hamstring', 'gluteal', 'calves'] as Slug[] },
-    { label: 'Axlar', slugs: ['deltoids'] as Slug[] },
-    { label: 'Armar', slugs: ['biceps', 'triceps'] as Slug[] },
-    { label: 'Mage',  slugs: ['abs', 'obliques'] as Slug[] },
-  ]
-  const curNames  = [...weekExNames, ...weekStrength.map(w => w.data.exercise_name)]
+  // Förra veckans muskelantal — jämförelsesiffran i Veckans träning-rutnätet
+  // (radar och set-tabell bor i MuscleDetailModal och räknar på loggade set)
   const prevNames = [...prevWeekExNames, ...prevStrength.map(w => w.data.exercise_name)]
-  const groupHits = (names: string[]) => MUSCLE_GROUPS_6.map(g =>
-    names.reduce((s, n) => s + (getMusclesForName(n).some(sl => g.slugs.includes(sl)) ? 1 : 0), 0))
-  const radarCur  = groupHits(curNames)
-  const radarPrev = groupHits(prevNames)
-  const hasRadar  = radarCur.some(v => v > 0) || radarPrev.some(v => v > 0)
   const prevMuscleCount = (() => {
     const set = new Set<Slug>()
     prevNames.forEach(n => getMusclesForName(n).forEach(sl => set.add(sl)))
     return set.size
   })()
-  // Set per muskelgrupp — bara loggade styrkeövningar har setdata
-  const setsPerGroup = MUSCLE_GROUPS_6.map(g =>
-    weekStrength.reduce((s, w) =>
-      s + (getMusclesForName(w.data.exercise_name).some(sl => g.slugs.includes(sl)) ? w.data.sets.length : 0), 0))
-  const maxGroupSets = Math.max(...setsPerGroup, 1)
 
   const completedDays = days.filter(d => d.status === 'completed').length
   const missedDays    = days.filter(d => d.status === 'failed').length
@@ -1350,21 +1332,43 @@ export default function StatsScreen() {
 
             </View>
 
-            {/* Tydlig ingång till muskeldetaljen (radar + set per grupp) */}
-            <TouchableOpacity
-              style={[s.card, s.cardPlain, s.muscleLinkRow]}
-              activeOpacity={0.7}
-              onPress={() => setMuscleOpen(true)}
-            >
-              <View style={s.muscleLinkIcon}>
-                <Ionicons name="stats-chart-outline" size={17} color={ORANGE} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.muscleLinkTitle}>Muskelfördelning & set</Text>
-                <Text style={s.muscleLinkSub}>Radar mot förra veckan · set per muskelgrupp</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
-            </TouchableOpacity>
+            {/* Avancerad statistik — tydliga ingångar till muskelstatistiken */}
+            <Text style={s.sectionHead}>Avancerad statistik</Text>
+            <View style={[s.card, s.cardPlain, { paddingVertical: 4 }]}>
+              {([
+                {
+                  icon: 'stats-chart-outline' as const,
+                  title: 'Set per muskelgrupp',
+                  sub: 'Antal loggade set för varje muskelgrupp',
+                },
+                {
+                  icon: 'analytics-outline' as const,
+                  title: 'Muskelfördelning',
+                  sub: 'Jämför perioden med den föregående',
+                },
+                {
+                  icon: 'list-outline' as const,
+                  title: 'Vanligaste övningarna',
+                  sub: 'Övningarna du loggar mest',
+                },
+              ]).map((r, i) => (
+                <TouchableOpacity
+                  key={r.title}
+                  style={[s.muscleLinkRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' }]}
+                  activeOpacity={0.7}
+                  onPress={() => setMuscleOpen(true)}
+                >
+                  <View style={s.muscleLinkIcon}>
+                    <Ionicons name={r.icon} size={17} color={ORANGE} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.muscleLinkTitle}>{r.title}</Text>
+                    <Text style={s.muscleLinkSub}>{r.sub}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
+                </TouchableOpacity>
+              ))}
+            </View>
 
             {/* Completed gym sessions */}
             {weekLoading ? (
@@ -1474,12 +1478,7 @@ export default function StatsScreen() {
       <MuscleDetailModal
         visible={muscleOpen}
         onClose={() => setMuscleOpen(false)}
-        weekLabel={weekBounds.label}
-        groups={MUSCLE_GROUPS_6.map(g => g.label)}
-        radarCur={radarCur}
-        radarPrev={radarPrev}
-        setsPerGroup={setsPerGroup}
-        totalSets={weekSums.sets}
+        workouts={strengthWorkouts}
       />
 
       <MilestoneAnalysisModal
