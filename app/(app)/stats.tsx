@@ -1207,6 +1207,22 @@ export default function StatsScreen() {
           scrollEventThrottle={16}
         >
           <>
+            {/* Veckobläddring — samma pilnavigering som i Distans-detaljvyn */}
+            <View style={s.weekNav}>
+              <TouchableOpacity style={s.weekNavBtn} onPress={() => setWeekOffset(o => o - 1)} activeOpacity={0.7}>
+                <Ionicons name="chevron-back" size={20} color={TEXT_PRIMARY} />
+              </TouchableOpacity>
+              <Text style={s.weekNavLabel}>{weekBounds.label}</Text>
+              <TouchableOpacity
+                style={s.weekNavBtn}
+                onPress={() => setWeekOffset(o => o + 1)}
+                disabled={weekOffset >= 0}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chevron-forward" size={20} color={weekOffset >= 0 ? 'rgba(255,255,255,0.18)' : TEXT_PRIMARY} />
+              </TouchableOpacity>
+            </View>
+
             {/* Veckostatistik — samma Apple-rutnät, med förra veckan som jämförelse */}
             <Text style={s.sectionHead}>Veckans träning</Text>
             <View style={[s.card, s.cardPlain]}>
@@ -1248,22 +1264,6 @@ export default function StatsScreen() {
                   <Text style={s.dtlPrev}>förra: {Math.round(prevSums.volume).toLocaleString('sv-SE')}</Text>
                 </View>
               </View>
-            </View>
-
-            {/* Week nav */}
-            <View style={s.weekNav}>
-              <TouchableOpacity style={s.weekNavBtn} onPress={() => setWeekOffset(o => o - 1)} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={22} color={TEXT_PRIMARY} />
-              </TouchableOpacity>
-              <Text style={s.weekNavLabel}>{weekBounds.label}</Text>
-              <TouchableOpacity
-                style={[s.weekNavBtn, weekOffset >= 0 && s.weekNavBtnDisabled]}
-                onPress={() => setWeekOffset(o => o + 1)}
-                disabled={weekOffset >= 0}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="chevron-forward" size={22} color={weekOffset >= 0 ? 'rgba(255,255,255,0.18)' : TEXT_PRIMARY} />
-              </TouchableOpacity>
             </View>
 
             {/* Body map — rubriken öppnar muskeldetaljen (radar + set per grupp) */}
@@ -1679,14 +1679,13 @@ const s = StyleSheet.create({
   sessionsWeekLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', marginTop: 8 },
 
   // Week nav
-  weekNav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 8, paddingVertical: 6,
+  // Samma pilnavigering som i Distans-detaljvyn
+  weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  weekNavBtn: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: CARD,
+    alignItems: 'center', justifyContent: 'center',
   },
-  weekNavBtn:         { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  weekNavBtnDisabled: { opacity: 0.35 },
-  weekNavLabel:       { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  weekNavLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
 
   legend:     { flexDirection: 'row', justifyContent: 'center', gap: 18 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
