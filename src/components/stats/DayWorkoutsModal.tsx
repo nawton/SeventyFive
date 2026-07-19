@@ -67,8 +67,10 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
   const [page, setPage] = useState(0)
 
   useEffect(() => {
-    sheetTop.value     = withSpring(SHEET_PARTIAL, SHEET_SP)
+    // Öppnar i fullhöjd direkt — dra ner för halvläge eller stäng
+    sheetTop.value     = withSpring(FULL_TOP, SHEET_SP)
     backdropAnim.value = withTiming(1, { duration: 260 })
+    snapState.value    = 1
   }, [])
 
   // Dagens fem uppgifter — så man ser exakt vad som missades en fälld dag
