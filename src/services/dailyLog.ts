@@ -338,7 +338,8 @@ function toTaskItem(row: any): TaskItem {
   }
 }
 
-/** Uppgifterna för en historisk dag (read-only) — null om dagen saknar logg.
+/** Uppgifterna för en historisk dag (read-only). Saknar dagen logg (öppnade
+ *  aldrig appen) visas nivåns mallar som obockade i stället för ingenting.
  *  Används av kalenderns dagvy för att visa vilka utmaningar som missades. */
 export async function getTasksForDay(
   challengeId: string,
@@ -350,12 +351,47 @@ export async function getTasksForDay(
     .eq('challenge_id', challengeId)
     .eq('day_number', dayNumber)
     .maybeSingle()
-  if (!log) return null
 
-  const { data } = await supabase
-    .from('task_completions')
-    .select('id, completed, task_template_id, details, task_templates(name, description, type, target_value, unit, icon)')
-    .eq('daily_log_id', log.id)
-  if (!data || data.length === 0) return null
-  return data.map(toTaskItem)
+  if (log) {
+    const { data } = await supabase
+      .from('task_completions')
+      .select('id, completed, task_template_id, details, task_templates(name, description, type, target_value, unit, icon)')
+      .eq('daily_log_id', log.id)
+    if (data && data.length > 0) return data.map(toTaskItem)
+  }
+
+  // Ingen logg/inga bockar — visa nivåns uppgifter (+ egna regler) som ogjorda
+  const { data: ch } = await supabase
+    .from('user_challenges')
+    .select('level_id, user_id')
+    .eq('id', challengeId)
+    .maybeSingle()
+  if (!ch) return null
+
+  const [{ data: levelTpls }, { data: customTpls }] = await Promise.all([
+    supabase
+      .from('task_templates')
+      .select('id, name, description, type, target_value, unit, icon')
+      .eq('level_id', ch.level_id)
+      .is('user_id', null),
+    supabase
+      .from('task_templates')
+      .select('id, name, description, type, target_value, unit, icon')
+      .eq('user_id', ch.user_id)
+      .eq('challenge_id', challengeId),
+  ])
+  const tpls = [...(levelTpls ?? []), ...(customTpls ?? [])]
+  if (tpls.length === 0) return null
+  return tpls.map(t => ({
+    completionId: `tpl:${t.id}`,
+    templateId: t.id,
+    name: t.name,
+    description: t.description ?? null,
+    type: t.type,
+    completed: false,
+    targetValue: t.target_value ?? null,
+    unit: t.unit ?? null,
+    details: null,
+    icon: t.icon ?? null,
+  }))
 }

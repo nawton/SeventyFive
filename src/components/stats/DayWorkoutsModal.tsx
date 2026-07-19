@@ -432,9 +432,9 @@ const s = StyleSheet.create({
   empty:    { alignItems: 'center', paddingVertical: 24, gap: 10 },
 
   tasksWrap: {
-    marginBottom: 12,
+    marginTop: 10, marginBottom: 18,
     backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16,
-    paddingHorizontal: 14,
+    paddingHorizontal: 14, paddingVertical: 4,
   },
   tasksHead: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
