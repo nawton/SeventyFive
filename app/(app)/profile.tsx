@@ -47,6 +47,10 @@ function formatFeedDate(createdAt: string): string {
   return new Date(createdAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
 }
 
+function feedMonth(createdAt: string): string {
+  return new Date(createdAt).toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })
+}
+
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
 function Avatar({ url, fallback, size }: { url: string | null; fallback: string; size: number }) {
@@ -95,7 +99,7 @@ export default function ProfileScreen() {
       const started = Date.now()
       load().catch(() => {}).finally(() => {
         // Låt snurran synas en stund även om hämtningen går blixtsnabbt
-        const wait = Math.max(0, 1200 - (Date.now() - started))
+        const wait = Math.max(0, 1000 - (Date.now() - started))
         setTimeout(() => {
           setRefreshing(false)
           refreshingRef.current = false
@@ -337,7 +341,11 @@ export default function ProfileScreen() {
   }
 
   function renderPhoto({ item, index }: { item: ProgressPhotoItem; index: number }) {
+    const m = feedMonth(item.createdAt)
+    const showMonth = index === 0 || feedMonth(photos[index - 1].createdAt) !== m
     return (
+      <View style={{ gap: 16 }}>
+        {showMonth && <Text style={s.feedMonth}>{m}</Text>}
       <View style={s.card}>
         <View style={s.cardHeader}>
           <Avatar url={avatarUrl} fallback={initial} size={34} />
@@ -358,6 +366,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {item.caption ? <Text style={s.cardCaption}>{item.caption}</Text> : null}
+      </View>
       </View>
     )
   }
@@ -497,6 +506,10 @@ const s = StyleSheet.create({
 
   sectionHead: {
     color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
+  },
+  feedMonth: {
+    color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', letterSpacing: -0.3,
+    textTransform: 'capitalize', marginTop: 4,
   },
   sectionSub: {
     color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI, marginTop: 3,
