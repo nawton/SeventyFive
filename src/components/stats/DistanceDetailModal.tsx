@@ -7,7 +7,7 @@ import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, weekdayOf, startOfWeek } from '@/lib/date'
-import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
+import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
 
 // =============================================================================
@@ -30,7 +30,23 @@ interface Bucket {
   walk: number
   total: number
   passes: number
+  secs: number
+  cals: number
+  longest: number      // längsta enskilda pass (km) i perioden
   isCurrent: boolean
+}
+
+function fmtDuration(totalSecs: number): string {
+  const h = Math.floor(totalSecs / 3600)
+  const m = Math.floor((totalSecs % 3600) / 60)
+  return h > 0 ? `${h} h ${m} min` : `${m} min`
+}
+
+function fmtPace(secsPerUnit: number): string {
+  if (!Number.isFinite(secsPerUnit) || secsPerUnit <= 0) return '--:--'
+  const m = Math.floor(secsPerUnit / 60)
+  const s = Math.floor(secsPerUnit % 60)
+  return `${m}:${String(s).padStart(2, '0')}`
 }
 
 function isoWeekNum(mon: Date): number {
@@ -47,6 +63,9 @@ function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Buck
     b[catOf(w.data.type ?? 'running')] += w.data.distance_km
     b.total += w.data.distance_km
     b.passes += 1
+    b.secs += w.data.duration_seconds
+    b.cals += w.data.calories
+    b.longest = Math.max(b.longest, w.data.distance_km)
   }
 
   if (res === 'day') {
@@ -61,7 +80,7 @@ function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Buck
         key,
         label: ['M', 'T', 'O', 'T', 'F', 'L', 'S'][i],
         fullLabel: d.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' }),
-        run: 0, cycle: 0, walk: 0, total: 0, passes: 0,
+        run: 0, cycle: 0, walk: 0, total: 0, passes: 0, secs: 0, cals: 0, longest: 0,
         isCurrent: key === today,
       }
     })
@@ -71,17 +90,17 @@ function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Buck
 
   if (res === 'week') {
     const cur = startOfWeek()
-    cur.setDate(cur.getDate() + offset * 12 * 7)
+    cur.setDate(cur.getDate() + offset * 7 * 7)
     const thisMon = toLocalDateString(startOfWeek())
-    const buckets = Array.from({ length: 12 }, (_, i) => {
-      const mon = new Date(cur); mon.setDate(mon.getDate() - (11 - i) * 7)
+    const buckets = Array.from({ length: 7 }, (_, i) => {
+      const mon = new Date(cur); mon.setDate(mon.getDate() - (6 - i) * 7)
       const wn = isoWeekNum(mon)
       const key = toLocalDateString(mon)
       return {
         key,
         label: String(wn),
         fullLabel: `Vecka ${wn}`,
-        run: 0, cycle: 0, walk: 0, total: 0, passes: 0,
+        run: 0, cycle: 0, walk: 0, total: 0, passes: 0, secs: 0, cals: 0, longest: 0,
         isCurrent: key === thisMon,
       }
     })
@@ -91,14 +110,14 @@ function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Buck
 
   const now = new Date()
   const nowKey = `${now.getFullYear()}-${now.getMonth()}`
-  const buckets = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() + offset * 12 - (11 - i), 1)
+  const buckets = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() + offset * 6 - (5 - i), 1)
     const key = `${d.getFullYear()}-${d.getMonth()}`
     return {
       key,
-      label: d.toLocaleDateString('sv-SE', { month: 'narrow' }),
+      label: d.toLocaleDateString('sv-SE', { month: 'short' }).replace('.', ''),
       fullLabel: d.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' }),
-      run: 0, cycle: 0, walk: 0, total: 0, passes: 0,
+      run: 0, cycle: 0, walk: 0, total: 0, passes: 0, secs: 0, cals: 0, longest: 0,
       isCurrent: key === nowKey,
     }
   })
@@ -120,9 +139,10 @@ function pageLabel(res: Res, buckets: Bucket[], offset: number): string {
       withMonth ? d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '') : String(d.getDate())
     return `${fmt(first, !sameMonth)}–${fmt(last, true)}`
   }
-  if (res === 'week') return `V${buckets[0].label} – V${buckets[11].label}`
+  const last = buckets[buckets.length - 1]
+  if (res === 'week') return `V${buckets[0].label} – V${last.label}`
   const short = (b: Bucket) => b.fullLabel.replace(/^(\w{3})\w*/, '$1')
-  return `${short(buckets[0])} – ${short(buckets[11])}`
+  return `${short(buckets[0])} – ${short(last)}`
 }
 
 function parseLocal(key: string): Date {
@@ -147,6 +167,9 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
   const sel = selKey ? buckets.find(b => b.key === selKey) ?? null : null
   const periodTotal  = buckets.reduce((s, b) => s + b.total, 0)
   const periodPasses = buckets.reduce((s, b) => s + b.passes, 0)
+  const periodSecs   = buckets.reduce((s, b) => s + b.secs, 0)
+  const periodCals   = buckets.reduce((s, b) => s + b.cals, 0)
+  const pageLongest  = buckets.reduce((s, b) => Math.max(s, b.longest), 0)
   const activeCount  = buckets.filter(b => b.total > 0).length
   const best = buckets.reduce<Bucket | null>((b, x) => (x.total > (b?.total ?? 0) ? x : b), null)
 
@@ -158,6 +181,8 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
     walk:  buckets.reduce((s, b) => s + b.walk, 0),
     total: periodTotal,
     passes: periodPasses,
+    secs: periodSecs,
+    cals: periodCals,
   }
 
   const resAvgLabel = res === 'day' ? 'Snitt per aktiv dag' : res === 'week' ? 'Snitt per aktiv vecka' : 'Snitt per aktiv månad'
@@ -215,7 +240,10 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
               {toDisplayDistance(shown.total, unit).toFixed(2).replace('.', ',')}
               <Text style={s.readoutUnit}> {unitLabel.toUpperCase()}</Text>
             </Text>
-            <Text style={s.readoutSub}>{shown.passes} pass{sel ? ' · tryck utanför staplarna för att nollställa' : ''}</Text>
+            <Text style={s.readoutSub}>
+              {shown.passes} pass · {fmtDuration(shown.secs)}
+              {shown.total > 0.1 ? ` · ${fmtPace(paceForUnit(shown.secs / shown.total, unit))} /${unitLabel}` : ''}
+            </Text>
           </View>
 
           {/* Graf — tryck på en stapel för att inspektera */}
@@ -318,6 +346,16 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
           <Text style={s.sectionHead}>Nyckeltal</Text>
           <View style={s.card}>
             {([
+              { label: 'Total tid', value: periodSecs > 0 ? fmtDuration(periodSecs) : '–' },
+              { label: 'Kalorier', value: periodCals > 0 ? `${periodCals.toLocaleString('sv-SE')} kcal` : '–' },
+              {
+                label: 'Snittempo',
+                value: periodTotal > 0.1 ? `${fmtPace(paceForUnit(periodSecs / periodTotal, unit))} /${unitLabel}` : '–',
+              },
+              {
+                label: 'Längsta pass',
+                value: pageLongest > 0 ? `${toDisplayDistance(pageLongest, unit).toFixed(2)} ${unitLabel}` : '–',
+              },
               {
                 label: resAvgLabel,
                 value: activeCount > 0 ? `${toDisplayDistance(periodTotal / activeCount, unit).toFixed(1)} ${unitLabel}` : '–',
