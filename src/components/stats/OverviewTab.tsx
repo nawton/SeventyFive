@@ -11,7 +11,7 @@ import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/uni
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
-import { STATS_SCREEN_W, BLUE, RED, YELLOW, PURPLE, nextMilestone, s } from './statsShared'
+import { STATS_SCREEN_W, BLUE, RED, YELLOW, nextMilestone, s } from './statsShared'
 import { CalendarView } from './CalendarView'
 import { DayWorkoutsModal } from './DayWorkoutsModal'
 import { MilestoneAnalysisModal } from './MilestoneAnalysisModal'
@@ -209,20 +209,6 @@ export function OverviewTab({
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Klarade dagar</Text>
                   <Text style={[s.dtlVal, { color: GREEN }]}>{weekReport.daysCleared}</Text>
-                </View>
-              </View>
-              <View style={s.dtlSep} />
-              <View style={[s.dtlRow, { paddingBottom: 0 }]}>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Dagar i streak</Text>
-                  <Text style={[s.dtlVal, { color: '#FF6B35' }]}>{streak}</Text>
-                </View>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{isEarlyDays ? 'Till dag 10' : 'Kvar till mål'}</Text>
-                  <Text style={[s.dtlVal, { color: PURPLE }]}>
-                    {isEarlyDays ? Math.max(0, 10 - currentDay) : Math.max(0, 75 - currentDay)}
-                    <Text style={s.dtlUnit}> DAGAR</Text>
-                  </Text>
                 </View>
               </View>
             </View>
