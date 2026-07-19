@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
-import Svg, { Circle, Text as SvgText, Polyline, Line as SvgLine, Rect, G } from 'react-native-svg'
+import Svg, { Circle, Text as SvgText, Polyline, Polygon, Line as SvgLine, Rect, G } from 'react-native-svg'
 import { useFocusEffect } from 'expo-router'
 import Body from 'react-native-body-highlighter'
 import { supabase } from '@/lib/supabase'
@@ -358,6 +358,7 @@ export default function StatsScreen() {
   const [userId, setUserId]                     = useState<string | null>(null)
   const [weekOffset, setWeekOffset]             = useState(0)
   const [weekExNames, setWeekExNames]           = useState<string[]>([])
+  const [prevWeekExNames, setPrevWeekExNames]   = useState<string[]>([])
   const [weekLoading, setWeekLoading]           = useState(false)
   const [weekGymSessions, setWeekGymSessions]   = useState<GymSession[]>([])
 
@@ -406,11 +407,16 @@ export default function StatsScreen() {
     if (!userId) return
     setWeekLoading(true)
     const { start, end } = getWeekBounds(weekOffset)
+    const prev = getWeekBounds(weekOffset - 1)
     Promise.all([
       getCompletedExerciseNamesForWeek(userId, start, end),
       fetchGymSessions(userId, start, end),
+      getCompletedExerciseNamesForWeek(userId, prev.start, prev.end).catch(() => [] as string[]),
     ])
-      .then(([names]) => setWeekExNames(names))
+      .then(([names, , prevNames]) => {
+        setWeekExNames(names)
+        setPrevWeekExNames(prevNames)
+      })
       .finally(() => setWeekLoading(false))
   }, [userId, weekOffset])
 
@@ -455,6 +461,52 @@ export default function StatsScreen() {
     intensity: (count >= 4 ? 3 : count >= 2 ? 2 : 1) as 1 | 2 | 3,
   }))
   const weekBounds   = getWeekBounds(weekOffset)
+  const prevBounds   = getWeekBounds(weekOffset - 1)
+
+  // ── Gym-fördjupning: set/reps/volym + muskelgrupper, vald vecka vs förra ──
+  const inWeek = (w: StrengthWorkout, b: { start: string; end: string }) => {
+    const d = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
+    return d >= b.start && d <= b.end
+  }
+  const weekStrength = strengthWorkouts.filter(w => inWeek(w, weekBounds))
+  const prevStrength = strengthWorkouts.filter(w => inWeek(w, prevBounds))
+  const strengthSums = (list: StrengthWorkout[]) => ({
+    sets:   list.reduce((s, w) => s + w.data.sets.length, 0),
+    reps:   list.reduce((s, w) => s + w.data.sets.reduce((x, r) => x + r.reps, 0), 0),
+    volume: list.reduce((s, w) => s + w.data.sets.reduce((x, r) => x + r.reps * (r.weight_kg || 0), 0), 0),
+  })
+  const weekSums = strengthSums(weekStrength)
+  const prevSums = strengthSums(prevStrength)
+  const gymPassCount = (b: { start: string; end: string }) =>
+    completedSessions.filter(c => c.sessionType === 'gym' && c.completedDate >= b.start && c.completedDate <= b.end).length
+  const prevPassCount = gymPassCount(prevBounds)
+
+  // Sex huvudgrupper för radar och set-tabell
+  const MUSCLE_GROUPS_6: Array<{ label: string; slugs: Slug[] }> = [
+    { label: 'Bröst', slugs: ['chest'] as Slug[] },
+    { label: 'Rygg',  slugs: ['upper-back', 'lower-back', 'trapezius'] as Slug[] },
+    { label: 'Ben',   slugs: ['quadriceps', 'hamstring', 'gluteal', 'calves'] as Slug[] },
+    { label: 'Axlar', slugs: ['deltoids'] as Slug[] },
+    { label: 'Armar', slugs: ['biceps', 'triceps'] as Slug[] },
+    { label: 'Mage',  slugs: ['abs', 'obliques'] as Slug[] },
+  ]
+  const curNames  = [...weekExNames, ...weekStrength.map(w => w.data.exercise_name)]
+  const prevNames = [...prevWeekExNames, ...prevStrength.map(w => w.data.exercise_name)]
+  const groupHits = (names: string[]) => MUSCLE_GROUPS_6.map(g =>
+    names.reduce((s, n) => s + (getMusclesForName(n).some(sl => g.slugs.includes(sl)) ? 1 : 0), 0))
+  const radarCur  = groupHits(curNames)
+  const radarPrev = groupHits(prevNames)
+  const hasRadar  = radarCur.some(v => v > 0) || radarPrev.some(v => v > 0)
+  const prevMuscleCount = (() => {
+    const set = new Set<Slug>()
+    prevNames.forEach(n => getMusclesForName(n).forEach(sl => set.add(sl)))
+    return set.size
+  })()
+  // Set per muskelgrupp — bara loggade styrkeövningar har setdata
+  const setsPerGroup = MUSCLE_GROUPS_6.map(g =>
+    weekStrength.reduce((s, w) =>
+      s + (getMusclesForName(w.data.exercise_name).some(sl => g.slugs.includes(sl)) ? w.data.sets.length : 0), 0))
+  const maxGroupSets = Math.max(...setsPerGroup, 1)
 
   const completedDays = days.filter(d => d.status === 'completed').length
   const missedDays    = days.filter(d => d.status === 'failed').length
@@ -1169,21 +1221,45 @@ export default function StatsScreen() {
           scrollEventThrottle={16}
         >
           <>
-            {/* Veckostatistik — samma Apple-rutnät som övriga flikar */}
+            {/* Veckostatistik — samma Apple-rutnät, med förra veckan som jämförelse */}
             <Text style={s.sectionHead}>Veckans träning</Text>
             <View style={[s.card, s.cardPlain]}>
-              <View style={[s.dtlRow, { paddingVertical: 0 }]}>
+              <View style={[s.dtlRow, { paddingTop: 0 }]}>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Pass</Text>
                   <Text style={[s.dtlVal, { color: ORANGE }]}>{weekGymSessions.length}</Text>
+                  <Text style={s.dtlPrev}>förra: {prevPassCount}</Text>
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl} numberOfLines={1}>Muskler</Text>
                   <Text style={[s.dtlVal, { color: PURPLE }]}>{weekMuscleFreq.size}</Text>
+                  <Text style={s.dtlPrev}>förra: {prevMuscleCount}</Text>
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Övningar</Text>
                   <Text style={[s.dtlVal, { color: GREEN }]}>{weekExNames.length}</Text>
+                  <Text style={s.dtlPrev}>förra: {prevWeekExNames.length}</Text>
+                </View>
+              </View>
+              <View style={s.dtlSep} />
+              <View style={[s.dtlRow, { paddingBottom: 0 }]}>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Set</Text>
+                  <Text style={[s.dtlVal, { color: BLUE }]}>{weekSums.sets}</Text>
+                  <Text style={s.dtlPrev}>förra: {prevSums.sets}</Text>
+                </View>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Reps</Text>
+                  <Text style={[s.dtlVal, { color: TEAL }]}>{weekSums.reps}</Text>
+                  <Text style={s.dtlPrev}>förra: {prevSums.reps}</Text>
+                </View>
+                <View style={s.dtlCell}>
+                  <Text style={s.dtlLbl}>Volym</Text>
+                  <Text style={[s.dtlVal, { color: YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {Math.round(weekSums.volume).toLocaleString('sv-SE')}
+                    <Text style={s.dtlUnit}> KG</Text>
+                  </Text>
+                  <Text style={s.dtlPrev}>förra: {Math.round(prevSums.volume).toLocaleString('sv-SE')}</Text>
                 </View>
               </View>
             </View>
@@ -1203,6 +1279,85 @@ export default function StatsScreen() {
                 <Ionicons name="chevron-forward" size={22} color={weekOffset >= 0 ? 'rgba(255,255,255,0.18)' : TEXT_PRIMARY} />
               </TouchableOpacity>
             </View>
+
+            {/* Muskelfördelning — radar: vald vecka mot förra veckan */}
+            {hasRadar && (
+              <>
+              <Text style={s.sectionHead}>Muskelfördelning</Text>
+              <View style={[s.card, s.cardPlain, { alignItems: 'center' }]}>
+                {(() => {
+                  const W = STATS_SCREEN_W - 80
+                  const H = 240
+                  const cx = W / 2
+                  const cy = H / 2
+                  const R = 82
+                  const maxV = Math.max(...radarCur, ...radarPrev, 1)
+                  const pt = (i: number, v: number) => {
+                    const a = (-90 + i * 60) * (Math.PI / 180)
+                    const r = (v / maxV) * R
+                    return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`
+                  }
+                  const ring = (f: number) =>
+                    MUSCLE_GROUPS_6.map((_, i) => pt(i, maxV * f)).join(' ')
+                  return (
+                    <Svg width={W} height={H}>
+                      {[0.25, 0.5, 0.75, 1].map(f => (
+                        <Polygon key={f} points={ring(f)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
+                      ))}
+                      {MUSCLE_GROUPS_6.map((_, i) => {
+                        const a = (-90 + i * 60) * (Math.PI / 180)
+                        return (
+                          <SvgLine
+                            key={i}
+                            x1={cx} y1={cy}
+                            x2={cx + R * Math.cos(a)} y2={cy + R * Math.sin(a)}
+                            stroke="rgba(255,255,255,0.07)" strokeWidth={1}
+                          />
+                        )
+                      })}
+                      {radarPrev.some(v => v > 0) && (
+                        <Polygon
+                          points={radarPrev.map((v, i) => pt(i, v)).join(' ')}
+                          fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.30)" strokeWidth={1.5}
+                        />
+                      )}
+                      {radarCur.some(v => v > 0) && (
+                        <Polygon
+                          points={radarCur.map((v, i) => pt(i, v)).join(' ')}
+                          fill={ORANGE + '33'} stroke={ORANGE} strokeWidth={2}
+                        />
+                      )}
+                      {MUSCLE_GROUPS_6.map((g, i) => {
+                        const a = (-90 + i * 60) * (Math.PI / 180)
+                        const lx = cx + (R + 22) * Math.cos(a)
+                        const ly = cy + (R + 22) * Math.sin(a)
+                        return (
+                          <SvgText
+                            key={g.label}
+                            x={lx} y={ly + 4}
+                            fontSize={12} fontWeight="600" textAnchor="middle"
+                            fill="rgba(255,255,255,0.65)"
+                          >
+                            {g.label}
+                          </SvgText>
+                        )
+                      })}
+                    </Svg>
+                  )
+                })()}
+                <View style={s.barLegend}>
+                  <View style={s.legItem}>
+                    <View style={[s.legDot, { backgroundColor: ORANGE }]} />
+                    <Text style={s.legText}>Vald vecka</Text>
+                  </View>
+                  <View style={s.legItem}>
+                    <View style={[s.legDot, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
+                    <Text style={s.legText}>Förra veckan</Text>
+                  </View>
+                </View>
+              </View>
+              </>
+            )}
 
             {/* Body map */}
             <Text style={s.sectionHead}>Tränade muskler</Text>
@@ -1268,6 +1423,33 @@ export default function StatsScreen() {
               )}
 
             </View>
+
+            {/* Set per muskelgrupp — från loggade styrkeövningar i vald vecka */}
+            {weekSums.sets > 0 && (
+              <>
+              <Text style={s.sectionHead}>Set per muskelgrupp</Text>
+              <View style={[s.card, s.cardPlain, { paddingVertical: 6, gap: 0 }]}>
+                <View style={s.grpRow}>
+                  <Text style={[s.grpLbl, { fontWeight: '700', color: TEXT_PRIMARY }]}>Totalt</Text>
+                  <View style={s.grpTrack} />
+                  <Text style={[s.grpVal, { color: TEXT_PRIMARY }]}>{weekSums.sets}</Text>
+                </View>
+                {MUSCLE_GROUPS_6.map((g, i) => (
+                  <View key={g.label} style={[s.grpRow, s.grpRowBorder]}>
+                    <Text style={s.grpLbl}>{g.label}</Text>
+                    <View style={s.grpTrack}>
+                      {setsPerGroup[i] > 0 && (
+                        <View style={[s.grpFill, { width: `${Math.max(6, (setsPerGroup[i] / maxGroupSets) * 100)}%` as never }]} />
+                      )}
+                    </View>
+                    <Text style={[s.grpVal, setsPerGroup[i] === 0 && { color: TEXT_SECONDARY }]}>
+                      {setsPerGroup[i]}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              </>
+            )}
 
             {/* Completed gym sessions */}
             {weekLoading ? (
@@ -1447,6 +1629,15 @@ const s = StyleSheet.create({
   dtlVal:  { fontSize: 26, fontFamily: 'Nunito_700Bold' },
   dtlUnit: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
   dtlSep:  { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
+  dtlPrev: { color: TEXT_SECONDARY, fontSize: 11, fontFamily: NUM_FONT_SEMI, marginTop: 1 },
+
+  // Set per muskelgrupp
+  grpRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
+  grpRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
+  grpLbl: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', width: 62 },
+  grpTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  grpFill: { height: '100%', borderRadius: 5, backgroundColor: ORANGE },
+  grpVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: 'Nunito_700Bold', width: 34, textAlign: 'right', fontVariant: ['tabular-nums'] as any },
 
   // Periodfilter (cardio-fliken)
   // Tempoutveckling
