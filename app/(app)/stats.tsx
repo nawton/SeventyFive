@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, TouchableOpacity, Modal, Dimensions, Alert,
@@ -621,8 +621,12 @@ export default function StatsScreen() {
     const d = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
     return d >= b.start && d <= b.end
   }
-  const weekStrength = strengthWorkouts.filter(w => inWeek(w, weekBounds))
-  const prevStrength = strengthWorkouts.filter(w => inWeek(w, prevBounds))
+  const weekStrength = useMemo(
+    () => strengthWorkouts.filter(w => inWeek(w, weekBounds)),
+    [strengthWorkouts, weekBounds.start, weekBounds.end])
+  const prevStrength = useMemo(
+    () => strengthWorkouts.filter(w => inWeek(w, prevBounds)),
+    [strengthWorkouts, prevBounds.start, prevBounds.end])
   const strengthSums = (list: StrengthWorkout[]) => ({
     sets:   list.reduce((s, w) => s + w.data.sets.length, 0),
     reps:   list.reduce((s, w) => s + w.data.sets.reduce((x, r) => x + r.reps, 0), 0),
@@ -722,11 +726,11 @@ export default function StatsScreen() {
     }
     return { start: null as string | null, end: null as string | null, label: 'Hela historiken' }
   })()
-  const cardioW = workouts.filter(w => {
+  const cardioW = useMemo(() => workouts.filter(w => {
     const d = toLocalDateString(new Date(w.created_at))
     return (cardioBounds.start === null || d >= cardioBounds.start)
       && (cardioBounds.end === null || d < cardioBounds.end)
-  })
+  }), [workouts, cardioBounds.start, cardioBounds.end])
 
   // Snittansträngning (RPE) och aktiva dagar för perioden
   const effortVals = cardioW
@@ -751,7 +755,7 @@ export default function StatsScreen() {
   const milestone   = nextMilestone(Math.max(0, currentDay - 1))
   const isEarlyDays = currentDay <= 7
   // Tempoutvecklingen räknas alltid på ALLA pass, oavsett periodfilter
-  const weeklyBars  = buildWeeklyBars(workouts)
+  const weeklyBars  = useMemo(() => buildWeeklyBars(workouts), [workouts])
 
   // Extra periodstatistik till Träningsdetaljer
   const avgDistKm      = cardioW.length ? totalKm / cardioW.length : 0
@@ -759,7 +763,7 @@ export default function StatsScreen() {
 
   // ── Distansgraf: staplar per dag/vecka/månad beroende på periodfiltret ──
   type DistBucket = { key: string; label: string; run: number; cycle: number; walk: number; total: number; isCurrent: boolean }
-  const distBuckets: DistBucket[] = (() => {
+  const distBuckets: DistBucket[] = useMemo(() => {
     const catOf = (t: string) => t === 'cycling' ? 'cycle' as const : t === 'walking' ? 'walk' as const : 'run' as const
     const add = (buckets: DistBucket[], key: string, w: CardioWorkout) => {
       const b = buckets.find(x => x.key === key)
@@ -806,7 +810,7 @@ export default function StatsScreen() {
       add(buckets, `${d.getFullYear()}-${d.getMonth()}`, w)
     })
     return buckets
-  })()
+  }, [workouts, cardioRange, cardioBounds.start, cardioBounds.end])
 
   // ── Cardiorekord (all-time) — vi sparar även PASSET bakom varje rekord så
   // korten kan öppna det direkt ──
@@ -849,36 +853,40 @@ export default function StatsScreen() {
   })()
   const hasRecords = workouts.length > 0
 
-  // ── Styrkerekord (all-time) — från loggade set, klickbara till passet ──
+  // ── Styrkerekord (all-time) — från loggade set, klickbara till passet.
+  // Tung loop över hela historiken → räknas bara om när datan ändras
   type LiftRec = { name: string; kg: number; date: string }
-  let recTopLift: LiftRec | null = null
-  let recOneRm: LiftRec | null = null
-  const volByDate = new Map<string, number>()
-  const setsByWeekMap = new Map<string, number>()
-  for (const w of strengthWorkouts) {
-    const d = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
-    let vol = 0
-    for (const st of w.data.sets) {
-      vol += st.reps * (st.weight_kg || 0)
-      if (st.weight_kg > 0 && (!recTopLift || st.weight_kg > recTopLift.kg)) {
-        recTopLift = { name: w.data.exercise_name, kg: st.weight_kg, date: d }
+  const { recTopLift, recOneRm, recBigDay, recWeekSets } = useMemo(() => {
+    let recTopLift: LiftRec | null = null
+    let recOneRm: LiftRec | null = null
+    const volByDate = new Map<string, number>()
+    const setsByWeekMap = new Map<string, number>()
+    for (const w of strengthWorkouts) {
+      const d = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
+      let vol = 0
+      for (const st of w.data.sets) {
+        vol += st.reps * (st.weight_kg || 0)
+        if (st.weight_kg > 0 && (!recTopLift || st.weight_kg > recTopLift.kg)) {
+          recTopLift = { name: w.data.exercise_name, kg: st.weight_kg, date: d }
+        }
+        // Epley: vikt × (1 + reps/30)
+        const orm = st.weight_kg > 0 && st.reps > 0 ? st.weight_kg * (1 + st.reps / 30) : 0
+        if (orm > 0 && (!recOneRm || orm > recOneRm.kg)) {
+          recOneRm = { name: w.data.exercise_name, kg: orm, date: d }
+        }
       }
-      // Epley: vikt × (1 + reps/30)
-      const orm = st.weight_kg > 0 && st.reps > 0 ? st.weight_kg * (1 + st.reps / 30) : 0
-      if (orm > 0 && (!recOneRm || orm > recOneRm.kg)) {
-        recOneRm = { name: w.data.exercise_name, kg: orm, date: d }
-      }
+      volByDate.set(d, (volByDate.get(d) ?? 0) + vol)
+      const wk = toLocalDateString(startOfWeek(parseLocalDate(d)))
+      setsByWeekMap.set(wk, (setsByWeekMap.get(wk) ?? 0) + w.data.sets.length)
     }
-    volByDate.set(d, (volByDate.get(d) ?? 0) + vol)
-    const wk = toLocalDateString(startOfWeek(parseLocalDate(d)))
-    setsByWeekMap.set(wk, (setsByWeekMap.get(wk) ?? 0) + w.data.sets.length)
-  }
-  let recBigDay: { date: string; vol: number } | null = null
-  for (const [d, v] of volByDate) {
-    if (v > 0 && (!recBigDay || v > recBigDay.vol)) recBigDay = { date: d, vol: v }
-  }
-  let recWeekSets = 0
-  for (const v of setsByWeekMap.values()) recWeekSets = Math.max(recWeekSets, v)
+    let recBigDay: { date: string; vol: number } | null = null
+    for (const [d, v] of volByDate) {
+      if (v > 0 && (!recBigDay || v > recBigDay.vol)) recBigDay = { date: d, vol: v }
+    }
+    let recWeekSets = 0
+    for (const v of setsByWeekMap.values()) recWeekSets = Math.max(recWeekSets, v)
+    return { recTopLift, recOneRm, recBigDay, recWeekSets }
+  }, [strengthWorkouts])
   const hasGymRecords = recTopLift !== null || recWeekSets > 0
 
   // Öppnar gympassdetaljen för alla loggade övningar ett visst datum
@@ -914,7 +922,7 @@ export default function StatsScreen() {
     dateStr: string
     workout?: CardioWorkout
   }
-  const sessionRows: SessRow[] = [
+  const sessionRows: SessRow[] = useMemo(() => [
     ...cardioW.map((w): SessRow => {
       const meta = CARDIO_META[w.data.type] ?? { icon: 'fitness' as const, color: ORANGE }
       return {
@@ -948,7 +956,8 @@ export default function StatsScreen() {
           dateStr: c.completedDate,
         }
       }),
-  ].sort((a, b) => b.sortKey - a.sortKey).slice(0, 30)
+  ].sort((a, b) => b.sortKey - a.sortKey).slice(0, 30),
+  [cardioW, completedSessions, unit, unitLabel, cardioBounds.start, cardioBounds.end])
 
   if (loading) {
     return (
