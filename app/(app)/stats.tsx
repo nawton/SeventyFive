@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
-import Svg, { Circle, Text as SvgText, Polyline, Line as SvgLine } from 'react-native-svg'
+import Svg, { Circle, Text as SvgText, Polyline, Line as SvgLine, Rect, G } from 'react-native-svg'
 import { useFocusEffect } from 'expo-router'
 import Body from 'react-native-body-highlighter'
 import { supabase } from '@/lib/supabase'
@@ -96,6 +96,11 @@ interface WeekBar {
   paceSec:   number
   pacedKm:   number
   pacedSecs: number
+}
+
+function isoWeekNum(mon: Date): number {
+  const jan4 = new Date(mon.getFullYear(), 0, 4)
+  return Math.ceil((((mon.getTime() - jan4.getTime()) / 86400000) + weekdayOf(jan4) - 1) / 7)
 }
 
 function buildWeeklyBars(workouts: CardioWorkout[]): WeekBar[] {
@@ -487,9 +492,58 @@ export default function StatsScreen() {
 
   const milestone   = nextMilestone(currentDay)
   const isEarlyDays = currentDay <= 7
-  // Veckostaplar + rekord räknas alltid på ALLA pass, oavsett periodfilter
+  // Tempoutvecklingen räknas alltid på ALLA pass, oavsett periodfilter
   const weeklyBars  = buildWeeklyBars(workouts)
-  const maxBarKm   = Math.max(...weeklyBars.map(b => b.total), 0.1)
+
+  // Extra periodstatistik till Träningsdetaljer
+  const avgDistKm      = cardioW.length ? totalKm / cardioW.length : 0
+  const longestPassKm  = cardioW.reduce((b, w) => Math.max(b, w.data.distance_km), 0)
+
+  // ── Distansgraf: staplar per dag/vecka/månad beroende på periodfiltret ──
+  type DistBucket = { key: string; label: string; run: number; cycle: number; walk: number; total: number; isCurrent: boolean }
+  const distBuckets: DistBucket[] = (() => {
+    const catOf = (t: string) => t === 'cycling' ? 'cycle' as const : t === 'walking' ? 'walk' as const : 'run' as const
+    const add = (buckets: DistBucket[], key: string, w: CardioWorkout) => {
+      const b = buckets.find(x => x.key === key)
+      if (!b) return
+      b[catOf(w.data.type ?? 'running')] += w.data.distance_km
+      b.total += w.data.distance_km
+    }
+    if (cardioRange === 'week') {
+      const start = startOfWeek()
+      const today = toLocalDateString(new Date())
+      const buckets = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(start); d.setDate(d.getDate() + i)
+        const key = toLocalDateString(d)
+        return { key, label: ['M', 'T', 'O', 'T', 'F', 'L', 'S'][i], run: 0, cycle: 0, walk: 0, total: 0, isCurrent: key === today }
+      })
+      workouts.forEach(w => add(buckets, toLocalDateString(new Date(w.created_at)), w))
+      return buckets
+    }
+    if (cardioRange === 'month') {
+      const cur = startOfWeek()
+      const buckets = Array.from({ length: 5 }, (_, i) => {
+        const mon = new Date(cur); mon.setDate(mon.getDate() - (4 - i) * 7)
+        return { key: toLocalDateString(mon), label: `V${isoWeekNum(mon)}`, run: 0, cycle: 0, walk: 0, total: 0, isCurrent: i === 4 }
+      })
+      workouts.forEach(w => add(buckets, toLocalDateString(startOfWeek(new Date(w.created_at))), w))
+      return buckets
+    }
+    const now = new Date()
+    const buckets = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+      return {
+        key: `${d.getFullYear()}-${d.getMonth()}`,
+        label: d.toLocaleDateString('sv-SE', { month: 'short' }).replace('.', ''),
+        run: 0, cycle: 0, walk: 0, total: 0, isCurrent: i === 5,
+      }
+    })
+    workouts.forEach(w => {
+      const d = new Date(w.created_at)
+      add(buckets, `${d.getFullYear()}-${d.getMonth()}`, w)
+    })
+    return buckets
+  })()
 
   // ── Cardiorekord (all-time) ──
   const allPaced = workouts.filter(w => w.data.distance_km > 0.1)
@@ -514,6 +568,18 @@ export default function StatsScreen() {
     byWeek.forEach(v => { if (v > max) max = v })
     return max
   })()
+  const recMostWeekPasses = (() => {
+    const byWeek = new Map<string, number>()
+    for (const w of workouts) {
+      const key = toLocalDateString(startOfWeek(new Date(w.created_at)))
+      byWeek.set(key, (byWeek.get(key) ?? 0) + 1)
+    }
+    let max = 0
+    byWeek.forEach(v => { if (v > max) max = v })
+    return max
+  })()
+  const recTotalKm   = workouts.reduce((s, w) => s + w.data.distance_km, 0)
+  const recTotalSecs = workouts.reduce((s, w) => s + w.data.duration_seconds, 0)
   const hasRecords = workouts.length > 0
 
   // ── Tempoutveckling: veckosnitt (endast veckor med distanspass) ──
@@ -788,7 +854,7 @@ export default function StatsScreen() {
                   </View>
                 </View>
                 <View style={s.dtlSep} />
-                <View style={[s.dtlRow, { paddingBottom: 0 }]}>
+                <View style={s.dtlRow}>
                   <View style={s.dtlCell}>
                     <Text style={s.dtlLbl}>Snittempo</Text>
                     <Text style={[s.dtlVal, { color: TEAL }]}>
@@ -801,6 +867,23 @@ export default function StatsScreen() {
                     <Text style={[s.dtlVal, { color: PURPLE }]}>
                       {bestPace}
                       <Text style={s.dtlUnit}> /{unitLabel}</Text>
+                    </Text>
+                  </View>
+                </View>
+                <View style={s.dtlSep} />
+                <View style={[s.dtlRow, { paddingBottom: 0 }]}>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Snittdistans</Text>
+                    <Text style={[s.dtlVal, { color: LIME }]}>
+                      {toDisplayDistance(avgDistKm, unit).toFixed(2).replace('.', ',')}
+                      <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
+                    </Text>
+                  </View>
+                  <View style={s.dtlCell}>
+                    <Text style={s.dtlLbl}>Längsta pass</Text>
+                    <Text style={[s.dtlVal, { color: ORANGE }]}>
+                      {toDisplayDistance(longestPassKm, unit).toFixed(2).replace('.', ',')}
+                      <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
                     </Text>
                   </View>
                 </View>
@@ -854,42 +937,73 @@ export default function StatsScreen() {
               )
             })()}
 
-            {/* Stacked bar chart */}
-            {weeklyBars.length > 0 && (
+            {/* Distansgraf — vertikala staplar som följer periodfiltret */}
+            {distBuckets.some(b => b.total > 0) && (
               <>
-              <Text style={s.sectionHead}>{unit === 'imperial' ? 'Miles' : 'Km'} per vecka</Text>
+              <Text style={s.sectionHead}>Distans</Text>
               <View style={[s.card, s.cardPlain]}>
-                <View style={s.barChart}>
-                  {weeklyBars.map((bar, i) => (
-                    <View key={i} style={s.barRow}>
-                      <Text style={[s.barWkLbl, bar.isCurrent && { color: ORANGE }]}>{bar.label}</Text>
-                      <View style={s.barTrack}>
-                        {bar.run > 0 && (
-                          <View style={[s.barSeg, {
-                            width: `${(bar.run / maxBarKm) * 100}%` as any,
-                            backgroundColor: ORANGE,
-                            opacity: bar.isCurrent ? 0.5 : 1,
-                          }]} />
-                        )}
-                        {bar.cycle > 0 && (
-                          <View style={[s.barSeg, {
-                            width: `${(bar.cycle / maxBarKm) * 100}%` as any,
-                            backgroundColor: BLUE,
-                            opacity: bar.isCurrent ? 0.5 : 1,
-                          }]} />
-                        )}
-                        {bar.walk > 0 && (
-                          <View style={[s.barSeg, {
-                            width: `${(bar.walk / maxBarKm) * 100}%` as any,
-                            backgroundColor: GREEN,
-                            opacity: bar.isCurrent ? 0.5 : 1,
-                          }]} />
-                        )}
-                      </View>
-                      <Text style={[s.barKmLbl, bar.isCurrent && { color: ORANGE }]}>
-                        {toDisplayDistance(bar.total, unit).toFixed(1)}
-                      </Text>
-                    </View>
+                <Text style={[s.cardSub, { marginTop: 0 }]}>
+                  {unitLabel} {cardioRange === 'week' ? 'per dag denna vecka' : cardioRange === 'month' ? 'per vecka, senaste 5 veckorna' : 'per månad, senaste 6 månaderna'}
+                </Text>
+                {(() => {
+                  const CH_W = STATS_SCREEN_W - 80
+                  const CH_H = 150
+                  const n = distBuckets.length
+                  const slot = CH_W / n
+                  const barW = Math.min(30, Math.round(slot * 0.5))
+                  const maxV = Math.max(...distBuckets.map(b => b.total), 0.1)
+                  const scale = (CH_H - 30) / maxV
+                  return (
+                    <Svg width={CH_W} height={CH_H}>
+                      {[0.25, 0.5, 0.75, 1].map(f => (
+                        <SvgLine
+                          key={f}
+                          x1={0} x2={CH_W}
+                          y1={CH_H - 4 - f * (CH_H - 30)} y2={CH_H - 4 - f * (CH_H - 30)}
+                          stroke="rgba(255,255,255,0.06)" strokeWidth={1}
+                        />
+                      ))}
+                      {distBuckets.map((b, i) => {
+                        const x = i * slot + (slot - barW) / 2
+                        if (b.total <= 0) {
+                          return <Rect key={b.key} x={x} y={CH_H - 7} width={barW} height={3} rx={1.5} fill="rgba(255,255,255,0.10)" />
+                        }
+                        // Staplas nedifrån: löpning, cykling, promenad
+                        const segs = ([
+                          [b.run, ORANGE], [b.cycle, BLUE], [b.walk, GREEN],
+                        ] as const).filter(sg => sg[0] > 0)
+                        let y = CH_H - 4
+                        const rects = segs.map(([v, color], j) => {
+                          const h = Math.max(3, v * scale)
+                          y -= h
+                          return (
+                            <Rect
+                              key={j}
+                              x={x} y={y + (j > 0 ? 0.75 : 0)}
+                              width={barW} height={h - (j > 0 ? 1.5 : 0)} rx={3}
+                              fill={color} opacity={b.isCurrent ? 1 : 0.8}
+                            />
+                          )
+                        })
+                        return (
+                          <G key={b.key}>
+                            {rects}
+                            <SvgText
+                              x={x + barW / 2} y={y - 6}
+                              fontSize={10} fontWeight="700" textAnchor="middle"
+                              fill={b.isCurrent ? '#fff' : 'rgba(255,255,255,0.45)'}
+                            >
+                              {toDisplayDistance(b.total, unit).toFixed(1)}
+                            </SvgText>
+                          </G>
+                        )
+                      })}
+                    </Svg>
+                  )
+                })()}
+                <View style={s.distLblRow}>
+                  {distBuckets.map(b => (
+                    <Text key={b.key} style={[s.distLbl, b.isCurrent && { color: ORANGE }]}>{b.label}</Text>
                   ))}
                 </View>
                 <View style={s.barLegend}>
@@ -908,41 +1022,53 @@ export default function StatsScreen() {
               </>
             )}
 
-            {/* Cardiorekord (all-time) */}
+            {/* Cardiorekord (all-time) — lista med ikon, etikett och färgat värde */}
             {hasRecords && (
               <>
               <Text style={s.sectionHead}>Cardiorekord</Text>
-              <View style={[s.card, s.cardPlain]}>
-                <View style={s.recGrid}>
-                  {([
-                    {
-                      icon: 'map-outline' as const, color: ORANGE, label: 'längsta pass',
-                      value: recLongestKm > 0 ? `${toDisplayDistance(recLongestKm, unit).toFixed(2)} ${unitLabel}` : '–',
-                    },
-                    {
-                      icon: 'flash-outline' as const, color: YELLOW, label: 'snabbaste km',
-                      value: recFastestSplitSec === Infinity ? '–' : fmtPace(recFastestSplitSec),
-                    },
-                    {
-                      icon: 'stopwatch-outline' as const, color: RED, label: `bästa tempo /${unitLabel}`,
-                      value: recBestPaceSec === Infinity ? '–' : fmtPace(paceForUnit(recBestPaceSec, unit)),
-                    },
-                    {
-                      icon: 'trending-up-outline' as const, color: GREEN, label: 'längsta vecka',
-                      value: recBiggestWeek > 0 ? `${toDisplayDistance(recBiggestWeek, unit).toFixed(1)} ${unitLabel}` : '–',
-                    },
-                  ]).map(r => (
-                    <View key={r.label} style={s.recCell}>
-                      <View style={[s.recIconWrap, { backgroundColor: r.color + '1A' }]}>
-                        <Ionicons name={r.icon} size={16} color={r.color} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.recVal} numberOfLines={1}>{r.value}</Text>
-                        <Text style={s.recLbl} numberOfLines={1}>{r.label}</Text>
-                      </View>
+              <View style={[s.card, s.cardPlain, { paddingVertical: 8, gap: 0 }]}>
+                {([
+                  {
+                    icon: 'map-outline' as const, color: ORANGE, label: 'Längsta pass',
+                    value: recLongestKm > 0 ? `${toDisplayDistance(recLongestKm, unit).toFixed(2)} ${unitLabel}` : '–',
+                  },
+                  {
+                    icon: 'flash-outline' as const, color: YELLOW, label: 'Snabbaste km',
+                    value: recFastestSplitSec === Infinity ? '–' : fmtPace(recFastestSplitSec),
+                  },
+                  {
+                    icon: 'stopwatch-outline' as const, color: RED, label: `Bästa tempo /${unitLabel}`,
+                    value: recBestPaceSec === Infinity ? '–' : fmtPace(paceForUnit(recBestPaceSec, unit)),
+                  },
+                  {
+                    icon: 'trending-up-outline' as const, color: GREEN, label: 'Längsta vecka',
+                    value: recBiggestWeek > 0 ? `${toDisplayDistance(recBiggestWeek, unit).toFixed(1)} ${unitLabel}` : '–',
+                  },
+                  {
+                    icon: 'calendar-outline' as const, color: PURPLE, label: 'Flest pass en vecka',
+                    value: `${recMostWeekPasses} pass`,
+                  },
+                  {
+                    icon: 'earth-outline' as const, color: BLUE, label: 'Total distans',
+                    value: `${toDisplayDistance(recTotalKm, unit).toFixed(1)} ${unitLabel}`,
+                  },
+                  {
+                    icon: 'time-outline' as const, color: TEAL, label: 'Total tid',
+                    value: fmtDuration(recTotalSecs),
+                  },
+                  {
+                    icon: 'checkmark-done-outline' as const, color: LIME, label: 'Pass totalt',
+                    value: String(workouts.length),
+                  },
+                ]).map((r, i) => (
+                  <View key={r.label} style={[s.recRow, i > 0 && s.recRowBorder]}>
+                    <View style={[s.recIconWrap, { backgroundColor: r.color + '1A' }]}>
+                      <Ionicons name={r.icon} size={16} color={r.color} />
                     </View>
-                  ))}
-                </View>
+                    <Text style={s.recRowLbl}>{r.label}</Text>
+                    <Text style={[s.recRowVal, { color: r.color }]} numberOfLines={1}>{r.value}</Text>
+                  </View>
+                ))}
               </View>
               </>
             )}
@@ -1236,14 +1362,14 @@ const s = StyleSheet.create({
   sessDate: { color: TEXT_SECONDARY, fontSize: 13, alignSelf: 'flex-end', marginBottom: 4 },
 
   // Cardiorekord
-  recGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 16 },
-  recCell: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 8 },
+  recRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  recRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
+  recRowLbl: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', flex: 1 },
+  recRowVal: { fontSize: 18, fontFamily: 'Nunito_700Bold', fontVariant: ['tabular-nums'] as any },
   recIconWrap: {
     width: 32, height: 32, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
-  recVal: { color: TEXT_PRIMARY, fontSize: 16, fontFamily: 'Nunito_700Bold' },
-  recLbl: { color: TEXT_SECONDARY, fontSize: 11, marginTop: 1 },
 
   // Ring chart
   ringWrap: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 4 },
@@ -1270,12 +1396,8 @@ const s = StyleSheet.create({
   msSub:     { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
 
   // Bar chart
-  barChart:  { gap: 8 },
-  barRow:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  barWkLbl:  { width: 26, fontSize: 11, color: TEXT_SECONDARY, textAlign: 'right', fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] as any },
-  barTrack:  { flex: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 6, overflow: 'hidden', flexDirection: 'row' },
-  barSeg:    { height: '100%' },
-  barKmLbl:  { width: 34, fontSize: 11, color: TEXT_SECONDARY, textAlign: 'right', fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] as any },
+  distLblRow: { flexDirection: 'row', marginTop: -6 },
+  distLbl: { flex: 1, textAlign: 'center', color: TEXT_SECONDARY, fontSize: 11, fontFamily: NUM_FONT_SEMI },
   barLegend: { flexDirection: 'row', gap: 16 },
   legItem:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legDot:    { width: 8, height: 8, borderRadius: 2 },
