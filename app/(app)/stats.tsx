@@ -422,9 +422,13 @@ export default function StatsScreen() {
     Alert.alert('Radera träning', 'Det här går inte att ångra.', [
       { text: 'Avbryt', style: 'cancel' },
       { text: 'Radera', style: 'destructive', onPress: async () => {
-        await deleteCardioWorkout(w.id).catch(() => {})
         setWorkouts(prev => prev.filter(x => x.id !== w.id))
         setSelectedWorkout(null)
+        const ok = await deleteCardioWorkout(w.id).catch(() => false)
+        if (!ok) {
+          Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
+          loadStats()
+        }
       } },
     ])
   }
@@ -513,15 +517,21 @@ export default function StatsScreen() {
 
   // Svep-radering i sessionslistan: GPS-pass tas bort helt, avbockade
   // schemapass får sin bock borttagen
+  // Optimistisk radering — misslyckas databasen läggs raden tillbaka och
+  // användaren får veta det, i stället för att passet spöklikt återuppstår
   function performDeleteSessionRow(r: { key: string; name: string; workout?: CardioWorkout }) {
+    const restore = () => {
+      Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
+      loadStats()
+    }
     if (r.workout) {
       const id = r.workout.id
       setWorkouts(prev => prev.filter(w => w.id !== id))
-      deleteCardioWorkout(id).catch(() => {})
+      deleteCardioWorkout(id).then(ok => { if (!ok) restore() }).catch(restore)
     } else if (r.key.startsWith('g:')) {
       const id = r.key.slice(2)
       setCompletedSessions(prev => prev.filter(c => c.id !== id))
-      deleteCompletion(id).catch(() => {})
+      deleteCompletion(id).catch(restore)
     }
   }
 
