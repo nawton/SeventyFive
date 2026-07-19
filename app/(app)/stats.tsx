@@ -1698,6 +1698,7 @@ export default function StatsScreen() {
               dateLabel={gymDetail.dateLabel}
               logged={gymDetail.logged}
               plannedNames={gymDetail.planned}
+              allWorkouts={strengthWorkouts}
               onClose={() => setGymDetail(null)}
             />
           )}
@@ -1712,6 +1713,7 @@ export default function StatsScreen() {
             dateLabel={gymDetail.dateLabel}
             logged={gymDetail.logged}
             plannedNames={gymDetail.planned}
+            allWorkouts={strengthWorkouts}
             onClose={() => setGymDetail(null)}
           />
         )}

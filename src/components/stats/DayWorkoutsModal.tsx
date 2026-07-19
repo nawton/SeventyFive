@@ -415,6 +415,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
             dateLabel={dateStr}
             logged={gymDetail.logged}
             plannedNames={gymDetail.planned}
+            allWorkouts={strengthWorkouts}
             onClose={() => setGymDetail(null)}
           />
         )}
