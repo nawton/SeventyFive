@@ -35,7 +35,7 @@ import {
 } from '@/services/progressPhotos'
 import { PhotoComposer } from '@/components/PhotoComposer'
 import { PhotoViewer } from '@/components/PhotoViewer'
-import { ORANGE, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, BG, CARD, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
@@ -281,7 +281,9 @@ export default function ProfileScreen() {
                     {challenge.challenge_levels?.display_name?.toUpperCase() ?? 'SEVENTYFIVE'}
                   </Text>
                 </View>
-                <Text style={s.heroDay}>Dag {currentDay}/75</Text>
+                <Text style={s.heroDay}>
+                  Dag <Text style={s.heroDayNum}>{currentDay}</Text> av <Text style={s.heroDayNum}>75</Text>
+                </Text>
               </View>
             )}
           </View>
@@ -312,7 +314,14 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        <Text style={s.sectionTitle}>FRAMSTEGSFOTON</Text>
+        <View>
+          <Text style={s.sectionHead}>Framstegsfoton</Text>
+          {photos.length > 0 && (
+            <Text style={s.sectionSub}>
+              {photos.length} {photos.length === 1 ? 'foto' : 'foton'} · {new Set(photos.map(p => p.dayNumber)).size} av {currentDay} dagar
+            </Text>
+          )}
+        </View>
 
         {photos.length === 0 && (
           <View style={s.emptyCard}>
@@ -426,7 +435,6 @@ const s = StyleSheet.create({
   gearButton: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: CARD,
-    borderWidth: 1, borderColor: BORDER,
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -437,8 +445,6 @@ const s = StyleSheet.create({
     gap: 14,
     backgroundColor: CARD,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: BORDER,
     padding: 16,
   },
   heroInfo: { flex: 1, gap: 6 },
@@ -454,6 +460,7 @@ const s = StyleSheet.create({
   },
   levelBadgeText: { color: ORANGE, fontSize: 9, fontWeight: '800', letterSpacing: 1.4 },
   heroDay: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  heroDayNum: { fontFamily: NUM_FONT_SEMI, fontSize: 13 },
 
   avatar: {
     backgroundColor: ORANGE,
@@ -467,7 +474,6 @@ const s = StyleSheet.create({
   recordsRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER,
     padding: 14, marginBottom: 12,
   },
   recordsIcon: {
@@ -489,20 +495,17 @@ const s = StyleSheet.create({
   },
   addButtonText: { color: '#000', fontSize: 15, fontWeight: '700' },
 
-  sectionTitle: {
-    color: TEXT_SECONDARY,
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    paddingHorizontal: 4,
+  sectionHead: {
+    color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
+  },
+  sectionSub: {
+    color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI, marginTop: 3,
   },
 
   // Empty state
   emptyCard: {
     backgroundColor: CARD,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
     padding: 28,
     alignItems: 'center',
     gap: 8,
@@ -514,8 +517,6 @@ const s = StyleSheet.create({
   card: {
     backgroundColor: CARD,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: BORDER,
     overflow: 'hidden',
   },
   cardHeader: {
