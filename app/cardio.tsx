@@ -322,7 +322,9 @@ export default function CardioScreen() {
   const [pickerOpen, setPickerOpen] = useState(false)
   // Fullskärms-stats: dra ner på statskortet för att dölja kartan
   const [statsExpanded, setStatsExpanded] = useState(false)
+  const [splitsOpen, setSplitsOpen] = useState(false)
   const expandV = useSharedValue(0)
+  const splitsV = useSharedValue(0)
   // Dölj statskortet till en liten tidspill när man vill se kartan
   const [hudHidden, setHudHidden] = useState(false)
   const [styleMenuOpen, setStyleMenuOpen] = useState(false)
@@ -386,6 +388,8 @@ export default function CardioScreen() {
   const calories = Math.round(distanceKm * 65)
 
   function openStats() {
+    setSplitsOpen(false)
+    splitsV.value = withTiming(0, { duration: 200 })
     setStatsExpanded(true)
     expandV.value = withTiming(1, { duration: 260 })
   }
@@ -393,22 +397,58 @@ export default function CardioScreen() {
     setStatsExpanded(false)
     expandV.value = withTiming(0, { duration: 220 })
   }
+  function openSplits() {
+    setStatsExpanded(false)
+    expandV.value = withTiming(0, { duration: 200 })
+    setSplitsOpen(true)
+    splitsV.value = withTiming(1, { duration: 260 })
+  }
+  function closeSplits() {
+    setSplitsOpen(false)
+    splitsV.value = withTiming(0, { duration: 220 })
+  }
 
-  // Dra ner på statskortet → fullskärms-stats; dra upp i fullskärm → karta igen
+  // Tresidig livevy som Runkeeper: [Splits] ← [Karta] → [Statistik].
+  // Svep på statskortet: vänster = statistik, höger = splits, ner = statistik.
   const expandGesture = Gesture.Pan()
+    .activeOffsetX([-15, 15])
     .activeOffsetY([-15, 15])
     .onEnd(e => {
-      if (e.translationY > 30) runOnJS(openStats)()
+      if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
+        if (e.translationX < -40) runOnJS(openStats)()
+        else if (e.translationX > 40) runOnJS(openSplits)()
+      } else if (e.translationY > 30) {
+        runOnJS(openStats)()
+      }
     })
   const collapseGesture = Gesture.Pan()
+    .activeOffsetX([-15, 15])
     .activeOffsetY([-15, 15])
     .onEnd(e => {
-      if (e.translationY < -30) runOnJS(closeStats)()
+      if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
+        if (e.translationX > 40) runOnJS(closeStats)()
+      } else if (e.translationY < -30) {
+        runOnJS(closeStats)()
+      }
+    })
+  const splitsCollapseGesture = Gesture.Pan()
+    .activeOffsetX([-15, 15])
+    .activeOffsetY([-15, 15])
+    .onEnd(e => {
+      if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
+        if (e.translationX < -40) runOnJS(closeSplits)()
+      } else if (e.translationY < -30) {
+        runOnJS(closeSplits)()
+      }
     })
 
   const expandedStyle = useAnimatedStyle(() => ({
     opacity: expandV.value,
-    transform: [{ translateY: interpolate(expandV.value, [0, 1], [-50, 0]) }],
+    transform: [{ translateX: interpolate(expandV.value, [0, 1], [60, 0]) }],
+  }))
+  const splitsStyle = useAnimatedStyle(() => ({
+    opacity: splitsV.value,
+    transform: [{ translateX: interpolate(splitsV.value, [0, 1], [-60, 0]) }],
   }))
 
   // Aktivitetsväljaren: inline-sheet utan mörk overlay, dras i handtaget
@@ -925,42 +965,6 @@ export default function CardioScreen() {
                 </View>
               )}
             </View>
-            {/* Mål från passdetaljen — live-progress, en rad per mål */}
-            {(goalKmNum > 0 || goalMinNum > 0) && (
-              <View style={styles.goalTrackWrap}>
-                {goalKmNum > 0 && (
-                  <View style={styles.goalOne}>
-                    <View style={styles.goalTextRow}>
-                      <Text style={[styles.goalText, lightCard && { color: '#555' }]}>
-                        Mål: {toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} {unitLabel}
-                      </Text>
-                      <Text style={styles.goalPct}>
-                        {Math.min(100, Math.round((distanceKm / goalKmNum) * 100))}%
-                      </Text>
-                    </View>
-                    <View style={[styles.goalTrack, lightCard && { backgroundColor: 'rgba(0,0,0,0.08)' }]}>
-                      <View style={[styles.goalFill, { width: `${Math.min(100, (distanceKm / goalKmNum) * 100)}%` as never }]} />
-                    </View>
-                  </View>
-                )}
-                {goalMinNum > 0 && (
-                  <View style={styles.goalOne}>
-                    <View style={styles.goalTextRow}>
-                      <Text style={[styles.goalText, lightCard && { color: '#555' }]}>
-                        Mål: {goalMinNum} min
-                      </Text>
-                      <Text style={[styles.goalPct, { color: ORANGE }]}>
-                        {Math.min(100, Math.round((elapsed / (goalMinNum * 60)) * 100))}%
-                      </Text>
-                    </View>
-                    <View style={[styles.goalTrack, lightCard && { backgroundColor: 'rgba(0,0,0,0.08)' }]}>
-                      <View style={[styles.goalFill, { backgroundColor: ORANGE, width: `${Math.min(100, (elapsed / (goalMinNum * 60)) * 100)}%` as never }]} />
-                    </View>
-                  </View>
-                )}
-              </View>
-            )}
-
             <View style={styles.statsRow}>
               <View style={styles.stat}>
                 <Text style={[styles.statValue, lightCard && { color: '#000' }]}>{toDisplayDistance(distanceKm, unit).toFixed(2)}</Text>
@@ -1018,6 +1022,47 @@ export default function CardioScreen() {
       </View>
 
       {/* ── Tillbaka-knapp — bara innan passet startats ── */}
+      {/* ── Splits-sidan (svep höger från kartan) — kilometrar i block ── */}
+      <Animated.View
+        style={[styles.expandedStats, splitsStyle]}
+        pointerEvents={splitsOpen ? 'auto' : 'none'}
+      >
+        <GestureDetector gesture={splitsCollapseGesture}>
+          <View style={{ flex: 1 }}>
+            <SafeAreaView style={styles.expandedInner} edges={['top']}>
+              <TouchableOpacity style={styles.expandedHandleWrap} onPress={closeSplits} activeOpacity={0.7}>
+                <View style={styles.sheetHandle} />
+                <Text style={styles.expandedHint}>Svep vänster för karta</Text>
+              </TouchableOpacity>
+              <Text style={styles.splitsPageTitle}>Splits</Text>
+              <ScrollView contentContainerStyle={styles.splitsList} showsVerticalScrollIndicator={false}>
+                {/* Pågående kilometer överst, markerad */}
+                <View style={[styles.splitBlock, styles.splitBlockActive]}>
+                  <Text style={styles.splitBlockLabelActive}>Kilometer {splitTimes.current.length + 1}</Text>
+                  <Text style={styles.splitBlockPaceActive}>
+                    {currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '0:00'}
+                    <Text style={styles.splitBlockUnitActive}> /{unitLabel}</Text>
+                  </Text>
+                  <Text style={styles.splitBlockDistActive}>
+                    {Math.max(0, Math.min(1, distanceKm - splitTimes.current.length)).toFixed(2).replace('.', ',')} av 1,00 km
+                  </Text>
+                </View>
+                {[...splitTimes.current].map((sec, i) => ({ sec, km: i + 1 })).reverse().map(sp => (
+                  <View key={sp.km} style={styles.splitBlock}>
+                    <Text style={styles.splitBlockLabel}>Kilometer {sp.km}</Text>
+                    <Text style={styles.splitBlockPace}>
+                      {formatPace(1, paceForUnit(sp.sec, unit))}
+                      <Text style={styles.splitBlockUnit}> /{unitLabel}</Text>
+                    </Text>
+                    <Text style={styles.splitBlockDist}>1,00 km</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </SafeAreaView>
+          </View>
+        </GestureDetector>
+      </Animated.View>
+
       {status === 'idle' && (
         <SafeAreaView style={styles.topRight} edges={['top']}>
           <GlassCircleButton icon="chevron-back" size={40} onPress={() => router.back()} />
@@ -1407,6 +1452,13 @@ export default function CardioScreen() {
 
       <SafeAreaView style={[styles.bottomBar, LIQUID_GLASS && styles.glassSurface]} edges={['bottom']}>
         {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
+        {/* Tre sidor: Splits · Karta · Statistik */}
+        <View style={styles.pageDots}>
+          {[0, 1, 2].map(i => {
+            const active = splitsOpen ? i === 0 : statsExpanded ? i === 2 : i === 1
+            return <View key={i} style={[styles.pageDot, active && styles.pageDotOn]} />
+          })}
+        </View>
         <View style={styles.bottomInner}>
 
           {status === 'idle' ? (
@@ -1504,10 +1556,29 @@ const styles = StyleSheet.create({
   idleCellLabel: { color: '#9BA0A6', fontSize: 11, fontWeight: '600' },
   idleCellValue: { color: '#fff', fontSize: 15, fontWeight: '700', marginTop: 1 },
   startWide: {
-    backgroundColor: ORANGE, borderRadius: 16,
-    paddingVertical: 16, alignItems: 'center',
+    backgroundColor: ORANGE, borderRadius: 999,
+    paddingVertical: 17, alignItems: 'center',
   },
   startWideText: { color: '#000', fontSize: 18, fontWeight: '800', letterSpacing: 0.3 },
+
+  // ── Splits-sidan ──
+  splitsPageTitle: { color: '#fff', fontSize: 30, fontWeight: '800', letterSpacing: -0.4, marginTop: 4, marginBottom: 14 },
+  splitsList: { gap: 10, paddingBottom: 160 },
+  splitBlock: { backgroundColor: '#1C1C1E', borderRadius: 18, padding: 18, gap: 2 },
+  splitBlockActive: { backgroundColor: ORANGE },
+  splitBlockLabel: { color: '#9BA0A6', fontSize: 14, fontWeight: '600' },
+  splitBlockLabelActive: { color: 'rgba(0,0,0,0.6)', fontSize: 14, fontWeight: '700' },
+  splitBlockPace: { color: '#fff', fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
+  splitBlockPaceActive: { color: '#000', fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
+  splitBlockUnit: { fontSize: 17, fontWeight: '700', color: '#9BA0A6' },
+  splitBlockUnitActive: { fontSize: 17, fontWeight: '700', color: 'rgba(0,0,0,0.55)' },
+  splitBlockDist: { color: '#9BA0A6', fontSize: 14, fontWeight: '600', marginTop: 2 },
+  splitBlockDistActive: { color: 'rgba(0,0,0,0.6)', fontSize: 14, fontWeight: '700', marginTop: 2 },
+
+  // Punktindikator för de tre sidorna
+  pageDots: { flexDirection: 'row', justifyContent: 'center', gap: 7, paddingTop: 8, marginBottom: -2 },
+  pageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)' },
+  pageDotOn: { backgroundColor: '#fff' },
 
   // Målmodal
   goalModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
