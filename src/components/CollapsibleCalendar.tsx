@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
-import type { WorkoutSession } from '@/services/workoutSchedule'
+import { sessionActiveOn, type WorkoutSession } from '@/services/workoutSchedule'
 
 const GREEN       = '#3BE862'
 const SCREEN_W    = Dimensions.get('window').width
@@ -304,7 +304,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     const dateStr = toLocalDateString(date)
     const skips   = sessionIndex.skipByDate.get(dateStr)
     const daySess = [
-      ...sessionIndex.byWeekday[wd].filter(s => !skips?.has(s.id)),
+      ...sessionIndex.byWeekday[wd].filter(s => !skips?.has(s.id) && sessionActiveOn(s, dateStr)),
       ...(sessionIndex.onceByDate.get(dateStr) ?? []),
     ]
     if (daySess.length === 0) return { allDone: false, hasGym: false, hasCardio: false }

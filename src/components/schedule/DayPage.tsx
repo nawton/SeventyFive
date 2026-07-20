@@ -21,7 +21,7 @@ import { resolveRunProgression } from '@/lib/runProgression'
 import { weekdayOf } from '@/lib/date'
 import { isoDate, todayMidnight, indexToDate, DAY_SHORT } from '@/lib/scheduleDates'
 import { ORANGE, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
-import type { WorkoutSession } from '@/services/workoutSchedule'
+import { sessionActiveOn, type WorkoutSession } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -98,7 +98,7 @@ export const DayPage = React.memo(function DayPage({
             if (s.name.startsWith('SKIP:')) return false
             if (skipIds.includes(s.id))     return false
             return (
-              s.weekdays.includes(weekday) ||
+              (s.weekdays.includes(weekday) && sessionActiveOn(s, dateStr)) ||
               (s.weekdays.length === 0 && s.name === dateStr) ||
               (s.weekdays.length === 0 && s.name.startsWith(`ONCE:${dateStr}:`))
             )
