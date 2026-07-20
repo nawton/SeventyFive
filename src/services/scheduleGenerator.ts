@@ -22,37 +22,175 @@ interface PlannedSession {
 }
 
 // ─── Löpprogram ───────────────────────────────────────────────────────────────
-// Runna-stil: fyra passtyper (långpass, tempopass, intervaller, återhämtning)
-// som börjar lågt och växer lite per genomfört pass — progressionen skrivs i
-// notes på formatet som resolveRunProgression läser ("Start … · +… per vecka
-// · max …") och nivån styrs av antal avklarade pass, inte kalendern.
-// Skapas som riktiga cardio-pass (session_type 'cardio').
+// Runna-stil: passtyper som börjar lågt och växer per genomfört pass —
+// progressionen skrivs i notes på formatet som resolveRunProgression läser
+// ("Start … · +… per vecka · max …") och nivån styrs av antal avklarade
+// pass, inte kalendern. Start, ökningstakt och tak följer erfarenhetsnivån
+// (samma försiktiga upptrappning som etablerade planer: långpasset ökar
+// ~0,5–2 km/vecka beroende på nivå och mål, i linje med 10 %-regeln).
+// Anger man en 5 km-testtid räknas tempozoner ut och skrivs in i passen.
 
-const RUN_PLANS: Record<string, PlannedSession[]> = {
-  '5k': [
-    { name: 'Långpass',     weekdays: [6], exercises: [], cardioType: 'running',  notes: 'Start 3 km · +0,5 km per vecka · max 7 km' },
-    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: 'Start 5×400 m · +1 per vecka · max 8×400 m' },
-    { name: 'Återhämtning', weekdays: [4], exercises: [], cardioType: 'running',  notes: '20–25 min i lugnt tempo' },
-    { name: 'Tempopass',    weekdays: [5], exercises: [], cardioType: 'running',  notes: 'Start 2 km · +0,5 km per vecka · max 4 km i tempofart' },
-  ],
-  '10k': [
-    { name: 'Långpass',     weekdays: [6], exercises: [], cardioType: 'running',  notes: 'Start 5 km · +1 km per vecka · max 12 km' },
-    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: 'Start 4×800 m · +1 per vecka · max 7×800 m' },
-    { name: 'Återhämtning', weekdays: [4], exercises: [], cardioType: 'running',  notes: '25–35 min i lugnt tempo' },
-    { name: 'Tempopass',    weekdays: [5], exercises: [], cardioType: 'running',  notes: 'Start 3 km · +0,5 km per vecka · max 6 km i tempofart' },
-  ],
-  half: [
-    { name: 'Långpass',     weekdays: [7], exercises: [], cardioType: 'running',  notes: 'Start 6 km · +1,5 km per vecka · max 18 km' },
-    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: 'Start 5×800 m · +1 per vecka · max 8×800 m' },
-    { name: 'Återhämtning', weekdays: [5], exercises: [], cardioType: 'running',  notes: '30–40 min i lugnt tempo' },
-    { name: 'Tempopass',    weekdays: [4], exercises: [], cardioType: 'running',  notes: 'Start 4 km · +1 km per vecka · max 8 km i tempofart' },
-  ],
-  marathon: [
-    { name: 'Långpass',     weekdays: [7], exercises: [], cardioType: 'running',  notes: 'Start 10 km · +2 km per vecka · max 30 km' },
-    { name: 'Intervaller',  weekdays: [2], exercises: [], cardioType: 'interval', notes: 'Start 5×1000 m · +1 per vecka · max 10×1000 m' },
-    { name: 'Återhämtning', weekdays: [5], exercises: [], cardioType: 'running',  notes: '30–45 min i lugnt tempo' },
-    { name: 'Tempopass',    weekdays: [4], exercises: [], cardioType: 'running',  notes: 'Start 5 km · +1 km per vecka · max 12 km i tempofart' },
-  ],
+export type RunExperience = 'beginner' | 'intermediate' | 'advanced'
+
+interface ProgSpec     { start: number; step: number; max: number }
+interface IntervalSpec { dist: number; start: number; max: number }
+
+interface RunLevelPlan {
+  long:     ProgSpec
+  tempo:    ProgSpec
+  interval: IntervalSpec
+  /** Återhämtningspassets längd, t.ex. "25–35 min" — medvetet utan progression */
+  recovery: string
+  /** Målspecifikt femte pass (fartlek/distanspass/maratonfart) */
+  extra:    { name: string; spec: ProgSpec; suffix: string }
+}
+
+const RUN_TABLES: Record<string, Record<RunExperience, RunLevelPlan>> = {
+  '5k': {
+    beginner: {
+      long:  { start: 2, step: 0.5, max: 5 },
+      tempo: { start: 1.5, step: 0.5, max: 3 },
+      interval: { dist: 400, start: 4, max: 8 },
+      recovery: '15–20 min',
+      extra: { name: 'Fartlek', spec: { start: 2, step: 0.5, max: 4 }, suffix: ' fartlek' },
+    },
+    intermediate: {
+      long:  { start: 3, step: 0.5, max: 7 },
+      tempo: { start: 2, step: 0.5, max: 4 },
+      interval: { dist: 400, start: 6, max: 10 },
+      recovery: '20–25 min',
+      extra: { name: 'Fartlek', spec: { start: 3, step: 0.5, max: 5 }, suffix: ' fartlek' },
+    },
+    advanced: {
+      long:  { start: 4, step: 1, max: 9 },
+      tempo: { start: 3, step: 0.5, max: 5 },
+      interval: { dist: 400, start: 8, max: 12 },
+      recovery: '25–30 min',
+      extra: { name: 'Fartlek', spec: { start: 4, step: 0.5, max: 6 }, suffix: ' fartlek' },
+    },
+  },
+  '10k': {
+    beginner: {
+      long:  { start: 4, step: 0.5, max: 8 },
+      tempo: { start: 2, step: 0.5, max: 4 },
+      interval: { dist: 800, start: 3, max: 6 },
+      recovery: '20–30 min',
+      extra: { name: 'Fartlek', spec: { start: 3, step: 0.5, max: 5 }, suffix: ' fartlek' },
+    },
+    intermediate: {
+      long:  { start: 5, step: 1, max: 12 },
+      tempo: { start: 3, step: 0.5, max: 6 },
+      interval: { dist: 800, start: 4, max: 7 },
+      recovery: '25–35 min',
+      extra: { name: 'Fartlek', spec: { start: 4, step: 0.5, max: 6 }, suffix: ' fartlek' },
+    },
+    advanced: {
+      long:  { start: 6, step: 1, max: 14 },
+      tempo: { start: 4, step: 1, max: 8 },
+      interval: { dist: 800, start: 5, max: 8 },
+      recovery: '30–40 min',
+      extra: { name: 'Fartlek', spec: { start: 5, step: 0.5, max: 7 }, suffix: ' fartlek' },
+    },
+  },
+  half: {
+    beginner: {
+      long:  { start: 5, step: 1, max: 14 },
+      tempo: { start: 3, step: 0.5, max: 6 },
+      interval: { dist: 800, start: 4, max: 7 },
+      recovery: '25–35 min',
+      extra: { name: 'Distanspass', spec: { start: 6, step: 1, max: 10 }, suffix: ' i jämn, behaglig fart' },
+    },
+    intermediate: {
+      long:  { start: 6, step: 1, max: 16 },
+      tempo: { start: 4, step: 1, max: 8 },
+      interval: { dist: 800, start: 5, max: 8 },
+      recovery: '30–40 min',
+      extra: { name: 'Distanspass', spec: { start: 8, step: 1, max: 12 }, suffix: ' i jämn, behaglig fart' },
+    },
+    advanced: {
+      long:  { start: 8, step: 1.5, max: 20 },
+      tempo: { start: 5, step: 1, max: 10 },
+      interval: { dist: 1000, start: 5, max: 8 },
+      recovery: '35–45 min',
+      extra: { name: 'Distanspass', spec: { start: 10, step: 1, max: 14 }, suffix: ' i jämn, behaglig fart' },
+    },
+  },
+  marathon: {
+    beginner: {
+      long:  { start: 8, step: 1, max: 22 },
+      tempo: { start: 4, step: 0.5, max: 8 },
+      interval: { dist: 800, start: 4, max: 8 },
+      recovery: '30–40 min',
+      extra: { name: 'Maratonfart', spec: { start: 4, step: 1, max: 10 }, suffix: ' i maratonfart' },
+    },
+    intermediate: {
+      long:  { start: 10, step: 1.5, max: 28 },
+      tempo: { start: 5, step: 1, max: 10 },
+      interval: { dist: 1000, start: 5, max: 8 },
+      recovery: '30–45 min',
+      extra: { name: 'Maratonfart', spec: { start: 5, step: 1, max: 12 }, suffix: ' i maratonfart' },
+    },
+    advanced: {
+      long:  { start: 12, step: 2, max: 32 },
+      tempo: { start: 6, step: 1, max: 12 },
+      interval: { dist: 1000, start: 6, max: 10 },
+      recovery: '40–50 min',
+      extra: { name: 'Maratonfart', spec: { start: 6, step: 1, max: 14 }, suffix: ' i maratonfart' },
+    },
+  },
+}
+
+/** Vad varje passtyp betyder — visas i schemaguiden så begreppen inte är grekiska */
+export const RUN_SESSION_INFO: Record<string, string> = {
+  'Långpass':     'Långsamt och långt — bygger uthålligheten. Farten ska kännas pratvänlig.',
+  'Intervaller':  'Korta, snabba upprepningar med vila emellan — höjer maxfart och flås.',
+  'Återhämtning': 'Kort och riktigt lugnt — hjälper kroppen hämta sig mellan de tunga passen.',
+  'Tempopass':    'Jämn, ansträngande fart strax under tävlingstempo — lär dig hålla fart längre.',
+  'Fartlek':      'Lek med farten — växla fritt mellan snabbt och lugnt under passet.',
+  'Distanspass':  'Medellångt pass i jämn, behaglig fart — vänjer kroppen vid distans.',
+  'Maratonfart':  'Kilometer i din tänkta tävlingsfart — övar exakt det tempo du ska hålla.',
+}
+
+const fmtKm   = (n: number) => String(n).replace('.', ',')
+const fmtPace = (sec: number) => {
+  const r = Math.round(sec)
+  return `${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}`
+}
+const paceRange = (a: number, b: number) => ` · ca ${fmtPace(a)}–${fmtPace(b)} /km`
+
+const progNotes = (p: ProgSpec, suffix = '') =>
+  `Start ${fmtKm(p.start)} km · +${fmtKm(p.step)} km per vecka · max ${fmtKm(p.max)} km${suffix}`
+
+/** Passen i prioritetsordning för valt mål — de första N används för N dagar */
+function buildRunSessions(distance: string, exp: RunExperience, fiveKSec: number | null): PlannedSession[] {
+  const t = (RUN_TABLES[distance] ?? RUN_TABLES['5k'])[exp]
+  // Tempozoner från 5 km-testet (P = sek/km i testet) — beprövade påslag:
+  // lugnt +60–90 s, tempo +15–25 s, intervaller ≈ testfart, maraton +45–60 s
+  const P = fiveKSec ? fiveKSec / 5 : null
+  const easyPace  = P ? paceRange(P + 60, P + 90) : ''
+  const tempoPace = P ? paceRange(P + 15, P + 25) : ''
+  const intPace   = P ? ` · ca ${fmtPace(Math.max(60, P - 5))} /km` : ''
+  const extraPace = P
+    ? t.extra.name === 'Maratonfart' ? paceRange(P + 45, P + 60)
+    : t.extra.name === 'Distanspass' ? paceRange(P + 35, P + 50)
+    : ''
+    : ''
+
+  return [
+    { name: 'Långpass',     weekdays: [], exercises: [], cardioType: 'running',  notes: progNotes(t.long, easyPace) },
+    { name: 'Intervaller',  weekdays: [], exercises: [], cardioType: 'interval', notes: `Start ${t.interval.start}×${t.interval.dist} m · +1 per vecka · max ${t.interval.max}×${t.interval.dist} m${intPace}` },
+    { name: 'Återhämtning', weekdays: [], exercises: [], cardioType: 'running',  notes: `${t.recovery} i lugnt tempo${easyPace}` },
+    { name: 'Tempopass',    weekdays: [], exercises: [], cardioType: 'running',  notes: progNotes(t.tempo, ` i tempofart${tempoPace}`) },
+    { name: t.extra.name,   weekdays: [], exercises: [], cardioType: 'running',  notes: progNotes(t.extra.spec, `${t.extra.suffix}${extraPace}`) },
+  ]
+}
+
+/** Passtyperna som ingår för mål + antal dagar — till schemaguidens förklaring */
+export function plannedRunTypes(distance: string, numDays: number): string[] {
+  const names = buildRunSessions(distance, 'intermediate', null).map(x => x.name)
+  const picked = names.slice(0, Math.max(1, numDays))
+  if (numDays > names.length && !picked.includes('Återhämtning')) picked.push('Återhämtning')
+  return picked
 }
 
 // ─── Styrka: helkropp (3 dagar) ───────────────────────────────────────────────
@@ -308,25 +446,27 @@ function buildPlan(result: WizardResult): PlannedSession[] {
   const numDays = days.length
 
   if (result.goal === 'running') {
-    const base = RUN_PLANS[result.runDistance ?? '5k'] ?? RUN_PLANS['5k']
-    // Få dagar: långpass + intervaller + återhämtning före tempopass;
-    // många dagar fylls ut med extra återhämtningspass
-    const pickRank = (s: PlannedSession) =>
-      s.name === 'Långpass' ? 0 : s.name === 'Intervaller' ? 1 : s.name === 'Återhämtning' ? 2 : 3
-    const picked = [...base].sort((a, b) => pickRank(a) - pickRank(b)).slice(0, numDays)
+    // Passen kommer i prioritetsordning: långpass, intervaller, återhämtning,
+    // tempopass och sist det målspecifika passet; extra dagar fylls med
+    // fler återhämtningspass
+    const base = buildRunSessions(
+      result.runDistance ?? '5k',
+      result.runExperience ?? 'beginner',
+      result.fiveKTimeSec ?? null,
+    )
+    const picked = base.slice(0, numDays)
     while (picked.length < numDays) {
-      picked.push({
-        name: `Återhämtning ${picked.length}`, weekdays: [], exercises: [],
-        cardioType: 'running', notes: '20–30 min i lugnt tempo',
-      })
+      const recovery = base.find(x => x.name === 'Återhämtning')!
+      picked.push({ ...recovery, name: `Återhämtning ${picked.length}` })
     }
     // Kvalitetspassen tidigt i veckan, återhämtning emellan, långpasset sist
     // (hamnar på helgen när man valt en helgdag)
-    const weekRank = (s: PlannedSession) =>
-      s.name === 'Intervaller' ? 0 : s.name === 'Tempopass' ? 1 : s.name === 'Långpass' ? 3 : 2
+    const weekRank = (x: PlannedSession) =>
+      x.name === 'Intervaller' ? 0 : x.name === 'Tempopass' ? 1 : x.name === 'Långpass' ? 4
+        : x.name.startsWith('Återhämtning') ? 3 : 2
     return picked
       .sort((a, b) => weekRank(a) - weekRank(b))
-      .map((s, i) => ({ ...s, weekdays: [days[i]] }))
+      .map((x, i) => ({ ...x, weekdays: [days[i]] }))
   }
 
   // Styrka: ihophängande split där varje dag har ett tydligt muskeltema

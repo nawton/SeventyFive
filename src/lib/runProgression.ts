@@ -12,7 +12,7 @@
 // =============================================================================
 
 const DIST_RE = /^Start\s+(\d+(?:[.,]\d+)?)\s*km\s*·\s*\+(\d+(?:[.,]\d+)?)\s*km per vecka\s*·\s*max\s+(\d+(?:[.,]\d+)?)\s*km(.*)$/
-const INT_RE  = /^Start\s+(\d+)×(\d+)\s*m\s*·\s*\+(\d+)\s*per vecka\s*·\s*max\s+(\d+)×\d+\s*m$/
+const INT_RE  = /^Start\s+(\d+)×(\d+)\s*m\s*·\s*\+(\d+)\s*per vecka\s*·\s*max\s+(\d+)×\d+\s*m(.*)$/
 
 const num = (s: string) => parseFloat(s.replace(',', '.'))
 const fmt = (v: number) => String(Math.round(v * 10) / 10).replace('.', ',')
@@ -31,7 +31,8 @@ export function resolveRunProgression(notes: string | null, completions: number)
   const iv = notes.match(INT_RE)
   if (iv) {
     const count = Math.min(parseInt(iv[1], 10) + parseInt(iv[3], 10) * completions, parseInt(iv[4], 10))
-    return `${count}×${iv[2]} m · vecka ${completions + 1}`
+    const suffix = iv[5].trim()
+    return `${count}×${iv[2]} m${suffix ? ` ${suffix}` : ''} · vecka ${completions + 1}`
   }
 
   return notes

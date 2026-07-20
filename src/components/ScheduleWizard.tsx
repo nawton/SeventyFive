@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Modal, Dimensions,
+  ScrollView, Modal, Dimensions, TextInput,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { RUN_SESSION_INFO, plannedRunTypes, type RunExperience } from '@/services/scheduleGenerator'
 import type { Slug } from '@/lib/muscles'
 
 const SCREEN_W = Dimensions.get('window').width
@@ -47,7 +48,7 @@ type Goal        = 'running' | 'muscle' | null
 type RunDistance = '5k' | '10k' | 'half' | 'marathon' | null
 type MusclePlan  = 'everything' | 'focus' | null
 type Limitation  = 'knee' | 'back' | 'shoulder'
-type Step        = 'goal' | 'running-distance' | 'muscle-plan' | 'muscle-focus' | 'days' | 'limitations' | 'summary'
+type Step        = 'goal' | 'running-distance' | 'running-profile' | 'muscle-plan' | 'muscle-focus' | 'days' | 'limitations' | 'summary'
 
 export type WizardResult = {
   goal:        Goal
@@ -57,7 +58,17 @@ export type WizardResult = {
   /** Valda träningsdagar, 1=Mån … 7=Sön */
   weekdays:    number[]
   limitations: Limitation[]
+  /** Löperfarenhet — styr startnivå och ökningstakt i löpplanen */
+  runExperience: RunExperience | null
+  /** 5 km-testtid i sekunder — ger tempozoner i passen; null = inte angiven */
+  fiveKTimeSec:  number | null
 }
+
+const EXPERIENCE_OPTIONS: Array<{ key: RunExperience; label: string; sub: string; icon: string }> = [
+  { key: 'beginner',     label: 'Nybörjare',    sub: 'Ny till löpning eller springer sporadiskt',      icon: 'leaf-outline' },
+  { key: 'intermediate', label: 'Van motionär', sub: 'Springer regelbundet, 1–2 pass i veckan',        icon: 'walk-outline' },
+  { key: 'advanced',     label: 'Erfaren',      sub: 'Tränar strukturerad löpning flera gånger i veckan', icon: 'rocket-outline' },
+]
 
 const WEEKDAY_OPTIONS = [
   { value: 1, label: 'Måndag'  },
@@ -77,7 +88,8 @@ const LIMITATION_OPTIONS: Array<{ key: Limitation; label: string; icon: string }
 
 const STEP_PROGRESS: Record<Step, number> = {
   'goal':              0,
-  'running-distance':  0.3,
+  'running-distance':  0.25,
+  'running-profile':   0.4,
   'muscle-plan':       0.3,
   'muscle-focus':      0.45,
   'days':              0.6,
@@ -101,6 +113,9 @@ export function ScheduleWizard({
   const [step, setStep]               = useState<Step>('goal')
   const [goal, setGoal]               = useState<Goal>(null)
   const [runDistance, setRunDistance] = useState<RunDistance>(null)
+  const [runExperience, setRunExperience] = useState<RunExperience | null>(null)
+  const [fiveKMin, setFiveKMin]       = useState('')
+  const [fiveKSec, setFiveKSec]       = useState('')
   const [musclePlan, setMusclePlan]   = useState<MusclePlan>(null)
   const [focusGroups, setFocusGroups] = useState<string[]>([])
   const [weekdays, setWeekdays]       = useState<number[]>([])
@@ -108,6 +123,7 @@ export function ScheduleWizard({
 
   function reset() {
     setStep('goal'); setGoal(null); setRunDistance(null)
+    setRunExperience(null); setFiveKMin(''); setFiveKSec('')
     setMusclePlan(null); setFocusGroups([])
     setWeekdays([]); setLimitations([])
   }
@@ -123,10 +139,11 @@ export function ScheduleWizard({
   function goBack() {
     if (step === 'goal')              { handleClose(); return }
     if (step === 'running-distance')  { setStep('goal'); return }
+    if (step === 'running-profile')   { setStep('running-distance'); return }
     if (step === 'muscle-plan')       { setStep('goal'); return }
     if (step === 'muscle-focus')      { setStep('muscle-plan'); return }
     if (step === 'days') {
-      if (goal === 'running')             setStep('running-distance')
+      if (goal === 'running')             setStep('running-profile')
       else if (musclePlan === 'focus')    setStep('muscle-focus')
       else                                setStep('muscle-plan')
       return
@@ -257,7 +274,78 @@ export function ScheduleWizard({
                 </TouchableOpacity>
               ))}
 
-              <NextButton disabled={!runDistance} onPress={() => runDistance && setStep('days')} />
+              <NextButton disabled={!runDistance} onPress={() => runDistance && setStep('running-profile')} />
+            </>
+          )}
+
+          {/* ── STEP: LÖPARPROFIL — erfarenhet + 5 km-test ───────────── */}
+          {step === 'running-profile' && (
+            <>
+              <Text style={s.stepTitle}>Din löparprofil</Text>
+              <Text style={s.stepSub}>
+                Startnivå och ökningstakt anpassas efter din erfarenhet.
+              </Text>
+
+              {EXPERIENCE_OPTIONS.map(opt => {
+                const selected = runExperience === opt.key
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[s.optCard, selected && s.optCardActive]}
+                    onPress={() => setRunExperience(opt.key)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[s.optIcon, selected && s.optIconActive]}>
+                      <Ionicons
+                        name={opt.icon as React.ComponentProps<typeof Ionicons>['name']}
+                        size={24}
+                        color={selected ? ORANGE : TEXT_SECONDARY}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.optTitle, selected && { color: ORANGE }]}>{opt.label}</Text>
+                      <Text style={s.optSub}>{opt.sub}</Text>
+                    </View>
+                    {selected && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
+                  </TouchableOpacity>
+                )
+              })}
+
+              {/* 5 km-test — frivilligt; ger tempozoner i passen */}
+              <Text style={s.testLabel}>HUR SNABBT SPRINGER DU 5 KM IDAG?</Text>
+              <View style={s.testRow}>
+                <View style={s.testField}>
+                  <TextInput
+                    style={s.testInput}
+                    value={fiveKMin}
+                    onChangeText={v => setFiveKMin(v.replace(/[^0-9]/g, '').slice(0, 3))}
+                    keyboardType="number-pad"
+                    returnKeyType="done"
+                    placeholder="30"
+                    placeholderTextColor="rgba(255,255,255,0.22)"
+                  />
+                  <Text style={s.testUnit}>min</Text>
+                </View>
+                <Text style={s.testColon}>:</Text>
+                <View style={s.testField}>
+                  <TextInput
+                    style={s.testInput}
+                    value={fiveKSec}
+                    onChangeText={v => setFiveKSec(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                    keyboardType="number-pad"
+                    returnKeyType="done"
+                    placeholder="00"
+                    placeholderTextColor="rgba(255,255,255,0.22)"
+                  />
+                  <Text style={s.testUnit}>sek</Text>
+                </View>
+              </View>
+              <Text style={s.testHint}>
+                Frivilligt — anger du en tid får varje pass ett tempoförslag (min/km).
+                Lämna tomt om du inte vet.
+              </Text>
+
+              <NextButton disabled={!runExperience} onPress={() => runExperience && setStep('days')} />
             </>
           )}
 
@@ -490,18 +578,38 @@ export function ScheduleWizard({
                 </View>
                 <View style={s.summaryCard}>
                   <Ionicons name="bar-chart-outline" size={24} color={ORANGE} />
-                  <Text style={s.summaryCardTitle}>Progressat</Text>
-                  <Text style={s.summaryCardSub}>Ökar gradvis varje vecka</Text>
+                  <Text style={s.summaryCardTitle}>Progression</Text>
+                  <Text style={s.summaryCardSub}>Ökar i takt med att du genomför passen</Text>
                 </View>
               </View>
+
+              {/* Passtyperna som ingår — så temporun inte är grekiska */}
+              {goal === 'running' && (
+                <View style={s.typeList}>
+                  <Text style={s.typeListTitle}>Det här ingår i din plan</Text>
+                  {[...new Set(plannedRunTypes(runDistance ?? '5k', Math.max(weekdays.length, 1)))].map(name => (
+                    <View key={name} style={s.typeRow}>
+                      <View style={s.typeDot} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.typeName}>{name}</Text>
+                        <Text style={s.typeDesc}>{RUN_SESSION_INFO[name] ?? ''}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
 
               <TouchableOpacity
                 style={s.nextBtn}
                 onPress={() => {
+                  const min = parseInt(fiveKMin, 10) || 0
+                  const sec = Math.min(59, parseInt(fiveKSec, 10) || 0)
                   const result: WizardResult = {
                     goal, runDistance, musclePlan, focusGroups,
                     weekdays: weekdays.length > 0 ? weekdays : [1, 3, 5],
                     limitations,
+                    runExperience,
+                    fiveKTimeSec: min * 60 + sec > 0 ? min * 60 + sec : null,
                   }
                   reset()
                   onFinish(result)
@@ -559,34 +667,57 @@ const s = StyleSheet.create({
   stepTitle: { color: TEXT_PRIMARY, fontSize: 30, fontWeight: '800', lineHeight: 36 },
   stepSub:   { color: TEXT_SECONDARY, fontSize: 15, marginBottom: 4 },
 
-  // Big goal cards
+  // Big goal cards — ram i vila, orange ram + tonad bakgrund när valt
   bigCard: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
     backgroundColor: CARD, borderRadius: 20, padding: 20,
+    borderWidth: 1.5, borderColor: BORDER,
   },
-  bigCardActive: { backgroundColor: ORANGE + '16' },
+  bigCardActive: { backgroundColor: ORANGE + '16', borderColor: ORANGE },
   bigCardIcon:   { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   bigCardTitle:  { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginBottom: 3 },
   bigCardSub:    { color: TEXT_SECONDARY, fontSize: 13 },
 
-  // Option cards (run distance)
+  // Option cards (run distance, erfarenhet, besvär)
   optCard: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
     backgroundColor: CARD, borderRadius: 16, padding: 16,
+    borderWidth: 1.5, borderColor: BORDER,
   },
-  optCardActive: { backgroundColor: ORANGE + '16' },
+  optCardActive: { backgroundColor: ORANGE + '16', borderColor: ORANGE },
   optIcon:       { width: 52, height: 52, borderRadius: 14, backgroundColor: BORDER, alignItems: 'center', justifyContent: 'center' },
   optIconActive: { backgroundColor: 'rgba(255,149,0,0.15)' },
   optTitle:      { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginBottom: 2 },
   optSub:        { color: TEXT_SECONDARY, fontSize: 13 },
+
+  // 5 km-testet
+  testLabel: {
+    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
+    letterSpacing: 1.2, marginTop: 10,
+  },
+  testRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  testField: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: CARD, borderRadius: 14,
+    borderWidth: 1.5, borderColor: BORDER,
+    paddingHorizontal: 16,
+  },
+  testInput: {
+    flex: 1, color: TEXT_PRIMARY, fontSize: 22, fontWeight: '700',
+    paddingVertical: 14, fontVariant: ['tabular-nums'],
+  },
+  testUnit:  { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  testColon: { color: TEXT_SECONDARY, fontSize: 22, fontWeight: '700' },
+  testHint:  { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17 },
 
   // Veckodagsval
   dayRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: CARD, borderRadius: 14,
     paddingHorizontal: 18, paddingVertical: 14,
+    borderWidth: 1.5, borderColor: BORDER,
   },
-  dayRowActive:  { backgroundColor: ORANGE + '16' },
+  dayRowActive:  { backgroundColor: ORANGE + '16', borderColor: ORANGE },
   dayRowLabel:   { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
   dayCheck: {
     width: 22, height: 22, borderRadius: 11,
@@ -603,8 +734,9 @@ const s = StyleSheet.create({
   planCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: CARD, borderRadius: 18, padding: 20,
+    borderWidth: 1.5, borderColor: BORDER,
   },
-  planCardActive:  { backgroundColor: ORANGE + '16' },
+  planCardActive:  { backgroundColor: ORANGE + '16', borderColor: ORANGE },
   planRecommended: { color: ORANGE, fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 3 },
   planTitle:       { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', marginBottom: 2 },
   planSub:         { color: TEXT_SECONDARY, fontSize: 13 },
@@ -615,6 +747,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 7,
     paddingHorizontal: 16, paddingVertical: 11,
     backgroundColor: CARD, borderRadius: 30,
+    borderWidth: 1.5, borderColor: BORDER,
   },
   muscleDot:     { width: 9, height: 9, borderRadius: 5 },
   muscleChipText:{ color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
@@ -634,9 +767,21 @@ const s = StyleSheet.create({
   summaryCard: {
     flex: 1, backgroundColor: CARD, borderRadius: 16,
     padding: 18, alignItems: 'center', gap: 6,
+    borderWidth: 1, borderColor: BORDER,
   },
   summaryCardTitle: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   summaryCardSub:   { color: TEXT_SECONDARY, fontSize: 12, textAlign: 'center' },
+
+  // Passtypsförklaringar (löpmål)
+  typeList: {
+    backgroundColor: CARD, borderRadius: 16, padding: 18, gap: 14,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  typeListTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  typeRow:  { flexDirection: 'row', gap: 10 },
+  typeDot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: ORANGE, marginTop: 5 },
+  typeName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
+  typeDesc: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17, marginTop: 1 },
 
   // CTA button
   nextBtn: {
