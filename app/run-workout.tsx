@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
@@ -6,7 +7,8 @@ import * as Haptics from 'expo-haptics'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
-import { parseRunTarget, paceToSec, type RunTarget } from '@/lib/runProgression'
+import { getUnitSystem, toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
+import { parseRunTarget, paceToSec, paceRangeForUnit, type RunTarget } from '@/lib/runProgression'
 import { RUN_SESSION_INFO } from '@/services/scheduleGenerator'
 
 // =============================================================================
@@ -29,51 +31,54 @@ interface Part {
   sub?: string
 }
 
-const fmtKm = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',')
+const fmtNum = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',')
 
-/** Passets delar utifrån typnamn + veckans mål — vår egen struktur, inte en mall */
-function buildParts(baseName: string, t: RunTarget): Part[] {
-  const pace = t.pace ? `ca ${t.pace}` : undefined
+/** Passets delar utifrån typnamn + veckans mål — vår egen struktur, inte en mall.
+    Distanser lagras i km men visas i vald enhet. */
+function buildParts(baseName: string, t: RunTarget, unit: UnitSystem): Part[] {
+  const u = distanceUnitLabel(unit)
+  const dist = (km: number) => `${fmtNum(toDisplayDistance(km, unit))} ${u}`
+  const pace = t.pace ? `ca ${paceRangeForUnit(t.pace, unit)}` : undefined
   // Nycklas på målets sort, inte passnamnet — omdöpta pass behåller strukturen
   if (t.kind === 'interval') {
     return [
-      { tag: 'VÄRM UPP',  text: '1,5 km lugn jogg' },
+      { tag: 'VÄRM UPP',  text: `${dist(1.5)} lugn jogg` },
       {
         tag: 'PASS',
         text: `${t.reps}×${t.intervalM} m i hög fart`,
         sub: [pace, '90 s gång- eller joggvila mellan varje'].filter(Boolean).join(' · '),
       },
-      { tag: 'VARVA NER', text: '1,5 km lugn jogg' },
+      { tag: 'VARVA NER', text: `${dist(1.5)} lugn jogg` },
     ]
   }
   if (t.kind === 'distance' && t.km != null) {
-    const km = fmtKm(t.km)
+    const km = dist(t.km)
     if (baseName === 'Tempopass') {
       return [
-        { tag: 'VÄRM UPP',  text: '1,5 km lugn jogg' },
-        { tag: 'PASS',      text: `${km} km i tempofart`, sub: pace ?? 'Jämn, ansträngande fart — strax under tävlingstempo' },
-        { tag: 'VARVA NER', text: '1 km lugn jogg' },
+        { tag: 'VÄRM UPP',  text: `${dist(1.5)} lugn jogg` },
+        { tag: 'PASS',      text: `${km} i tempofart`, sub: pace ?? 'Jämn, ansträngande fart — strax under tävlingstempo' },
+        { tag: 'VARVA NER', text: `${dist(1)} lugn jogg` },
       ]
     }
     if (baseName === 'Maratonfart') {
       return [
-        { tag: 'VÄRM UPP',  text: '1,5 km lugn jogg' },
-        { tag: 'PASS',      text: `${km} km i maratonfart`, sub: pace ?? 'Din tänkta tävlingsfart' },
-        { tag: 'VARVA NER', text: '1 km lugn jogg' },
+        { tag: 'VÄRM UPP',  text: `${dist(1.5)} lugn jogg` },
+        { tag: 'PASS',      text: `${km} i maratonfart`, sub: pace ?? 'Din tänkta tävlingsfart' },
+        { tag: 'VARVA NER', text: `${dist(1)} lugn jogg` },
       ]
     }
     if (baseName === 'Fartlek') {
       return [
         { tag: 'VÄRM UPP',  text: '10 min lugn jogg' },
-        { tag: 'PASS',      text: `${km} km fartlek`, sub: 'Växla fritt mellan snabbt och lugnt — lek med farten' },
+        { tag: 'PASS',      text: `${km} fartlek`, sub: 'Växla fritt mellan snabbt och lugnt — lek med farten' },
         { tag: 'VARVA NER', text: '5–10 min lugn jogg' },
       ]
     }
     if (baseName === 'Distanspass') {
-      return [{ tag: 'PASS', text: `${km} km i jämn, behaglig fart`, sub: pace }]
+      return [{ tag: 'PASS', text: `${km} i jämn, behaglig fart`, sub: pace }]
     }
     // Långpass och övriga distanspass
-    return [{ tag: 'PASS', text: `${km} km i lugn, pratvänlig fart`, sub: pace }]
+    return [{ tag: 'PASS', text: `${km} i lugn, pratvänlig fart`, sub: pace }]
   }
   // Återhämtning m.fl. — beskrivningen bor i anteckningen
   return [{ tag: 'PASS', text: t.label || 'Lugnt pass', sub: pace }]
@@ -116,11 +121,15 @@ export default function RunWorkoutScreen() {
     date?: string
   }>()
 
+  // km/miles — internt är allt km, bara visningen konverteras
+  const [unit, setUnit] = useState<UnitSystem>('metric')
+  useEffect(() => { getUnitSystem().then(setUnit).catch(() => {}) }, [])
+
   const week     = Math.max(0, parseInt(params.week ?? '0', 10) || 0)
   const name     = params.name ?? 'Löppass'
   const baseName = name.replace(/\s+\d+$/, '')
   const target   = parseRunTarget(params.notes ?? null, week)
-  const parts    = buildParts(baseName, target)
+  const parts    = buildParts(baseName, target, unit)
   const est      = estimateMinutes(baseName, target)
   const info     = RUN_SESSION_INFO[baseName]
   const icon     = TYPE_ICON[params.cardioType ?? 'running'] ?? 'fitness-outline'
@@ -130,7 +139,7 @@ export default function RunWorkoutScreen() {
     : null
 
   const headline = target.kind === 'distance' && target.km != null
-    ? `${fmtKm(target.km)} km`
+    ? `${fmtNum(toDisplayDistance(target.km, unit))} ${distanceUnitLabel(unit)}`
     : target.kind === 'interval'
       ? `${target.reps}×${target.intervalM} m`
       : null
@@ -196,7 +205,7 @@ export default function RunWorkoutScreen() {
           {target.pace && (
             <View style={s.metaChip}>
               <Ionicons name="speedometer-outline" size={15} color={CARDIO_BLUE} />
-              <Text style={s.metaChipText}>{target.pace}</Text>
+              <Text style={s.metaChipText}>{paceRangeForUnit(target.pace, unit)}</Text>
             </View>
           )}
         </View>

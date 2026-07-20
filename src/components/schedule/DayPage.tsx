@@ -18,6 +18,7 @@ import { WorkoutSection } from '@/components/WorkoutSection'
 import { WEEKDAYS } from '@/components/SessionEditor'
 import { scaledReps } from '@/lib/progression'
 import { resolveRunProgression } from '@/lib/runProgression'
+import type { UnitSystem } from '@/lib/units'
 import { weekdayOf } from '@/lib/date'
 import { isoDate, todayMidnight, indexToDate, DAY_SHORT } from '@/lib/scheduleDates'
 import { ORANGE, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
@@ -54,7 +55,7 @@ export interface DayPageApi {
 // vars props faktiskt ändrats — inte alla monterade sidor i pagern.
 
 export const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, userId, dayAnimStyle, api,
+  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, unit, userId, dayAnimStyle, api,
 }: {
   idx: number
   sessions: WorkoutSession[]
@@ -66,6 +67,8 @@ export const DayPage = React.memo(function DayPage({
   cardioLogs: CardioWorkout[]
   logged: StrengthWorkout[]
   lastWeights: Record<string, number>
+  /** km/miles — löpplanernas mål visas i vald enhet */
+  unit: UnitSystem
   userId: string | null
   dayAnimStyle: AnimatedStyle<ViewStyle>
   api: DayPageApi
@@ -180,7 +183,7 @@ export const DayPage = React.memo(function DayPage({
                     const planDays = Math.round((date.getTime() - planStart.getTime()) / 86400000)
                     const planWeek = Math.floor(planDays / 7)
                     const displayNotes = s.session_type === 'cardio'
-                      ? resolveRunProgression(s.notes, planWeek)
+                      ? resolveRunProgression(s.notes, planWeek, unit)
                       : s.notes
                     const displaySession = { ...s, name: sessionDisplayName(s), notes: displayNotes, exercises: scaled.map(x => x.ex) }
                     // Faktisk statistik för avklarade gympass (från loggade set)

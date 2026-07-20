@@ -12,6 +12,8 @@
 // Notes som inte matchar formatet visas orörda.
 // =============================================================================
 
+import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
+
 const DIST_RE = /^Start\s+(\d+(?:[.,]\d+)?)\s*km\s*·\s*\+(\d+(?:[.,]\d+)?)\s*km per vecka\s*·\s*max\s+(\d+(?:[.,]\d+)?)\s*km(.*)$/
 const INT_RE  = /^Start\s+(\d+)×(\d+)\s*m\s*·\s*\+(\d+)\s*per vecka\s*·\s*max\s+(\d+)×\d+\s*m(.*)$/
 
@@ -22,16 +24,37 @@ const fmt = (v: number) => String(Math.round(v * 10) / 10).replace('.', ',')
 // vecka, max 25 s totalt (≈ vad man realistiskt vinner under en plan).
 // Bara själva "ca X:XX(–Y:YY) /km"-biten röres, aldrig övrig text.
 const PACE_TOKEN_RE = /(ca\s+)([0-9]+:[0-9]{2}(?:–[0-9]+:[0-9]{2})?)(\s*\/km)/
+const fmtSec = (sec: number) => {
+  const r = Math.round(sec)
+  return `${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}`
+}
 function improvePaceIn(str: string, week: number): string {
   const gain = Math.min(25, Math.round(week * 1.5))
   if (gain <= 0) return str
   return str.replace(PACE_TOKEN_RE, (_, pre: string, range: string, post: string) => {
-    const shifted = range.replace(/(\d+):(\d{2})/g, (__, m: string, s: string) => {
-      const total = Math.max(180, parseInt(m, 10) * 60 + parseInt(s, 10) - gain)
-      return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
-    })
+    const shifted = range.replace(/(\d+):(\d{2})/g, (__, m: string, s: string) =>
+      fmtSec(Math.max(180, parseInt(m, 10) * 60 + parseInt(s, 10) - gain)))
     return `${pre}${shifted}${post}`
   })
+}
+
+// Planerna är metriska i grunden — vid miles konverteras tempot vid visning
+function convertPaceToken(str: string, unit: UnitSystem): string {
+  if (unit !== 'imperial') return str
+  return str.replace(PACE_TOKEN_RE, (_, pre: string, range: string) => {
+    const shifted = range.replace(/(\d+):(\d{2})/g, (__, m: string, s: string) =>
+      fmtSec(paceForUnit(parseInt(m, 10) * 60 + parseInt(s, 10), 'imperial')))
+    return `${pre}${shifted} /mi`
+  })
+}
+
+/** "5:45–6:10 /km" → miles-tempo när enheten kräver det (annars oförändrad) */
+export function paceRangeForUnit(pace: string, unit: UnitSystem): string {
+  if (unit !== 'imperial') return pace
+  return pace
+    .replace(/(\d+):(\d{2})/g, (_, m: string, s: string) =>
+      fmtSec(paceForUnit(parseInt(m, 10) * 60 + parseInt(s, 10), 'imperial')))
+    .replace('/km', '/mi')
 }
 
 // ─── Strukturerad tolkning — pass-detaljskärmen bygger sitt upplägg av detta ──
@@ -87,24 +110,28 @@ export function paceToSec(p: string): number {
 }
 
 /** Målet för en given planvecka (0 = första veckan), t.ex. "14 km · vecka 3". */
-export function resolveRunProgression(notes: string | null, week: number): string | null {
+export function resolveRunProgression(
+  notes: string | null,
+  week: number,
+  unit: UnitSystem = 'metric',
+): string | null {
   if (!notes) return notes
   const w = Math.max(0, week)
 
   const d = notes.match(DIST_RE)
   if (d) {
     const val = Math.min(num(d[1]) + num(d[2]) * w, num(d[3]))
-    const suffix = improvePaceIn(d[4].trim(), w)
-    return `${fmt(val)} km${suffix ? ` ${suffix}` : ''} · vecka ${w + 1}`
+    const suffix = convertPaceToken(improvePaceIn(d[4].trim(), w), unit)
+    return `${fmt(toDisplayDistance(val, unit))} ${distanceUnitLabel(unit)}${suffix ? ` ${suffix}` : ''} · vecka ${w + 1}`
   }
 
   const iv = notes.match(INT_RE)
   if (iv) {
     const count = Math.min(parseInt(iv[1], 10) + parseInt(iv[3], 10) * w, parseInt(iv[4], 10))
-    const suffix = improvePaceIn(iv[5].trim(), w)
+    const suffix = convertPaceToken(improvePaceIn(iv[5].trim(), w), unit)
     return `${count}×${iv[2]} m${suffix ? ` ${suffix}` : ''} · vecka ${w + 1}`
   }
 
   // Icke-progressiva pass (återhämtning) — tempoförslaget förbättras ändå
-  return improvePaceIn(notes, w)
+  return convertPaceToken(improvePaceIn(notes, w), unit)
 }
