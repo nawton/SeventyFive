@@ -127,6 +127,21 @@ export async function setCardioGoal(type: string, goal: { km: number; min: numbe
   await AsyncStorage.setItem(`cardioGoal:${type}`, JSON.stringify(goal)).catch(() => {})
 }
 
+// Senaste 5 km-testtiden (sekunder) — sätts i schemaguiden och kan uppdateras
+// under Anpassning; driver löpplanens tempoförslag
+export async function getFiveKTime(): Promise<number | null> {
+  try {
+    const v = Number(await AsyncStorage.getItem('fiveKTimeSec'))
+    return Number.isFinite(v) && v > 0 ? v : null
+  } catch {
+    return null
+  }
+}
+
+export async function setFiveKTime(sec: number): Promise<void> {
+  await AsyncStorage.setItem('fiveKTimeSec', String(sec)).catch(() => {})
+}
+
 // Passets starttid (per pass + dag) — så Tid-räknaren överlever att vyn stängs
 export async function getOrInitPassStart(id: string): Promise<number> {
   const key = `passStart:${id}`

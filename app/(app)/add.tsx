@@ -45,6 +45,7 @@ import {
   completeExercise,
   uncompleteExercise,
   deleteRepeatingSessions,
+  PLAN_WEEKS,
   type WorkoutSession,
 } from '@/services/workoutSchedule'
 import { SessionEditor } from '@/components/SessionEditor'
@@ -55,7 +56,7 @@ import { getCardioWorkoutsForDate, getWorkoutsForDate, getStrengthWorkouts, type
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { DayPage, EMPTY_CHECKED, EMPTY_COMPLETED, EMPTY_CARDIO_STATS, EMPTY_CARDIO_LOGS, EMPTY_LOGGED, type DayPageApi } from '@/components/schedule/DayPage'
@@ -88,6 +89,8 @@ export default function SchemaScreen() {
   const [wizardVisible, setWizardVisible]   = useState(false)
   // null = inte inläst än (rendera inte bannern förrän vi vet, undviker blink)
   const [wizardBannerDismissed, setWizardBannerDismissed] = useState<boolean | null>(null)
+  // Vilket plan-slut användaren klickat bort — ny plan nollställer skylten
+  const [planEndDismissedKey, setPlanEndDismissedKey] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl]           = useState<string | null>(null)
   const [profileName, setProfileName]       = useState('')
   const [challengeDay, setChallengeDay]     = useState<number | null>(null)
@@ -109,7 +112,31 @@ export default function SchemaScreen() {
     AsyncStorage.getItem('wizardBannerDismissed')
       .then(v => setWizardBannerDismissed(v === '1'))
       .catch(() => setWizardBannerDismissed(false))
+    AsyncStorage.getItem('planEndDismissed')
+      .then(setPlanEndDismissedKey)
+      .catch(() => {})
   }, [])
+
+  // Löpplanens sista vecka (eller slut): knuffa mot nästa plan så passen inte
+  // bara försvinner tyst när 16-veckorshorisonten tar slut
+  const planEnd = (() => {
+    const cardio = sessions.filter(s => s.weekdays.length > 0 && s.session_type === 'cardio')
+    if (cardio.length === 0) return null
+    const newest = cardio.reduce((a, b) => (a.created_at > b.created_at ? a : b))
+    const end = new Date(newest.created_at)
+    end.setHours(0, 0, 0, 0)
+    end.setDate(end.getDate() + PLAN_WEEKS * 7)
+    const daysLeft = Math.round((end.getTime() - todayMidnight().getTime()) / 86400000)
+    if (daysLeft > 7) return null
+    return { ended: daysLeft <= 0, key: isoDate(end) }
+  })()
+  const showPlanEndBanner = planEnd !== null && planEndDismissedKey !== planEnd.key
+
+  function dismissPlanEndBanner() {
+    if (!planEnd) return
+    setPlanEndDismissedKey(planEnd.key)
+    AsyncStorage.setItem('planEndDismissed', planEnd.key).catch(() => {})
+  }
 
   // Guidat flöde från engångsmålen: landa på sidan, öppna sedan schemaguiden
   const { action } = useLocalSearchParams<{ action?: string }>()
@@ -454,6 +481,36 @@ export default function SchemaScreen() {
         </TouchableOpacity>
       )}
 
+      {/* Löpplanen är klar/snart klar — skapa nästa utifrån var man är nu */}
+      {showPlanEndBanner && (
+        <TouchableOpacity
+          style={styles.planEndBanner}
+          onPress={() => setWizardVisible(true)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.planEndIcon}>
+            <Ionicons name="flag" size={20} color="#000" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.planEndTitle}>
+              {planEnd?.ended ? 'Din löpplan är klar!' : 'Sista veckan på din löpplan'}
+            </Text>
+            <Text style={styles.planEndSub}>
+              {planEnd?.ended
+                ? 'Skapa nästa plan utifrån var du är nu'
+                : 'Dags att planera nästa — utgå från din nya nivå'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.planEndClose}
+            onPress={dismissPlanEndBanner}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close" size={16} color="#000" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
       {/* Collapsible calendar */}
       <CollapsibleCalendar
         sessions={sessions}
@@ -688,6 +745,25 @@ const styles = StyleSheet.create({
   },
   wizardBannerTitle: { color: '#000', fontSize: 15, fontWeight: '800' },
   wizardBannerSub:   { color: 'rgba(0,0,0,0.6)', fontSize: 12, marginTop: 1 },
+
+  // Plan-slut — samma bannerform som schemaguiden men i cardio-blått
+  planEndBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: 16, marginBottom: 10,
+    backgroundColor: CARDIO_BLUE, borderRadius: 16, padding: 14,
+  },
+  planEndIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  planEndTitle: { color: '#000', fontSize: 15, fontWeight: '800' },
+  planEndSub:   { color: 'rgba(0,0,0,0.6)', fontSize: 12, marginTop: 1 },
+  planEndClose: {
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   topHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

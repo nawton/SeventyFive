@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react'
 import {
-  View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet,
+  View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, TextInput, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import MapView from 'react-native-maps'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE } from '@/lib/theme'
+import { supabase } from '@/lib/supabase'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, NUM_FONT } from '@/lib/theme'
 import { GlassSegment } from '@/components/GlassSegment'
 import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
 import { getTabBarShrinkEnabled, setTabBarShrinkEnabled } from '@/lib/tabBar'
+import { updateRunPaces } from '@/services/scheduleGenerator'
 import {
   getCardioStatsTheme, setCardioStatsTheme, type CardioStatsTheme,
   getVoiceCues, setVoiceCues,
   getDefaultMapStyle, setDefaultMapStyle, type MapStyleKey,
-  getLastMapCoord,
+  getLastMapCoord, getFiveKTime,
 } from '@/lib/prefs'
 
 // =============================================================================
@@ -79,6 +81,12 @@ export default function AnpassningScreen() {
   const [voice, setVoice]           = useState(true)
   const [mapStyle, setMapStyle]     = useState<MapStyleKey>('satellite')
   const [mapCoord, setMapCoord]     = useState<{ latitude: number; longitude: number } | null>(null)
+  // 5 km-testtiden — driver löpplanens tempoförslag och kan uppdateras här
+  const [userId, setUserId]         = useState<string | null>(null)
+  const [fiveKMin, setFiveKMin]     = useState('')
+  const [fiveKSec, setFiveKSec]     = useState('')
+  const [savedFiveK, setSavedFiveK] = useState<number | null>(null)
+  const [savingFiveK, setSavingFiveK] = useState(false)
 
   useEffect(() => {
     getTabBarShrinkEnabled().then(setNavShrink)
@@ -88,7 +96,38 @@ export default function AnpassningScreen() {
     // Gamla 'terrain'-val finns inte i Apple Maps — visas som Karta
     getDefaultMapStyle().then(m => setMapStyle(m === 'terrain' ? 'standard' : m))
     getLastMapCoord().then(c => setMapCoord(c ?? FALLBACK_COORD)).catch(() => setMapCoord(FALLBACK_COORD))
+    getFiveKTime().then(sec => {
+      if (!sec) return
+      setSavedFiveK(sec)
+      setFiveKMin(String(Math.floor(sec / 60)))
+      setFiveKSec(String(sec % 60).padStart(2, '0'))
+    })
+    supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id ?? null))
   }, [])
+
+  const fiveKTotal = (parseInt(fiveKMin, 10) || 0) * 60 + Math.min(59, parseInt(fiveKSec, 10) || 0)
+  const fiveKImplausible = fiveKTotal > 0 && (fiveKTotal < 12 * 60 || fiveKTotal > 90 * 60)
+  const fiveKChanged = fiveKTotal > 0 && !fiveKImplausible && fiveKTotal !== savedFiveK
+
+  async function saveFiveK() {
+    if (!userId || !fiveKChanged || savingFiveK) return
+    Haptics.selectionAsync()
+    setSavingFiveK(true)
+    try {
+      const count = await updateRunPaces(userId, fiveKTotal)
+      setSavedFiveK(fiveKTotal)
+      Alert.alert(
+        'Testtid uppdaterad',
+        count > 0
+          ? `Tempoförslagen i ${count} pass har räknats om efter din nya tid.`
+          : 'Tiden är sparad — den används när du skapar din nästa löpplan.',
+      )
+    } catch (e: any) {
+      Alert.alert('Kunde inte uppdatera', e.message)
+    } finally {
+      setSavingFiveK(false)
+    }
+  }
 
   function chooseMapStyle(key: MapStyleKey) {
     Haptics.selectionAsync()
@@ -197,6 +236,47 @@ export default function AnpassningScreen() {
               onChange={t => { setStatsTheme(t); setCardioStatsTheme(t).catch(() => {}) }}
             />
           </View>
+          {/* 5 km-tid — räknar om löpplanens tempoförslag utan omgenerering */}
+          <View style={[s.segBlock, s.rowBorder]}>
+            <View style={s.segLabelRow}>
+              <Ionicons name="stopwatch-outline" size={20} color={TEXT_SECONDARY} />
+              <Text style={s.rowLabel}>Min 5 km-tid</Text>
+            </View>
+            <View style={s.fiveKRow}>
+              <TextInput
+                style={s.fiveKInput}
+                value={fiveKMin}
+                onChangeText={v => setFiveKMin(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                returnKeyType="done"
+                placeholder="28"
+                placeholderTextColor="rgba(255,255,255,0.22)"
+              />
+              <Text style={s.fiveKColon}>:</Text>
+              <TextInput
+                style={s.fiveKInput}
+                value={fiveKSec}
+                onChangeText={v => setFiveKSec(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                returnKeyType="done"
+                placeholder="30"
+                placeholderTextColor="rgba(255,255,255,0.22)"
+              />
+              <TouchableOpacity
+                style={[s.fiveKBtn, (!fiveKChanged || savingFiveK) && { opacity: 0.35 }]}
+                disabled={!fiveKChanged || savingFiveK}
+                onPress={saveFiveK}
+                activeOpacity={0.8}
+              >
+                <Text style={s.fiveKBtnText}>{savingFiveK ? 'Sparar…' : 'Uppdatera'}</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={fiveKImplausible ? s.fiveKWarn : s.segHint}>
+              {fiveKImplausible
+                ? 'Ange hela 5 km-tiden (12–90 min), inte ditt tempo.'
+                : 'Sprungit ett nytt test? Tempoförslagen i din löpplan räknas om direkt — progressionen påverkas inte.'}
+            </Text>
+          </View>
           <SwitchRow
             icon="volume-high-outline"
             label="Röstguidning"
@@ -237,6 +317,23 @@ const s = StyleSheet.create({
   segBlock: { padding: 16, gap: 12 },
   segLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   segHint: { color: TEXT_SECONDARY, fontSize: 12 },
+
+  // 5 km-tiden — samma sifferspråk som schemaguidens test
+  fiveKRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  fiveKInput: {
+    width: 64, paddingVertical: 9,
+    backgroundColor: BG, borderRadius: 12,
+    borderWidth: 1, borderColor: BORDER,
+    color: TEXT_PRIMARY, fontSize: 20, fontFamily: NUM_FONT,
+    textAlign: 'center', fontVariant: ['tabular-nums'],
+  },
+  fiveKColon: { color: TEXT_SECONDARY, fontSize: 20, fontFamily: NUM_FONT },
+  fiveKBtn: {
+    flex: 1, alignItems: 'center',
+    backgroundColor: CARDIO_BLUE, borderRadius: 12, paddingVertical: 11,
+  },
+  fiveKBtnText: { color: '#000', fontSize: 14, fontWeight: '700' },
+  fiveKWarn: { color: '#FF6B6B', fontSize: 12, fontWeight: '600' },
 
   // Kartkort — samma utseende som löpvyns kartväljare
   mapGrid: {

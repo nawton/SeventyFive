@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase'
+import { setFiveKTime } from '@/lib/prefs'
 import { createWorkoutSession } from './workoutSchedule'
 import type { WizardResult } from '@/components/ScheduleWizard'
 
@@ -185,6 +187,48 @@ function buildRunSessions(distance: string, exp: RunExperience, fiveKSec: number
     { name: 'Tempopass',    weekdays: [], exercises: [], cardioType: 'running',  notes: progNotes(t.tempo, ` i tempofart${tempoPace}`) },
     { name: t.extra.name,   weekdays: [], exercises: [], cardioType: 'running',  notes: progNotes(t.extra.spec, `${t.extra.suffix}${extraPace}`) },
   ]
+}
+
+// ─── Uppdatera 5 km-tiden mitt i planen ──────────────────────────────────────
+// Skriver om tempoförslagen i befintliga plan-pass utifrån en ny testtid —
+// progressionen (start/ökning/max) lämnas orörd, och pass utan planformat
+// (egna anteckningar) rörs aldrig.
+
+const PACE_SUFFIX_RE = /\s*·\s*ca\s+[0-9]+:[0-9]{2}(?:–[0-9]+:[0-9]{2})?\s*\/(?:km|mi)/
+
+function rewritePaces(notes: string, fiveKSec: number): string {
+  const base = notes.replace(PACE_SUFFIX_RE, '')
+  const isSpec = /^Start /.test(base)
+  const isRecovery = base.includes('i lugnt tempo')
+  if (!isSpec && !isRecovery) return notes          // egna anteckningar — rör ej
+  if (/fartlek/i.test(base)) return base            // fartlek har inget tempoförslag
+  const P = fiveKSec / 5
+  if (/^Start \d+×\d+\s*m/.test(base))        return `${base} · ca ${fmtPace(P - 5)} /km`
+  if (base.includes('i tempofart'))           return `${base}${paceRange(P + 15, P + 25)}`
+  if (base.includes('i maratonfart'))         return `${base}${paceRange(P + 45, P + 60)}`
+  if (base.includes('i jämn, behaglig fart')) return `${base}${paceRange(P + 35, P + 50)}`
+  return `${base}${paceRange(P + 60, P + 90)}`      // långpass + återhämtning
+}
+
+/** Uppdaterar tempoförslagen i alla plan-pass. Returnerar antal ändrade pass. */
+export async function updateRunPaces(userId: string, fiveKSec: number): Promise<number> {
+  const { data, error } = await supabase
+    .from('workout_sessions')
+    .select('id, notes, session_type, weekdays')
+    .eq('user_id', userId)
+  if (error) throw error
+
+  const cardio = (data ?? []).filter(s =>
+    s.session_type === 'cardio' && (s.weekdays ?? []).length > 0 && s.notes)
+
+  const updates = cardio
+    .map(s => ({ id: s.id as string, next: rewritePaces(s.notes as string, fiveKSec) }))
+    .filter((u, i) => u.next !== cardio[i].notes)
+
+  await Promise.all(updates.map(u =>
+    supabase.from('workout_sessions').update({ notes: u.next }).eq('id', u.id)))
+  await setFiveKTime(fiveKSec)
+  return updates.length
 }
 
 /** Passtyperna som ingår för mål + antal dagar — till schemaguidens förklaring */
@@ -509,5 +553,7 @@ export async function generateScheduleFromWizard(
   if (failed.length > 0) {
     throw new Error(`${failed.length} av ${plan.length} pass kunde inte skapas:\n${failed.join('\n')}`)
   }
+  // Spara testtiden så den kan uppdateras senare under Anpassning
+  if (result.fiveKTimeSec) await setFiveKTime(result.fiveKTimeSec)
   return plan.length
 }
