@@ -6,7 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 import { RUN_SESSION_INFO, plannedRunTypes, type RunExperience } from '@/services/scheduleGenerator'
 import type { Slug } from '@/lib/muscles'
 
@@ -311,41 +311,59 @@ export function ScheduleWizard({
                 )
               })}
 
-              {/* 5 km-test — frivilligt; ger tempozoner i passen */}
-              <Text style={s.testLabel}>HUR SNABBT SPRINGER DU 5 KM IDAG?</Text>
-              <View style={s.testRow}>
-                <View style={s.testField}>
-                  <TextInput
-                    style={s.testInput}
-                    value={fiveKMin}
-                    onChangeText={v => setFiveKMin(v.replace(/[^0-9]/g, '').slice(0, 3))}
-                    keyboardType="number-pad"
-                    returnKeyType="done"
-                    placeholder="30"
-                    placeholderTextColor="rgba(255,255,255,0.22)"
-                  />
-                  <Text style={s.testUnit}>min</Text>
-                </View>
-                <Text style={s.testColon}>:</Text>
-                <View style={s.testField}>
-                  <TextInput
-                    style={s.testInput}
-                    value={fiveKSec}
-                    onChangeText={v => setFiveKSec(v.replace(/[^0-9]/g, '').slice(0, 2))}
-                    keyboardType="number-pad"
-                    returnKeyType="done"
-                    placeholder="00"
-                    placeholderTextColor="rgba(255,255,255,0.22)"
-                  />
-                  <Text style={s.testUnit}>sek</Text>
-                </View>
-              </View>
-              <Text style={s.testHint}>
-                Frivilligt — anger du en tid får varje pass ett tempoförslag (min/km).
-                Lämna tomt om du inte vet.
-              </Text>
+              {/* 5 km-test — frivilligt; ger tempozoner i passen. Totaltiden
+                  valideras så ett angivet tempo (5:25) inte tolkas som tid */}
+              {(() => {
+                const total = (parseInt(fiveKMin, 10) || 0) * 60 + Math.min(59, parseInt(fiveKSec, 10) || 0)
+                const implausible = total > 0 && (total < 12 * 60 || total > 90 * 60)
+                return (
+                  <>
+                    <View style={s.testCard}>
+                      <View style={s.testTitleRow}>
+                        <Ionicons name="stopwatch-outline" size={17} color={ORANGE} />
+                        <Text style={s.testTitle}>Hur snabbt springer du 5 km idag?</Text>
+                      </View>
+                      <View style={s.testRow}>
+                        <View style={s.testCol}>
+                          <TextInput
+                            style={s.testInput}
+                            value={fiveKMin}
+                            onChangeText={v => setFiveKMin(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                            keyboardType="number-pad"
+                            returnKeyType="done"
+                            placeholder="28"
+                            placeholderTextColor="rgba(255,255,255,0.22)"
+                          />
+                          <Text style={s.testUnit}>MIN</Text>
+                        </View>
+                        <Text style={s.testColon}>:</Text>
+                        <View style={s.testCol}>
+                          <TextInput
+                            style={s.testInput}
+                            value={fiveKSec}
+                            onChangeText={v => setFiveKSec(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                            keyboardType="number-pad"
+                            returnKeyType="done"
+                            placeholder="30"
+                            placeholderTextColor="rgba(255,255,255,0.22)"
+                          />
+                          <Text style={s.testUnit}>SEK</Text>
+                        </View>
+                      </View>
+                      <Text style={implausible ? s.testWarn : s.testHint}>
+                        {implausible
+                          ? 'Det där ser ut som ett tempo, inte en totaltid — ange hela tiden för 5 km, t.ex. 28:30.'
+                          : 'Frivilligt — med en tid får varje pass ett tempoförslag i min/km. Lämna tomt om du inte vet.'}
+                      </Text>
+                    </View>
 
-              <NextButton disabled={!runExperience} onPress={() => runExperience && setStep('days')} />
+                    <NextButton
+                      disabled={!runExperience || implausible}
+                      onPress={() => runExperience && !implausible && setStep('days')}
+                    />
+                  </>
+                )
+              })()}
             </>
           )}
 
@@ -604,12 +622,14 @@ export function ScheduleWizard({
                 onPress={() => {
                   const min = parseInt(fiveKMin, 10) || 0
                   const sec = Math.min(59, parseInt(fiveKSec, 10) || 0)
+                  const total = min * 60 + sec
                   const result: WizardResult = {
                     goal, runDistance, musclePlan, focusGroups,
                     weekdays: weekdays.length > 0 ? weekdays : [1, 3, 5],
                     limitations,
                     runExperience,
-                    fiveKTimeSec: min * 60 + sec > 0 ? min * 60 + sec : null,
+                    // Bara rimliga totaltider — annars inga tempoförslag alls
+                    fiveKTimeSec: total >= 12 * 60 && total <= 90 * 60 ? total : null,
                   }
                   reset()
                   onFinish(result)
@@ -690,25 +710,26 @@ const s = StyleSheet.create({
   optTitle:      { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginBottom: 2 },
   optSub:        { color: TEXT_SECONDARY, fontSize: 13 },
 
-  // 5 km-testet
-  testLabel: {
-    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
-    letterSpacing: 1.2, marginTop: 10,
+  // 5 km-testet — samma kortspråk som resten av appen, siffror i Nunito
+  testCard: {
+    backgroundColor: CARD, borderRadius: 16, padding: 16, gap: 14,
+    borderWidth: 1, borderColor: BORDER, marginTop: 6,
   },
-  testRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  testField: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1.5, borderColor: BORDER,
-    paddingHorizontal: 16,
-  },
+  testTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  testTitle:    { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600', flex: 1 },
+  testRow:      { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 12 },
+  testCol:      { alignItems: 'center', gap: 6 },
   testInput: {
-    flex: 1, color: TEXT_PRIMARY, fontSize: 22, fontWeight: '700',
-    paddingVertical: 14, fontVariant: ['tabular-nums'],
+    width: 84, paddingVertical: 10,
+    backgroundColor: BG, borderRadius: 12,
+    borderWidth: 1, borderColor: BORDER,
+    color: TEXT_PRIMARY, fontSize: 24, fontFamily: NUM_FONT,
+    textAlign: 'center', fontVariant: ['tabular-nums'],
   },
-  testUnit:  { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  testColon: { color: TEXT_SECONDARY, fontSize: 22, fontWeight: '700' },
+  testUnit:  { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '700', letterSpacing: 1.2 },
+  testColon: { color: TEXT_SECONDARY, fontSize: 24, fontFamily: NUM_FONT, marginTop: 8 },
   testHint:  { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17 },
+  testWarn:  { color: '#FF6B6B', fontSize: 12, lineHeight: 17, fontWeight: '600' },
 
   // Veckodagsval
   dayRow: {

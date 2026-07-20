@@ -165,11 +165,13 @@ const progNotes = (p: ProgSpec, suffix = '') =>
 function buildRunSessions(distance: string, exp: RunExperience, fiveKSec: number | null): PlannedSession[] {
   const t = (RUN_TABLES[distance] ?? RUN_TABLES['5k'])[exp]
   // Tempozoner från 5 km-testet (P = sek/km i testet) — beprövade påslag:
-  // lugnt +60–90 s, tempo +15–25 s, intervaller ≈ testfart, maraton +45–60 s
-  const P = fiveKSec ? fiveKSec / 5 : null
+  // lugnt +60–90 s, tempo +15–25 s, intervaller ≈ testfart, maraton +45–60 s.
+  // Orimliga tider (under 12 eller över 90 min — troligen ett tempo eller en
+  // felskrivning) ignoreras hellre än att ge löjliga tempoförslag
+  const P = fiveKSec && fiveKSec >= 12 * 60 && fiveKSec <= 90 * 60 ? fiveKSec / 5 : null
   const easyPace  = P ? paceRange(P + 60, P + 90) : ''
   const tempoPace = P ? paceRange(P + 15, P + 25) : ''
-  const intPace   = P ? ` · ca ${fmtPace(Math.max(60, P - 5))} /km` : ''
+  const intPace   = P ? ` · ca ${fmtPace(P - 5)} /km` : ''
   const extraPace = P
     ? t.extra.name === 'Maratonfart' ? paceRange(P + 45, P + 60)
     : t.extra.name === 'Distanspass' ? paceRange(P + 35, P + 50)
