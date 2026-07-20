@@ -7,7 +7,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { clamp, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline, Marker } from 'react-native-maps'
-import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { fmtTime, fmtPace } from '@/lib/format'
 import type { CardioWorkout } from '@/services/workouts'
@@ -227,10 +227,6 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
               <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{title}</Text>
               {dateLabel && <Text style={s.heroDate}>{dateLabel}</Text>}
             </View>
-            <View style={s.donePill}>
-              <Ionicons name="checkmark-circle" size={13} color={GREEN} />
-              <Text style={s.donePillText}>Avklarat</Text>
-            </View>
           </View>
 
           <View style={s.statsGrid}>
@@ -244,16 +240,31 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
 
           {splits.length > 0 && (
             <View style={s.splitsCard}>
-              <Text style={s.splitsTitle}>Kilometersplittar</Text>
-              {splits.map((sp, i) => (
-                <View key={i} style={s.splitRow}>
-                  <Text style={s.splitKm}>{sp.label}</Text>
-                  <View style={s.splitBarTrack}>
-                    <View style={[s.splitBar, { width: `${sp.paceSec > 0 ? Math.max(10, (fastestSplit / sp.paceSec) * 100) : 10}%` as never }]} />
+              <View style={s.splitsHead}>
+                <Text style={s.splitsTitle}>Kilometersplittar</Text>
+                <Text style={s.splitsUnit}>min/{unitLabel}</Text>
+              </View>
+              {splits.map((sp, i) => {
+                const fastest = sp.paceSec > 0 && sp.paceSec === fastestSplit
+                return (
+                  <View key={i} style={s.splitRow}>
+                    <Text style={s.splitKm}>{sp.label}</Text>
+                    <View style={s.splitBarTrack}>
+                      <View
+                        style={[
+                          s.splitBar,
+                          fastest && s.splitBarFastest,
+                          { width: `${sp.paceSec > 0 ? Math.max(12, (fastestSplit / sp.paceSec) * 100) : 12}%` as never },
+                        ]}
+                      />
+                    </View>
+                    <View style={s.splitPaceWrap}>
+                      {fastest && <Ionicons name="flash" size={11} color={CARDIO_BLUE} />}
+                      <Text style={[s.splitPace, fastest && s.splitPaceFastest]}>{fmtPace(sp.paceSec)}</Text>
+                    </View>
                   </View>
-                  <Text style={s.splitPace}>{fmtPace(sp.paceSec)}</Text>
-                </View>
-              ))}
+                )
+              })}
             </View>
           )}
 
@@ -351,11 +362,6 @@ const s = StyleSheet.create({
   },
   heroTitle: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
   heroDate: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500', marginTop: 3, textTransform: 'capitalize' },
-  donePill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: GREEN + '1E', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 5,
-  },
-  donePillText: { color: GREEN, fontSize: 12, fontWeight: '700' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 20, paddingHorizontal: 4, marginTop: 14 },
   effortCard: {
     backgroundColor: CARD, borderRadius: 20,
@@ -378,17 +384,29 @@ const s = StyleSheet.create({
   statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   splitsCard: {
     backgroundColor: CARD, borderRadius: 20,
+    borderWidth: 1, borderColor: BORDER,
     paddingHorizontal: 18, paddingVertical: 16, gap: 4,
+  },
+  splitsHead: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 8,
   },
   splitsTitle: {
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
-    textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8,
+    textTransform: 'uppercase', letterSpacing: 1.5,
   },
+  splitsUnit: { color: 'rgba(255,255,255,0.30)', fontSize: 11, fontFamily: NUM_FONT_SEMI },
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
-  splitKm: { color: TEXT_SECONDARY, fontSize: 14, fontFamily: NUM_FONT_SEMI, width: 56, fontVariant: ['tabular-nums'] },
-  splitBarTrack: { flex: 1, height: 16, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
-  splitBar: { height: '100%', borderRadius: 8, backgroundColor: ORANGE },
-  splitPace: { color: TEXT_PRIMARY, fontSize: 14, fontFamily: NUM_FONT, width: 48, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  splitKm: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT_SEMI, width: 52, fontVariant: ['tabular-nums'] },
+  splitBarTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
+  splitBar: { height: '100%', borderRadius: 5, backgroundColor: CARDIO_BLUE, opacity: 0.55 },
+  splitBarFastest: { opacity: 1 },
+  splitPaceWrap: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
+    gap: 3, width: 58,
+  },
+  splitPace: { color: TEXT_PRIMARY, fontSize: 14, fontFamily: NUM_FONT, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  splitPaceFastest: { color: CARDIO_BLUE },
   styleSheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: '#1C1C1E',
