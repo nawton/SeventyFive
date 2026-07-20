@@ -4,9 +4,9 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, BORDER, ORANGE, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
-import { parseRunTarget, paceToSec, resolveRunProgression, type RunTarget } from '@/lib/runProgression'
+import { parseRunTarget, paceToSec, type RunTarget } from '@/lib/runProgression'
 import { RUN_SESSION_INFO } from '@/services/scheduleGenerator'
 
 // =============================================================================
@@ -149,19 +149,6 @@ export default function RunWorkoutScreen() {
     })
   }
 
-  function customize() {
-    router.replace({
-      pathname: '/cardio-session',
-      params: {
-        sessionId: params.sessionId ?? '',
-        name,
-        cardioType: params.cardioType ?? 'running',
-        notes: resolveRunProgression(params.notes ?? null, week) ?? '',
-        date: params.date ?? '',
-      },
-    })
-  }
-
   return (
     <View style={s.screen}>
       {/* ── Topp: tillbaka + planvecka ── */}
@@ -201,7 +188,7 @@ export default function RunWorkoutScreen() {
         <View style={s.metaRow}>
           {est && (
             <View style={s.metaChip}>
-              <Ionicons name="time-outline" size={15} color={ORANGE} />
+              <Ionicons name="time-outline" size={15} color={CARDIO_BLUE} />
               <Text style={s.metaChipText}>{est[0] === est[1] ? `≈ ${est[0]} min` : `${est[0]}–${est[1]} min`}</Text>
             </View>
           )}
@@ -216,7 +203,7 @@ export default function RunWorkoutScreen() {
         {/* Vad passet gör för dig */}
         {info && (
           <View style={s.infoCard}>
-            <Ionicons name="bulb-outline" size={17} color={ORANGE} />
+            <Ionicons name="bulb-outline" size={17} color={CARDIO_BLUE} />
             <Text style={s.infoText}>{info}</Text>
           </View>
         )}
@@ -249,9 +236,6 @@ export default function RunWorkoutScreen() {
           <Ionicons name="play" size={17} color="#000" />
           <Text style={s.startBtnText}>Starta passet</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={customize} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8 }}>
-          <Text style={s.customLink}>Anpassa mål och inställningar</Text>
-        </TouchableOpacity>
       </View>
     </View>
   )
@@ -281,7 +265,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   heroTitle:     { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', letterSpacing: -0.4 },
-  heroTarget:    { color: ORANGE, fontSize: 17, fontFamily: NUM_FONT, marginTop: 3 },
+  heroTarget:    { color: CARDIO_BLUE, fontSize: 17, fontFamily: NUM_FONT, marginTop: 3 },
   heroTargetSub: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT_SEMI },
 
   metaRow:  { flexDirection: 'row', gap: 8, marginTop: 14 },
@@ -295,8 +279,8 @@ const s = StyleSheet.create({
 
   infoCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: ORANGE + '12', borderRadius: 14,
-    borderWidth: 1, borderColor: ORANGE + '30',
+    backgroundColor: CARDIO_BLUE + '12', borderRadius: 14,
+    borderWidth: 1, borderColor: CARDIO_BLUE + '30',
     padding: 14, marginTop: 14,
   },
   infoText: { flex: 1, color: TEXT_PRIMARY, fontSize: 13, lineHeight: 19 },
@@ -317,7 +301,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center',
   },
-  partNumMain:     { backgroundColor: ORANGE },
+  partNumMain:     { backgroundColor: CARDIO_BLUE },
   partNumText:     { color: TEXT_SECONDARY, fontSize: 14, fontFamily: NUM_FONT },
   partNumTextMain: { color: '#000' },
   partText: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
@@ -325,7 +309,7 @@ const s = StyleSheet.create({
   partTag: {
     color: TEXT_SECONDARY, fontSize: 9, fontWeight: '800', letterSpacing: 1,
   },
-  partTagMain: { color: ORANGE },
+  partTagMain: { color: CARDIO_BLUE },
 
   progressNote: {
     color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17,
@@ -340,8 +324,7 @@ const s = StyleSheet.create({
   startBtn: {
     alignSelf: 'stretch',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ORANGE, borderRadius: 18, paddingVertical: 16,
+    backgroundColor: CARDIO_BLUE, borderRadius: 18, paddingVertical: 16,
   },
   startBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
-  customLink:   { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
 })
