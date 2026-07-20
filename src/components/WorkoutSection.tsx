@@ -495,8 +495,25 @@ export function WorkoutSection({
         </TouchableOpacity>
 
         {/* Avklarade pass har ingen snabb-avbockning — ett tryck ska inte kunna
-            radera passets status. Ångra görs i passvyn (gym) / detaljvyn (cardio). */}
-        {isCardio && isCompleted ? null : (!isCardio && onOpenFullscreen) ? (
+            radera passets status. Ångra görs i passvyn (gym) / detaljvyn (cardio).
+            Cardiopass har ingen Klar-knapp alls: de avklaras genom att springas. */}
+        {isCardio ? (
+          isCompleted && !onViewCardioSummary ? (
+            // Avbockat utan GPS-data → ingen detaljvy finns; bocken är enda
+            // vägen att ångra så kortet inte blir dött
+            <TouchableOpacity
+              onPress={() => Alert.alert('Ångra avklarat?', 'Passet markeras som ej genomfört.', [
+                { text: 'Avbryt', style: 'cancel' },
+                { text: 'Ångra', style: 'destructive', onPress: handleUncomplete },
+              ])}
+              style={s.doneBadge}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="checkmark-circle" size={13} color={GREEN} />
+              <Text style={s.doneBadgeText}>Klar</Text>
+            </TouchableOpacity>
+          ) : null
+        ) : onOpenFullscreen ? (
           // Gympass: alltid Öppna — även avklarade (info + Spara finns därinne)
           <TouchableOpacity onPress={onOpenFullscreen} style={s.openBtn} activeOpacity={0.8}>
             <Ionicons name="expand-outline" size={14} color={ORANGE} />
