@@ -208,11 +208,14 @@ export const DayPage = React.memo(function DayPage({
                               Alert.alert('Framtida pass', 'Du kan starta passet först på passdagen.')
                               return
                             }
-                            router.push({ pathname: '/cardio-session', params: {
+                            // Schemalagda pass öppnar pass-detaljen med veckans
+                            // mål förifyllt — inget eget mål behöver sättas
+                            router.push({ pathname: '/run-workout', params: {
                             sessionId: s.id,
                             name: sessionDisplayName(s),
                             cardioType: s.cardio_type ?? 'running',
-                            notes: displayNotes ?? '',
+                            notes: s.notes ?? '',
+                            week: String(Math.max(0, planWeek)),
                             date: dateStr,
                           } })
                           }

@@ -18,6 +18,57 @@ const INT_RE  = /^Start\s+(\d+)×(\d+)\s*m\s*·\s*\+(\d+)\s*per vecka\s*·\s*max
 const num = (s: string) => parseFloat(s.replace(',', '.'))
 const fmt = (v: number) => String(Math.round(v * 10) / 10).replace('.', ',')
 
+// ─── Strukturerad tolkning — pass-detaljskärmen bygger sitt upplägg av detta ──
+
+export interface RunTarget {
+  kind: 'distance' | 'interval' | 'plain'
+  /** Veckans distansmål i km (kind 'distance') */
+  km?: number
+  reps?: number
+  intervalM?: number
+  /** Beskrivande svans utan tempoförslag, t.ex. "i tempofart" */
+  label: string
+  /** Tempoförslag från 5 km-testet, t.ex. "5:45–6:10 /km" */
+  pace: string | null
+  week: number
+}
+
+const PACE_RE = /·?\s*ca\s+([0-9]+:[0-9]{2}(?:–[0-9]+:[0-9]{2})?)\s*\/km/
+
+export function parseRunTarget(notes: string | null, week: number): RunTarget {
+  const w = Math.max(0, week)
+  const paceM = notes?.match(PACE_RE) ?? null
+  const pace = paceM ? `${paceM[1]} /km` : null
+  const strip = (s: string) => s.replace(PACE_RE, '').replace(/\s*·\s*$/, '').trim()
+
+  if (notes) {
+    const d = notes.match(DIST_RE)
+    if (d) {
+      return {
+        kind: 'distance',
+        km: Math.min(num(d[1]) + num(d[2]) * w, num(d[3])),
+        label: strip(d[4].trim()), pace, week: w,
+      }
+    }
+    const iv = notes.match(INT_RE)
+    if (iv) {
+      return {
+        kind: 'interval',
+        reps: Math.min(parseInt(iv[1], 10) + parseInt(iv[3], 10) * w, parseInt(iv[4], 10)),
+        intervalM: parseInt(iv[2], 10),
+        label: strip(iv[5].trim()), pace, week: w,
+      }
+    }
+  }
+  return { kind: 'plain', label: strip(notes ?? ''), pace, week: w }
+}
+
+/** "5:45" → sekunder */
+export function paceToSec(p: string): number {
+  const m = p.match(/(\d+):(\d{2})/)
+  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : 0
+}
+
 /** Målet för en given planvecka (0 = första veckan), t.ex. "14 km · vecka 3". */
 export function resolveRunProgression(notes: string | null, week: number): string | null {
   if (!notes) return notes
