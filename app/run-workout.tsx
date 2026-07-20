@@ -208,6 +208,12 @@ export default function RunWorkoutScreen() {
               <Text style={s.metaChipText}>{paceRangeForUnit(target.pace, unit)}</Text>
             </View>
           )}
+          {target.cutback && (
+            <View style={s.metaChip}>
+              <Ionicons name="leaf-outline" size={15} color={CARDIO_BLUE} />
+              <Text style={s.metaChipText}>Lugnare vecka</Text>
+            </View>
+          )}
         </View>
 
         {/* Vad passet gör för dig */}

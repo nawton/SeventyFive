@@ -22,6 +22,7 @@ import {
   deleteSessionWithSkips,
   deleteRepeatingSessions,
   dateForWeekday,
+  PLAN_WEEKS,
   type WorkoutSession,
 } from '@/services/workoutSchedule'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
@@ -285,6 +286,17 @@ export default function ManageSessionsScreen() {
   const totalSessions  = sessions.length
   const scheduledDays  = new Set(sessions.flatMap(s => s.weekdays)).size
 
+  // Löpplaner är tidsbegränsade (16 veckor) — visa när planen tar slut.
+  // Gympass fortsätter tills vidare och behöver ingen skylt.
+  const planEndLabel = (() => {
+    const cardio = sessions.filter(s => s.session_type === 'cardio')
+    if (cardio.length === 0) return null
+    const newest = cardio.reduce((a, b) => (a.created_at > b.created_at ? a : b))
+    const end = new Date(newest.created_at)
+    end.setDate(end.getDate() + PLAN_WEEKS * 7)
+    return end.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
+  })()
+
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
 
@@ -311,6 +323,12 @@ export default function ManageSessionsScreen() {
               <Ionicons name="calendar-outline" size={13} color={ORANGE} />
               <Text style={s.summaryText}>{scheduledDays} dagar/vecka</Text>
             </View>
+            {planEndLabel && (
+              <View style={[s.summaryChip, s.summaryChipBlue]}>
+                <Ionicons name="flag-outline" size={13} color={CARDIO_BLUE} />
+                <Text style={[s.summaryText, { color: CARDIO_BLUE }]}>Löpplan till {planEndLabel}</Text>
+              </View>
+            )}
           </Animated.View>
         )}
 
@@ -409,13 +427,14 @@ const s = StyleSheet.create({
 
   // Summary
   summaryRow: {
-    flexDirection: 'row', gap: 8, marginBottom: 16,
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16,
   },
   summaryChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: ORANGE + '12',
     borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6,
   },
+  summaryChipBlue: { backgroundColor: CARDIO_BLUE + '14' },
   summaryText: { color: ORANGE, fontSize: 12, fontWeight: '600' },
 
   // Grid
