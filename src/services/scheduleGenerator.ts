@@ -490,8 +490,10 @@ export async function generateScheduleFromWizard(
   result: WizardResult
 ): Promise<number> {
   const plan = buildPlan(result)
-  for (const session of plan) {
-    await createWorkoutSession(
+  // Alla pass skapas parallellt och oberoende — ett enskilt fel får inte
+  // hugga av resten av veckan (då står man med ett halvt schema)
+  const results = await Promise.allSettled(plan.map(session =>
+    createWorkoutSession(
       userId,
       session.name,
       session.weekdays,
@@ -500,6 +502,12 @@ export async function generateScheduleFromWizard(
       session.cardioType ? 'cardio' : 'gym',
       session.cardioType ?? null,
     )
+  ))
+  const failed = results
+    .map((r, i) => r.status === 'rejected' ? `${plan[i].name}: ${(r.reason as Error)?.message ?? 'okänt fel'}` : null)
+    .filter((x): x is string => x !== null)
+  if (failed.length > 0) {
+    throw new Error(`${failed.length} av ${plan.length} pass kunde inte skapas:\n${failed.join('\n')}`)
   }
   return plan.length
 }
