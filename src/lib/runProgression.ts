@@ -18,6 +18,22 @@ const INT_RE  = /^Start\s+(\d+)×(\d+)\s*m\s*·\s*\+(\d+)\s*per vecka\s*·\s*max
 const num = (s: string) => parseFloat(s.replace(',', '.'))
 const fmt = (v: number) => String(Math.round(v * 10) / 10).replace('.', ',')
 
+// Tempoförslagen förbättras försiktigt under planens gång — ca 1,5 s/km per
+// vecka, max 25 s totalt (≈ vad man realistiskt vinner under en plan).
+// Bara själva "ca X:XX(–Y:YY) /km"-biten röres, aldrig övrig text.
+const PACE_TOKEN_RE = /(ca\s+)([0-9]+:[0-9]{2}(?:–[0-9]+:[0-9]{2})?)(\s*\/km)/
+function improvePaceIn(str: string, week: number): string {
+  const gain = Math.min(25, Math.round(week * 1.5))
+  if (gain <= 0) return str
+  return str.replace(PACE_TOKEN_RE, (_, pre: string, range: string, post: string) => {
+    const shifted = range.replace(/(\d+):(\d{2})/g, (__, m: string, s: string) => {
+      const total = Math.max(180, parseInt(m, 10) * 60 + parseInt(s, 10) - gain)
+      return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
+    })
+    return `${pre}${shifted}${post}`
+  })
+}
+
 // ─── Strukturerad tolkning — pass-detaljskärmen bygger sitt upplägg av detta ──
 
 export interface RunTarget {
@@ -37,7 +53,8 @@ const PACE_RE = /·?\s*ca\s+([0-9]+:[0-9]{2}(?:–[0-9]+:[0-9]{2})?)\s*\/km/
 
 export function parseRunTarget(notes: string | null, week: number): RunTarget {
   const w = Math.max(0, week)
-  const paceM = notes?.match(PACE_RE) ?? null
+  const improved = notes ? improvePaceIn(notes, w) : null
+  const paceM = improved?.match(PACE_RE) ?? null
   const pace = paceM ? `${paceM[1]} /km` : null
   const strip = (s: string) => s.replace(PACE_RE, '').replace(/\s*·\s*$/, '').trim()
 
@@ -77,16 +94,17 @@ export function resolveRunProgression(notes: string | null, week: number): strin
   const d = notes.match(DIST_RE)
   if (d) {
     const val = Math.min(num(d[1]) + num(d[2]) * w, num(d[3]))
-    const suffix = d[4].trim()
+    const suffix = improvePaceIn(d[4].trim(), w)
     return `${fmt(val)} km${suffix ? ` ${suffix}` : ''} · vecka ${w + 1}`
   }
 
   const iv = notes.match(INT_RE)
   if (iv) {
     const count = Math.min(parseInt(iv[1], 10) + parseInt(iv[3], 10) * w, parseInt(iv[4], 10))
-    const suffix = iv[5].trim()
+    const suffix = improvePaceIn(iv[5].trim(), w)
     return `${count}×${iv[2]} m${suffix ? ` ${suffix}` : ''} · vecka ${w + 1}`
   }
 
-  return notes
+  // Icke-progressiva pass (återhämtning) — tempoförslaget förbättras ändå
+  return improvePaceIn(notes, w)
 }

@@ -94,21 +94,21 @@ const RUN_TABLES: Record<string, Record<RunExperience, RunLevelPlan>> = {
   },
   half: {
     beginner: {
-      long:  { start: 5, step: 1, max: 14 },
+      long:  { start: 5, step: 1, max: 16 },
       tempo: { start: 3, step: 0.5, max: 6 },
       interval: { dist: 800, start: 4, max: 7 },
       recovery: '25–35 min',
       extra: { name: 'Distanspass', spec: { start: 6, step: 1, max: 10 }, suffix: ' i jämn, behaglig fart' },
     },
     intermediate: {
-      long:  { start: 6, step: 1, max: 16 },
+      long:  { start: 6, step: 1, max: 18 },
       tempo: { start: 4, step: 1, max: 8 },
       interval: { dist: 800, start: 5, max: 8 },
       recovery: '30–40 min',
       extra: { name: 'Distanspass', spec: { start: 8, step: 1, max: 12 }, suffix: ' i jämn, behaglig fart' },
     },
     advanced: {
-      long:  { start: 8, step: 1.5, max: 20 },
+      long:  { start: 8, step: 1.5, max: 21 },
       tempo: { start: 5, step: 1, max: 10 },
       interval: { dist: 1000, start: 5, max: 8 },
       recovery: '35–45 min',
@@ -117,21 +117,21 @@ const RUN_TABLES: Record<string, Record<RunExperience, RunLevelPlan>> = {
   },
   marathon: {
     beginner: {
-      long:  { start: 8, step: 1, max: 22 },
+      long:  { start: 8, step: 1.5, max: 30 },
       tempo: { start: 4, step: 0.5, max: 8 },
       interval: { dist: 800, start: 4, max: 8 },
       recovery: '30–40 min',
       extra: { name: 'Maratonfart', spec: { start: 4, step: 1, max: 10 }, suffix: ' i maratonfart' },
     },
     intermediate: {
-      long:  { start: 10, step: 1.5, max: 28 },
+      long:  { start: 10, step: 1.5, max: 30 },
       tempo: { start: 5, step: 1, max: 10 },
       interval: { dist: 1000, start: 5, max: 8 },
       recovery: '30–45 min',
       extra: { name: 'Maratonfart', spec: { start: 5, step: 1, max: 12 }, suffix: ' i maratonfart' },
     },
     advanced: {
-      long:  { start: 12, step: 2, max: 32 },
+      long:  { start: 12, step: 2, max: 34 },
       tempo: { start: 6, step: 1, max: 12 },
       interval: { dist: 1000, start: 6, max: 10 },
       recovery: '40–50 min',
