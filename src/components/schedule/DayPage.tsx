@@ -172,10 +172,13 @@ export const DayPage = React.memo(function DayPage({
                     })
                     // Löpplanens progression: notes-formatet "Start … · max …"
                     // löses till den visade dagens planvecka — bläddrar man
-                    // framåt ser man hur passen växer vecka för vecka
+                    // framåt ser man hur passen växer vecka för vecka.
+                    // Hela dagar rundas först så sommartidsskiften inte
+                    // knuffar veckogränsen en timme fel
                     const planStart = new Date(s.created_at)
                     planStart.setHours(0, 0, 0, 0)
-                    const planWeek = Math.floor((date.getTime() - planStart.getTime()) / (7 * 86400000))
+                    const planDays = Math.round((date.getTime() - planStart.getTime()) / 86400000)
+                    const planWeek = Math.floor(planDays / 7)
                     const displayNotes = s.session_type === 'cardio'
                       ? resolveRunProgression(s.notes, planWeek)
                       : s.notes

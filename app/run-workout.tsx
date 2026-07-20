@@ -34,7 +34,8 @@ const fmtKm = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',')
 /** Passets delar utifrån typnamn + veckans mål — vår egen struktur, inte en mall */
 function buildParts(baseName: string, t: RunTarget): Part[] {
   const pace = t.pace ? `ca ${t.pace}` : undefined
-  if (baseName === 'Intervaller' && t.kind === 'interval') {
+  // Nycklas på målets sort, inte passnamnet — omdöpta pass behåller strukturen
+  if (t.kind === 'interval') {
     return [
       { tag: 'VÄRM UPP',  text: '1,5 km lugn jogg' },
       {

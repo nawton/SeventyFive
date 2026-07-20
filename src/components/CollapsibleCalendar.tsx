@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
-import { sessionActiveOn, type WorkoutSession } from '@/services/workoutSchedule'
+import { PLAN_WEEKS, type WorkoutSession } from '@/services/workoutSchedule'
 
 const GREEN       = '#3BE862'
 const SCREEN_W    = Dimensions.get('window').width
@@ -276,6 +276,20 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     const byWeekday: WorkoutSession[][] = Array.from({ length: 8 }, () => [])
     const onceByDate = new Map<string, WorkoutSession[]>()
     const skipByDate = new Map<string, Set<string>>()
+    // Aktivt datumintervall per pass, förberäknat som strängar — karusellen
+    // renderar ~150 celler och Date-matte per cell och pass gör den laggig
+    const rangeById = new Map<string, { start: string; end: string | null }>()
+    for (const sess of sessions) {
+      if (sess.weekdays.length > 0) {
+        const start = new Date(sess.created_at)
+        const end = new Date(start)
+        end.setDate(end.getDate() + PLAN_WEEKS * 7)
+        rangeById.set(sess.id, {
+          start: toLocalDateString(start),
+          end: sess.session_type === 'cardio' ? toLocalDateString(end) : null,
+        })
+      }
+    }
     for (const sess of sessions) {
       if (sess.name.startsWith('SKIP:')) {
         // Format: SKIP:YYYY-MM-DD:sessionId
@@ -296,15 +310,19 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
       }
       for (const wd of sess.weekdays) byWeekday[wd]?.push(sess)
     }
-    return { byWeekday, onceByDate, skipByDate }
+    return { byWeekday, onceByDate, skipByDate, rangeById }
   }, [sessions])
 
   function sessionInfo(date: Date) {
     const wd      = toWeekday(date)
     const dateStr = toLocalDateString(date)
     const skips   = sessionIndex.skipByDate.get(dateStr)
+    const inRange = (s: WorkoutSession) => {
+      const r = sessionIndex.rangeById.get(s.id)
+      return !r || (dateStr >= r.start && (r.end === null || dateStr < r.end))
+    }
     const daySess = [
-      ...sessionIndex.byWeekday[wd].filter(s => !skips?.has(s.id) && sessionActiveOn(s, dateStr)),
+      ...sessionIndex.byWeekday[wd].filter(s => !skips?.has(s.id) && inRange(s)),
       ...(sessionIndex.onceByDate.get(dateStr) ?? []),
     ]
     if (daySess.length === 0) return { allDone: false, hasGym: false, hasCardio: false }
