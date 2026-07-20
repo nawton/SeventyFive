@@ -22,13 +22,13 @@ interface PlannedSession {
 }
 
 // ─── Löpprogram ───────────────────────────────────────────────────────────────
-// Runna-stil: passtyper som börjar lågt och växer per genomfört pass —
+// Runna-stil: passtyper som börjar lågt och växer vecka för vecka —
 // progressionen skrivs i notes på formatet som resolveRunProgression läser
-// ("Start … · +… per vecka · max …") och nivån styrs av antal avklarade
-// pass, inte kalendern. Start, ökningstakt och tak följer erfarenhetsnivån
-// (samma försiktiga upptrappning som etablerade planer: långpasset ökar
-// ~0,5–2 km/vecka beroende på nivå och mål, i linje med 10 %-regeln).
-// Anger man en 5 km-testtid räknas tempozoner ut och skrivs in i passen.
+// ("Start … · +… per vecka · max …") och nivån följer kalendern: planvecka
+// räknat från att passet skapades. Start, ökningstakt och tak följer
+// erfarenhetsnivån (samma försiktiga upptrappning som etablerade planer:
+// långpasset ökar ~0,5–2 km/vecka beroende på nivå och mål, i linje med
+// 10 %-regeln). Anger man en 5 km-testtid skrivs tempozoner in i passen.
 
 export type RunExperience = 'beginner' | 'intermediate' | 'advanced'
 

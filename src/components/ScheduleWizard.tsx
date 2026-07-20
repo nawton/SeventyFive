@@ -597,7 +597,7 @@ export function ScheduleWizard({
                 <View style={s.summaryCard}>
                   <Ionicons name="bar-chart-outline" size={24} color={ORANGE} />
                   <Text style={s.summaryCardTitle}>Progression</Text>
-                  <Text style={s.summaryCardSub}>Ökar i takt med att du genomför passen</Text>
+                  <Text style={s.summaryCardSub}>Passen växer vecka för vecka i 16 veckor</Text>
                 </View>
               </View>
 

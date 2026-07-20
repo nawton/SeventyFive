@@ -54,15 +54,13 @@ export interface DayPageApi {
 // vars props faktiskt ändrats — inte alla monterade sidor i pagern.
 
 export const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, doneCounts, userId, dayAnimStyle, api,
+  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, userId, dayAnimStyle, api,
 }: {
   idx: number
   sessions: WorkoutSession[]
   exercises: Exercise[]
   checked: Record<string, boolean>
   progress: Record<string, number>
-  /** Genomföranden per pass — driver löpplanernas distansprogression */
-  doneCounts: Record<string, number>
   completed: Set<string>
   cardioStats: Record<string, { distanceKm: number; durationSeconds: number }>
   cardioLogs: CardioWorkout[]
@@ -173,9 +171,13 @@ export const DayPage = React.memo(function DayPage({
                       return { ex: progressed ? { ...ex, reps } : ex, progressed }
                     })
                     // Löpplanens progression: notes-formatet "Start … · max …"
-                    // löses till dagens mål utifrån antal genomförda pass
+                    // löses till den visade dagens planvecka — bläddrar man
+                    // framåt ser man hur passen växer vecka för vecka
+                    const planStart = new Date(s.created_at)
+                    planStart.setHours(0, 0, 0, 0)
+                    const planWeek = Math.floor((date.getTime() - planStart.getTime()) / (7 * 86400000))
                     const displayNotes = s.session_type === 'cardio'
-                      ? resolveRunProgression(s.notes, doneCounts[s.id] ?? 0)
+                      ? resolveRunProgression(s.notes, planWeek)
                       : s.notes
                     const displaySession = { ...s, name: sessionDisplayName(s), notes: displayNotes, exercises: scaled.map(x => x.ex) }
                     // Faktisk statistik för avklarade gympass (från loggade set)

@@ -23,16 +23,17 @@ export interface WorkoutSession {
   exercises: SessionExercise[]
 }
 
-// En träningsplan är inte evig: upprepande pass gäller i 16 veckor från att
-// de skapades och försvinner sedan från schemat — som en riktig träningsplan.
-// Engångspass (ONCE:) styrs av sitt eget datum och berörs inte.
+// En träningsplan är inte evig: upprepande pass gäller från dagen de skapades
+// och 16 veckor framåt — inga pass bakåt i tiden före planen fanns, och inga
+// eviga upprepningar. Engångspass (ONCE:) styrs av sitt eget datum.
 export const PLAN_WEEKS = 16
 
 export function sessionActiveOn(session: WorkoutSession, dateStr: string): boolean {
   if (session.weekdays.length === 0) return true
-  const end = new Date(session.created_at)
+  const start = new Date(session.created_at)
+  const end = new Date(start)
   end.setDate(end.getDate() + PLAN_WEEKS * 7)
-  return dateStr < toLocalDateString(end)
+  return dateStr >= toLocalDateString(start) && dateStr < toLocalDateString(end)
 }
 
 export async function getWorkoutSessions(userId: string): Promise<WorkoutSession[]> {
