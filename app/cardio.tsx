@@ -372,6 +372,12 @@ export default function CardioScreen() {
     idx: 0, segStartDistKm: 0, segStartElapsed: 0, completedWork: 0, done: false,
   })
 
+  // ── Auto-paus: klockan fryser vid stillastående (rödljus) och återupptas
+  // automatiskt vid rörelse. Distans fryser av sig själv (rörelsefiltret).
+  const [autoPaused, setAutoPaused] = useState(false)
+  const autoPausedRef = useRef(false)
+  const lastMoveTs = useRef(0)
+
   const selectedExercise = EXERCISES.find(e => e.key === exercise)!
   const calories = Math.round(distanceKm * 65)
 
@@ -521,6 +527,14 @@ export default function CardioScreen() {
         done: st.done,
       })
     }
+  }
+
+  // Tidssegment (vila, fartlek-faser) räknas på klockan — auto-paus där skulle
+  // frysa nedräkningen för evigt när man står still och vilar
+  function inDurationSegment(): boolean {
+    if (!guidedSegments) return false
+    const st = intervalRef.current
+    return !st.done && !!guidedSegments[st.idx]?.durationS
   }
 
   // Dev-genväg: långtryck på intervallbannern force-avancerar segmentet —
@@ -684,15 +698,37 @@ export default function CardioScreen() {
 
     setStatus('running')
     paceTs.current = 0
+    // Auto-pausens rörelsefönster börjar om vid varje start/återupptagning
+    lastMoveTs.current = Date.now()
+    autoPausedRef.current = false
+    setAutoPaused(false)
     timerRef.current = setInterval(() => {
-      setElapsed(s => {
-        const v = s + 1
-        elapsedRef.current = v
-        return v
-      })
+      // Auto-paus fryser klockan — allt annat i ticken rullar vidare
+      if (!autoPausedRef.current) {
+        setElapsed(s => {
+          const v = s + 1
+          elapsedRef.current = v
+          return v
+        })
+      }
       // Ingen GPS-fix på 8 sekunder → visa "ingen signal"
       if (lastFixTs.current > 0 && Date.now() - lastFixTs.current > 8000) {
         updateGps(-1)
+      }
+      // Stillastående i 5 s → auto-paus. Aldrig utan GPS-signal (tunnlar),
+      // aldrig innan rundan kommit igång, aldrig under tidssegment (vila)
+      if (
+        !autoPausedRef.current &&
+        gpsCatRef.current !== -1 &&
+        distanceRef.current > 0.02 &&
+        lastMoveTs.current > 0 &&
+        Date.now() - lastMoveTs.current > 5000 &&
+        !inDurationSegment()
+      ) {
+        autoPausedRef.current = true
+        setAutoPaused(true)
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+        speak('Autopaus.')
       }
       // Tidsmål uppnått — säg till en gång
       if (goalMinNum > 0 && !goalMinSaid.current && elapsedRef.current >= goalMinNum * 60) {
@@ -733,6 +769,15 @@ export default function CardioScreen() {
         if (lastCoord.current) {
           const d = haversineDistance(lastCoord.current, coord)
           if (d < 0.002) return
+
+          // Rörelse — auto-pausen släpper direkt
+          lastMoveTs.current = Date.now()
+          if (autoPausedRef.current) {
+            autoPausedRef.current = false
+            setAutoPaused(false)
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+            speak('Återupptar.')
+          }
 
           // Live pace (exponential moving average)
           const nowMs = Date.now()
@@ -807,6 +852,9 @@ export default function CardioScreen() {
     locationSub.current = null
     if (timerRef.current) clearInterval(timerRef.current)
     paceTs.current = 0 // reset so resume doesn't produce a stale pace
+    // Manuell paus tar över auto-pausen
+    autoPausedRef.current = false
+    setAutoPaused(false)
   }
 
   function cleanup() {
@@ -1014,6 +1062,11 @@ export default function CardioScreen() {
               {status === 'paused' && (
                 <View style={styles.pausedBadge}>
                   <Text style={styles.pausedBadgeText}>PAUSAD</Text>
+                </View>
+              )}
+              {status === 'running' && autoPaused && (
+                <View style={styles.pausedBadge}>
+                  <Text style={styles.pausedBadgeText}>AUTOPAUS</Text>
                 </View>
               )}
               {/* GPS-signal — så man förstår varför distansen står stilla */}
@@ -1276,6 +1329,11 @@ export default function CardioScreen() {
                     {status === 'paused' && (
                       <View style={styles.pausedBadge}>
                         <Text style={styles.pausedBadgeText}>PAUSAD</Text>
+                      </View>
+                    )}
+                    {status === 'running' && autoPaused && (
+                      <View style={styles.pausedBadge}>
+                        <Text style={styles.pausedBadgeText}>AUTOPAUS</Text>
                       </View>
                     )}
                   </View>
