@@ -30,6 +30,7 @@ import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { RunSegment } from '@/lib/runProgression'
+import { advanceEngine, createEngineState, spokenSegmentIntro } from '@/lib/intervalEngine'
 import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, getLastMapCoord, setLastMapCoord, type CardioStatsTheme, type VoiceSettings } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
@@ -358,19 +359,13 @@ export default function CardioScreen() {
   const smoothedPaceRef = useRef(0)
   const splitToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ── Intervallmotorns state — ref:en är auktoritativ i looparna (läser bara
-  // andra refs, aldrig state → inga stale closures). engineUi är en snapshot
-  // som ENDAST sätts vid segmentövergångar; per-sekund-progressen härleds i
-  // render från redan-tickande elapsed/distanceKm. Ingen motoråterhämtning
-  // vid app-omstart mitt i pass (samma villkor som fria rundor).
-  const intervalRef = useRef({
-    idx: 0,
-    segStartDistKm: 0,
-    segStartElapsed: 0,
-    restWarned: false,
-    completedWork: 0,
-    done: false,
-  })
+  // ── Intervallmotorns state — logiken bor i lib/intervalEngine (ren, testbar);
+  // här lever bara refs + översättningen av motorns händelser till röst/haptik.
+  // Ref:en är auktoritativ i looparna (läser bara andra refs, aldrig state →
+  // inga stale closures). engineUi är en snapshot som ENDAST sätts vid
+  // segmentövergångar; per-sekund-progressen härleds i render från redan-
+  // tickande elapsed/distanceKm. Ingen motoråterhämtning vid app-omstart.
+  const intervalRef = useRef(createEngineState())
   // Faktiskt resultat per avklarat arbetssegment — sparas med passet
   const intervalResults = useRef<CardioInterval[]>([])
   const [engineUi, setEngineUi] = useState({
@@ -499,100 +494,23 @@ export default function CardioScreen() {
     return parts.join(' ')
   }
 
-  // ── Intervallmotorn — guidar genom segmentupplägget (uppvärmning → arbete/
-  // vila → nedvarvning). Anropas från både 1 s-timern (tidssegment) och
-  // GPS-callbacken (distanssegment); idempotent så dubbla anrop i samma tick
-  // är ofarliga. Rör aldrig splitKm/splitTimes — km-splitsen lever sitt eget liv.
-
-  function segRemaining(seg: RunSegment): number {
+  // ── Intervallmotorn — logiken bor i lib/intervalEngine; här översätts dess
+  // händelser till röst + haptik och UI-snapshoten uppdateras vid segmentbyten.
+  // Anropas från både 1 s-timern (tidssegment) och GPS-callbacken (distans-
+  // segment). Rör aldrig splitKm/splitTimes — km-splitsen lever sitt eget liv.
+  function runIntervalEngine() {
+    if (!guidedSegments) return
     const st = intervalRef.current
-    return seg.distanceM
-      ? seg.distanceM - (distanceRef.current - st.segStartDistKm) * 1000
-      : (seg.durationS ?? 0) - (elapsedRef.current - st.segStartElapsed)
-  }
-
-  // "1,5 kilometer" / "600 meter" — för uppläsning
-  function spokenDist(m: number): string {
-    if (m >= 1000 && m % 100 === 0) {
-      return `${String(m / 1000).replace('.', ',')} kilometer`
-    }
-    return `${m} meter`
-  }
-
-  function spokenSegmentIntro(seg: RunSegment): string {
-    if (seg.kind === 'work') {
-      // Intervaller läses i meter ("Intervall 3 av 6. 1000 meter."),
-      // tempo/maratonfart/fartlek i kilometer
-      return seg.label.startsWith('Intervall')
-        ? `${seg.label}. ${seg.distanceM} meter.`
-        : `${seg.label}: ${spokenDist(seg.distanceM ?? 0)}.`
-    }
-    if (seg.durationS) {
-      return `${seg.label}: ${Math.round(seg.durationS / 60)} minuter i lugnt tempo.`
-    }
-    return `${seg.label}: ${spokenDist(seg.distanceM ?? 0)} i lugnt tempo.`
-  }
-
-  function transitionPhrase(finished: RunSegment, next: RunSegment): string {
-    if (next.kind === 'rest') {
-      return `Intervall klar. Vila ${next.durationS} sekunder.`
-    }
-    if (next.kind === 'cooldown') {
-      const prefix = finished.label.startsWith('Intervall')
-        ? 'Sista intervallen klar. '
-        : 'Bra jobbat! '
-      return `${prefix}${spokenSegmentIntro(next)}`
-    }
-    return spokenSegmentIntro(next)
-  }
-
-  function advanceIntervalEngine() {
-    const segs = guidedSegments
-    if (!segs) return
-    const st = intervalRef.current
-    if (st.done) return
-
-    // 10 s-varning innan vilan tar slut — löparen hinner göra sig redo
-    const cur = segs[st.idx]
-    if (cur.kind === 'rest' && cur.durationS && !st.restWarned) {
-      const remain = segRemaining(cur)
-      if (remain <= 10 && remain > 0) {
-        st.restWarned = true
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-        speak('Tio sekunder kvar. Gör dig redo.')
-      }
-    }
-
-    // Avancera — idx växer strikt, loopen terminerar vid segs.length
-    let changed = false
-    while (st.idx < segs.length && segRemaining(segs[st.idx]) <= 0) {
-      const finished = segs[st.idx]
-      if (finished.kind === 'work') {
-        st.completedWork += 1
-        // Faktiskt resultat — mäts INNAN segStart-markörerna nollställs.
-        // Distanssegment: måldistansen (triggern), faktisk tid från klockan.
-        // Tidssegment (fartlek): måltiden, faktisk distans från GPS:en.
-        const durationS = finished.durationS ?? Math.max(1, elapsedRef.current - st.segStartElapsed)
-        const distanceM = finished.distanceM ?? Math.round((distanceRef.current - st.segStartDistKm) * 1000)
-        intervalResults.current.push({
-          label: finished.label,
-          distanceM,
-          durationS,
-          paceSec: distanceM > 0 ? Math.round(durationS / (distanceM / 1000)) : 0,
-        })
-      }
-      st.idx += 1
-      st.segStartDistKm = distanceRef.current
-      st.segStartElapsed = elapsedRef.current
-      st.restWarned = false
-      changed = true
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      if (st.idx >= segs.length) {
-        st.done = true
-        speak('Passet är klart! Bra jobbat. Avsluta passet när du vill.')
-      } else {
-        speak(transitionPhrase(finished, segs[st.idx]))
-      }
+    const { changed, events } = advanceEngine(
+      st,
+      guidedSegments,
+      { distanceKm: distanceRef.current, elapsedS: elapsedRef.current },
+      intervalResults.current,
+    )
+    for (const ev of events) {
+      if (ev.type === 'restWarning') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+      else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      speak(ev.phrase)
     }
     if (changed) {
       setEngineUi({
@@ -614,7 +532,7 @@ export default function CardioScreen() {
     const seg = guidedSegments[st.idx]
     if (seg.distanceM) st.segStartDistKm = distanceRef.current - seg.distanceM / 1000
     else st.segStartElapsed = elapsedRef.current - (seg.durationS ?? 0)
-    advanceIntervalEngine()
+    runIntervalEngine()
   }
 
   function openStyleSheet() {
@@ -798,7 +716,7 @@ export default function CardioScreen() {
         }
       }
       // Guidade pass: tidssegment (vila, fartlek-värmning) drivs av klockan
-      if (guided) advanceIntervalEngine()
+      if (guided) runIntervalEngine()
     }, 1000)
     locationSub.current = await Location.watchPositionAsync(
       { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 3 },
@@ -865,7 +783,7 @@ export default function CardioScreen() {
           setDistanceKm(newKm)
 
           // Guidade pass: distanssegment drivs av just committad distans
-          if (guided) advanceIntervalEngine()
+          if (guided) runIntervalEngine()
         }
 
         lastCoord.current = coord
