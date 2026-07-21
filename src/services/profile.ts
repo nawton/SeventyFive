@@ -4,12 +4,17 @@ import { uploadImage } from '@/lib/storage'
 export interface ProfileData {
   name: string | null
   avatar_url: string | null
+  /** YYYY-MM-DD */
+  birth_date: string | null
+  gender: string | null
+  weight_kg: number | null
+  height_cm: number | null
 }
 
 export async function getProfile(userId: string): Promise<ProfileData | null> {
   const { data } = await supabase
     .from('profiles')
-    .select('name, avatar_url')
+    .select('name, avatar_url, birth_date, gender, weight_kg, height_cm')
     .eq('id', userId)
     .maybeSingle()
   return data
