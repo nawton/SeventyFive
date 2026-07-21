@@ -40,7 +40,6 @@ import { ORANGE, GREEN, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
-import { RecordsCard } from '@/components/RecordsCard'
 import type { UserChallengeWithLevel } from '@/types/database'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -298,11 +297,6 @@ export default function ProfileScreen() {
           </View>
           <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
         </TouchableOpacity>
-
-        {/* Rekord & medaljer — Runna Levels-stil (delad komponent) */}
-        <View style={{ marginBottom: 12 }}>
-          <RecordsCard />
-        </View>
 
         {/* Lägg till foto — grönt kvittoläge när dagens redan är taget */}
         {challenge && (hasTodayPhoto ? (

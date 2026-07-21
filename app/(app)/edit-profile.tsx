@@ -194,6 +194,55 @@ export default function EditProfileScreen() {
             <RecordsCard />
           </View>
 
+          {/* ── Inställningar — några riktiga, resten växer fram ── */}
+          <View style={styles.fieldSection}>
+            <Text style={styles.fieldLabel}>INSTÄLLNINGAR</Text>
+            <View style={styles.rowsCard}>
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => router.push('/anpassning' as never)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowIconBox}>
+                  <Ionicons name="options-outline" size={17} color={ORANGE} />
+                </View>
+                <Text style={styles.rowLabel}>Anpassning</Text>
+                <Text style={styles.rowValue} numberOfLines={1}>Karta, röst, enheter</Text>
+                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+
+              <View style={styles.rowDivider} />
+
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => router.push('/settings' as never)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowIconBox}>
+                  <Ionicons name="notifications-outline" size={17} color={ORANGE} />
+                </View>
+                <Text style={styles.rowLabel}>Notiser & påminnelser</Text>
+                <View style={{ flex: 1 }} />
+                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+
+              <View style={styles.rowDivider} />
+
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => Alert.alert('Kommer snart', 'Hitta lopp nära dig och koppla dem direkt till din träningsplan.')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowIconBox}>
+                  <Ionicons name="flag-outline" size={17} color={ORANGE} />
+                </View>
+                <Text style={styles.rowLabel}>Hitta ett lopp</Text>
+                <Text style={styles.rowValue} numberOfLines={1}>Kommer snart</Text>
+                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
         </ScrollView>
 
       {/* ── Avatar picker bottom sheet ── */}
