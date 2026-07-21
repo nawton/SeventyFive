@@ -27,7 +27,7 @@ import {
 } from '@/services/workoutSchedule'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
-import { SessionEditor, WEEKDAYS } from '@/components/SessionEditor'
+import { SessionEditor } from '@/components/SessionEditor'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE } from '@/lib/theme'
 
