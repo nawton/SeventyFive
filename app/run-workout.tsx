@@ -8,7 +8,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
-import { parseRunTarget, paceToSec, paceRangeForUnit, buildRunSegments, type RunTarget } from '@/lib/runProgression'
+import { parseRunTarget, paceToSec, paceRangeForUnit, buildRunSegments, RUN_RECIPE, type RunTarget } from '@/lib/runProgression'
 import { RUN_SESSION_INFO } from '@/services/scheduleGenerator'
 
 // =============================================================================
@@ -42,36 +42,36 @@ function buildParts(baseName: string, t: RunTarget, unit: UnitSystem): Part[] {
   // Nycklas på målets sort, inte passnamnet — omdöpta pass behåller strukturen
   if (t.kind === 'interval') {
     return [
-      { tag: 'VÄRM UPP',  text: `${dist(1.5)} lugn jogg` },
+      { tag: 'VÄRM UPP',  text: `${dist(RUN_RECIPE.warmupM / 1000)} lugn jogg` },
       {
         tag: 'PASS',
         text: `${t.reps}×${t.intervalM} m i hög fart`,
-        sub: [pace, '90 s gång- eller joggvila mellan varje'].filter(Boolean).join(' · '),
+        sub: [pace, `${RUN_RECIPE.restS} s gång- eller joggvila mellan varje`].filter(Boolean).join(' · '),
       },
-      { tag: 'VARVA NER', text: `${dist(1.5)} lugn jogg` },
+      { tag: 'VARVA NER', text: `${dist(RUN_RECIPE.cooldownIntervalM / 1000)} lugn jogg` },
     ]
   }
   if (t.kind === 'distance' && t.km != null) {
     const km = dist(t.km)
     if (baseName === 'Tempopass') {
       return [
-        { tag: 'VÄRM UPP',  text: `${dist(1.5)} lugn jogg` },
+        { tag: 'VÄRM UPP',  text: `${dist(RUN_RECIPE.warmupM / 1000)} lugn jogg` },
         { tag: 'PASS',      text: `${km} i tempofart`, sub: pace ?? 'Jämn, ansträngande fart — strax under tävlingstempo' },
-        { tag: 'VARVA NER', text: `${dist(1)} lugn jogg` },
+        { tag: 'VARVA NER', text: `${dist(RUN_RECIPE.cooldownTempoM / 1000)} lugn jogg` },
       ]
     }
     if (baseName === 'Maratonfart') {
       return [
-        { tag: 'VÄRM UPP',  text: `${dist(1.5)} lugn jogg` },
+        { tag: 'VÄRM UPP',  text: `${dist(RUN_RECIPE.warmupM / 1000)} lugn jogg` },
         { tag: 'PASS',      text: `${km} i maratonfart`, sub: pace ?? 'Din tänkta tävlingsfart' },
-        { tag: 'VARVA NER', text: `${dist(1)} lugn jogg` },
+        { tag: 'VARVA NER', text: `${dist(RUN_RECIPE.cooldownTempoM / 1000)} lugn jogg` },
       ]
     }
     if (baseName === 'Fartlek') {
       return [
-        { tag: 'VÄRM UPP',  text: '10 min lugn jogg' },
+        { tag: 'VÄRM UPP',  text: `${Math.round(RUN_RECIPE.fartlekWarmupS / 60)} min lugn jogg` },
         { tag: 'PASS',      text: `${km} fartlek`, sub: 'Växla fritt mellan snabbt och lugnt — lek med farten' },
-        { tag: 'VARVA NER', text: '5–10 min lugn jogg' },
+        { tag: 'VARVA NER', text: `${Math.round(RUN_RECIPE.fartlekCooldownS / 60)} min lugn jogg` },
       ]
     }
     if (baseName === 'Distanspass') {
@@ -101,7 +101,7 @@ function estimateMinutes(baseName: string, t: RunTarget): [number, number] | nul
     dLo = (t.km * lo) / 60; dHi = (t.km * hi) / 60
   } else if (t.kind === 'interval' && t.reps != null && t.intervalM != null) {
     const work = (t.reps * t.intervalM / 1000) * lo / 60
-    const rest = ((t.reps - 1) * 90) / 60
+    const rest = ((t.reps - 1) * RUN_RECIPE.restS) / 60
     dLo = work + rest; dHi = work + rest
   } else {
     return null

@@ -117,6 +117,21 @@ export function paceToSec(p: string): number {
 // → nedvarvning) som run-workout skickar till GPS-skärmen. Långpass och andra
 // enkla pass returnerar [] — de guidas av det vanliga distansmålet istället.
 
+// EN sanningskälla för passrecepten — används av både segmentbygget (motorn)
+// och run-workouts visningstext, så skärm och röst aldrig kan säga olika
+export const RUN_RECIPE = {
+  /** Uppvärmning/nedvarvning för intervallpass (m) */
+  warmupM: 1500,
+  cooldownIntervalM: 1500,
+  /** Nedvarvning för tempo/maratonfart (m) */
+  cooldownTempoM: 1000,
+  /** Vila mellan intervaller (s) */
+  restS: 90,
+  /** Fartlek: tidsbaserad värmning/nedvarvning (s) */
+  fartlekWarmupS: 600,
+  fartlekCooldownS: 300,
+} as const
+
 export interface RunSegment {
   kind: 'warmup' | 'work' | 'rest' | 'cooldown'
   /** Exakt en av distanceM/durationS per segment */
@@ -143,12 +158,12 @@ export function buildRunSegments(baseName: string, t: RunTarget): RunSegment[] {
     ({ kind: 'work', distanceM, label, ...(paceSecLo ? { paceSecLo, paceSecHi } : {}) })
 
   if (t.kind === 'interval' && t.reps && t.intervalM) {
-    const segs: RunSegment[] = [{ kind: 'warmup', distanceM: 1500, label: 'Uppvärmning' }]
+    const segs: RunSegment[] = [{ kind: 'warmup', distanceM: RUN_RECIPE.warmupM, label: 'Uppvärmning' }]
     for (let i = 1; i <= t.reps; i++) {
       segs.push(work(t.intervalM, `Intervall ${i} av ${t.reps}`))
-      if (i < t.reps) segs.push({ kind: 'rest', durationS: 90, label: 'Vila' })
+      if (i < t.reps) segs.push({ kind: 'rest', durationS: RUN_RECIPE.restS, label: 'Vila' })
     }
-    segs.push({ kind: 'cooldown', distanceM: 1500, label: 'Nedvarvning' })
+    segs.push({ kind: 'cooldown', distanceM: RUN_RECIPE.cooldownIntervalM, label: 'Nedvarvning' })
     return segs
   }
 
@@ -156,16 +171,16 @@ export function buildRunSegments(baseName: string, t: RunTarget): RunSegment[] {
     const workM = Math.round(t.km * 1000)
     if (baseName === 'Tempopass' || baseName === 'Maratonfart') {
       return [
-        { kind: 'warmup', distanceM: 1500, label: 'Uppvärmning' },
+        { kind: 'warmup', distanceM: RUN_RECIPE.warmupM, label: 'Uppvärmning' },
         work(workM, baseName === 'Tempopass' ? 'Tempo' : 'Maratonfart'),
-        { kind: 'cooldown', distanceM: 1000, label: 'Nedvarvning' },
+        { kind: 'cooldown', distanceM: RUN_RECIPE.cooldownTempoM, label: 'Nedvarvning' },
       ]
     }
     if (baseName === 'Fartlek') {
       return [
-        { kind: 'warmup', durationS: 600, label: 'Uppvärmning' },
+        { kind: 'warmup', durationS: RUN_RECIPE.fartlekWarmupS, label: 'Uppvärmning' },
         work(workM, 'Fartlek'),
-        { kind: 'cooldown', durationS: 300, label: 'Nedvarvning' },
+        { kind: 'cooldown', durationS: RUN_RECIPE.fartlekCooldownS, label: 'Nedvarvning' },
       ]
     }
   }
