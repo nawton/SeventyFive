@@ -40,8 +40,7 @@ import { ORANGE, GREEN, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
-import { getAchievementSummary, type AchievementSummary } from '@/services/achievementSummary'
-import { MedalBadge } from '@/components/MedalBadge'
+import { RecordsCard } from '@/components/RecordsCard'
 import type { UserChallengeWithLevel } from '@/types/database'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -85,7 +84,6 @@ export default function ProfileScreen() {
   const [composerUri, setComposerUri] = useState<string | null>(null)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const [compareOpen, setCompareOpen] = useState(false)
-  const [achSummary, setAchSummary] = useState<AchievementSummary | null>(null)
   const [refreshing, setRefreshing]   = useState(false)
   const refreshingRef = useRef(false)
   const pullArmedRef  = useRef(true)
@@ -162,9 +160,6 @@ export default function ProfileScreen() {
         console.warn('[profile] kunde inte hämta foton:', photoItems.reason?.message)
       }
 
-      // Medalj-/rekordsiffrorna till raden — bäst-effort, blockerar inget
-      const chId = active.status === 'fulfilled' ? active.value?.id ?? null : null
-      getAchievementSummary(uid, chId).then(setAchSummary).catch(() => {})
     } finally {
       setLoading(false)
     }
@@ -304,27 +299,10 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
         </TouchableOpacity>
 
-        {/* Rekord & medaljer — Runna Levels-stil: överlappande medaljer + stor rubrik */}
-        <TouchableOpacity
-          style={s.recordsCard}
-          onPress={() => router.push('/records')}
-          activeOpacity={0.85}
-        >
-          <View style={s.medalStack}>
-            <View style={s.medalBack}><MedalBadge tier="bronze" unlocked size={46} /></View>
-            <View style={s.medalMid}><MedalBadge tier="silver" unlocked size={50} /></View>
-            <View style={s.medalFront}><MedalBadge tier="gold" unlocked size={56} /></View>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.recordsTitle}>Rekord & medaljer</Text>
-            <Text style={s.recordsSub}>
-              {achSummary
-                ? `${achSummary.medalsUnlocked} av ${achSummary.medalsTotal} medaljer · ${achSummary.recordCount} rekord`
-                : 'Samla poäng. Nå dina mål.'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
-        </TouchableOpacity>
+        {/* Rekord & medaljer — Runna Levels-stil (delad komponent) */}
+        <View style={{ marginBottom: 12 }}>
+          <RecordsCard />
+        </View>
 
         {/* Lägg till foto — grönt kvittoläge när dagens redan är taget */}
         {challenge && (hasTodayPhoto ? (
@@ -514,19 +492,6 @@ const s = StyleSheet.create({
   },
   avatarInitial: { color: '#000', fontWeight: '700' },
 
-  // Rekord & medaljer — Runna Levels-känsla: stort kort med medaljtrio
-  recordsCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: CARD, borderRadius: 18,
-    borderWidth: 1, borderColor: BORDER,
-    paddingVertical: 18, paddingHorizontal: 16, marginBottom: 12,
-  },
-  medalStack: { width: 96, height: 56, justifyContent: 'center' },
-  medalBack:  { position: 'absolute', left: 0, opacity: 0.9 },
-  medalMid:   { position: 'absolute', left: 22, zIndex: 1 },
-  medalFront: { position: 'absolute', left: 44, zIndex: 2 },
-  recordsTitle: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
-  recordsSub:   { color: TEXT_SECONDARY, fontSize: 13, marginTop: 3, lineHeight: 18 },
 
   addButton: {
     flexDirection: 'row',

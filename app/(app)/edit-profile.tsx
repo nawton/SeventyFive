@@ -20,6 +20,7 @@ import { compressImage } from '@/lib/image'
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { SubscriptionCard } from '@/components/SubscriptionCard'
+import { RecordsCard } from '@/components/RecordsCard'
 
 const AVATAR_SECTIONS = [
   { label: 'Träning',    items: ['💪', '🏋️', '🏃', '🧘', '🥊', '🚴', '🤸', '🏊'] },
@@ -145,7 +146,7 @@ export default function EditProfileScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
         </TouchableOpacity>
-        <Text style={styles.title}>Redigera profil</Text>
+        <Text style={styles.title}>Profil</Text>
         <TouchableOpacity style={styles.checkBtn} onPress={handleSave} disabled={saving} activeOpacity={0.7}>
           {saving
             ? <ActivityIndicator color={ORANGE} size="small" />
@@ -173,57 +174,24 @@ export default function EditProfileScreen() {
             </View>
             <Text style={styles.previewName}>{name || 'Ditt namn'}</Text>
             <Text style={styles.previewEmail}>{email}</Text>
-          </View>
-
-          {/* ── Konto-rader ── */}
-          <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>KONTO</Text>
-            <View style={styles.rowsCard}>
-              <TouchableOpacity
-                style={styles.row}
-                onPress={() => router.push('/edit-name')}
-                activeOpacity={0.7}
-              >
-                <View style={styles.rowIconBox}>
-                  <Ionicons name="person-outline" size={17} color={ORANGE} />
-                </View>
-                <Text style={styles.rowLabel}>Visningsnamn</Text>
-                <Text style={styles.rowValue} numberOfLines={1}>{name || 'Lägg till'}</Text>
-                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
-              </TouchableOpacity>
-
-              <View style={styles.rowDivider} />
-
-              <TouchableOpacity
-                style={styles.row}
-                onPress={() => router.push('/change-password?from=profile' as never)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.rowIconBox}>
-                  <Ionicons name="lock-closed-outline" size={17} color={ORANGE} />
-                </View>
-                <Text style={styles.rowLabel}>Lösenord</Text>
-                <Text style={styles.rowValue} numberOfLines={1}>••••••••</Text>
-                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
-              </TouchableOpacity>
-
-              <View style={styles.rowDivider} />
-
-              <View style={[styles.row, { opacity: 0.55 }]}>
-                <View style={[styles.rowIconBox, { backgroundColor: BORDER }]}>
-                  <Ionicons name="mail-outline" size={17} color={TEXT_SECONDARY} />
-                </View>
-                <Text style={styles.rowLabel}>E-post</Text>
-                <Text style={styles.rowValue} numberOfLines={1}>{email}</Text>
-                <Ionicons name="lock-closed-outline" size={14} color={TEXT_SECONDARY} />
-              </View>
-            </View>
+            <TouchableOpacity
+              style={styles.editPill}
+              onPress={() => router.push('/account' as never)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.editPillText}>REDIGERA PROFIL</Text>
+            </TouchableOpacity>
           </View>
 
           {/* ── Abonnemang — premiumbannern leder till paywallen ── */}
           <View style={styles.fieldSection}>
             <Text style={styles.fieldLabel}>ABONNEMANG</Text>
             <SubscriptionCard name={name} />
+          </View>
+
+          {/* ── Rekord & medaljer — Runna Levels-stil ── */}
+          <View style={styles.fieldSection}>
+            <RecordsCard />
           </View>
 
         </ScrollView>
@@ -354,6 +322,11 @@ const styles = StyleSheet.create({
   },
   previewName:  { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '700', marginTop: 4 },
   previewEmail: { color: TEXT_SECONDARY, fontSize: 13 },
+  editPill: {
+    marginTop: 12, backgroundColor: '#E9EDF2',
+    borderRadius: 24, paddingHorizontal: 26, paddingVertical: 11,
+  },
+  editPillText: { color: '#0B0B0D', fontSize: 13, fontWeight: '800', letterSpacing: 1 },
 
   // Fields
   fieldSection: { paddingHorizontal: 20, gap: 8 },
