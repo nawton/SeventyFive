@@ -158,6 +158,11 @@ export const s = StyleSheet.create({
   paceWeekRow:  { flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 36 },
   paceWeekLbl:  { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
 
+  // Intervalltrend
+  ivTrendHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  ivTrendDelta:   { color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI },
+  ivTrendHeadline:{ color: TEXT_PRIMARY, fontSize: 24, fontFamily: NUM_FONT, marginTop: 4, marginBottom: 6, fontVariant: ['tabular-nums'] as const },
+
   // Sessioner-listan (Apple Fitness-stil)
   sessMonth: { color: TEXT_PRIMARY, fontSize: 20, fontFamily: 'Nunito_800ExtraBold', marginTop: 8 },
   sessRow: {

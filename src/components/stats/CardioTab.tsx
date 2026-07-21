@@ -15,6 +15,7 @@ import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } fr
 import { effortColor } from '@/components/EffortRating'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { buildIntervalTrend } from '@/lib/intervalTrend'
 import type { CardioWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
 import {
@@ -168,6 +169,8 @@ export function CardioTab({
 
   // Tempoutvecklingen räknas alltid på ALLA pass, oavsett periodfilter
   const weeklyBars  = useMemo(() => buildWeeklyBars(workouts), [workouts])
+  // Intervalltrend över hela historiken — oberoende av periodfiltret
+  const ivTrend     = useMemo(() => buildIntervalTrend(workouts), [workouts])
 
   // Extra periodstatistik till Träningsdetaljer
   const avgDistKm      = cardioW.length ? totalKm / cardioW.length : 0
@@ -464,6 +467,80 @@ export function CardioTab({
                     ))}
                   </View>
                 </TouchableOpacity>
+                </>
+              )
+            })()}
+
+            {/* Intervalltrend — guidade pass sparar per-intervall-tempo;
+                här syns utvecklingen pass för pass: "5:10 → 4:52" */}
+            {ivTrend && (() => {
+              const CH_W = STATS_SCREEN_W - 84
+              const CH_H = 110
+              const vals = ivTrend.points.map(p => paceForUnit(p.paceSec, unit))
+              const minV = Math.min(...vals)
+              const maxV = Math.max(...vals)
+              const span = Math.max(maxV - minV, 1)
+              const px = (i: number) =>
+                vals.length === 1 ? CH_W / 2 : (i / (vals.length - 1)) * (CH_W - 16) + 8
+              // Lägre tempo = bättre → snabbast överst, som tempografen
+              const py = (v: number) => 12 + ((v - minV) / span) * (CH_H - 24)
+              const pts = vals.map((v, i) => `${px(i)},${py(v)}`).join(' ')
+              const distLbl = ivTrend.distanceM >= 1000
+                ? `${String(ivTrend.distanceM / 1000).replace('.', ',')} km`
+                : `${ivTrend.distanceM} m`
+              return (
+                <>
+                <View style={s.sectionHeadRow}>
+                  <Text style={[s.sectionHead, s.sectionHeadInline]}>Intervaller</Text>
+                </View>
+                <View style={[s.card, s.cardPlain]}>
+                  <View style={s.ivTrendHeadRow}>
+                    <Text style={[s.cardSub, { marginTop: 0, flex: 1 }]}>
+                      {distLbl}-intervaller · snitt per pass
+                    </Text>
+                    <Text style={[
+                      s.ivTrendDelta,
+                      ivTrend.improvementSec > 0 && { color: GREEN },
+                    ]}>
+                      {ivTrend.improvementSec > 0
+                        ? `−${ivTrend.improvementSec} s snabbare`
+                        : ivTrend.improvementSec < 0
+                          ? `+${-ivTrend.improvementSec} s`
+                          : 'oförändrat'}
+                    </Text>
+                  </View>
+                  <Text style={s.ivTrendHeadline}>
+                    {fmtPace(paceForUnit(ivTrend.first, unit))} → {fmtPace(paceForUnit(ivTrend.last, unit))}
+                    <Text style={s.dtlUnit}> /{unitLabel}</Text>
+                  </Text>
+                  <View style={s.paceChartRow}>
+                    <View style={s.paceAxis}>
+                      <Text style={s.paceAxisLbl}>{fmtPace(minV)}</Text>
+                      <Text style={s.paceAxisLbl}>{fmtPace(maxV)}</Text>
+                    </View>
+                    <Svg width={CH_W} height={CH_H}>
+                      {[0.25, 0.5, 0.75].map(f => (
+                        <SvgLine
+                          key={f}
+                          x1={0} x2={CH_W}
+                          y1={12 + f * (CH_H - 24)} y2={12 + f * (CH_H - 24)}
+                          stroke="rgba(255,255,255,0.06)" strokeWidth={1}
+                        />
+                      ))}
+                      <Polyline points={pts} fill="none" stroke={BLUE} strokeWidth={2.5} strokeLinejoin="round" />
+                      {vals.map((v, i) => (
+                        <Circle key={i} cx={px(i)} cy={py(v)} r={4} fill={BLUE} stroke={CARD} strokeWidth={2} />
+                      ))}
+                    </Svg>
+                  </View>
+                  <View style={s.paceWeekRow}>
+                    {ivTrend.points.map((p, i) => (
+                      <Text key={i} style={s.paceWeekLbl}>
+                        {new Date(p.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'numeric' })}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
                 </>
               )
             })()}

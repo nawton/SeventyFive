@@ -31,7 +31,8 @@ import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { RunSegment } from '@/lib/runProgression'
 import { advanceEngine, createEngineState, spokenSegmentIntro } from '@/lib/intervalEngine'
-import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, getLastMapCoord, setLastMapCoord, type CardioStatsTheme, type VoiceSettings } from '@/lib/prefs'
+import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, getLastMapCoord, setLastMapCoord, getBodyWeightKg, type CardioStatsTheme, type VoiceSettings } from '@/lib/prefs'
+import { estimateCalories, DEFAULT_WEIGHT_KG } from '@/lib/calories'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -182,6 +183,12 @@ export default function CardioScreen() {
   }, [])
   function speak(text: string) {
     if (!voiceRef.current) return
+    Speech.speak(text, { language: 'sv-SE' })
+  }
+  /** Intervallguidningens röst — egen toggle, oberoende av huvudrösten.
+      Man kan stänga av km-rapporterna och ändå höra "Vila 90 sekunder". */
+  function speakGuide(text: string) {
+    if (!voiceSetRef.current.say.intervals) return
     Speech.speak(text, { language: 'sv-SE' })
   }
   const goalKmSaid = useRef(false)
@@ -337,7 +344,11 @@ export default function CardioScreen() {
   const lastMoveTs = useRef(0)
 
   const selectedExercise = EXERCISES.find(e => e.key === exercise)!
-  const calories = Math.round(distanceKm * 65)
+  // MET-baserade kalorier: aktivitet × fart × kroppsvikt — inte samma schablon
+  // för en promenad som för intervaller. Vikten sätts i cardio-inställningarna.
+  const [weightKg, setWeightKg] = useState(DEFAULT_WEIGHT_KG)
+  useEffect(() => { getBodyWeightKg().then(setWeightKg) }, [])
+  const calories = estimateCalories(exercise, distanceKm, elapsed, weightKg)
 
   // En gemensam sidvariabel (0 karta · 1 detaljvy · 2 splits) — sidorna
   // glider in från sidan i stället för att poppa upp
@@ -474,7 +485,7 @@ export default function CardioScreen() {
     for (const ev of events) {
       if (ev.type === 'restWarning') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
       else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      speak(ev.phrase)
+      speakGuide(ev.phrase)
     }
     if (changed) {
       setEngineUi({
@@ -642,7 +653,7 @@ export default function CardioScreen() {
     // Talat besked vid start (med mål/första segmentet) respektive återupptagning
     if (elapsedRef.current === 0) {
       if (guidedSegments) {
-        speak(`${selectedExercise.label} startad. ${spokenSegmentIntro(guidedSegments[0])}`)
+        speakGuide(`${selectedExercise.label} startad. ${spokenSegmentIntro(guidedSegments[0])}`)
       } else {
         const kmTxt = goalKmNum > 0
           ? `${(goalKmNum % 1 === 0 ? String(goalKmNum) : goalKmNum.toFixed(1).replace('.', ','))} kilometer`
@@ -1668,6 +1679,19 @@ export default function CardioScreen() {
                   <Switch
                     value={voiceOn}
                     onValueChange={setVoiceEnabled}
+                    trackColor={{ false: '#333', true: CARDIO_ACCENT }}
+                    thumbColor="#fff"
+                  />
+                </View>
+                {/* Guidningen har egen röst — kan vara på fast statistiken är av */}
+                <View style={styles.voiceRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.voiceRowLabel}>Intervallguidning</Text>
+                    <Text style={styles.voiceRowValue}>Segmentbyten och vila på guidade pass</Text>
+                  </View>
+                  <Switch
+                    value={voiceSet.say.intervals}
+                    onValueChange={on => updateVoiceSet({ say: { intervals: on } })}
                     trackColor={{ false: '#333', true: CARDIO_ACCENT }}
                     thumbColor="#fff"
                   />

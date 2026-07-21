@@ -51,13 +51,16 @@ export interface VoiceSettings {
     curPace: boolean
     splitPace: boolean
     summary: boolean
+    /** Intervallguidningens röst (segmentbyten, vila) — oberoende av
+        huvudtogglen: man kan slippa km-rapporter men ändå höra guidningen */
+    intervals: boolean
   }
 }
 
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   distEvery: 1,
   timeEvery: 0,
-  say: { time: true, distance: true, avgPace: true, curPace: false, splitPace: true, summary: true },
+  say: { time: true, distance: true, avgPace: true, curPace: false, splitPace: true, summary: true, intervals: true },
 }
 
 export async function getVoiceSettings(): Promise<VoiceSettings> {
@@ -262,4 +265,20 @@ export async function getRaceDate(): Promise<string | null> {
 export async function setRaceDate(date: string | null): Promise<void> {
   if (date) await AsyncStorage.setItem('raceDate', date).catch(() => {})
   else await AsyncStorage.removeItem('raceDate').catch(() => {})
+}
+
+// Kroppsvikt (kg) — bara för kaloriberäkningen i cardio. Sätts i
+// cardio-inställningarna; 75 kg tills användaren angett något.
+export async function getBodyWeightKg(): Promise<number> {
+  try {
+    const v = Number(await AsyncStorage.getItem('bodyWeightKg'))
+    return Number.isFinite(v) && v >= 30 && v <= 250 ? v : 75
+  } catch {
+    return 75
+  }
+}
+
+export async function setBodyWeightKg(kg: number): Promise<void> {
+  if (!Number.isFinite(kg) || kg < 30 || kg > 250) return
+  await AsyncStorage.setItem('bodyWeightKg', String(Math.round(kg))).catch(() => {})
 }

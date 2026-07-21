@@ -268,6 +268,28 @@ describe('simulerat guidat pass', () => {
     expect(spoken()).toContain('Passet är klart')
   })
 
+  it('guidningen hörs även när huvudrösten är AV', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage')
+    await AsyncStorage.setItem('cardioVoiceCues', 'off')   // km-rapporter tystade
+    await startRun({ name: 'interval', segments: JSON.stringify(SEGS) })
+    run(20, 5)                                    // värmning klar → intervall 1
+    expect(spoken()).toContain('Intervall 1 av 2')
+    await AsyncStorage.removeItem('cardioVoiceCues')
+  })
+
+  it('intervallguidningens egen toggle tystar bara guidningen', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage')
+    await AsyncStorage.setItem('voiceSettings', JSON.stringify({
+      distEvery: 1, timeEvery: 0,
+      say: { time: true, distance: true, avgPace: true, curPace: false, splitPace: true, summary: true, intervals: false },
+    }))
+    await startRun({ name: 'interval', segments: JSON.stringify(SEGS) })
+    run(20, 5)                                    // värmning klar — tyst övergång
+    expect(spoken()).not.toContain('Intervall 1 av 2')
+    expect(screen.getAllByText('Intervall 1 av 2').length).toBeGreaterThan(0) // bannern guidar ändå
+    await AsyncStorage.removeItem('voiceSettings')
+  })
+
   it('autopausen håller tassarna borta från vilans nedräkning', async () => {
     await startRun({ name: 'interval', segments: JSON.stringify(SEGS) })
     run(20, 5)                                    // värmning klar

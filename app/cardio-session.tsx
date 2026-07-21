@@ -27,7 +27,7 @@ import {
   getUnitSystem, setUnitSystem, toDisplayDistance, fromDisplayDistance,
   distanceUnitLabel, paceForUnit, type UnitSystem,
 } from '@/lib/units'
-import { getCardioStatsTheme, setCardioStatsTheme, getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, type CardioStatsTheme } from '@/lib/prefs'
+import { getCardioStatsTheme, setCardioStatsTheme, getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, getBodyWeightKg, setBodyWeightKg, type CardioStatsTheme } from '@/lib/prefs'
 
 const SCREEN_W    = Dimensions.get('window').width
 const GOAL_PAGE_W = SCREEN_W - 40   // scrollens padding är 20 per sida
@@ -122,6 +122,8 @@ export default function CardioSessionScreen() {
   const [unit, setUnit]       = useState<UnitSystem>('metric')
   const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
   const [voiceOn, setVoiceOn] = useState(true)
+  // Kroppsvikt (kg) — bara för kaloriberäkningen under passet
+  const [weightStr, setWeightStr] = useState('75')
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Egen inmatning: vilken siffra som redigeras + fältets text
   const [editTarget, setEditTarget] = useState<'dist' | 'time' | null>(null)
@@ -131,6 +133,7 @@ export default function CardioSessionScreen() {
     getUnitSystem().then(setUnit)
     getCardioStatsTheme().then(setStatsTheme)
     getVoiceCues().then(setVoiceOn)
+    getBodyWeightKg().then(kg => setWeightStr(String(kg)))
     // Förifyll med senaste målet för den här passtypen
     getCardioGoal(type).then(g => {
       if (!g) return
@@ -473,9 +476,28 @@ export default function CardioSessionScreen() {
               ))}
             </View>
 
+            <Text style={s.settingLabel}>VIKT — FÖR KALORIBERÄKNINGEN</Text>
+            <View style={s.weightRow}>
+              <TextInput
+                style={s.weightInput}
+                value={weightStr}
+                onChangeText={v => setWeightStr(v.replace(/[^0-9]/g, '').slice(0, 3))}
+                keyboardType="number-pad"
+                returnKeyType="done"
+                placeholder="75"
+                placeholderTextColor="rgba(255,255,255,0.25)"
+              />
+              <Text style={s.weightUnit}>kg</Text>
+            </View>
+
             <TouchableOpacity
               style={[s.editSaveBtn, { flex: 0, alignSelf: 'stretch' }]}
-              onPress={() => { Haptics.selectionAsync(); setSettingsOpen(false) }}
+              onPress={() => {
+                Haptics.selectionAsync()
+                const kg = parseInt(weightStr, 10)
+                if (Number.isFinite(kg)) setBodyWeightKg(kg).catch(() => {})
+                setSettingsOpen(false)
+              }}
               activeOpacity={0.85}
             >
               <Ionicons name="checkmark" size={17} color="#fff" />
@@ -592,6 +614,14 @@ const s = StyleSheet.create({
   editSaveText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   settingLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
+  weightRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  weightInput: {
+    flex: 1, paddingVertical: 12, paddingHorizontal: 14,
+    backgroundColor: BG, borderRadius: 12, borderWidth: 1, borderColor: BORDER,
+    color: TEXT_PRIMARY, fontSize: 18, fontFamily: NUM_FONT,
+    fontVariant: ['tabular-nums'],
+  },
+  weightUnit: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
   unitRow: { flexDirection: 'row', gap: 8 },
   unitBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 12,
