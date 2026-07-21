@@ -6,10 +6,10 @@ import Animated, {
 } from 'react-native-reanimated'
 import type { TaskItem } from '@/services/dailyLog'
 import type { TaskType } from '@/types/database'
+import { ORANGE } from '@/lib/theme'
 
 const { width: SW } = Dimensions.get('window')
 
-const ORANGE      = '#FFA817'
 const CARD_BG     = '#131315'
 const CARD_BORDER = '#1E1E21'
 
