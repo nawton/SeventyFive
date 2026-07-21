@@ -4,7 +4,7 @@ import {
   ScrollView, Modal, Dimensions, TextInput,
   KeyboardAvoidingView, Platform,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
@@ -37,11 +37,12 @@ const MUSCLE_GROUPS = [
   { key: 'core',      label: 'Mage',    color: '#FD79A8' },
 ]
 
+// Distanserna som stora sifferkort — siffran ÄR identiteten, Runna-stil
 const RUN_OPTIONS = [
-  { key: '5k',       label: '5K',          sub: 'Perfekt startpunkt',      icon: 'walk-outline'     },
-  { key: '10k',      label: '10K',          sub: 'Nästa nivå',              icon: 'fitness-outline'  },
-  { key: 'half',     label: 'Halvmarathon', sub: '21.1 km',                icon: 'flag-outline'     },
-  { key: 'marathon', label: 'Marathon',     sub: '42.2 km, den ultimata', icon: 'trophy-outline'   },
+  { key: '5k',       num: '5',    label: '5K',           sub: 'Perfekt startpunkt' },
+  { key: '10k',      num: '10',   label: '10K',          sub: 'Nästa nivå'         },
+  { key: 'half',     num: '21,1', label: 'Halvmarathon', sub: 'Halva klassikern'   },
+  { key: 'marathon', num: '42,2', label: 'Marathon',     sub: 'Den ultimata'       },
 ] as const
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ type Goal        = 'running' | 'muscle' | null
 type RunDistance = '5k' | '10k' | 'half' | 'marathon' | null
 type MusclePlan  = 'everything' | 'focus' | null
 type Limitation  = 'knee' | 'back' | 'shoulder'
-type Step        = 'goal' | 'running-distance' | 'running-profile' | 'muscle-plan' | 'muscle-focus' | 'days' | 'limitations' | 'summary'
+type Step        = 'goal' | 'running-distance' | 'running-profile' | 'running-test' | 'running-race' | 'muscle-plan' | 'muscle-focus' | 'days' | 'limitations' | 'summary'
 
 export type WizardResult = {
   goal:        Goal
@@ -69,10 +70,12 @@ export type WizardResult = {
   raceDate:      string | null
 }
 
+// MaterialCommunityIcons — egna motiv för wizarden så den inte återanvänder
+// samma Ionicons som resten av appen
 const EXPERIENCE_OPTIONS: Array<{ key: RunExperience; label: string; sub: string; icon: string }> = [
-  { key: 'beginner',     label: 'Nybörjare',    sub: 'Ny till löpning eller springer sporadiskt',      icon: 'leaf-outline' },
-  { key: 'intermediate', label: 'Van motionär', sub: 'Springer regelbundet, 1–2 pass i veckan',        icon: 'walk-outline' },
-  { key: 'advanced',     label: 'Erfaren',      sub: 'Tränar strukturerad löpning flera gånger i veckan', icon: 'rocket-outline' },
+  { key: 'beginner',     label: 'Nybörjare',    sub: 'Ny till löpning eller springer sporadiskt',      icon: 'sprout' },
+  { key: 'intermediate', label: 'Van motionär', sub: 'Springer regelbundet, 1–2 pass i veckan',        icon: 'run' },
+  { key: 'advanced',     label: 'Erfaren',      sub: 'Tränar strukturerad löpning flera gånger i veckan', icon: 'podium-gold' },
 ]
 
 const WEEKDAY_OPTIONS = [
@@ -86,13 +89,13 @@ const WEEKDAY_OPTIONS = [
 ] as const
 
 const LIMITATION_OPTIONS: Array<{ key: Limitation; label: string; icon: string }> = [
-  { key: 'knee',     label: 'Knäproblem',   icon: 'walk-outline' },
-  { key: 'back',     label: 'Ryggproblem',  icon: 'body-outline' },
-  { key: 'shoulder', label: 'Axelproblem',  icon: 'barbell-outline' },
+  { key: 'knee',     label: 'Knäproblem',   icon: 'bandage' },
+  { key: 'back',     label: 'Ryggproblem',  icon: 'human-cane' },
+  { key: 'shoulder', label: 'Axelproblem',  icon: 'arm-flex' },
 ]
 
-// Stegtitlarna i sidfotens räknare — flödet beräknas dynamiskt per mål
-const RUN_FLOW: Step[]    = ['goal', 'running-distance', 'running-profile', 'days', 'limitations', 'summary']
+// Stegflödena — ETT beslut per skärm (Runna-känslan), beräknas per mål
+const RUN_FLOW: Step[]    = ['goal', 'running-distance', 'running-profile', 'running-test', 'running-race', 'days', 'limitations', 'summary']
 const MUSCLE_FLOW: Step[] = ['goal', 'muscle-plan', 'days', 'limitations', 'summary']
 const FOCUS_FLOW: Step[]  = ['goal', 'muscle-plan', 'muscle-focus', 'days', 'limitations', 'summary']
 
@@ -153,10 +156,12 @@ export function ScheduleWizard({
     if (step === 'goal')              { handleClose(); return }
     if (step === 'running-distance')  { setStep('goal'); return }
     if (step === 'running-profile')   { setStep('running-distance'); return }
+    if (step === 'running-test')      { setStep('running-profile'); return }
+    if (step === 'running-race')      { setStep('running-test'); return }
     if (step === 'muscle-plan')       { setStep('goal'); return }
     if (step === 'muscle-focus')      { setStep('muscle-plan'); return }
     if (step === 'days') {
-      if (goal === 'running')             setStep('running-profile')
+      if (goal === 'running')             setStep('running-race')
       else if (musclePlan === 'focus')    setStep('muscle-focus')
       else                                setStep('muscle-plan')
       return
@@ -195,6 +200,7 @@ export function ScheduleWizard({
   // 5 km-testet: totaltiden valideras så ett tempo (5:25) inte tolkas som tid
   const fiveKTotal = (parseInt(fiveKMin, 10) || 0) * 60 + Math.min(59, parseInt(fiveKSec, 10) || 0)
   const fiveKImplausible = fiveKTotal > 0 && (fiveKTotal < 12 * 60 || fiveKTotal > 90 * 60)
+  const fiveKPlausible = fiveKTotal >= 12 * 60 && fiveKTotal <= 90 * 60
 
   function finishWizard() {
     const result: WizardResult = {
@@ -216,8 +222,13 @@ export function ScheduleWizard({
         onPress: () => goal && setStep(goal === 'running' ? 'running-distance' : 'muscle-plan') }
       case 'running-distance': return { label: 'Fortsätt', disabled: !runDistance,
         onPress: () => runDistance && setStep('running-profile') }
-      case 'running-profile':  return { label: 'Fortsätt', disabled: !runExperience || fiveKImplausible,
-        onPress: () => runExperience && !fiveKImplausible && setStep('days') }
+      case 'running-profile':  return { label: 'Fortsätt', disabled: !runExperience,
+        onPress: () => runExperience && setStep('running-test') }
+      // 5 km-tiden är OBLIGATORISK — tempozonerna i hela planen bygger på den
+      case 'running-test':     return { label: 'Fortsätt', disabled: !fiveKPlausible,
+        onPress: () => fiveKPlausible && setStep('running-race') }
+      case 'running-race':     return { label: raceValid ? 'Fortsätt' : 'Hoppa över', disabled: false,
+        onPress: () => setStep('days') }
       case 'muscle-plan':      return { label: 'Fortsätt', disabled: !musclePlan,
         onPress: () => musclePlan && setStep(musclePlan === 'focus' ? 'muscle-focus' : 'days') }
       case 'muscle-focus':     return { label: 'Fortsätt', disabled: focusGroups.length === 0,
@@ -277,7 +288,7 @@ export function ScheduleWizard({
                 activeOpacity={0.8}
               >
                 <View style={[s.bigCardIcon, { backgroundColor: 'rgba(255,149,0,0.15)' }]}>
-                  <Ionicons name="walk" size={34} color={ORANGE} />
+                  <MaterialCommunityIcons name="run-fast" size={34} color={ORANGE} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.bigCardTitle, goal === 'running' && { color: ORANGE }]}>
@@ -294,7 +305,7 @@ export function ScheduleWizard({
                 activeOpacity={0.8}
               >
                 <View style={[s.bigCardIcon, { backgroundColor: 'rgba(162,155,254,0.15)' }]}>
-                  <Ionicons name="barbell" size={34} color="#A29BFE" />
+                  <MaterialCommunityIcons name="weight-lifter" size={34} color="#A29BFE" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.bigCardTitle, goal === 'muscle' && { color: ORANGE }]}>
@@ -308,44 +319,45 @@ export function ScheduleWizard({
             </>
           )}
 
-          {/* ── STEP: LÖPAVSTÅND ─────────────────────────────────────── */}
+          {/* ── STEP: LÖPAVSTÅND — stora sifferkort i 2×2 ────────────── */}
           {step === 'running-distance' && (
             <>
-              <Text style={s.stepTitle}>Vilket avstånd siktar du på?</Text>
-              <Text style={s.stepSub}>Vi anpassar programmet efter ditt mål.</Text>
+              <Text style={s.stepTitle}>Vilket avstånd{'\n'}siktar du på?</Text>
+              <Text style={s.stepSub}>Hela programmet byggs runt ditt mål.</Text>
 
-              {RUN_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[s.optCard, runDistance === opt.key && s.optCardActive]}
-                  onPress={() => setRunDistance(opt.key)}
-                  activeOpacity={0.8}
-                >
-                  <View style={[s.optIcon, runDistance === opt.key && s.optIconActive]}>
-                    <Ionicons
-                      name={opt.icon as React.ComponentProps<typeof Ionicons>['name']}
-                      size={26}
-                      color={runDistance === opt.key ? ORANGE : TEXT_SECONDARY}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.optTitle, runDistance === opt.key && { color: ORANGE }]}>{opt.label}</Text>
-                    <Text style={s.optSub}>{opt.sub}</Text>
-                  </View>
-                  {runDistance === opt.key && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
-                </TouchableOpacity>
-              ))}
-
+              <View style={s.distGrid}>
+                {RUN_OPTIONS.map(opt => {
+                  const selected = runDistance === opt.key
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[s.distCard, selected && s.distCardActive]}
+                      onPress={() => setRunDistance(opt.key)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={s.distNumRow}>
+                        <Text style={[s.distNum, selected && { color: ORANGE }]}>{opt.num}</Text>
+                        <Text style={[s.distUnit, selected && { color: ORANGE }]}>K</Text>
+                      </View>
+                      <Text style={s.distLabel}>{opt.label}</Text>
+                      <Text style={s.distSub}>{opt.sub}</Text>
+                      {selected && (
+                        <View style={s.distCheck}>
+                          <MaterialCommunityIcons name="check-bold" size={13} color="#000" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
             </>
           )}
 
-          {/* ── STEP: LÖPARPROFIL — erfarenhet + 5 km-test ───────────── */}
+          {/* ── STEP: ERFARENHET ─────────────────────────────────────── */}
           {step === 'running-profile' && (
             <>
-              <Text style={s.stepTitle}>Din löparprofil</Text>
-              <Text style={s.stepSub}>
-                Startnivå och ökningstakt anpassas efter din erfarenhet.
-              </Text>
+              <Text style={s.stepTitle}>Hur van löpare{'\n'}är du?</Text>
+              <Text style={s.stepSub}>Startnivå och ökningstakt anpassas efter din erfarenhet.</Text>
 
               {EXPERIENCE_OPTIONS.map(opt => {
                 const selected = runExperience === opt.key
@@ -357,9 +369,9 @@ export function ScheduleWizard({
                     activeOpacity={0.8}
                   >
                     <View style={[s.optIcon, selected && s.optIconActive]}>
-                      <Ionicons
-                        name={opt.icon as React.ComponentProps<typeof Ionicons>['name']}
-                        size={24}
+                      <MaterialCommunityIcons
+                        name={opt.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
+                        size={26}
                         color={selected ? ORANGE : TEXT_SECONDARY}
                       />
                     </View>
@@ -371,82 +383,91 @@ export function ScheduleWizard({
                   </TouchableOpacity>
                 )
               })}
+            </>
+          )}
 
-              {/* 5 km-test — frivilligt; ger tempozoner i passen */}
-              <View style={s.testCard}>
-                      <View style={s.testTitleRow}>
-                        <Ionicons name="stopwatch-outline" size={17} color={ORANGE} />
-                        <Text style={s.testTitle}>Hur snabbt springer du 5 km idag?</Text>
-                        <Text style={s.optionalPill}>FRIVILLIGT</Text>
-                      </View>
-                      <View style={s.testRow}>
-                        <View style={s.testCol}>
-                          <TextInput
-                            style={s.testInput}
-                            value={fiveKMin}
-                            onChangeText={v => setFiveKMin(v.replace(/[^0-9]/g, '').slice(0, 2))}
-                            keyboardType="number-pad"
-                            returnKeyType="done"
-                            placeholder="28"
-                            placeholderTextColor="rgba(255,255,255,0.22)"
-                          />
-                          <Text style={s.testUnit}>MIN</Text>
-                        </View>
-                        <Text style={s.testColon}>:</Text>
-                        <View style={s.testCol}>
-                          <TextInput
-                            style={s.testInput}
-                            value={fiveKSec}
-                            onChangeText={v => setFiveKSec(v.replace(/[^0-9]/g, '').slice(0, 2))}
-                            keyboardType="number-pad"
-                            returnKeyType="done"
-                            placeholder="30"
-                            placeholderTextColor="rgba(255,255,255,0.22)"
-                          />
-                          <Text style={s.testUnit}>SEK</Text>
-                        </View>
-                      </View>
-                      <Text style={fiveKImplausible ? s.testWarn : s.testHint}>
-                        {fiveKImplausible
-                          ? 'Det där ser ut som ett tempo, inte en totaltid — ange hela tiden för 5 km, t.ex. 28:30.'
-                          : 'Med en tid får varje pass ett tempoförslag i min/km. Lämna tomt om du inte vet.'}
-                      </Text>
+          {/* ── STEP: 5 KM-TEST — obligatoriskt, tempozonerna bygger på det ── */}
+          {step === 'running-test' && (
+            <>
+              <Text style={s.stepTitle}>Hur snabbt springer{'\n'}du 5 km?</Text>
+              <Text style={s.stepSub}>
+                Tempozonerna i varje pass — lugnt, tempo, intervaller — räknas ut från din tid, så planen blir din och ingen annans.
+              </Text>
+
+              <View style={s.testCardBig}>
+                <MaterialCommunityIcons name="timer-outline" size={30} color={ORANGE} />
+                <View style={s.testRow}>
+                  <View style={s.testCol}>
+                    <TextInput
+                      style={s.testInputBig}
+                      value={fiveKMin}
+                      onChangeText={v => setFiveKMin(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                      keyboardType="number-pad"
+                      returnKeyType="done"
+                      placeholder="28"
+                      placeholderTextColor="rgba(255,255,255,0.22)"
+                    />
+                    <Text style={s.testUnit}>MINUTER</Text>
+                  </View>
+                  <Text style={s.testColonBig}>:</Text>
+                  <View style={s.testCol}>
+                    <TextInput
+                      style={s.testInputBig}
+                      value={fiveKSec}
+                      onChangeText={v => setFiveKSec(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                      keyboardType="number-pad"
+                      returnKeyType="done"
+                      placeholder="30"
+                      placeholderTextColor="rgba(255,255,255,0.22)"
+                    />
+                    <Text style={s.testUnit}>SEKUNDER</Text>
+                  </View>
+                </View>
+                <Text style={fiveKImplausible ? s.testWarn : s.testHint}>
+                  {fiveKImplausible
+                    ? 'Det där ser ut som ett tempo, inte en totaltid — ange hela tiden för 5 km, t.ex. 28:30.'
+                    : 'Osäker? Ta ett hederligt ungefär — du kan uppdatera tiden när som helst under Anpassning.'}
+                </Text>
               </View>
+            </>
+          )}
 
-              {/* Tävlingsdag — väljs i planens sista vecka (vecka 16). Planen
-                  trappar ner de två sista veckorna och slutar med loppet. */}
-              <View style={s.testCard}>
-                      <View style={s.testTitleRow}>
-                        <Ionicons name="flag-outline" size={17} color={ORANGE} />
-                        <Text style={s.testTitle}>Avsluta med ett lopp?</Text>
-                        <Text style={s.optionalPill}>FRIVILLIGT</Text>
-                      </View>
-                      <View style={s.raceDayGrid}>
-                        {raceWeekDays.map(d => {
-                          const iso = toLocalDateString(d)
-                          const selected = raceDateStr === iso
-                          return (
-                            <TouchableOpacity
-                              key={iso}
-                              style={[s.raceDayChip, selected && s.raceDayChipActive]}
-                              onPress={() => setRaceDateStr(selected ? '' : iso)}
-                              activeOpacity={0.75}
-                            >
-                              <Text style={[s.raceDayName, selected && { color: ORANGE }]}>
-                                {d.toLocaleDateString('sv-SE', { weekday: 'short' }).replace('.', '').toUpperCase()}
-                              </Text>
-                              <Text style={[s.raceDayDate, selected && { color: ORANGE }]}>
-                                {d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')}
-                              </Text>
-                            </TouchableOpacity>
-                          )
-                        })}
-                      </View>
-                      <Text style={s.testHint}>
-                        {raceValid
-                          ? 'Planen trappar ner de sista två veckorna och slutar med loppet — inga träningspass på eller efter tävlingsdagen.'
-                          : 'Välj tävlingsdag i planens sista vecka. Tryck igen för att ångra.'}
-                      </Text>
+          {/* ── STEP: LOPP — tävlingsdag väljs i planens sista vecka ──── */}
+          {step === 'running-race' && (
+            <>
+              <Text style={s.stepTitle}>Avsluta med{'\n'}ett lopp?</Text>
+              <Text style={s.stepSub}>
+                Välj tävlingsdag i planens sista vecka — passen trappar ner de två sista veckorna och schemat slutar med loppet.
+              </Text>
+
+              <View style={s.testCardBig}>
+                <MaterialCommunityIcons name="flag-checkered" size={30} color={ORANGE} />
+                <View style={s.raceDayGrid}>
+                  {raceWeekDays.map(d => {
+                    const iso = toLocalDateString(d)
+                    const selected = raceDateStr === iso
+                    return (
+                      <TouchableOpacity
+                        key={iso}
+                        style={[s.raceDayChip, selected && s.raceDayChipActive]}
+                        onPress={() => setRaceDateStr(selected ? '' : iso)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[s.raceDayName, selected && { color: ORANGE }]}>
+                          {d.toLocaleDateString('sv-SE', { weekday: 'short' }).replace('.', '').toUpperCase()}
+                        </Text>
+                        <Text style={[s.raceDayDate, selected && { color: ORANGE }]}>
+                          {d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')}
+                        </Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+                <Text style={s.testHint}>
+                  {raceValid
+                    ? 'Inga träningspass på eller efter tävlingsdagen — då är det bara loppet som gäller.'
+                    : 'Frivilligt — hoppa över om du inte har ett lopp på gång. Tryck igen för att ångra ett val.'}
+                </Text>
               </View>
             </>
           )}
@@ -615,8 +636,8 @@ export function ScheduleWizard({
                     activeOpacity={0.8}
                   >
                     <View style={[s.optIcon, selected && s.optIconActive]}>
-                      <Ionicons
-                        name={opt.icon as React.ComponentProps<typeof Ionicons>['name']}
+                      <MaterialCommunityIcons
+                        name={opt.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
                         size={24}
                         color={selected ? ORANGE : TEXT_SECONDARY}
                       />
@@ -649,7 +670,7 @@ export function ScheduleWizard({
             <>
               <View style={s.summaryCheckmark}>
                 <View style={s.summaryIconCircle}>
-                  <Ionicons name="checkmark" size={48} color="#000" />
+                  <MaterialCommunityIcons name="party-popper" size={44} color="#000" />
                 </View>
               </View>
 
@@ -751,11 +772,6 @@ const s = StyleSheet.create({
   stepTitle: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', lineHeight: 34, letterSpacing: -0.4 },
   stepSub:   { color: TEXT_SECONDARY, fontSize: 15, lineHeight: 21, marginBottom: 8 },
 
-  optionalPill: {
-    color: TEXT_SECONDARY, fontSize: 9, fontWeight: '800', letterSpacing: 1,
-    borderWidth: 1, borderColor: BORDER, borderRadius: 8,
-    paddingHorizontal: 7, paddingVertical: 3, overflow: 'hidden',
-  },
 
   // Big goal cards — ram i vila, orange ram + tonad bakgrund när valt
   bigCard: {
@@ -781,22 +797,43 @@ const s = StyleSheet.create({
   optSub:        { color: TEXT_SECONDARY, fontSize: 13 },
 
   // 5 km-testet — samma kortspråk som resten av appen, siffror i Nunito
-  testCard: {
-    backgroundColor: CARD, borderRadius: 16, padding: 16, gap: 14,
-    borderWidth: 1, borderColor: BORDER, marginTop: 6,
-  },
   testTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   testTitle:    { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600', flex: 1 },
   testRow:      { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 12 },
   testCol:      { alignItems: 'center', gap: 6 },
-  testInput: {
-    width: 84, paddingVertical: 10,
-    backgroundColor: BG, borderRadius: 12,
+  testUnit:  { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '700', letterSpacing: 1.2 },
+
+  // Distansval — stora sifferkort i 2×2, siffran är hjälten
+  distGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  distCard: {
+    width: (SCREEN_W - 52) / 2, borderRadius: 20, padding: 18, paddingTop: 20,
+    backgroundColor: CARD, borderWidth: 1.5, borderColor: BORDER, gap: 2,
+  },
+  distCardActive: { backgroundColor: ORANGE + '14', borderColor: ORANGE },
+  distNumRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
+  distNum:  { color: TEXT_PRIMARY, fontSize: 44, lineHeight: 46, fontFamily: NUM_FONT, letterSpacing: -1 },
+  distUnit: { color: TEXT_SECONDARY, fontSize: 20, fontFamily: NUM_FONT, marginBottom: 4 },
+  distLabel:{ color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700', marginTop: 6 },
+  distSub:  { color: TEXT_SECONDARY, fontSize: 12 },
+  distCheck: {
+    position: 'absolute', top: 12, right: 12,
+    width: 22, height: 22, borderRadius: 11, backgroundColor: ORANGE,
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // Stora inmatningskorten (5 km-test + lopp) — ett kort i fokus per skärm
+  testCardBig: {
+    backgroundColor: CARD, borderRadius: 20, padding: 22, gap: 18,
+    borderWidth: 1, borderColor: BORDER, alignItems: 'center', marginTop: 6,
+  },
+  testInputBig: {
+    width: 108, paddingVertical: 14,
+    backgroundColor: BG, borderRadius: 14,
     borderWidth: 1, borderColor: BORDER,
-    color: TEXT_PRIMARY, fontSize: 24, fontFamily: NUM_FONT,
+    color: TEXT_PRIMARY, fontSize: 34, fontFamily: NUM_FONT,
     textAlign: 'center', fontVariant: ['tabular-nums'],
   },
-  testUnit:  { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '700', letterSpacing: 1.2 },
+  testColonBig: { color: TEXT_SECONDARY, fontSize: 34, fontFamily: NUM_FONT, marginTop: 12 },
 
   // Tävlingsdagsväljaren — en chip per dag i planens sista vecka
   raceDayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
@@ -808,7 +845,6 @@ const s = StyleSheet.create({
   raceDayChipActive: { backgroundColor: ORANGE + '16', borderColor: ORANGE },
   raceDayName: { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   raceDayDate: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
-  testColon: { color: TEXT_SECONDARY, fontSize: 24, fontFamily: NUM_FONT, marginTop: 8 },
   testHint:  { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17 },
   testWarn:  { color: '#FF6B6B', fontSize: 12, lineHeight: 17, fontWeight: '600' },
 
