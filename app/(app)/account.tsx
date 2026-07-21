@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 // =============================================================================
 // KONTO — namn, lösenord och e-post. Nås via "Redigera profil"-pillen på
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
   },
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
-  scroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24 + TAB_CONTENT_PAD },
   rowsCard: { backgroundColor: CARD, borderRadius: 14, overflow: 'hidden' },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

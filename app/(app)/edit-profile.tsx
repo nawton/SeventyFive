@@ -21,6 +21,7 @@ import { getProfile, updateProfile, uploadAvatar } from '@/services/profile'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { SubscriptionCard } from '@/components/SubscriptionCard'
 import { RecordsCard } from '@/components/RecordsCard'
+import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 const AVATAR_SECTIONS = [
   { label: 'Träning',    items: ['💪', '🏋️', '🏃', '🧘', '🥊', '🚴', '🤸', '🏊'] },
@@ -194,6 +195,55 @@ export default function EditProfileScreen() {
             <RecordsCard />
           </View>
 
+          {/* ── Min träning — genvägar till det man återkommer till ── */}
+          <View style={styles.fieldSection}>
+            <Text style={styles.fieldLabel}>MIN TRÄNING</Text>
+            <View style={styles.rowsCard}>
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => router.push('/manage-sessions' as never)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowIconBox}>
+                  <Ionicons name="calendar-outline" size={17} color={ORANGE} />
+                </View>
+                <Text style={styles.rowLabel}>Veckoschema</Text>
+                <View style={{ flex: 1 }} />
+                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+
+              <View style={styles.rowDivider} />
+
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => router.push('/stats' as never)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowIconBox}>
+                  <Ionicons name="bar-chart-outline" size={17} color={ORANGE} />
+                </View>
+                <Text style={styles.rowLabel}>Statistik</Text>
+                <View style={{ flex: 1 }} />
+                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+
+              <View style={styles.rowDivider} />
+
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => Alert.alert('Kommer snart', 'Hitta lopp nära dig och koppla dem direkt till din träningsplan.')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowIconBox}>
+                  <Ionicons name="flag-outline" size={17} color={ORANGE} />
+                </View>
+                <Text style={styles.rowLabel}>Hitta ett lopp</Text>
+                <Text style={styles.rowValue} numberOfLines={1}>Kommer snart</Text>
+                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* ── Inställningar — några riktiga, resten växer fram ── */}
           <View style={styles.fieldSection}>
             <Text style={styles.fieldLabel}>INSTÄLLNINGAR</Text>
@@ -230,15 +280,43 @@ export default function EditProfileScreen() {
 
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => Alert.alert('Kommer snart', 'Hitta lopp nära dig och koppla dem direkt till din träningsplan.')}
+                onPress={() => Alert.alert('SeventyFive', 'Version 1.0.0\n\nByggd av Nawton. 75 dagar — gym, löpning och allt däremellan.')}
                 activeOpacity={0.7}
               >
                 <View style={styles.rowIconBox}>
-                  <Ionicons name="flag-outline" size={17} color={ORANGE} />
+                  <Ionicons name="information-circle-outline" size={17} color={ORANGE} />
                 </View>
-                <Text style={styles.rowLabel}>Hitta ett lopp</Text>
-                <Text style={styles.rowValue} numberOfLines={1}>Kommer snart</Text>
+                <Text style={styles.rowLabel}>Om SeventyFive</Text>
+                <Text style={styles.rowValue} numberOfLines={1}>1.0.0</Text>
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ── Logga ut — egen sektion längst ner, som konventionen bjuder ── */}
+          <View style={styles.fieldSection}>
+            <View style={styles.rowsCard}>
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => {
+                  Alert.alert('Logga ut', 'Är du säker på att du vill logga ut? Din data sparas.', [
+                    { text: 'Avbryt', style: 'cancel' },
+                    {
+                      text: 'Logga ut',
+                      style: 'destructive',
+                      onPress: async () => {
+                        await supabase.auth.signOut()
+                        router.replace('/(auth)/welcome' as never)
+                      },
+                    },
+                  ])
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.rowIconBox, { backgroundColor: 'rgba(255,69,58,0.14)' }]}>
+                  <Ionicons name="log-out-outline" size={17} color="#FF453A" />
+                </View>
+                <Text style={[styles.rowLabel, { color: '#FF453A' }]}>Logga ut</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -330,7 +408,8 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: BG },
   centered: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' },
-  scroll:   { paddingBottom: 48, gap: 28 },
+  // TAB_CONTENT_PAD — flytande tabbaren får inte skymma sista sektionen
+  scroll:   { paddingBottom: 24 + TAB_CONTENT_PAD, gap: 28 },
 
   // Header
   header: {
