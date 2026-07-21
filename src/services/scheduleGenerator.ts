@@ -562,6 +562,13 @@ export async function generateScheduleFromWizard(
   // utan lopp rensar ett gammalt datum så det inte spökar i horisonten.
   if (result.goal === 'running') {
     await setRaceDate(result.raceDate ?? null)
+    // Gamla tävlingsdagar städas alltid — engångspass överlever "Ersätt"
+    // (som bara tar upprepande pass) och skulle annars ge dubbla RACE DAYs
+    await supabase
+      .from('workout_sessions')
+      .delete()
+      .eq('user_id', userId)
+      .like('name', 'ONCE:%:Tävlingsdag%')
     if (result.raceDate) {
       const label = RACE_LABELS[result.runDistance ?? '5k'] ?? 'loppet'
       await createWorkoutSession(

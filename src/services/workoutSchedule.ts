@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { toLocalDateString, parseLocalDate, weekdayOf } from '@/lib/date'
+import { toLocalDateString, weekdayOf } from '@/lib/date'
 
 export interface SessionExercise {
   id: string
@@ -30,18 +30,14 @@ export interface WorkoutSession {
 // styrs av sitt eget datum.
 export const PLAN_WEEKS = 16
 
-/** Cardio-planens slutdatum (exklusivt): dagen efter loppet när ett
-    tävlingsdatum finns efter planstarten — loppet är målet och planen slutar
-    där, oavsett om det är tidigare eller senare än 16 veckor. Utan
-    tävlingsdatum gäller 16-veckorshorisonten. */
+/** Cardio-planens slutdatum (exklusivt): själva tävlingsdagen när ett
+    tävlingsdatum finns efter planstarten — på race day springer man loppet
+    (eget engångspass), inga vanliga träningspass den dagen eller efter.
+    Utan tävlingsdatum gäller 16-veckorshorisonten. */
 export function planEndDateStr(createdAt: string, raceDate?: string | null): string {
   const start = new Date(createdAt)
   start.setHours(0, 0, 0, 0)
-  if (raceDate && raceDate >= toLocalDateString(start)) {
-    const dayAfter = parseLocalDate(raceDate)
-    dayAfter.setDate(dayAfter.getDate() + 1)
-    return toLocalDateString(dayAfter)
-  }
+  if (raceDate && raceDate >= toLocalDateString(start)) return raceDate
   const end = new Date(start)
   end.setDate(end.getDate() + PLAN_WEEKS * 7)
   return toLocalDateString(end)

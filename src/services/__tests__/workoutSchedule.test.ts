@@ -17,11 +17,11 @@ describe('planEndDateStr', () => {
   it('utan tävlingsdatum: 16 veckor från planstarten', () => {
     expect(planEndDateStr('2026-07-01T08:00:00', null)).toBe('2026-10-21')
   })
-  it('med tävlingsdatum: dagen efter loppet — loppet är målet', () => {
-    expect(planEndDateStr('2026-07-01T08:00:00', '2026-09-13')).toBe('2026-09-14')
+  it('med tävlingsdatum: planen slutar PÅ loppet — race day är löpardagen', () => {
+    expect(planEndDateStr('2026-07-01T08:00:00', '2026-09-13')).toBe('2026-09-13')
   })
   it('loppet kan också förlänga planen förbi 16 veckor', () => {
-    expect(planEndDateStr('2026-07-01T08:00:00', '2026-12-06')).toBe('2026-12-07')
+    expect(planEndDateStr('2026-07-01T08:00:00', '2026-12-06')).toBe('2026-12-06')
   })
   it('tävlingsdatum före planstarten ignoreras', () => {
     expect(planEndDateStr('2026-07-01T08:00:00', '2026-06-01')).toBe('2026-10-21')
@@ -37,10 +37,11 @@ describe('sessionActiveOn', () => {
     expect(sessionActiveOn(s, '2026-06-30')).toBe(false)  // före planen fanns
   })
 
-  it('med tävlingsdatum: passen lever till och med loppet, sen tystnar planen', () => {
+  it('med tävlingsdatum: inga vanliga pass på eller efter race day', () => {
     const s = session()
-    expect(sessionActiveOn(s, '2026-09-13', '2026-09-13')).toBe(true)   // race day
-    expect(sessionActiveOn(s, '2026-09-14', '2026-09-13')).toBe(false)  // dagen efter
+    expect(sessionActiveOn(s, '2026-09-12', '2026-09-13')).toBe(true)   // dagen före
+    expect(sessionActiveOn(s, '2026-09-13', '2026-09-13')).toBe(false)  // race day: bara loppet
+    expect(sessionActiveOn(s, '2026-09-14', '2026-09-13')).toBe(false)  // efteråt: tyst
     // Och långt race förlänger horisonten förbi 16-veckorsgränsen
     expect(sessionActiveOn(s, '2026-11-15', '2026-12-06')).toBe(true)
   })

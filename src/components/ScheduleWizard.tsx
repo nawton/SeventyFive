@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { toLocalDateString } from '@/lib/date'
 import { RUN_SESSION_INFO, plannedRunTypes, type RunExperience } from '@/services/scheduleGenerator'
 import type { Slug } from '@/lib/muscles'
 
@@ -127,24 +128,18 @@ export function ScheduleWizard({
     setWeekdays([]); setLimitations([])
   }
 
-  // Tävlingsdatum: siffror formateras till ÅÅÅÅ-MM-DD medan man skriver.
-  // Giltigt = riktigt datum som inte redan varit; tomt är alltid okej.
-  function formatRaceInput(v: string): string {
-    const d = v.replace(/[^0-9]/g, '').slice(0, 8)
-    if (d.length <= 4) return d
-    if (d.length <= 6) return `${d.slice(0, 4)}-${d.slice(4)}`
-    return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`
-  }
-  const raceParsed = (() => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(raceDateStr)) return null
-    const [y, m, d] = raceDateStr.split('-').map(Number)
-    const date = new Date(y, m - 1, d)
-    if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null
-    return date
+  // Tävlingsdagen väljs bland planens sista veckas dagar (vecka 16) —
+  // hela planen bygger upp mot just den dagen, så datumet är inte fritt.
+  const raceWeekDays = (() => {
+    const base = new Date()
+    base.setHours(0, 0, 0, 0)
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base)
+      d.setDate(d.getDate() + 15 * 7 + i)   // planvecka 16 = dag 105–111
+      return d
+    })
   })()
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  const raceValid   = raceParsed !== null && raceParsed.getTime() >= today.getTime()
-  const raceInvalid = raceDateStr.length > 0 && !raceValid
+  const raceValid = raceDateStr !== ''
 
   function toggleWeekday(day: number) {
     setWeekdays(prev =>
@@ -221,8 +216,8 @@ export function ScheduleWizard({
         onPress: () => goal && setStep(goal === 'running' ? 'running-distance' : 'muscle-plan') }
       case 'running-distance': return { label: 'Fortsätt', disabled: !runDistance,
         onPress: () => runDistance && setStep('running-profile') }
-      case 'running-profile':  return { label: 'Fortsätt', disabled: !runExperience || fiveKImplausible || raceInvalid,
-        onPress: () => runExperience && !fiveKImplausible && !raceInvalid && setStep('days') }
+      case 'running-profile':  return { label: 'Fortsätt', disabled: !runExperience || fiveKImplausible,
+        onPress: () => runExperience && !fiveKImplausible && setStep('days') }
       case 'muscle-plan':      return { label: 'Fortsätt', disabled: !musclePlan,
         onPress: () => musclePlan && setStep(musclePlan === 'focus' ? 'muscle-focus' : 'days') }
       case 'muscle-focus':     return { label: 'Fortsätt', disabled: focusGroups.length === 0,
@@ -418,27 +413,39 @@ export function ScheduleWizard({
                       </Text>
               </View>
 
-              {/* Tävlingsdatum — frivilligt; planen slutar på loppet med
-                  nedtrappning sista två veckorna och RACE DAY i schemat */}
+              {/* Tävlingsdag — väljs i planens sista vecka (vecka 16). Planen
+                  trappar ner de två sista veckorna och slutar med loppet. */}
               <View style={s.testCard}>
                       <View style={s.testTitleRow}>
                         <Ionicons name="flag-outline" size={17} color={ORANGE} />
-                        <Text style={s.testTitle}>Har du ett lopp inbokat?</Text>
+                        <Text style={s.testTitle}>Avsluta med ett lopp?</Text>
                         <Text style={s.optionalPill}>FRIVILLIGT</Text>
                       </View>
-                      <TextInput
-                        style={[s.testInput, { width: 190, textAlign: 'center', alignSelf: 'center' }]}
-                        value={raceDateStr}
-                        onChangeText={v => setRaceDateStr(formatRaceInput(v))}
-                        keyboardType="number-pad"
-                        returnKeyType="done"
-                        placeholder="2026-10-18"
-                        placeholderTextColor="rgba(255,255,255,0.22)"
-                      />
-                      <Text style={raceInvalid ? s.testWarn : s.testHint}>
-                        {raceInvalid
-                          ? 'Ange ett riktigt datum framåt i tiden, t.ex. 2026-10-18.'
-                          : 'Med ett datum siktar planen på loppet: nedtrappning sista två veckorna och tävlingsdagen i schemat.'}
+                      <View style={s.raceDayGrid}>
+                        {raceWeekDays.map(d => {
+                          const iso = toLocalDateString(d)
+                          const selected = raceDateStr === iso
+                          return (
+                            <TouchableOpacity
+                              key={iso}
+                              style={[s.raceDayChip, selected && s.raceDayChipActive]}
+                              onPress={() => setRaceDateStr(selected ? '' : iso)}
+                              activeOpacity={0.75}
+                            >
+                              <Text style={[s.raceDayName, selected && { color: ORANGE }]}>
+                                {d.toLocaleDateString('sv-SE', { weekday: 'short' }).replace('.', '').toUpperCase()}
+                              </Text>
+                              <Text style={[s.raceDayDate, selected && { color: ORANGE }]}>
+                                {d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')}
+                              </Text>
+                            </TouchableOpacity>
+                          )
+                        })}
+                      </View>
+                      <Text style={s.testHint}>
+                        {raceValid
+                          ? 'Planen trappar ner de sista två veckorna och slutar med loppet — inga träningspass på eller efter tävlingsdagen.'
+                          : 'Välj tävlingsdag i planens sista vecka. Tryck igen för att ångra.'}
                       </Text>
               </View>
             </>
@@ -669,7 +676,7 @@ export function ScheduleWizard({
                   <Text style={s.summaryCardTitle}>{goal === 'running' && raceValid ? 'Mot loppet' : 'Progression'}</Text>
                   <Text style={s.summaryCardSub}>
                     {goal === 'running' && raceValid
-                      ? `Passen växer fram till tävlingsdagen ${raceDateStr}`
+                      ? `Passen växer fram till loppet ${new Date(raceDateStr).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}`
                       : 'Passen växer vecka för vecka i 16 veckor'}
                   </Text>
                 </View>
@@ -790,6 +797,17 @@ const s = StyleSheet.create({
     textAlign: 'center', fontVariant: ['tabular-nums'],
   },
   testUnit:  { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '700', letterSpacing: 1.2 },
+
+  // Tävlingsdagsväljaren — en chip per dag i planens sista vecka
+  raceDayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+  raceDayChip: {
+    width: 74, alignItems: 'center', gap: 2,
+    paddingVertical: 10, borderRadius: 12,
+    backgroundColor: BG, borderWidth: 1, borderColor: BORDER,
+  },
+  raceDayChipActive: { backgroundColor: ORANGE + '16', borderColor: ORANGE },
+  raceDayName: { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  raceDayDate: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
   testColon: { color: TEXT_SECONDARY, fontSize: 24, fontFamily: NUM_FONT, marginTop: 8 },
   testHint:  { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17 },
   testWarn:  { color: '#FF6B6B', fontSize: 12, lineHeight: 17, fontWeight: '600' },
