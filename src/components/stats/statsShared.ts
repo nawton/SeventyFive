@@ -2,7 +2,7 @@
 // skalet (stats.tsx) och flikkomponenterna importerar härifrån så att
 // designen har en enda källa.
 import { StyleSheet, Dimensions } from 'react-native'
-import { BG, CARD, BORDER, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 
@@ -11,7 +11,7 @@ export const STATS_SCREEN_W = Dimensions.get('window').width
 export const TAB_BAR_W = STATS_SCREEN_W - GRID_PADDING * 2
 export const SEG_W     = TAB_BAR_W / 3      // en flik-kolumns bredd
 // Klara Apple Fitness-färger för statistikvärden
-export const BLUE   = '#3FBBFF'
+export const BLUE   = CARDIO_BLUE   // cardio-grafernas turkos
 export const RED    = '#FF3D73'
 export const YELLOW = '#FFE60A'
 export const PURPLE = '#D65CFF'

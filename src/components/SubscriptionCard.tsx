@@ -1,20 +1,19 @@
 import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
-import { GREEN } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, MINT } from '@/lib/theme'
 import {
   getSubscription, isPremium,
   FREE_SUBSCRIPTION, type Subscription,
 } from '@/services/subscription'
 
 // =============================================================================
-// PREMIUM-BANNERN på profilsidan — gradient med krona (Runna-stil), hela
-// ytan leder till /premium. Gratis: pitch + PRENUMERERA. Premium: status.
-// Statusen ägs av stripe-webhooken; bannern läser om den vid varje fokus.
+// PREMIUM-BANNERN på profilsidan — appens eget formspråk: mörkt kort med
+// 1 px-ram och turkos accentkant, ingen gradient. Hela ytan leder till
+// /premium. Statusen ägs av stripe-webhooken; läses om vid varje fokus.
 // =============================================================================
 
 function fmtDate(iso: string | null): string {
@@ -43,52 +42,56 @@ export function SubscriptionCard({ name }: { name?: string }) {
   const premium = isPremium(sub)
   const firstName = name?.split(' ')[0]
   const pastDue = !premium && (sub.status === 'past_due' || sub.status === 'unpaid')
+  const accent = premium ? GREEN : MINT
 
   return (
     <TouchableOpacity
-      activeOpacity={0.88}
+      style={[s.card, { borderLeftColor: accent }]}
+      activeOpacity={0.85}
       onPress={() => { Haptics.selectionAsync(); router.push('/premium') }}
     >
-      <LinearGradient
-        colors={premium ? ['#1E5A4C', '#2F7A5F'] : ['#2E6E5C', '#7A4A32']}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={s.banner}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={s.title}>
-            {premium
-              ? 'SeventyFive Premium'
-              : firstName ? `${firstName}, skaffa Premium` : 'Skaffa SeventyFive Premium'}
-          </Text>
-          <Text style={s.sub}>
-            {premium
-              ? sub.cancel_at_period_end
-                ? `Avslutas ${fmtDate(sub.current_period_end)}`
-                : `Aktivt · förnyas ${fmtDate(sub.current_period_end)}`
-              : pastDue
-                ? 'Betalningen misslyckades — uppdatera ditt kort'
-                : 'Lås upp löpplaner, intervallguidning och full statistik'}
-          </Text>
-          <Text style={s.action}>
-            {premium ? 'HANTERA' : pastDue ? 'UPPDATERA BETALNING' : 'PRENUMERERA'}
-          </Text>
-        </View>
+      <View style={[s.iconWrap, { backgroundColor: accent + '1C' }]}>
         <MaterialCommunityIcons
           name={premium ? 'crown' : 'crown-outline'}
-          size={54}
-          color={premium ? GREEN : 'rgba(255,255,255,0.9)'}
+          size={26}
+          color={accent}
         />
-      </LinearGradient>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.title}>
+          {premium
+            ? 'SeventyFive Premium'
+            : firstName ? `${firstName}, skaffa Premium` : 'Skaffa SeventyFive Premium'}
+        </Text>
+        <Text style={s.sub}>
+          {premium
+            ? sub.cancel_at_period_end
+              ? `Avslutas ${fmtDate(sub.current_period_end)}`
+              : `Aktivt · förnyas ${fmtDate(sub.current_period_end)}`
+            : pastDue
+              ? 'Betalningen misslyckades — uppdatera ditt kort'
+              : 'Lås upp löpplaner, intervallguidning och full statistik'}
+        </Text>
+        <Text style={[s.action, { color: accent }]}>
+          {premium ? 'HANTERA' : pastDue ? 'UPPDATERA BETALNING' : 'PRENUMERERA'}
+        </Text>
+      </View>
     </TouchableOpacity>
   )
 }
 
 const s = StyleSheet.create({
-  banner: {
-    borderRadius: 18, padding: 18,
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+  card: {
+    backgroundColor: CARD, borderRadius: 18, padding: 16,
+    borderWidth: 1, borderColor: BORDER,
+    borderLeftWidth: 3,
+    flexDirection: 'row', alignItems: 'center', gap: 14,
   },
-  title:  { color: '#fff', fontSize: 18, fontWeight: '800' },
-  sub:    { color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 18, marginTop: 4 },
-  action: { color: '#fff', fontSize: 12, fontWeight: '800', letterSpacing: 1.2, marginTop: 12 },
+  iconWrap: {
+    width: 48, height: 48, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  title:  { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '800' },
+  sub:    { color: TEXT_SECONDARY, fontSize: 12.5, lineHeight: 17, marginTop: 3 },
+  action: { fontSize: 11.5, fontWeight: '800', letterSpacing: 1.2, marginTop: 10 },
 })

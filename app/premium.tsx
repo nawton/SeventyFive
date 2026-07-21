@@ -6,7 +6,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM_FONT } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM_FONT, MINT } from '@/lib/theme'
 import { PREMIUM_PLANS, PREMIUM_BENEFITS, type PlanKey } from '@/lib/premiumPlans'
 import {
   getSubscription, isPremium, startCheckout, openBillingPortal,
@@ -18,8 +18,6 @@ import {
 // personlig rubrik, checklista, planval och EN mint-CTA — inga stora orange
 // knappar. Har man redan Premium blir sidan en statusvy med Hantera.
 // =============================================================================
-
-const MINT = '#5BD9C3'
 
 function fmtDate(iso: string | null): string {
   if (!iso) return ''

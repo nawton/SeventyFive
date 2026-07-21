@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { DistanceAreaChart } from './DistanceAreaChart'
-import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/lib/date'
 import { fmtPace, fmtDuration } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
@@ -17,7 +17,7 @@ import type { CardioWorkout } from '@/services/workouts'
 // för att inspektera en period, med fördelning och nyckeltal under grafen.
 // =============================================================================
 
-const BLUE = '#3FBBFF'
+const BLUE = CARDIO_BLUE
 const SCREEN_W = Dimensions.get('window').width
 
 type Res = 'day' | 'week' | 'month'

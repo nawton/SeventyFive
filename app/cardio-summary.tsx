@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getCardioWorkoutByDate, getCardioWorkoutById, deleteCardioWorkout, type CardioWorkout } from '@/services/workouts'
 import { getProfile } from '@/services/profile'
-import { BG, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, TEXT_SECONDARY, CARDIO_BLUE } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
@@ -47,7 +47,7 @@ export default function CardioSummaryScreen() {
     : null
 
   if (loading) {
-    return <View style={st.center}><ActivityIndicator color="#3BD5FF" /></View>
+    return <View style={st.center}><ActivityIndicator color={CARDIO_BLUE} /></View>
   }
   if (!workout) {
     return (
