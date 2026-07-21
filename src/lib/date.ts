@@ -34,8 +34,11 @@ export function startOfWeek(d: Date = new Date()): Date {
   return mon
 }
 
-/** ISO-veckonummer för en måndag (veckans start) */
+/** ISO-veckonummer för en måndag (veckans start). Veckans torsdag avgör vilket
+    ISO-år veckan tillhör — så årsskiftesveckor får rätt nummer (v1/v52/v53). */
 export function isoWeekNum(mon: Date): number {
-  const jan4 = new Date(mon.getFullYear(), 0, 4)
-  return Math.ceil((((mon.getTime() - jan4.getTime()) / 86400000) + weekdayOf(jan4) - 1) / 7)
+  const thu = new Date(mon)
+  thu.setDate(mon.getDate() + 3)
+  const week1Mon = startOfWeek(new Date(thu.getFullYear(), 0, 4))
+  return 1 + Math.round((thu.getTime() - week1Mon.getTime()) / 86400000 / 7)
 }

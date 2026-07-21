@@ -163,8 +163,9 @@ const paceRange = (a: number, b: number) => ` · ca ${fmtPace(a)}–${fmtPace(b)
 const progNotes = (p: ProgSpec, suffix = '') =>
   `Start ${fmtKm(p.start)} km · +${fmtKm(p.step)} km per vecka · max ${fmtKm(p.max)} km${suffix}`
 
-/** Passen i prioritetsordning för valt mål — de första N används för N dagar */
-function buildRunSessions(distance: string, exp: RunExperience, fiveKSec: number | null): PlannedSession[] {
+/** Passen i prioritetsordning för valt mål — de första N används för N dagar.
+    Exporterad för enhetstester — appen går via generateScheduleFromWizard. */
+export function buildRunSessions(distance: string, exp: RunExperience, fiveKSec: number | null): PlannedSession[] {
   const t = (RUN_TABLES[distance] ?? RUN_TABLES['5k'])[exp]
   // Tempozoner från 5 km-testet (P = sek/km i testet) — beprövade påslag:
   // lugnt +60–90 s, tempo +15–25 s, intervaller ≈ testfart, maraton +45–60 s.
@@ -196,7 +197,7 @@ function buildRunSessions(distance: string, exp: RunExperience, fiveKSec: number
 
 const PACE_SUFFIX_RE = /\s*·\s*ca\s+[0-9]+:[0-9]{2}(?:–[0-9]+:[0-9]{2})?\s*\/(?:km|mi)/
 
-function rewritePaces(notes: string, fiveKSec: number): string {
+export function rewritePaces(notes: string, fiveKSec: number): string {
   const base = notes.replace(PACE_SUFFIX_RE, '')
   const isSpec = /^Start /.test(base)
   const isRecovery = base.includes('i lugnt tempo')
