@@ -1883,27 +1883,34 @@ export default function CardioScreen() {
               {/* Inställningsrutnät i eget flytande kort, Start separat under */}
               <View style={styles.idleCard}>
               <View style={styles.idleGrid}>
-                <TouchableOpacity style={styles.idleCell} onPress={openPicker} activeOpacity={0.75}>
+                {/* Guidade pass: planen äger aktivitet och mål — cellerna låses */}
+                <TouchableOpacity style={styles.idleCell} onPress={openPicker} activeOpacity={0.75} disabled={guided}>
                   <Ionicons name={selectedExercise.icon} size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
                     <Text style={styles.idleCellLabel}>Aktivitet</Text>
                     <Text style={styles.idleCellValue}>{selectedExercise.label}</Text>
                   </View>
+                  {guided && <Ionicons name="lock-closed" size={12} color="rgba(255,255,255,0.35)" />}
                 </TouchableOpacity>
                 <View style={styles.idleGridDivV} />
-                <TouchableOpacity style={styles.idleCell} onPress={openGoalModal} activeOpacity={0.75}>
+                <TouchableOpacity style={styles.idleCell} onPress={openGoalModal} activeOpacity={0.75} disabled={guided}>
                   <Ionicons name="flag-outline" size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
-                    <Text style={styles.idleCellLabel}>Mål</Text>
+                    <Text style={styles.idleCellLabel}>{guided ? 'Upplägg' : 'Mål'}</Text>
                     <Text style={styles.idleCellValue} numberOfLines={1}>
-                      {goalKmNum > 0 || goalMinNum > 0
-                        ? [
-                            goalKmNum > 0 ? `${String(goalKmNum).replace('.', ',')} ${unitLabel}` : null,
-                            goalMinNum > 0 ? `${goalMinNum} min` : null,
-                          ].filter(Boolean).join(' · ')
-                        : 'Inget'}
+                      {guided
+                        ? totalWork > 1
+                          ? `${totalWork} intervaller`
+                          : 'Följer passet'
+                        : goalKmNum > 0 || goalMinNum > 0
+                          ? [
+                              goalKmNum > 0 ? `${String(goalKmNum).replace('.', ',')} ${unitLabel}` : null,
+                              goalMinNum > 0 ? `${goalMinNum} min` : null,
+                            ].filter(Boolean).join(' · ')
+                          : 'Inget'}
                     </Text>
                   </View>
+                  {guided && <Ionicons name="lock-closed" size={12} color="rgba(255,255,255,0.35)" />}
                 </TouchableOpacity>
               </View>
               <View style={styles.idleGridDivH} />
