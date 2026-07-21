@@ -69,7 +69,7 @@ describe('Profilinställningar', () => {
   it('viktshjulet sparar till profilen OCH kaloriberäkningens inställning', async () => {
     render(<AccountScreen />)
     fireEvent.press(await screen.findByText('Vikt'))
-    fireEvent.press(screen.getByText('Klar'))   // sparar förvalda 75,5 (från profilen)
+    fireEvent.press(screen.getByText('Done'))   // sparar förvalda 75,5 (från profilen)
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { weight_kg: 75.5 }))
     expect(await getBodyWeightKg()).toBe(76)    // prefs rundar till hela kg
@@ -96,7 +96,7 @@ describe('Profilinställningar', () => {
   it('födelsedatumshjulet sparar valt datum', async () => {
     render(<AccountScreen />)
     fireEvent.press(await screen.findByText('Födelsedatum'))
-    fireEvent.press(screen.getByText('Klar'))
+    fireEvent.press(screen.getByText('Done'))
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { birth_date: '2004-01-09' }))
   })

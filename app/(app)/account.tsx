@@ -207,13 +207,16 @@ export default function AccountScreen() {
       <Modal visible={sheet !== null} transparent animationType="fade" onRequestClose={() => setSheet(null)}>
         <Pressable style={styles.overlay} onPress={() => setSheet(null)}>
           <View style={styles.floatWrap} pointerEvents="box-none">
+            {/* Som iOS egna Done på sifferknappsatsen: rent liquid glass,
+                dragbar (håll och dra — fjädrar tillbaka) */}
             <GlassPill
               onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
+              draggable
               style={styles.klarPill}
-              tint="rgba(255,255,255,0.14)"
+              tint="transparent"
               fallbackStyle={styles.klarFallback}
             >
-              <Text style={styles.klarPillText}>Klar</Text>
+              <Text style={styles.klarPillText}>Done</Text>
             </GlassPill>
             <Pressable style={styles.pickerPanel} onPress={() => {}}>
             {sheet === 'birth' && (
@@ -300,7 +303,7 @@ const styles = StyleSheet.create({
   rowLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   rowValue: { flex: 1, color: TEXT_SECONDARY, fontSize: 14, textAlign: 'right' },
 
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'flex-end' },
   floatWrap: { paddingHorizontal: 8, paddingBottom: 28, alignItems: 'flex-end', gap: 10 },
   pickerPanel: {
     alignSelf: 'stretch',
