@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Modal, Dimensions, TextInput,
+  KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -89,16 +90,10 @@ const LIMITATION_OPTIONS: Array<{ key: Limitation; label: string; icon: string }
   { key: 'shoulder', label: 'Axelproblem',  icon: 'barbell-outline' },
 ]
 
-const STEP_PROGRESS: Record<Step, number> = {
-  'goal':              0,
-  'running-distance':  0.25,
-  'running-profile':   0.4,
-  'muscle-plan':       0.3,
-  'muscle-focus':      0.45,
-  'days':              0.6,
-  'limitations':       0.8,
-  'summary':           1,
-}
+// Stegtitlarna i sidfotens räknare — flödet beräknas dynamiskt per mål
+const RUN_FLOW: Step[]    = ['goal', 'running-distance', 'running-profile', 'days', 'limitations', 'summary']
+const MUSCLE_FLOW: Step[] = ['goal', 'muscle-plan', 'days', 'limitations', 'summary']
+const FOCUS_FLOW: Step[]  = ['goal', 'muscle-plan', 'muscle-focus', 'days', 'limitations', 'summary']
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -190,36 +185,89 @@ export function ScheduleWizard({
   }
 
   const focusSlugs = focusGroups.flatMap(g => GROUP_SLUGS[g] ?? [])
-  const progress   = STEP_PROGRESS[step]
 
   const bodyData = (slugs: Slug[]) => slugs.map(sl => ({ slug: sl, intensity: 1 as const }))
+
+  // ── Flöde + fast sidfot ────────────────────────────────────────────────────
+  // CTA:n bor i en fast sidfot (inte i scrollen) — den ska alltid vara på
+  // samma ställe, som i en riktig onboarding. Varje steg bidrar bara med
+  // etikett/villkor/åtgärd här.
+  const stepFlow = goal === 'muscle'
+    ? (musclePlan === 'focus' ? FOCUS_FLOW : MUSCLE_FLOW)
+    : RUN_FLOW
+  const stepIdx = Math.max(0, stepFlow.indexOf(step))
+
+  // 5 km-testet: totaltiden valideras så ett tempo (5:25) inte tolkas som tid
+  const fiveKTotal = (parseInt(fiveKMin, 10) || 0) * 60 + Math.min(59, parseInt(fiveKSec, 10) || 0)
+  const fiveKImplausible = fiveKTotal > 0 && (fiveKTotal < 12 * 60 || fiveKTotal > 90 * 60)
+
+  function finishWizard() {
+    const result: WizardResult = {
+      goal, runDistance, musclePlan, focusGroups,
+      weekdays: weekdays.length > 0 ? weekdays : [1, 3, 5],
+      limitations,
+      runExperience,
+      // Bara rimliga totaltider — annars inga tempoförslag alls
+      fiveKTimeSec: fiveKTotal >= 12 * 60 && fiveKTotal <= 90 * 60 ? fiveKTotal : null,
+      raceDate: goal === 'running' && raceValid ? raceDateStr : null,
+    }
+    reset()
+    onFinish(result)
+  }
+
+  const footer: { label: string; disabled: boolean; onPress: () => void } = (() => {
+    switch (step) {
+      case 'goal':             return { label: 'Fortsätt', disabled: !goal,
+        onPress: () => goal && setStep(goal === 'running' ? 'running-distance' : 'muscle-plan') }
+      case 'running-distance': return { label: 'Fortsätt', disabled: !runDistance,
+        onPress: () => runDistance && setStep('running-profile') }
+      case 'running-profile':  return { label: 'Fortsätt', disabled: !runExperience || fiveKImplausible || raceInvalid,
+        onPress: () => runExperience && !fiveKImplausible && !raceInvalid && setStep('days') }
+      case 'muscle-plan':      return { label: 'Fortsätt', disabled: !musclePlan,
+        onPress: () => musclePlan && setStep(musclePlan === 'focus' ? 'muscle-focus' : 'days') }
+      case 'muscle-focus':     return { label: 'Fortsätt', disabled: focusGroups.length === 0,
+        onPress: () => focusGroups.length > 0 && setStep('days') }
+      case 'days':             return { label: 'Fortsätt', disabled: weekdays.length === 0,
+        onPress: () => weekdays.length > 0 && setStep('limitations') }
+      case 'limitations':      return { label: 'Fortsätt', disabled: false,
+        onPress: () => setStep('summary') }
+      case 'summary':          return { label: 'Starta träning', disabled: false, onPress: finishWizard }
+    }
+  })()
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
       <View style={[s.screen, { paddingTop: insets.top }]}>
 
-        {/* Header */}
+        {/* Header: tillbaka + titel + stegräknare */}
         <View style={s.header}>
           <TouchableOpacity onPress={goBack} style={s.iconBtn} activeOpacity={0.7}>
             <Ionicons
               name={step === 'goal' ? 'close' : 'chevron-back'}
-              size={step === 'goal' ? 22 : 26}
+              size={step === 'goal' ? 18 : 20}
               color={TEXT_PRIMARY}
             />
           </TouchableOpacity>
           <Text style={s.headerTitle}>Skapa ditt schema</Text>
-          <View style={{ width: 36 }} />
+          <Text style={s.headerStep}>{stepIdx + 1}/{stepFlow.length}</Text>
         </View>
 
-        {/* Progress bar */}
-        <View style={s.progressTrack}>
-          <View style={[s.progressFill, { width: `${Math.round(progress * 100)}%` as any }]} />
+        {/* Segmenterad stegindikator — ett spår per steg i flödet */}
+        <View style={s.progressRow}>
+          {stepFlow.map((st, i) => (
+            <View key={st} style={[s.progressSeg, i <= stepIdx && s.progressSegDone]} />
+          ))}
         </View>
 
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'android' ? 'height' : undefined}
+        >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 40 }]}
+          contentContainerStyle={[s.content, { paddingBottom: 32 }]}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
 
           {/* ── STEP: MÅL ──────────────────────────────────────────────── */}
@@ -262,10 +310,6 @@ export function ScheduleWizard({
                 {goal === 'muscle' && <Ionicons name="checkmark-circle" size={24} color={ORANGE} />}
               </TouchableOpacity>
 
-              <NextButton disabled={!goal} onPress={() => {
-                if (!goal) return
-                setStep(goal === 'running' ? 'running-distance' : 'muscle-plan')
-              }} />
             </>
           )}
 
@@ -297,7 +341,6 @@ export function ScheduleWizard({
                 </TouchableOpacity>
               ))}
 
-              <NextButton disabled={!runDistance} onPress={() => runDistance && setStep('running-profile')} />
             </>
           )}
 
@@ -334,17 +377,12 @@ export function ScheduleWizard({
                 )
               })}
 
-              {/* 5 km-test — frivilligt; ger tempozoner i passen. Totaltiden
-                  valideras så ett angivet tempo (5:25) inte tolkas som tid */}
-              {(() => {
-                const total = (parseInt(fiveKMin, 10) || 0) * 60 + Math.min(59, parseInt(fiveKSec, 10) || 0)
-                const implausible = total > 0 && (total < 12 * 60 || total > 90 * 60)
-                return (
-                  <>
-                    <View style={s.testCard}>
+              {/* 5 km-test — frivilligt; ger tempozoner i passen */}
+              <View style={s.testCard}>
                       <View style={s.testTitleRow}>
                         <Ionicons name="stopwatch-outline" size={17} color={ORANGE} />
                         <Text style={s.testTitle}>Hur snabbt springer du 5 km idag?</Text>
+                        <Text style={s.optionalPill}>FRIVILLIGT</Text>
                       </View>
                       <View style={s.testRow}>
                         <View style={s.testCol}>
@@ -373,19 +411,20 @@ export function ScheduleWizard({
                           <Text style={s.testUnit}>SEK</Text>
                         </View>
                       </View>
-                      <Text style={implausible ? s.testWarn : s.testHint}>
-                        {implausible
+                      <Text style={fiveKImplausible ? s.testWarn : s.testHint}>
+                        {fiveKImplausible
                           ? 'Det där ser ut som ett tempo, inte en totaltid — ange hela tiden för 5 km, t.ex. 28:30.'
-                          : 'Frivilligt — med en tid får varje pass ett tempoförslag i min/km. Lämna tomt om du inte vet.'}
+                          : 'Med en tid får varje pass ett tempoförslag i min/km. Lämna tomt om du inte vet.'}
                       </Text>
-                    </View>
+              </View>
 
-                    {/* Tävlingsdatum — frivilligt; planen slutar på loppet med
-                        nedtrappning sista två veckorna och RACE DAY i schemat */}
-                    <View style={s.testCard}>
+              {/* Tävlingsdatum — frivilligt; planen slutar på loppet med
+                  nedtrappning sista två veckorna och RACE DAY i schemat */}
+              <View style={s.testCard}>
                       <View style={s.testTitleRow}>
                         <Ionicons name="flag-outline" size={17} color={ORANGE} />
                         <Text style={s.testTitle}>Har du ett lopp inbokat?</Text>
+                        <Text style={s.optionalPill}>FRIVILLIGT</Text>
                       </View>
                       <TextInput
                         style={[s.testInput, { width: 190, textAlign: 'center', alignSelf: 'center' }]}
@@ -399,17 +438,9 @@ export function ScheduleWizard({
                       <Text style={raceInvalid ? s.testWarn : s.testHint}>
                         {raceInvalid
                           ? 'Ange ett riktigt datum framåt i tiden, t.ex. 2026-10-18.'
-                          : 'Frivilligt — med ett datum siktar planen på loppet: nedtrappning sista två veckorna och tävlingsdagen i schemat.'}
+                          : 'Med ett datum siktar planen på loppet: nedtrappning sista två veckorna och tävlingsdagen i schemat.'}
                       </Text>
-                    </View>
-
-                    <NextButton
-                      disabled={!runExperience || implausible || raceInvalid}
-                      onPress={() => runExperience && !implausible && !raceInvalid && setStep('days')}
-                    />
-                  </>
-                )
-              })()}
+              </View>
             </>
           )}
 
@@ -467,10 +498,6 @@ export function ScheduleWizard({
                 {musclePlan === 'focus' && <Ionicons name="checkmark-circle" size={24} color={ORANGE} />}
               </TouchableOpacity>
 
-              <NextButton disabled={!musclePlan} onPress={() => {
-                if (!musclePlan) return
-                setStep(musclePlan === 'focus' ? 'muscle-focus' : 'days')
-              }} />
             </>
           )}
 
@@ -526,7 +553,6 @@ export function ScheduleWizard({
                 })}
               </View>
 
-              <NextButton disabled={focusGroups.length === 0} onPress={() => focusGroups.length > 0 && setStep('days')} />
             </>
           )}
 
@@ -561,7 +587,6 @@ export function ScheduleWizard({
                   : `${weekdays.length} pass per vecka`}
               </Text>
 
-              <NextButton disabled={weekdays.length === 0} onPress={() => weekdays.length > 0 && setStep('limitations')} />
             </>
           )}
 
@@ -609,7 +634,6 @@ export function ScheduleWizard({
                 {limitations.length === 0 && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
               </TouchableOpacity>
 
-              <NextButton disabled={false} onPress={() => setStep('summary')} />
             </>
           )}
 
@@ -641,9 +665,13 @@ export function ScheduleWizard({
                   <Text style={s.summaryCardSub}>{Math.max(weekdays.length, 1)} pass per vecka</Text>
                 </View>
                 <View style={s.summaryCard}>
-                  <Ionicons name="bar-chart-outline" size={24} color={ORANGE} />
-                  <Text style={s.summaryCardTitle}>Progression</Text>
-                  <Text style={s.summaryCardSub}>Passen växer vecka för vecka i 16 veckor</Text>
+                  <Ionicons name={goal === 'running' && raceValid ? 'flag-outline' : 'bar-chart-outline'} size={24} color={ORANGE} />
+                  <Text style={s.summaryCardTitle}>{goal === 'running' && raceValid ? 'Mot loppet' : 'Progression'}</Text>
+                  <Text style={s.summaryCardSub}>
+                    {goal === 'running' && raceValid
+                      ? `Passen växer fram till tävlingsdagen ${raceDateStr}`
+                      : 'Passen växer vecka för vecka i 16 veckor'}
+                  </Text>
                 </View>
               </View>
 
@@ -663,51 +691,26 @@ export function ScheduleWizard({
                 </View>
               )}
 
-              <TouchableOpacity
-                style={s.nextBtn}
-                onPress={() => {
-                  const min = parseInt(fiveKMin, 10) || 0
-                  const sec = Math.min(59, parseInt(fiveKSec, 10) || 0)
-                  const total = min * 60 + sec
-                  const result: WizardResult = {
-                    goal, runDistance, musclePlan, focusGroups,
-                    weekdays: weekdays.length > 0 ? weekdays : [1, 3, 5],
-                    limitations,
-                    runExperience,
-                    // Bara rimliga totaltider — annars inga tempoförslag alls
-                    fiveKTimeSec: total >= 12 * 60 && total <= 90 * 60 ? total : null,
-                    raceDate: goal === 'running' && raceValid ? raceDateStr : null,
-                  }
-                  reset()
-                  onFinish(result)
-                }}
-                activeOpacity={0.85}
-              >
-                <Text style={s.nextBtnText}>Starta träning</Text>
-                <Ionicons name="arrow-forward" size={18} color="#000" />
-              </TouchableOpacity>
             </>
           )}
 
         </ScrollView>
+
+        {/* Fast sidfot — CTA:n sitter alltid på samma ställe */}
+        <View style={[s.footer, { paddingBottom: insets.bottom + 10 }]}>
+          <TouchableOpacity
+            style={[s.nextBtn, footer.disabled && s.nextBtnDisabled]}
+            onPress={footer.onPress}
+            activeOpacity={0.85}
+            disabled={footer.disabled}
+          >
+            <Text style={s.nextBtnText}>{footer.label}</Text>
+            <Ionicons name="arrow-forward" size={18} color="#000" />
+          </TouchableOpacity>
+        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
-  )
-}
-
-// ─── Next button helper ───────────────────────────────────────────────────────
-
-function NextButton({ disabled, onPress }: { disabled: boolean; onPress: () => void }) {
-  return (
-    <TouchableOpacity
-      style={[s.nextBtn, disabled && s.nextBtnDisabled]}
-      onPress={onPress}
-      activeOpacity={0.85}
-      disabled={disabled}
-    >
-      <Text style={s.nextBtnText}>Fortsätt</Text>
-      <Ionicons name="arrow-forward" size={18} color="#000" />
-    </TouchableOpacity>
   )
 }
 
@@ -718,21 +721,34 @@ const s = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
   },
-  iconBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  iconBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
   headerTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-
-  progressTrack: {
-    height: 3, backgroundColor: CARD,
-    marginHorizontal: 16, borderRadius: 2, marginBottom: 4,
+  headerStep: {
+    width: 34, textAlign: 'right',
+    color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT,
+    fontVariant: ['tabular-nums'],
   },
-  progressFill: { height: 3, backgroundColor: ORANGE, borderRadius: 2 },
 
-  content: { paddingHorizontal: 20, paddingTop: 28, gap: 14 },
+  progressRow: { flexDirection: 'row', gap: 5, marginHorizontal: 16, marginBottom: 2 },
+  progressSeg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: CARD },
+  progressSegDone: { backgroundColor: ORANGE },
 
-  stepTitle: { color: TEXT_PRIMARY, fontSize: 30, fontWeight: '800', lineHeight: 36 },
-  stepSub:   { color: TEXT_SECONDARY, fontSize: 15, marginBottom: 4 },
+  content: { paddingHorizontal: 20, paddingTop: 26, gap: 12 },
+
+  stepTitle: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', lineHeight: 34, letterSpacing: -0.4 },
+  stepSub:   { color: TEXT_SECONDARY, fontSize: 15, lineHeight: 21, marginBottom: 8 },
+
+  optionalPill: {
+    color: TEXT_SECONDARY, fontSize: 9, fontWeight: '800', letterSpacing: 1,
+    borderWidth: 1, borderColor: BORDER, borderRadius: 8,
+    paddingHorizontal: 7, paddingVertical: 3, overflow: 'hidden',
+  },
 
   // Big goal cards — ram i vila, orange ram + tonad bakgrund när valt
   bigCard: {
@@ -851,12 +867,14 @@ const s = StyleSheet.create({
   typeName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   typeDesc: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17, marginTop: 1 },
 
-  // CTA button
+  // Fast sidfot med CTA — ram och yta, inga skuggor (appens designspråk)
+  footer: {
+    paddingHorizontal: 20, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: BORDER, backgroundColor: BG,
+  },
   nextBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ORANGE, borderRadius: 16, paddingVertical: 18,
-    shadowColor: ORANGE, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28, shadowRadius: 12,
+    backgroundColor: ORANGE, borderRadius: 16, paddingVertical: 17,
   },
   nextBtnDisabled: { opacity: 0.35 },
   nextBtnText:     { color: '#000', fontSize: 17, fontWeight: '800' },
