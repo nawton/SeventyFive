@@ -670,11 +670,16 @@ export default function CardioScreen() {
       if (lastFixTs.current > 0 && Date.now() - lastFixTs.current > 8000) {
         updateGps(-1)
       }
-      // Stillastående i 5 s → auto-paus. Aldrig utan GPS-signal (tunnlar),
-      // aldrig innan rundan kommit igång, aldrig under tidssegment (vila)
+      // Stillastående i 5 s → auto-paus. Aldrig utan GPS-signal (tunnlar) —
+      // en FÄRSK fix krävs, annars är det signalen som är borta och inte
+      // löparen som står still (signalflaggan sätts först efter 8 s och
+      // hinner inte skydda). Aldrig innan rundan kommit igång, aldrig
+      // under tidssegment (vila)
       if (
         !autoPausedRef.current &&
         gpsCatRef.current !== -1 &&
+        lastFixTs.current > 0 &&
+        Date.now() - lastFixTs.current < 5000 &&
         distanceRef.current > 0.02 &&
         lastMoveTs.current > 0 &&
         Date.now() - lastMoveTs.current > 5000 &&

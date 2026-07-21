@@ -35,11 +35,18 @@ jest.mock('expo-glass-effect', () => {
   return { GlassView: View, isLiquidGlassAvailable: () => false }
 })
 
-// Apple Maps — karta/polyline/markörer renderas som tomma vyer
+// Apple Maps — karta/polyline/markörer renderas som tomma vyer, och
+// kamerametoderna på ref:en är no-ops så spårningsloopen kan anropa dem
 jest.mock('react-native-maps', () => {
   const React = require('react')
   const { View } = require('react-native')
-  const MapView = React.forwardRef((props, ref) =>
-    React.createElement(View, { ...props, ref }, props.children))
+  const MapView = React.forwardRef((props, ref) => {
+    React.useImperativeHandle(ref, () => ({
+      animateCamera: () => {},
+      animateToRegion: () => {},
+      fitToCoordinates: () => {},
+    }))
+    return React.createElement(View, props, props.children)
+  })
   return { __esModule: true, default: MapView, Polyline: View, Marker: View }
 })
