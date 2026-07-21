@@ -44,7 +44,8 @@
           "photosPermission": "Vi använder ditt fotobibliotek för att välja framstegsfoton och profilbild."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

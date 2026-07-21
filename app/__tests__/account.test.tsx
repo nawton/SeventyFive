@@ -59,12 +59,11 @@ describe('Profilinställningar', () => {
     expect(screen.getByText('Svenska')).toBeOnTheScreen()      // låst rad utan chevron
   })
 
-  it('könsvalet sparas direkt till profilen', async () => {
+  it('könsraden leder till den egna könssidan', async () => {
+    const { router } = require('expo-router')
     render(<AccountScreen />)
     fireEvent.press(await screen.findByText('Kön'))
-    fireEvent.press(screen.getByText('Kvinna'))
-    await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { gender: 'Kvinna' }))
+    expect(router.push).toHaveBeenCalledWith('/gender')
   })
 
   it('viktshjulet sparar till profilen OCH kaloriberäkningens inställning', async () => {

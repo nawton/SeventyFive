@@ -6,14 +6,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
 import { setBodyWeightKg } from '@/lib/prefs'
 import { splitName, combineName } from '@/lib/profileName'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
-import { WheelPicker } from '@/components/WheelPicker'
+import DateTimePicker from '@react-native-community/datetimepicker'
+import { Picker } from '@react-native-picker/picker'
 
 // =============================================================================
 // PROFILINSTÄLLNINGAR — namn, födelsedatum, kön, vikt, längd och konto.
@@ -22,18 +22,10 @@ import { WheelPicker } from '@/components/WheelPicker'
 // tills fler språk finns.
 // =============================================================================
 
-const MONTHS = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',
-  'juli', 'augusti', 'september', 'oktober', 'november', 'december']
-const GENDERS = ['Man', 'Kvinna', 'Annat']
-
 const range = (from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) => from + i)
 
-function daysInMonth(year: number, monthIdx: number): number {
-  return new Date(year, monthIdx + 1, 0).getDate()
-}
-
-type SheetKind = null | 'birth' | 'gender' | 'weight' | 'height'
+type SheetKind = null | 'birth' | 'weight' | 'height'
 
 // Utanför skärmkomponenten — en inline-definierad Row blir en NY komponenttyp
 // varje render, vilket monterar om raderna i onödan (och kan sluka tryck som
@@ -72,12 +64,8 @@ export default function AccountScreen() {
   const [nameEdit, setNameEdit] = useState<null | 'first' | 'last'>(null)
   const [nameDraft, setNameDraft] = useState('')
 
-  // Hjulens utkast — committas först på Klar
-  const thisYear = new Date().getFullYear()
-  const YEARS = range(thisYear - 100, thisYear - 10)
-  const [dYear, setDYear]   = useState(2000)
-  const [dMonth, setDMonth] = useState(0)
-  const [dDay, setDDay]     = useState(1)
+  // Utkast — committas först på Klar. Apples inbyggda hjul används rakt av.
+  const [dDate, setDDate] = useState(new Date(2000, 0, 9))
   const WEIGHTS = range(30, 200)
   const [wInt, setWInt] = useState(75)
   const [wDec, setWDec] = useState(0)
@@ -112,13 +100,11 @@ export default function AccountScreen() {
   // ── Sheets ─────────────────────────────────────────────────────────────────
 
   function openBirth() {
-    const d = birthDate ? new Date(birthDate + 'T12:00:00') : new Date(2000, 0, 9)
-    setDYear(d.getFullYear()); setDMonth(d.getMonth()); setDDay(d.getDate())
+    setDDate(birthDate ? new Date(birthDate + 'T12:00:00') : new Date(2000, 0, 9))
     setSheet('birth')
   }
   function saveBirth() {
-    const day = Math.min(dDay, daysInMonth(dYear, dMonth))
-    const iso = `${dYear}-${String(dMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const iso = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}-${String(dDate.getDate()).padStart(2, '0')}`
     setBirthDate(iso)
     save({ birth_date: iso })
     setSheet(null)
@@ -148,13 +134,6 @@ export default function AccountScreen() {
     setSheet(null)
   }
 
-  function pickGender(g: string) {
-    Haptics.selectionAsync()
-    setGender(g)
-    save({ gender: g })
-    setSheet(null)
-  }
-
   function openNameEdit(part: 'first' | 'last') {
     setNameDraft(part === 'first' ? first : last)
     setNameEdit(part)
@@ -171,7 +150,6 @@ export default function AccountScreen() {
   const birthLabel = birthDate ?? 'Ej angivet'
   const weightLabel = weightKg != null ? `${String(weightKg).replace('.', ',')} kg` : 'Ej specificerad'
   const heightLabel = heightCm != null ? `${heightCm} cm` : 'Ej specificerad'
-  const dayItems = range(1, daysInMonth(dYear, dMonth)).map(String)
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -191,7 +169,7 @@ export default function AccountScreen() {
           <View style={styles.rowDivider} />
           <Row label="Födelsedatum" value={birthLabel} onPress={openBirth} />
           <View style={styles.rowDivider} />
-          <Row label="Kön" value={gender ?? 'Ej angivet'} onPress={() => setSheet('gender')} />
+          <Row label="Kön" value={gender ?? 'Ej angivet'} onPress={() => router.push('/gender' as never)} />
           <View style={styles.rowDivider} />
           <Row label="Vikt" value={weightLabel} onPress={openWeight} />
           <View style={styles.rowDivider} />
@@ -208,8 +186,8 @@ export default function AccountScreen() {
         </View>
       </ScrollView>
 
-      {/* ── Hjul-sheet: födelsedatum / vikt / längd ── */}
-      <Modal visible={sheet !== null && sheet !== 'gender'} transparent animationType="slide" onRequestClose={() => setSheet(null)}>
+      {/* ── Sheet med Apples inbyggda hjul: födelsedatum / vikt / längd ── */}
+      <Modal visible={sheet !== null} transparent animationType="slide" onRequestClose={() => setSheet(null)}>
         <Pressable style={styles.overlay} onPress={() => setSheet(null)}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <Text style={styles.sheetTitle}>
@@ -217,24 +195,50 @@ export default function AccountScreen() {
             </Text>
 
             {sheet === 'birth' && (
-              <View style={styles.wheelRow}>
-                <WheelPicker items={dayItems} selectedIndex={Math.min(dDay, dayItems.length) - 1} onChange={i => setDDay(i + 1)} width={70} />
-                <WheelPicker items={MONTHS} selectedIndex={dMonth} onChange={setDMonth} width={140} />
-                <WheelPicker items={YEARS.map(String)} selectedIndex={Math.max(0, YEARS.indexOf(dYear))} onChange={i => setDYear(YEARS[i])} width={90} />
-              </View>
+              <DateTimePicker
+                value={dDate}
+                mode="date"
+                display="spinner"
+                locale="sv-SE"
+                themeVariant="dark"
+                maximumDate={new Date()}
+                onChange={(_e, d) => { if (d) setDDate(d) }}
+                style={styles.datePicker}
+              />
             )}
 
             {sheet === 'weight' && (
-              <View style={styles.wheelRow}>
-                <WheelPicker items={WEIGHTS.map(String)} selectedIndex={Math.max(0, WEIGHTS.indexOf(wInt))} onChange={i => setWInt(WEIGHTS[i])} width={90} />
-                <WheelPicker items={range(0, 9).map(d => `,${d}`)} selectedIndex={wDec} onChange={setWDec} width={64} />
+              <View style={styles.pickerRow}>
+                <Picker
+                  selectedValue={wInt}
+                  onValueChange={v => setWInt(Number(v))}
+                  style={styles.picker}
+                  itemStyle={styles.pickerItem}
+                >
+                  {WEIGHTS.map(w => <Picker.Item key={w} label={String(w)} value={w} />)}
+                </Picker>
+                <Picker
+                  selectedValue={wDec}
+                  onValueChange={v => setWDec(Number(v))}
+                  style={styles.pickerNarrow}
+                  itemStyle={styles.pickerItem}
+                >
+                  {range(0, 9).map(d => <Picker.Item key={d} label={`,${d}`} value={d} />)}
+                </Picker>
                 <Text style={styles.wheelUnit}>kg</Text>
               </View>
             )}
 
             {sheet === 'height' && (
-              <View style={styles.wheelRow}>
-                <WheelPicker items={HEIGHTS.map(String)} selectedIndex={Math.max(0, HEIGHTS.indexOf(hCm))} onChange={i => setHCm(HEIGHTS[i])} width={90} />
+              <View style={styles.pickerRow}>
+                <Picker
+                  selectedValue={hCm}
+                  onValueChange={v => setHCm(Number(v))}
+                  style={styles.picker}
+                  itemStyle={styles.pickerItem}
+                >
+                  {HEIGHTS.map(h => <Picker.Item key={h} label={String(h)} value={h} />)}
+                </Picker>
                 <Text style={styles.wheelUnit}>cm</Text>
               </View>
             )}
@@ -246,26 +250,6 @@ export default function AccountScreen() {
             >
               <Text style={styles.doneBtnText}>Klar</Text>
             </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* ── Kön ── */}
-      <Modal visible={sheet === 'gender'} transparent animationType="slide" onRequestClose={() => setSheet(null)}>
-        <Pressable style={styles.overlay} onPress={() => setSheet(null)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <Text style={styles.sheetTitle}>Kön</Text>
-            {GENDERS.map(g => (
-              <TouchableOpacity
-                key={g}
-                style={[styles.genderRow, gender === g && styles.genderRowActive]}
-                onPress={() => pickGender(g)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.genderText, gender === g && { color: ORANGE }]}>{g}</Text>
-                {gender === g && <Ionicons name="checkmark-circle" size={20} color={ORANGE} />}
-              </TouchableOpacity>
-            ))}
           </Pressable>
         </Pressable>
       </Modal>
@@ -329,7 +313,11 @@ const styles = StyleSheet.create({
     padding: 22, paddingBottom: 34, gap: 16,
   },
   sheetTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800', textAlign: 'center' },
-  wheelRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
+  datePicker: { alignSelf: 'center' },
+  pickerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  picker: { width: 110, height: 216 },
+  pickerNarrow: { width: 80, height: 216 },
+  pickerItem: { color: TEXT_PRIMARY, fontSize: 22 },
   wheelUnit: { color: TEXT_SECONDARY, fontSize: 18, fontWeight: '700', marginLeft: 8 },
 
   doneBtn: {
@@ -337,14 +325,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   doneBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
-
-  genderRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: CARD, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-    borderWidth: 1, borderColor: BORDER,
-  },
-  genderRowActive: { borderColor: ORANGE, backgroundColor: ORANGE + '14' },
-  genderText: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
 
   nameCard: {
     marginHorizontal: 24, marginBottom: 'auto', marginTop: 'auto',

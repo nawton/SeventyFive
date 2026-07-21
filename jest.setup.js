@@ -50,6 +50,19 @@ jest.mock('@/components/GlassButton', () => {
   return { GlassCircleButton: Btn, GlassPill: Btn }
 })
 
+// Apples inbyggda hjulväljare — i test: tomma vyer (värden ändras via onChange-mockar)
+jest.mock('@react-native-community/datetimepicker', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: View }
+})
+jest.mock('@react-native-picker/picker', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  const Picker = ({ children }) => React.createElement(View, null, children)
+  Picker.Item = () => null
+  return { Picker }
+})
+
 // Apple Maps — karta/polyline/markörer renderas som tomma vyer, och
 // kamerametoderna på ref:en är no-ops så spårningsloopen kan anropa dem
 jest.mock('react-native-maps', () => {
