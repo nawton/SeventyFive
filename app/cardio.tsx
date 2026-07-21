@@ -55,6 +55,44 @@ function nameToType(name: string): ExerciseType {
   return 'running'
 }
 
+// Vad aktiviteten går ut på + vad man ska tänka på — visas i infosheeten
+// när man trycker på Aktivitet-cellen under ett guidat pass
+const ACTIVITY_INFO: Record<ExerciseType, { desc: string; tips: string[] }> = {
+  running: {
+    desc: 'Löpning i din egen takt — grunden i all distansträning. Lugna kilometrar bygger motorn som gör de snabba passen möjliga.',
+    tips: [
+      'Starta lugnare än det känns nödvändigt — de första minuterna ljuger alltid',
+      'Landa mjukt med foten under kroppen och blicken framåt',
+      'Kan du prata i korta meningar ligger du rätt i lugnt tempo',
+    ],
+  },
+  interval: {
+    desc: 'Korta upprepningar i hög fart med vila emellan. Inget pass höjer din maxfart och ditt flås mer — men bara om farten är jämn och vilan används.',
+    tips: [
+      'Håll jämn fart genom hela intervallen — starta inte i sprint',
+      'Använd vilan aktivt: gå eller jogga lätt så pulsen hinner sjunka',
+      'Sista intervallen ska kännas tuff, men du ska klara alla i samma fart',
+      'Tappar du tekniken — sakta ner hellre än att kämpa dig sönder',
+    ],
+  },
+  cycling: {
+    desc: 'Cykling — kondition med minimal belastning på leder och senor. Perfekt som volymträning och aktiv återhämtning.',
+    tips: [
+      'Håll jämn kadens, runt 80–90 tramptag per minut',
+      'Växla lättare i backarna istället för att trampa tungt',
+      'Slappna av i axlar och grepp — kraften kommer från benen',
+    ],
+  },
+  walking: {
+    desc: 'Promenad — aktiv återhämtning som bygger grundkondition utan att slita. Underskattat verktyg mellan de tuffa passen.',
+    tips: [
+      'Håll ett tempo där du blir lätt andfådd',
+      'Ta ut steget och låt armarna jobba med',
+      'Perfekt dagen efter ett tufft pass — blodflödet snabbar på återhämtningen',
+    ],
+  },
+}
+
 const DIAL = Math.min(Dimensions.get('window').width - 70, 320)
 const LIVE_W = Dimensions.get('window').width
 // Cardioskärmens blå accent — ersätter appens orange på just den här ytan
@@ -149,6 +187,8 @@ export default function CardioScreen() {
     () => guidedSegments?.filter(s => s.kind === 'work').length ?? 0,
     [guidedSegments])
   const [goalModalOpen, setGoalModalOpen] = useState(false)
+  // Infosheets för guidade pass: passets upplägg resp. aktivitetens instruktioner
+  const [infoSheet, setInfoSheet] = useState<null | 'plan' | 'activity'>(null)
   const [goalKmDraft, setGoalKmDraft]   = useState(0)
   const [goalMinDraft, setGoalMinDraft] = useState(0)
 
@@ -1861,6 +1901,91 @@ export default function CardioScreen() {
         </Pressable>
       </Modal>
 
+      {/* ── Infosheet: passets upplägg (guidade pass) ── */}
+      <Modal visible={infoSheet === 'plan'} transparent animationType="slide" onRequestClose={() => setInfoSheet(null)}>
+        <Pressable style={styles.goalModalOverlay} onPress={() => setInfoSheet(null)}>
+          <Pressable style={styles.goalModalSheet} onPress={() => {}}>
+            <View style={styles.goalIconWrap}>
+              <View style={styles.goalIconCircle}>
+                <Ionicons name="flash" size={26} color={CARDIO_ACCENT} />
+              </View>
+              <Text style={styles.goalModalTitle}>Passets upplägg</Text>
+              <Text style={styles.infoSheetSub}>
+                Följ guidningen — rösten och bannern säger till när det är dags att växla
+              </Text>
+            </View>
+            <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+              {guidedSegments?.map((seg, i) => {
+                const icon: React.ComponentProps<typeof Ionicons>['name'] =
+                  seg.kind === 'work' ? 'flash-outline'
+                  : seg.kind === 'rest' ? 'pause-outline'
+                  : seg.kind === 'cooldown' ? 'leaf-outline'
+                  : 'walk-outline'
+                const target = seg.distanceM
+                  ? seg.distanceM >= 1000 && seg.distanceM % 100 === 0
+                    ? `${String(seg.distanceM / 1000).replace('.', ',')} km`
+                    : `${seg.distanceM} m`
+                  : (seg.durationS ?? 0) < 120
+                    ? `${seg.durationS} s`
+                    : `${Math.round((seg.durationS ?? 0) / 60)} min`
+                const isWork = seg.kind === 'work'
+                return (
+                  <View key={i} style={[styles.infoPlanRow, i > 0 && styles.infoPlanRowBorder]}>
+                    <View style={[styles.infoPlanIcon, isWork && { backgroundColor: CARDIO_ACCENT + '22' }]}>
+                      <Ionicons name={icon} size={15} color={isWork ? CARDIO_ACCENT : '#9BA0A6'} />
+                    </View>
+                    <Text style={[styles.infoPlanLabel, isWork && { color: '#fff', fontWeight: '700' }]} numberOfLines={1}>
+                      {seg.label}
+                    </Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[styles.infoPlanTarget, isWork && { color: CARDIO_ACCENT }]}>{target}</Text>
+                      {isWork && seg.paceSecLo && (
+                        <Text style={styles.infoPlanPace}>
+                          ca {formatPace(1, paceForUnit(seg.paceSecLo, unit))}
+                          {seg.paceSecHi && seg.paceSecHi !== seg.paceSecLo ? `–${formatPace(1, paceForUnit(seg.paceSecHi, unit))}` : ''} /{unitLabel}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )
+              })}
+            </ScrollView>
+            <TouchableOpacity style={styles.goalModalSave} onPress={() => setInfoSheet(null)}>
+              <Text style={styles.goalModalSaveText}>Jag är redo</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── Infosheet: vad aktiviteten går ut på (guidade pass) ── */}
+      <Modal visible={infoSheet === 'activity'} transparent animationType="slide" onRequestClose={() => setInfoSheet(null)}>
+        <Pressable style={styles.goalModalOverlay} onPress={() => setInfoSheet(null)}>
+          <Pressable style={styles.goalModalSheet} onPress={() => {}}>
+            <View style={styles.goalIconWrap}>
+              <View style={styles.goalIconCircle}>
+                <Ionicons name={selectedExercise.icon} size={26} color={CARDIO_ACCENT} />
+              </View>
+              <Text style={styles.goalModalTitle}>{selectedExercise.label}</Text>
+            </View>
+            <Text style={styles.infoSheetDesc}>{ACTIVITY_INFO[exercise].desc}</Text>
+            <Text style={styles.infoSheetTipsHead}>TÄNK PÅ</Text>
+            <View style={{ gap: 10 }}>
+              {ACTIVITY_INFO[exercise].tips.map((tip, i) => (
+                <View key={i} style={styles.infoTipRow}>
+                  <View style={styles.infoTipDot}>
+                    <Ionicons name="checkmark" size={11} color={CARDIO_ACCENT} />
+                  </View>
+                  <Text style={styles.infoTipText}>{tip}</Text>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.goalModalSave} onPress={() => setInfoSheet(null)}>
+              <Text style={styles.goalModalSaveText}>Jag är redo</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <SafeAreaView
         style={[
           status === 'idle' ? styles.bottomBarIdle : styles.bottomBar,
@@ -1883,17 +2008,26 @@ export default function CardioScreen() {
               {/* Inställningsrutnät i eget flytande kort, Start separat under */}
               <View style={styles.idleCard}>
               <View style={styles.idleGrid}>
-                {/* Guidade pass: planen äger aktivitet och mål — cellerna låses */}
-                <TouchableOpacity style={styles.idleCell} onPress={openPicker} activeOpacity={0.75} disabled={guided}>
+                {/* Guidade pass: planen äger aktivitet och mål — cellerna öppnar
+                    infosheets istället för väljare */}
+                <TouchableOpacity
+                  style={styles.idleCell}
+                  onPress={guided ? () => setInfoSheet('activity') : openPicker}
+                  activeOpacity={0.75}
+                >
                   <Ionicons name={selectedExercise.icon} size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
                     <Text style={styles.idleCellLabel}>Aktivitet</Text>
                     <Text style={styles.idleCellValue}>{selectedExercise.label}</Text>
                   </View>
-                  {guided && <Ionicons name="lock-closed" size={12} color="rgba(255,255,255,0.35)" />}
+                  {guided && <Ionicons name="information-circle-outline" size={14} color="rgba(255,255,255,0.4)" />}
                 </TouchableOpacity>
                 <View style={styles.idleGridDivV} />
-                <TouchableOpacity style={styles.idleCell} onPress={openGoalModal} activeOpacity={0.75} disabled={guided}>
+                <TouchableOpacity
+                  style={styles.idleCell}
+                  onPress={guided ? () => setInfoSheet('plan') : openGoalModal}
+                  activeOpacity={0.75}
+                >
                   <Ionicons name="flag-outline" size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
                     <Text style={styles.idleCellLabel}>{guided ? 'Upplägg' : 'Mål'}</Text>
@@ -1910,7 +2044,7 @@ export default function CardioScreen() {
                           : 'Inget'}
                     </Text>
                   </View>
-                  {guided && <Ionicons name="lock-closed" size={12} color="rgba(255,255,255,0.35)" />}
+                  {guided && <Ionicons name="information-circle-outline" size={14} color="rgba(255,255,255,0.4)" />}
                 </TouchableOpacity>
               </View>
               <View style={styles.idleGridDivH} />
@@ -2091,6 +2225,44 @@ const styles = StyleSheet.create({
   goalModalSaveText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   goalModalClear: { alignItems: 'center', paddingVertical: 8 },
   goalModalClearText: { color: '#9BA0A6', fontSize: 13 },
+
+  // ── Infosheets för guidade pass ──
+  infoSheetSub: {
+    color: '#9BA0A6', fontSize: 13, textAlign: 'center',
+    lineHeight: 18, marginTop: -2, paddingHorizontal: 16,
+  },
+  infoSheetDesc: { color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 21 },
+  infoSheetTipsHead: {
+    color: '#9BA0A6', fontSize: 11, fontWeight: '700', letterSpacing: 1.4, marginTop: 4,
+  },
+  infoTipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  infoTipDot: {
+    width: 20, height: 20, borderRadius: 10, marginTop: 1,
+    backgroundColor: CARDIO_ACCENT + '1E',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  infoTipText: { flex: 1, color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 19 },
+
+  infoPlanRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10,
+  },
+  infoPlanRowBorder: {
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)',
+  },
+  infoPlanIcon: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  infoPlanLabel: { flex: 1, color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: '500' },
+  infoPlanTarget: {
+    color: 'rgba(255,255,255,0.85)', fontSize: 14, fontFamily: NUM_FONT,
+    fontVariant: ['tabular-nums'],
+  },
+  infoPlanPace: {
+    color: '#9BA0A6', fontSize: 11, fontFamily: NUM_FONT_SEMI,
+    fontVariant: ['tabular-nums'], marginTop: 1,
+  },
   root: { flex: 1, backgroundColor: '#e8e8e8' },
 
   // ── Stats overlay ──
