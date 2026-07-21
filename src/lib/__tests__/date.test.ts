@@ -59,7 +59,10 @@ describe('scheduleDates pager', () => {
     }
   })
   it('imorgon är ett steg åt höger', () => {
+    // Midnatt, som kalendern alltid skickar — new Date() med klockslag skulle
+    // göra testet tidsberoende (rundas till 2 dagar efter lunch)
     const tomorrow = new Date()
+    tomorrow.setHours(0, 0, 0, 0)
     tomorrow.setDate(tomorrow.getDate() + 1)
     expect(dateToIndex(tomorrow)).toBe(CENTER_IDX + 1)
   })
