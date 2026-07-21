@@ -51,9 +51,9 @@ function returnUrl(): string {
 
 /** Startar Stripe Checkout i webbläsaren. Statusen uppdateras av webhooken —
     anroparen bör läsa om abonnemanget när skärmen får fokus igen. */
-export async function startCheckout(): Promise<void> {
+export async function startCheckout(plan: 'annual' | 'monthly' = 'annual'): Promise<void> {
   const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-    body: { redirectUrl: returnUrl() },
+    body: { redirectUrl: returnUrl(), plan },
   })
   if (error) throw new Error(error.message ?? 'Kunde inte starta betalningen')
   const url = (data as { url?: string })?.url

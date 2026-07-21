@@ -15,9 +15,11 @@ Stripe ──webhook──▶ stripe-webhook ──▶ subscriptions-tabellen �
 1. **Stripe-konto** — skapa på stripe.com. Jobba i **testläge** tills allt funkar
    (testkort: `4242 4242 4242 4242`, valfritt datum/CVC).
 
-2. **Produkt + pris** — Dashboard → Product catalog → Add product.
-   T.ex. "SeventyFive Premium", återkommande, 49 kr/månad.
-   Kopiera pris-id:t (`price_…`).
+2. **Produkt + priser** — Dashboard → Product catalog → Add product.
+   "SeventyFive Premium" med TVÅ återkommande priser: månadsvis (t.ex. 99 kr)
+   och årligen (t.ex. 699 kr). Kopiera båda pris-id:na (`price_…`).
+   Visningstexterna i appen bor i `src/lib/premiumPlans.ts` — uppdatera dem
+   så de matchar de faktiska beloppen.
 
 3. **Kör migrationen** (skapar `subscriptions`-tabellen med RLS):
    ```bash
@@ -27,8 +29,10 @@ Stripe ──webhook──▶ stripe-webhook ──▶ subscriptions-tabellen �
 4. **Sätt secrets** (Supabase → Edge Functions → Secrets, eller CLI):
    ```bash
    supabase secrets set STRIPE_SECRET_KEY=sk_test_…
-   supabase secrets set STRIPE_PRICE_ID=price_…
+   supabase secrets set STRIPE_PRICE_ID_ANNUAL=price_…
+   supabase secrets set STRIPE_PRICE_ID_MONTHLY=price_…
    ```
+   (`STRIPE_PRICE_ID` fungerar som fallback om du bara har ett pris.)
 
 5. **Deploya funktionerna:**
    ```bash

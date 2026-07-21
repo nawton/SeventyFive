@@ -55,9 +55,9 @@ describe('isPremium', () => {
 describe('startCheckout / openBillingPortal', () => {
   it('hämtar checkout-URL från edge-funktionen och öppnar webbläsaren', async () => {
     ;(supabase.functions.invoke as jest.Mock).mockResolvedValue({ data: { url: 'https://checkout.stripe.com/x' }, error: null })
-    await startCheckout()
+    await startCheckout('monthly')
     expect(supabase.functions.invoke).toHaveBeenCalledWith('stripe-checkout', {
-      body: { redirectUrl: 'seventyfive://profile' },
+      body: { redirectUrl: 'seventyfive://profile', plan: 'monthly' },
     })
     expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalledWith('https://checkout.stripe.com/x', 'seventyfive://profile')
   })

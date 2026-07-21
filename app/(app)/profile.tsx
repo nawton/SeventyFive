@@ -324,8 +324,8 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
         </TouchableOpacity>
 
-        {/* Abonnemang — uppgradera eller hantera via Stripe */}
-        <SubscriptionCard />
+        {/* Premium-bannern — leder till paywallen/statussidan */}
+        <SubscriptionCard name={name} />
 
         {/* Lägg till foto — grönt kvittoläge när dagens redan är taget */}
         {challenge && (hasTodayPhoto ? (

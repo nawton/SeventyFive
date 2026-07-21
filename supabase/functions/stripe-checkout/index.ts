@@ -22,12 +22,16 @@ Deno.serve(async (req: Request) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return jsonResponse({ error: 'Inte inloggad' }, 401)
 
-    const { redirectUrl } = await req.json().catch(() => ({}))
+    const { redirectUrl, plan } = await req.json().catch(() => ({}))
     const redirect = typeof redirectUrl === 'string' && redirectUrl.length > 0
       ? redirectUrl
       : 'seventyfive://subscription-result'
 
-    const priceId = Deno.env.get('STRIPE_PRICE_ID')
+    // Två planer: årlig (default) och månadsvis — egna Stripe-priser.
+    // STRIPE_PRICE_ID fungerar som fallback om bara ett pris finns uppsatt.
+    const priceId = (plan === 'monthly'
+      ? Deno.env.get('STRIPE_PRICE_ID_MONTHLY')
+      : Deno.env.get('STRIPE_PRICE_ID_ANNUAL')) ?? Deno.env.get('STRIPE_PRICE_ID')
     if (!priceId) return jsonResponse({ error: 'STRIPE_PRICE_ID saknas' }, 500)
 
     // Återanvänd Stripe-kunden om användaren redan har en — annars skapa
