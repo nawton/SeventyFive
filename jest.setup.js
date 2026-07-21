@@ -2,3 +2,44 @@
 // ger en fungerande in-memory-implementation
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'))
+
+// ─── Komponenttester ─────────────────────────────────────────────────────────
+// Native-moduler utan JS-implementation i test ersätts med officiella mockar
+// eller enkla View-attrapper. Ren logik (node-tester) påverkas inte — mockarna
+// aktiveras bara när modulen faktiskt importeras.
+
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'))
+require('react-native-gesture-handler/jestSetup')
+jest.mock('react-native-safe-area-context', () => {
+  const { View } = require('react-native')
+  return {
+    SafeAreaProvider: View,
+    SafeAreaView: View,
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+    useSafeAreaFrame: () => ({ x: 0, y: 0, width: 390, height: 844 }),
+  }
+})
+
+// Ikonfonterna drar in expo-font/expo-asset som saknar testimplementation —
+// varje ikon renderas som texten "icon:<namn>" (går att asserta på)
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  const Icon = ({ name }) => React.createElement(Text, null, `icon:${name}`)
+  return new Proxy({}, { get: () => Icon })
+})
+
+// Liquid glass (iOS 26) — i test: vanliga vyer utan glaseffekt
+jest.mock('expo-glass-effect', () => {
+  const { View } = require('react-native')
+  return { GlassView: View, isLiquidGlassAvailable: () => false }
+})
+
+// Apple Maps — karta/polyline/markörer renderas som tomma vyer
+jest.mock('react-native-maps', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  const MapView = React.forwardRef((props, ref) =>
+    React.createElement(View, { ...props, ref }, props.children))
+  return { __esModule: true, default: MapView, Polyline: View, Marker: View }
+})
