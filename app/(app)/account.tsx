@@ -12,6 +12,7 @@ import { setBodyWeightKg } from '@/lib/prefs'
 import { splitName, combineName } from '@/lib/profileName'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { GlassPill } from '@/components/GlassButton'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { Picker } from '@react-native-picker/picker'
 
@@ -211,13 +212,14 @@ export default function AccountScreen() {
       <Modal visible={sheet !== null} transparent animationType="fade" onRequestClose={() => setSheet(null)}>
         <Pressable style={styles.overlay} onPress={() => setSheet(null)}>
           <View style={styles.floatWrap} pointerEvents="box-none">
-            <TouchableOpacity
-              style={styles.klarPill}
+            <GlassPill
               onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
-              activeOpacity={0.85}
+              style={styles.klarPill}
+              tint="rgba(10,132,255,0.75)"
+              fallbackStyle={styles.klarFallback}
             >
               <Text style={styles.klarPillText}>Klar</Text>
-            </TouchableOpacity>
+            </GlassPill>
             <Pressable style={styles.pickerPanel} onPress={() => {}}>
             {sheet === 'birth' && (
               <DateTimePicker
@@ -280,9 +282,14 @@ export default function AccountScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           pointerEvents="box-none"
         >
-          <TouchableOpacity style={styles.klarPill} onPress={doneEditingNames} activeOpacity={0.85}>
+          <GlassPill
+            onPress={doneEditingNames}
+            style={styles.klarPill}
+            tint="rgba(10,132,255,0.75)"
+            fallbackStyle={styles.klarFallback}
+          >
             <Text style={styles.klarPillText}>Klar</Text>
-          </TouchableOpacity>
+          </GlassPill>
         </KeyboardAvoidingView>
       )}
     </SafeAreaView>
@@ -327,11 +334,9 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, bottom: 0,
     alignItems: 'flex-end', padding: 14,
   },
-  klarPill: {
-    backgroundColor: ORANGE, borderRadius: 24,
-    paddingHorizontal: 24, paddingVertical: 11,
-  },
-  klarPillText: { color: '#000', fontSize: 16, fontWeight: '800' },
+  klarPill: { borderRadius: 24, paddingHorizontal: 26, paddingVertical: 12 },
+  klarFallback: { backgroundColor: '#0A84FF' },
+  klarPillText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   rowInput: {
     flex: 1, color: TEXT_PRIMARY, fontSize: 15, textAlign: 'right', padding: 0,
   },
