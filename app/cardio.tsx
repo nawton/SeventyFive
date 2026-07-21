@@ -241,6 +241,8 @@ export default function CardioScreen() {
   }, [])
   const locationSub = useRef<Location.LocationSubscription | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Väntande kartcentrering från init — städas vid unmount
+  const initCenterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Kompass: enhetens riktning från sensorn
   const headingSub = useRef<Location.LocationSubscription | null>(null)
@@ -603,7 +605,10 @@ export default function CardioScreen() {
   function sendInit(coord: Coord) {
     const center = () => mapRef.current?.animateCamera({ center: coord, zoom: 16 }, { duration: 0 })
     if (mapReady.current) center()
-    else setTimeout(center, 600)
+    else {
+      if (initCenterTimer.current) clearTimeout(initCenterTimer.current)
+      initCenterTimer.current = setTimeout(center, 600)
+    }
   }
 
   function changeStyle(key: string) {
@@ -813,6 +818,7 @@ export default function CardioScreen() {
     if (timerRef.current) clearInterval(timerRef.current)
     if (splitToastTimer.current) clearTimeout(splitToastTimer.current)
     if (countdownTimer.current) clearInterval(countdownTimer.current)
+    if (initCenterTimer.current) clearTimeout(initCenterTimer.current)
   }
 
   function handleFinish() {
