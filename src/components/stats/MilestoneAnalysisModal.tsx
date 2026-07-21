@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, Modal, ScrollView } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, ORANGE, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
+import { BG, CARD, ORANGE, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { parseLocalDate, toLocalDateString } from '@/lib/date'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import type { DaySummary } from '@/services/dailyLog'
@@ -14,7 +14,7 @@ import type { CompletedSessionItem } from '@/services/workoutSchedule'
 // Sammanfattar hur det gått hittills och ger konkreta, databaserade tips.
 // =============================================================================
 
-const BLUE = CARDIO_BLUE
+const BLUE = '#3FBBFF'
 const TEAL = '#40F5E9'
 
 const WEEKDAYS = ['måndagar', 'tisdagar', 'onsdagar', 'torsdagar', 'fredagar', 'lördagar', 'söndagar']

@@ -12,8 +12,6 @@ export const NUM_FONT      = 'Nunito_700Bold'
 export const NUM_FONT_SEMI = 'Nunito_600SemiBold'
 
 /** Cardions accentfärg — GPS-skärmen, schemakorten och detaljvyerna delar den */
-// Löpdelens accent — turkos-mint (Runna-inspirerad). Namnet CARDIO_BLUE
-// behålls så alla befintliga användningar följer med automatiskt.
-export const CARDIO_BLUE = '#4ED9C4'
-/** Samma turkos under sitt rätta namn — för nya ytor (premium m.m.) */
-export const MINT = CARDIO_BLUE
+export const CARDIO_BLUE = '#3FA7FF'
+/** Turkos-mint — premiumytornas accent (Runna-inspirerad) */
+export const MINT = '#4ED9C4'
