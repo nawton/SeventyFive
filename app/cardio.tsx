@@ -3,7 +3,7 @@ import * as Location from 'expo-location'
 import * as Speech from 'expo-speech'
 import { useKeepAwake } from 'expo-keep-awake'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Dimensions,
@@ -29,6 +29,7 @@ import { saveCardioWorkout } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
+import type { RunSegment } from '@/lib/runProgression'
 import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, getLastMapCoord, setLastMapCoord, type CardioStatsTheme, type VoiceSettings } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
@@ -123,9 +124,30 @@ export default function CardioScreen() {
   // SafeAreaView får noll-insets inne i modaler på iOS — padda explicit
   const insets = useSafeAreaInsets()
 
-  const { name, sessionId, sessionDate, goalKm, goalMin } = useLocalSearchParams<{ name?: string; sessionId?: string; sessionDate?: string; goalKm?: string; goalMin?: string }>()
+  const { name, sessionId, sessionDate, goalKm, goalMin, segments } = useLocalSearchParams<{ name?: string; sessionId?: string; sessionDate?: string; goalKm?: string; goalMin?: string; segments?: string }>()
   const [goalKmNum, setGoalKmNum]   = useState(goalKm ? parseFloat(goalKm) : 0)
   const [goalMinNum, setGoalMinNum] = useState(goalMin ? parseInt(goalMin, 10) : 0)
+
+  // ── Guidat pass: segmentupplägg från run-workout (intervaller/tempo/fartlek).
+  // Allt som inte parsar rent → null → vanlig fri runda, aldrig krasch.
+  const guidedSegments = useMemo<RunSegment[] | null>(() => {
+    const raw = Array.isArray(segments) ? segments[0] : segments
+    if (!raw) return null
+    try {
+      const arr = JSON.parse(raw)
+      if (!Array.isArray(arr) || arr.length < 2) return null
+      const ok = arr.every((s: RunSegment) =>
+        s && typeof s.label === 'string' &&
+        ((s.distanceM ?? 0) > 0) !== ((s.durationS ?? 0) > 0))
+      return ok ? (arr as RunSegment[]) : null
+    } catch {
+      return null
+    }
+  }, [segments])
+  const guided = guidedSegments !== null
+  const totalWork = useMemo(
+    () => guidedSegments?.filter(s => s.kind === 'work').length ?? 0,
+    [guidedSegments])
   const [goalModalOpen, setGoalModalOpen] = useState(false)
   const [goalKmDraft, setGoalKmDraft]   = useState(0)
   const [goalMinDraft, setGoalMinDraft] = useState(0)
@@ -296,6 +318,23 @@ export default function CardioScreen() {
   const smoothedPaceRef = useRef(0)
   const splitToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ── Intervallmotorns state — ref:en är auktoritativ i looparna (läser bara
+  // andra refs, aldrig state → inga stale closures). engineUi är en snapshot
+  // som ENDAST sätts vid segmentövergångar; per-sekund-progressen härleds i
+  // render från redan-tickande elapsed/distanceKm. Ingen motoråterhämtning
+  // vid app-omstart mitt i pass (samma villkor som fria rundor).
+  const intervalRef = useRef({
+    idx: 0,
+    segStartDistKm: 0,
+    segStartElapsed: 0,
+    restWarned: false,
+    completedWork: 0,
+    done: false,
+  })
+  const [engineUi, setEngineUi] = useState({
+    idx: 0, segStartDistKm: 0, segStartElapsed: 0, completedWork: 0, done: false,
+  })
+
   const selectedExercise = EXERCISES.find(e => e.key === exercise)!
   const calories = Math.round(distanceKm * 65)
 
@@ -416,6 +455,111 @@ export default function CardioScreen() {
       parts.push(`Senaste kilometern: ${spokenTime(splitTimes.current[splitTimes.current.length - 1])}.`)
     }
     return parts.join(' ')
+  }
+
+  // ── Intervallmotorn — guidar genom segmentupplägget (uppvärmning → arbete/
+  // vila → nedvarvning). Anropas från både 1 s-timern (tidssegment) och
+  // GPS-callbacken (distanssegment); idempotent så dubbla anrop i samma tick
+  // är ofarliga. Rör aldrig splitKm/splitTimes — km-splitsen lever sitt eget liv.
+
+  function segRemaining(seg: RunSegment): number {
+    const st = intervalRef.current
+    return seg.distanceM
+      ? seg.distanceM - (distanceRef.current - st.segStartDistKm) * 1000
+      : (seg.durationS ?? 0) - (elapsedRef.current - st.segStartElapsed)
+  }
+
+  // "1,5 kilometer" / "600 meter" — för uppläsning
+  function spokenDist(m: number): string {
+    if (m >= 1000 && m % 100 === 0) {
+      return `${String(m / 1000).replace('.', ',')} kilometer`
+    }
+    return `${m} meter`
+  }
+
+  function spokenSegmentIntro(seg: RunSegment): string {
+    if (seg.kind === 'work') {
+      // Intervaller läses i meter ("Intervall 3 av 6. 1000 meter."),
+      // tempo/maratonfart/fartlek i kilometer
+      return seg.label.startsWith('Intervall')
+        ? `${seg.label}. ${seg.distanceM} meter.`
+        : `${seg.label}: ${spokenDist(seg.distanceM ?? 0)}.`
+    }
+    if (seg.durationS) {
+      return `${seg.label}: ${Math.round(seg.durationS / 60)} minuter i lugnt tempo.`
+    }
+    return `${seg.label}: ${spokenDist(seg.distanceM ?? 0)} i lugnt tempo.`
+  }
+
+  function transitionPhrase(finished: RunSegment, next: RunSegment): string {
+    if (next.kind === 'rest') {
+      return `Intervall klar. Vila ${next.durationS} sekunder.`
+    }
+    if (next.kind === 'cooldown') {
+      const prefix = finished.label.startsWith('Intervall')
+        ? 'Sista intervallen klar. '
+        : 'Bra jobbat! '
+      return `${prefix}${spokenSegmentIntro(next)}`
+    }
+    return spokenSegmentIntro(next)
+  }
+
+  function advanceIntervalEngine() {
+    const segs = guidedSegments
+    if (!segs) return
+    const st = intervalRef.current
+    if (st.done) return
+
+    // 10 s-varning innan vilan tar slut — löparen hinner göra sig redo
+    const cur = segs[st.idx]
+    if (cur.kind === 'rest' && cur.durationS && !st.restWarned) {
+      const remain = segRemaining(cur)
+      if (remain <= 10 && remain > 0) {
+        st.restWarned = true
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+        speak('Tio sekunder kvar. Gör dig redo.')
+      }
+    }
+
+    // Avancera — idx växer strikt, loopen terminerar vid segs.length
+    let changed = false
+    while (st.idx < segs.length && segRemaining(segs[st.idx]) <= 0) {
+      const finished = segs[st.idx]
+      if (finished.kind === 'work') st.completedWork += 1
+      st.idx += 1
+      st.segStartDistKm = distanceRef.current
+      st.segStartElapsed = elapsedRef.current
+      st.restWarned = false
+      changed = true
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      if (st.idx >= segs.length) {
+        st.done = true
+        speak('Passet är klart! Bra jobbat. Avsluta passet när du vill.')
+      } else {
+        speak(transitionPhrase(finished, segs[st.idx]))
+      }
+    }
+    if (changed) {
+      setEngineUi({
+        idx: st.idx,
+        segStartDistKm: st.segStartDistKm,
+        segStartElapsed: st.segStartElapsed,
+        completedWork: st.completedWork,
+        done: st.done,
+      })
+    }
+  }
+
+  // Dev-genväg: långtryck på intervallbannern force-avancerar segmentet —
+  // distanssegment går inte att testa inomhus annars. Skeppas aldrig (__DEV__).
+  function devForceSegment() {
+    if (!__DEV__ || !guidedSegments) return
+    const st = intervalRef.current
+    if (st.done) return
+    const seg = guidedSegments[st.idx]
+    if (seg.distanceM) st.segStartDistKm = distanceRef.current - seg.distanceM / 1000
+    else st.segStartElapsed = elapsedRef.current - (seg.durationS ?? 0)
+    advanceIntervalEngine()
   }
 
   function openStyleSheet() {
@@ -547,16 +691,20 @@ export default function CardioScreen() {
   }
 
   async function startTracking() {
-    // Talat besked vid start (med mål) respektive återupptagning
+    // Talat besked vid start (med mål/första segmentet) respektive återupptagning
     if (elapsedRef.current === 0) {
-      const kmTxt = goalKmNum > 0
-        ? `${(goalKmNum % 1 === 0 ? String(goalKmNum) : goalKmNum.toFixed(1).replace('.', ','))} kilometer`
-        : ''
-      const minTxt = goalMinNum > 0 ? `${goalMinNum} minuter` : ''
-      const goalTxt = kmTxt && minTxt
-        ? ` Mål: ${kmTxt} på ${minTxt}.`
-        : kmTxt ? ` Mål: ${kmTxt}.` : minTxt ? ` Mål: ${minTxt}.` : ''
-      speak(`${selectedExercise.label} startad.${goalTxt}`)
+      if (guidedSegments) {
+        speak(`${selectedExercise.label} startad. ${spokenSegmentIntro(guidedSegments[0])}`)
+      } else {
+        const kmTxt = goalKmNum > 0
+          ? `${(goalKmNum % 1 === 0 ? String(goalKmNum) : goalKmNum.toFixed(1).replace('.', ','))} kilometer`
+          : ''
+        const minTxt = goalMinNum > 0 ? `${goalMinNum} minuter` : ''
+        const goalTxt = kmTxt && minTxt
+          ? ` Mål: ${kmTxt} på ${minTxt}.`
+          : kmTxt ? ` Mål: ${kmTxt}.` : minTxt ? ` Mål: ${minTxt}.` : ''
+        speak(`${selectedExercise.label} startad.${goalTxt}`)
+      }
     } else {
       speak('Återupptar.')
     }
@@ -594,6 +742,8 @@ export default function CardioScreen() {
           if (phrase) speak(phrase)
         }
       }
+      // Guidade pass: tidssegment (vila, fartlek-värmning) drivs av klockan
+      if (guided) advanceIntervalEngine()
     }, 1000)
     locationSub.current = await Location.watchPositionAsync(
       { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 3 },
@@ -658,6 +808,9 @@ export default function CardioScreen() {
 
           distanceRef.current = newKm
           setDistanceKm(newKm)
+
+          // Guidade pass: distanssegment drivs av just committad distans
+          if (guided) advanceIntervalEngine()
         }
 
         lastCoord.current = coord
@@ -899,6 +1052,53 @@ export default function CardioScreen() {
                 </View>
               )}
             </View>
+
+            {/* ── Intervallguidning: aktuellt segment + progress ── */}
+            {guided && (() => {
+              const seg = engineUi.done ? null : guidedSegments![engineUi.idx]
+              const total = seg ? (seg.distanceM ?? seg.durationS ?? 1) : 1
+              const remain = seg
+                ? seg.distanceM
+                  ? Math.max(0, seg.distanceM - (distanceKm - engineUi.segStartDistKm) * 1000)
+                  : Math.max(0, (seg.durationS ?? 0) - (elapsed - engineUi.segStartElapsed))
+                : 0
+              const pct = seg ? Math.min(1, Math.max(0, 1 - remain / total)) : 1
+              const isWork = seg?.kind === 'work'
+              const barColor = !seg ? '#3BE862' : isWork ? CARDIO_ACCENT : lightCard ? '#9E9E9E' : '#8A8F98'
+              return (
+                <Pressable
+                  style={styles.ivBanner}
+                  onPress={() => setHudHidden(true)}
+                  onLongPress={__DEV__ ? devForceSegment : undefined}
+                  delayLongPress={600}
+                >
+                  <View style={styles.ivBannerRow}>
+                    <Text
+                      style={[
+                        styles.ivBannerLabel,
+                        lightCard && { color: '#000' },
+                        isWork && { color: CARDIO_ACCENT },
+                        !seg && { color: '#3BE862' },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {seg ? seg.label : 'Passet klart'}
+                    </Text>
+                    {seg ? (
+                      <Text style={[styles.ivBannerRemain, lightCard && { color: '#000' }]}>
+                        {seg.distanceM ? `${Math.ceil(remain / 10) * 10} m kvar` : formatTime(Math.ceil(remain))}
+                      </Text>
+                    ) : (
+                      <Ionicons name="checkmark-circle" size={15} color="#3BE862" />
+                    )}
+                  </View>
+                  <View style={[styles.ivBannerTrack, lightCard && { backgroundColor: '#E0E0E0' }]}>
+                    <View style={[styles.ivBannerFill, { width: `${pct * 100}%` as never, backgroundColor: barColor }]} />
+                  </View>
+                </Pressable>
+              )
+            })()}
+
             <View style={styles.statsRow}>
               <View style={styles.stat}>
                 <Text style={[styles.statValue, lightCard && { color: '#000' }]}>{toDisplayDistance(distanceKm, unit).toFixed(2)}</Text>
@@ -1047,6 +1247,47 @@ export default function CardioScreen() {
                       </View>
                     </View>
                   )}
+                </View>
+              )}
+
+              {/* ── Guidat pass: hela segmentupplägget — klara ✓, aktuellt
+                    markerat med live-återstående, kommande dämpade ── */}
+              {guided && (
+                <View style={styles.expandedGoal}>
+                  <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false}>
+                    {guidedSegments!.map((seg, i) => {
+                      const isDone = engineUi.done || i < engineUi.idx
+                      const isCurrent = !engineUi.done && i === engineUi.idx
+                      const target = seg.distanceM
+                        ? `${seg.distanceM >= 1000 ? `${String(seg.distanceM / 1000).replace('.', ',')} km` : `${seg.distanceM} m`}`
+                        : formatTime(seg.durationS ?? 0)
+                      const liveRemain = isCurrent
+                        ? seg.distanceM
+                          ? `${Math.ceil(Math.max(0, seg.distanceM - (distanceKm - engineUi.segStartDistKm) * 1000) / 10) * 10} m kvar`
+                          : formatTime(Math.ceil(Math.max(0, (seg.durationS ?? 0) - (elapsed - engineUi.segStartElapsed))))
+                        : null
+                      return (
+                        <View key={i} style={[styles.ivListRow, isCurrent && styles.ivListRowCurrent]}>
+                          <View style={[styles.ivListDot, isDone && { backgroundColor: '#3BE862' }, isCurrent && { backgroundColor: CARDIO_ACCENT }]}>
+                            {isDone && <Ionicons name="checkmark" size={10} color="#000" />}
+                          </View>
+                          <Text
+                            style={[
+                              styles.ivListLabel,
+                              isDone && { color: '#666' },
+                              isCurrent && { color: '#fff', fontWeight: '700' },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {seg.label}
+                          </Text>
+                          <Text style={[styles.ivListTarget, isCurrent && { color: CARDIO_ACCENT }]}>
+                            {liveRemain ?? target}
+                          </Text>
+                        </View>
+                      )
+                    })}
+                  </ScrollView>
                 </View>
               )}
 
@@ -1304,6 +1545,20 @@ export default function CardioScreen() {
                     {reached
                       ? 'Tidsmål uppnått!'
                       : `${Math.round(pct * 100)}% av tidsmålet (${goalMinNum} min)`}
+                  </Text>
+                </View>
+              )
+            })()}
+            {/* Guidat pass: intervallfacit ("1 av 1" på tempo/maraton är brus → totalWork > 1) */}
+            {summary && guided && totalWork > 1 && (() => {
+              const all = engineUi.completedWork >= totalWork
+              return (
+                <View style={styles.summaryGoalRow}>
+                  <Ionicons name={all ? 'trophy' : 'flash-outline'} size={16} color={all ? '#FFD54F' : 'rgba(255,255,255,0.6)'} />
+                  <Text style={[styles.summaryGoalText, all && { color: '#FFD54F' }]}>
+                    {all
+                      ? `Alla ${totalWork} intervaller avklarade!`
+                      : `${engineUi.completedWork} av ${totalWork} intervaller`}
                   </Text>
                 </View>
               )
@@ -1946,6 +2201,40 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
   goalFill: { height: '100%', backgroundColor: CARDIO_BLUE, borderRadius: 2 },
+
+  // ── Intervallguidning: HUD-banner + segmentlista ──
+  ivBanner: { alignSelf: 'stretch', gap: 5, marginBottom: 10 },
+  ivBannerRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+  },
+  ivBannerLabel: {
+    flex: 1, color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '700',
+  },
+  ivBannerRemain: {
+    color: 'rgba(255,255,255,0.85)', fontSize: 13, fontFamily: NUM_FONT,
+    fontVariant: ['tabular-nums'],
+  },
+  ivBannerTrack: {
+    height: 3, borderRadius: 2, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  ivBannerFill: { height: '100%', borderRadius: 2 },
+
+  ivListRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 7, paddingHorizontal: 4, borderRadius: 8,
+  },
+  ivListRowCurrent: { backgroundColor: 'rgba(255,255,255,0.06)' },
+  ivListDot: {
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ivListLabel: { flex: 1, color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '500' },
+  ivListTarget: {
+    color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: NUM_FONT,
+    fontVariant: ['tabular-nums'],
+  },
 
   statsRow: {
     flexDirection: 'row',
