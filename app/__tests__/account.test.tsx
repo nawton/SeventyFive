@@ -75,12 +75,11 @@ describe('Profilinställningar', () => {
     expect(await getBodyWeightKg()).toBe(76)    // prefs rundar till hela kg
   })
 
-  it('namnen redigeras direkt i raden — Klar-pillen sparar ihop dem', async () => {
+  it('namnen redigeras direkt i raden — returknappen sparar ihop dem', async () => {
     render(<AccountScreen />)
     const input = await screen.findByDisplayValue('Anton')
-    fireEvent(input, 'focus')
     fireEvent.changeText(input, 'Tony')
-    fireEvent.press(screen.getByText('Klar'))
+    fireEvent(input, 'submitEditing')
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Wretenberg' }))
   })

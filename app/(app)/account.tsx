@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable,
-  TextInput, KeyboardAvoidingView, Platform, Keyboard,
+  TextInput, Keyboard,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -61,8 +61,6 @@ export default function AccountScreen() {
   const [heightCm, setHeightCm]   = useState<number | null>(null)
 
   const [sheet, setSheet] = useState<SheetKind>(null)
-  // Namnen redigeras direkt i raderna — pillen visas när något fält har fokus
-  const [nameFocus, setNameFocus] = useState(false)
 
   // Utkast — committas först på Klar. Apples inbyggda hjul används rakt av.
   const [dDate, setDDate] = useState(new Date(2000, 0, 9))
@@ -102,7 +100,6 @@ export default function AccountScreen() {
   }
   function doneEditingNames() {
     Keyboard.dismiss()
-    setNameFocus(false)
     saveNames()
   }
 
@@ -165,7 +162,6 @@ export default function AccountScreen() {
               style={styles.rowInput}
               value={first}
               onChangeText={setFirst}
-              onFocus={() => setNameFocus(true)}
               onBlur={saveNames}
               returnKeyType="done"
               onSubmitEditing={doneEditingNames}
@@ -180,7 +176,6 @@ export default function AccountScreen() {
               style={styles.rowInput}
               value={last}
               onChangeText={setLast}
-              onFocus={() => setNameFocus(true)}
               onBlur={saveNames}
               returnKeyType="done"
               onSubmitEditing={doneEditingNames}
@@ -215,7 +210,7 @@ export default function AccountScreen() {
             <GlassPill
               onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
               style={styles.klarPill}
-              tint="rgba(10,132,255,0.75)"
+              tint="rgba(255,255,255,0.14)"
               fallbackStyle={styles.klarFallback}
             >
               <Text style={styles.klarPillText}>Klar</Text>
@@ -275,23 +270,6 @@ export default function AccountScreen() {
         </Pressable>
       </Modal>
 
-      {/* Flytande Klar ovanför tangentbordet vid namnredigering */}
-      {nameFocus && (
-        <KeyboardAvoidingView
-          style={styles.klarWrap}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          pointerEvents="box-none"
-        >
-          <GlassPill
-            onPress={doneEditingNames}
-            style={styles.klarPill}
-            tint="rgba(10,132,255,0.75)"
-            fallbackStyle={styles.klarFallback}
-          >
-            <Text style={styles.klarPillText}>Klar</Text>
-          </GlassPill>
-        </KeyboardAvoidingView>
-      )}
     </SafeAreaView>
   )
 }
@@ -335,7 +313,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end', padding: 14,
   },
   klarPill: { borderRadius: 24, paddingHorizontal: 26, paddingVertical: 12 },
-  klarFallback: { backgroundColor: '#0A84FF' },
+  klarFallback: { backgroundColor: 'rgba(40,40,44,0.96)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   klarPillText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   rowInput: {
     flex: 1, color: TEXT_PRIMARY, fontSize: 15, textAlign: 'right', padding: 0,
