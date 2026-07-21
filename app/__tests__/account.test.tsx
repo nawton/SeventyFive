@@ -39,8 +39,8 @@ beforeEach(() => {
 describe('Profilinställningar', () => {
   it('visar alla rader med värden från profilen', async () => {
     render(<AccountScreen />)
-    expect(await screen.findByText('Anton')).toBeOnTheScreen()
-    expect(screen.getByText('Wretenberg')).toBeOnTheScreen()
+    expect(await screen.findByDisplayValue('Anton')).toBeOnTheScreen()
+    expect(screen.getByDisplayValue('Wretenberg')).toBeOnTheScreen()
     expect(screen.getByText('2004-01-09')).toBeOnTheScreen()
     expect(screen.getByText('Man')).toBeOnTheScreen()
     expect(screen.getByText('75,5 kg')).toBeOnTheScreen()
@@ -53,7 +53,7 @@ describe('Profilinställningar', () => {
       name: null, avatar_url: null, birth_date: null, gender: null, weight_kg: null, height_cm: null,
     })
     render(<AccountScreen />)
-    expect(await screen.findAllByText('Lägg till')).toHaveLength(2)
+    expect(await screen.findAllByPlaceholderText('Lägg till')).toHaveLength(2)
     expect(screen.getAllByText('Ej specificerad')).toHaveLength(2)
     expect(screen.getAllByText('Ej angivet')).toHaveLength(2)  // födelsedatum + kön
     expect(screen.getByText('Svenska')).toBeOnTheScreen()      // låst rad utan chevron
@@ -75,13 +75,23 @@ describe('Profilinställningar', () => {
     expect(await getBodyWeightKg()).toBe(76)    // prefs rundar till hela kg
   })
 
-  it('namnraderna leder till namnsidan med rätt del', async () => {
-    const { router } = require('expo-router')
+  it('namnen redigeras direkt i raden — Klar-pillen sparar ihop dem', async () => {
     render(<AccountScreen />)
-    fireEvent.press(await screen.findByText('Förnamn'))
-    expect(router.push).toHaveBeenCalledWith('/name-edit?part=first')
-    fireEvent.press(screen.getByText('Efternamn'))
-    expect(router.push).toHaveBeenCalledWith('/name-edit?part=last')
+    const input = await screen.findByDisplayValue('Anton')
+    fireEvent(input, 'focus')
+    fireEvent.changeText(input, 'Tony')
+    fireEvent.press(screen.getByText('Klar'))
+    await waitFor(() =>
+      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Wretenberg' }))
+  })
+
+  it('blur sparar också — man ska inte kunna tappa en namnändring', async () => {
+    render(<AccountScreen />)
+    const input = await screen.findByDisplayValue('Wretenberg')
+    fireEvent.changeText(input, 'Berg')
+    fireEvent(input, 'blur')
+    await waitFor(() =>
+      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Anton Berg' }))
   })
 
   it('födelsedatumshjulet sparar valt datum', async () => {

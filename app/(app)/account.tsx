@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable,
+  TextInput, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -8,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
 import { setBodyWeightKg } from '@/lib/prefs'
-import { splitName } from '@/lib/profileName'
+import { splitName, combineName } from '@/lib/profileName'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import DateTimePicker from '@react-native-community/datetimepicker'
@@ -59,6 +60,8 @@ export default function AccountScreen() {
   const [heightCm, setHeightCm]   = useState<number | null>(null)
 
   const [sheet, setSheet] = useState<SheetKind>(null)
+  // Namnen redigeras direkt i raderna — pillen visas när något fält har fokus
+  const [nameFocus, setNameFocus] = useState(false)
 
   // Utkast — committas först på Klar. Apples inbyggda hjul används rakt av.
   const [dDate, setDDate] = useState(new Date(2000, 0, 9))
@@ -91,6 +94,15 @@ export default function AccountScreen() {
   function save(updates: Parameters<typeof updateProfile>[1]) {
     if (!userId) return
     updateProfile(userId, updates).catch(() => {})
+  }
+
+  function saveNames() {
+    save({ name: combineName(first, last) })
+  }
+  function doneEditingNames() {
+    Keyboard.dismiss()
+    setNameFocus(false)
+    saveNames()
   }
 
   // ── Sheets ─────────────────────────────────────────────────────────────────
@@ -146,9 +158,35 @@ export default function AccountScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.rowsCard}>
-          <Row label="Förnamn" value={first || 'Lägg till'} onPress={() => router.push('/name-edit?part=first' as never)} />
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Förnamn</Text>
+            <TextInput
+              style={styles.rowInput}
+              value={first}
+              onChangeText={setFirst}
+              onFocus={() => setNameFocus(true)}
+              onBlur={saveNames}
+              returnKeyType="done"
+              onSubmitEditing={doneEditingNames}
+              placeholder="Lägg till"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+            />
+          </View>
           <View style={styles.rowDivider} />
-          <Row label="Efternamn" value={last || 'Lägg till'} onPress={() => router.push('/name-edit?part=last' as never)} />
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Efternamn</Text>
+            <TextInput
+              style={styles.rowInput}
+              value={last}
+              onChangeText={setLast}
+              onFocus={() => setNameFocus(true)}
+              onBlur={saveNames}
+              returnKeyType="done"
+              onSubmitEditing={doneEditingNames}
+              placeholder="Lägg till"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+            />
+          </View>
           <View style={styles.rowDivider} />
           <Row label="Födelsedatum" value={birthLabel} onPress={openBirth} />
           <View style={styles.rowDivider} />
@@ -169,25 +207,18 @@ export default function AccountScreen() {
         </View>
       </ScrollView>
 
-      {/* ── Sheet med Apples inbyggda hjul: födelsedatum / vikt / längd ── */}
-      <Modal visible={sheet !== null} transparent animationType="slide" onRequestClose={() => setSheet(null)}>
+      {/* ── Flytande panel med Apples hjul + Klar-pill (som förlagan) ── */}
+      <Modal visible={sheet !== null} transparent animationType="fade" onRequestClose={() => setSheet(null)}>
         <Pressable style={styles.overlay} onPress={() => setSheet(null)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <View style={styles.sheetHeader}>
-              <TouchableOpacity onPress={() => setSheet(null)} hitSlop={8}>
-                <Text style={styles.sheetCancel}>Avbryt</Text>
-              </TouchableOpacity>
-              <Text style={styles.sheetTitle}>
-                {sheet === 'birth' ? 'Födelsedatum' : sheet === 'weight' ? 'Vikt' : 'Längd'}
-              </Text>
-              <TouchableOpacity
-                onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
-                hitSlop={8}
-              >
-                <Text style={styles.sheetDone}>Klar</Text>
-              </TouchableOpacity>
-            </View>
-
+          <View style={styles.floatWrap} pointerEvents="box-none">
+            <TouchableOpacity
+              style={styles.klarPill}
+              onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.klarPillText}>Klar</Text>
+            </TouchableOpacity>
+            <Pressable style={styles.pickerPanel} onPress={() => {}}>
             {sheet === 'birth' && (
               <DateTimePicker
                 value={dDate}
@@ -237,10 +268,23 @@ export default function AccountScreen() {
               </View>
             )}
 
-          </Pressable>
+            </Pressable>
+          </View>
         </Pressable>
       </Modal>
 
+      {/* Flytande Klar ovanför tangentbordet vid namnredigering */}
+      {nameFocus && (
+        <KeyboardAvoidingView
+          style={styles.klarWrap}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          pointerEvents="box-none"
+        >
+          <TouchableOpacity style={styles.klarPill} onPress={doneEditingNames} activeOpacity={0.85}>
+            <Text style={styles.klarPillText}>Klar</Text>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   )
 }
@@ -271,16 +315,26 @@ const styles = StyleSheet.create({
   rowLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   rowValue: { flex: 1, color: TEXT_SECONDARY, fontSize: 14, textAlign: 'right' },
 
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: BG, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  floatWrap: { paddingHorizontal: 8, paddingBottom: 28, alignItems: 'flex-end', gap: 10 },
+  pickerPanel: {
+    alignSelf: 'stretch',
+    backgroundColor: CARD, borderRadius: 28,
     borderWidth: 1, borderColor: BORDER,
-    padding: 22, paddingBottom: 34, gap: 16,
+    paddingVertical: 10,
   },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sheetTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800', textAlign: 'center' },
-  sheetCancel: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
-  sheetDone: { color: ORANGE, fontSize: 16, fontWeight: '800' },
+  klarWrap: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    alignItems: 'flex-end', padding: 14,
+  },
+  klarPill: {
+    backgroundColor: ORANGE, borderRadius: 24,
+    paddingHorizontal: 24, paddingVertical: 11,
+  },
+  klarPillText: { color: '#000', fontSize: 16, fontWeight: '800' },
+  rowInput: {
+    flex: 1, color: TEXT_PRIMARY, fontSize: 15, textAlign: 'right', padding: 0,
+  },
   datePicker: { alignSelf: 'center' },
   pickerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   picker: { width: 110, height: 216 },
