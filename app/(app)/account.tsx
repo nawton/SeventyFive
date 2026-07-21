@@ -12,9 +12,7 @@ import { setBodyWeightKg } from '@/lib/prefs'
 import { splitName, combineName } from '@/lib/profileName'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
-import { GlassPill } from '@/components/GlassButton'
 import DateTimePicker from '@react-native-community/datetimepicker'
-import { Picker } from '@react-native-picker/picker'
 
 // =============================================================================
 // PROFILINSTÄLLNINGAR — namn, födelsedatum, kön, vikt, längd och konto.
@@ -23,10 +21,8 @@ import { Picker } from '@react-native-picker/picker'
 // tills fler språk finns.
 // =============================================================================
 
-const range = (from: number, to: number) =>
-  Array.from({ length: to - from + 1 }, (_, i) => from + i)
 
-type SheetKind = null | 'birth' | 'weight' | 'height'
+type SheetKind = null | 'birth'
 
 // Utanför skärmkomponenten — en inline-definierad Row blir en NY komponenttyp
 // varje render, vilket monterar om raderna i onödan (och kan sluka tryck som
@@ -62,13 +58,11 @@ export default function AccountScreen() {
 
   const [sheet, setSheet] = useState<SheetKind>(null)
 
-  // Utkast — committas först på Klar. Apples inbyggda hjul används rakt av.
+  // Födelsedatum: Apples hjul i panel, sparas direkt vid snurr.
   const [dDate, setDDate] = useState(new Date(2000, 0, 9))
-  const WEIGHTS = range(30, 200)
-  const [wInt, setWInt] = useState(75)
-  const [wDec, setWDec] = useState(0)
-  const HEIGHTS = range(120, 220)
-  const [hCm, setHCm] = useState(175)
+  // Vikt/längd skrivs direkt i raden — sifferknappsatsen ger iOS egna Done-pill
+  const [wDraft, setWDraft] = useState('')
+  const [hDraft, setHDraft] = useState('')
 
   useFocusEffect(useCallback(() => {
     let alive = true
@@ -85,6 +79,8 @@ export default function AccountScreen() {
         setGender(p.gender ?? null)
         setWeightKg(p.weight_kg != null ? Number(p.weight_kg) : null)
         setHeightCm(p.height_cm ?? null)
+        setWDraft(p.weight_kg != null ? String(Number(p.weight_kg)).replace('.', ',') : '')
+        setHDraft(p.height_cm != null ? String(p.height_cm) : '')
       }).catch(() => {})
     })
     return () => { alive = false }
@@ -109,40 +105,29 @@ export default function AccountScreen() {
     setDDate(birthDate ? new Date(birthDate + 'T12:00:00') : new Date(2000, 0, 9))
     setSheet('birth')
   }
-  function saveBirth() {
-    const iso = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, '0')}-${String(dDate.getDate()).padStart(2, '0')}`
+  function commitBirth(d: Date) {
+    setDDate(d)
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     setBirthDate(iso)
     save({ birth_date: iso })
-    setSheet(null)
   }
 
-  function openWeight() {
-    const w = weightKg ?? 75
-    setWInt(Math.min(200, Math.max(30, Math.floor(w))))
-    setWDec(Math.round((w % 1) * 10) % 10)
-    setSheet('weight')
+  function commitWeight() {
+    const w = parseFloat(wDraft.replace(',', '.'))
+    if (!Number.isFinite(w) || w < 30 || w > 250) { setWDraft(weightKg != null ? String(weightKg).replace('.', ',') : ''); return }
+    const rounded = Math.round(w * 10) / 10
+    setWeightKg(rounded)
+    save({ weight_kg: rounded })
+    setBodyWeightKg(rounded).catch(() => {})   // kaloriberäkningen läser härifrån
   }
-  function saveWeight() {
-    const w = wInt + wDec / 10
-    setWeightKg(w)
-    save({ weight_kg: w })
-    setBodyWeightKg(w).catch(() => {})   // kaloriberäkningen läser härifrån
-    setSheet(null)
-  }
-
-  function openHeight() {
-    setHCm(heightCm ?? 175)
-    setSheet('height')
-  }
-  function saveHeight() {
-    setHeightCm(hCm)
-    save({ height_cm: hCm })
-    setSheet(null)
+  function commitHeight() {
+    const h = parseInt(hDraft, 10)
+    if (!Number.isFinite(h) || h < 100 || h > 250) { setHDraft(heightCm != null ? String(heightCm) : ''); return }
+    setHeightCm(h)
+    save({ height_cm: h })
   }
 
   const birthLabel = birthDate ?? 'Ej angivet'
-  const weightLabel = weightKg != null ? `${String(weightKg).replace('.', ',')} kg` : 'Ej specificerad'
-  const heightLabel = heightCm != null ? `${heightCm} cm` : 'Ej specificerad'
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -188,9 +173,33 @@ export default function AccountScreen() {
           <View style={styles.rowDivider} />
           <Row label="Kön" value={gender ?? 'Ej angivet'} onPress={() => router.push('/gender' as never)} />
           <View style={styles.rowDivider} />
-          <Row label="Vikt" value={weightLabel} onPress={openWeight} />
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Vikt</Text>
+            <TextInput
+              style={styles.rowInput}
+              value={wDraft}
+              onChangeText={v => setWDraft(v.replace(/[^0-9,\.]/g, '').slice(0, 5))}
+              onBlur={commitWeight}
+              keyboardType="decimal-pad"
+              placeholder="Ej specificerad"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+            />
+            <Text style={styles.rowUnit}>kg</Text>
+          </View>
           <View style={styles.rowDivider} />
-          <Row label="Längd" value={heightLabel} onPress={openHeight} />
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Längd</Text>
+            <TextInput
+              style={styles.rowInput}
+              value={hDraft}
+              onChangeText={v => setHDraft(v.replace(/[^0-9]/g, '').slice(0, 3))}
+              onBlur={commitHeight}
+              keyboardType="number-pad"
+              placeholder="Ej specificerad"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+            />
+            <Text style={styles.rowUnit}>cm</Text>
+          </View>
           <View style={styles.rowDivider} />
           <Row label="Språk" value="Svenska" locked />
         </View>
@@ -203,71 +212,23 @@ export default function AccountScreen() {
         </View>
       </ScrollView>
 
-      {/* ── Flytande panel med Apples hjul + Klar-pill (som förlagan) ── */}
-      <Modal visible={sheet !== null} transparent animationType="fade" onRequestClose={() => setSheet(null)}>
+      {/* ── Födelsedatum: Apples hjul i flytande panel — sparar direkt vid
+          snurr, tryck utanför stänger. Ingen egen knapp. ── */}
+      <Modal visible={sheet === 'birth'} transparent animationType="fade" onRequestClose={() => setSheet(null)}>
         <Pressable style={styles.overlay} onPress={() => setSheet(null)}>
           <View style={styles.floatWrap} pointerEvents="box-none">
-            {/* Som iOS egna Done på sifferknappsatsen: rent liquid glass,
-                dragbar (håll och dra — fjädrar tillbaka) */}
-            <GlassPill
-              onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
-              draggable
-              style={styles.klarPill}
-              tint="transparent"
-              fallbackStyle={styles.klarFallback}
-            >
-              <Text style={styles.klarPillText}>Done</Text>
-            </GlassPill>
             <Pressable style={styles.pickerPanel} onPress={() => {}}>
-            {sheet === 'birth' && (
               <DateTimePicker
+                testID="birthPicker"
                 value={dDate}
                 mode="date"
                 display="spinner"
                 locale="sv-SE"
                 themeVariant="dark"
                 maximumDate={new Date()}
-                onChange={(_e, d) => { if (d) setDDate(d) }}
+                onChange={(_e, d) => { if (d) commitBirth(d) }}
                 style={styles.datePicker}
               />
-            )}
-
-            {sheet === 'weight' && (
-              <View style={styles.pickerRow}>
-                <Picker
-                  selectedValue={wInt}
-                  onValueChange={v => setWInt(Number(v))}
-                  style={styles.picker}
-                  itemStyle={styles.pickerItem}
-                >
-                  {WEIGHTS.map(w => <Picker.Item key={w} label={String(w)} value={w} />)}
-                </Picker>
-                <Picker
-                  selectedValue={wDec}
-                  onValueChange={v => setWDec(Number(v))}
-                  style={styles.pickerNarrow}
-                  itemStyle={styles.pickerItem}
-                >
-                  {range(0, 9).map(d => <Picker.Item key={d} label={`,${d}`} value={d} />)}
-                </Picker>
-                <Text style={styles.wheelUnit}>kg</Text>
-              </View>
-            )}
-
-            {sheet === 'height' && (
-              <View style={styles.pickerRow}>
-                <Picker
-                  selectedValue={hCm}
-                  onValueChange={v => setHCm(Number(v))}
-                  style={styles.picker}
-                  itemStyle={styles.pickerItem}
-                >
-                  {HEIGHTS.map(h => <Picker.Item key={h} label={String(h)} value={h} />)}
-                </Picker>
-                <Text style={styles.wheelUnit}>cm</Text>
-              </View>
-            )}
-
             </Pressable>
           </View>
         </Pressable>
@@ -315,17 +276,10 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, bottom: 0,
     alignItems: 'flex-end', padding: 14,
   },
-  klarPill: { borderRadius: 24, paddingHorizontal: 26, paddingVertical: 12 },
-  klarFallback: { backgroundColor: 'rgba(40,40,44,0.96)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
-  klarPillText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   rowInput: {
     flex: 1, color: TEXT_PRIMARY, fontSize: 15, textAlign: 'right', padding: 0,
   },
+  rowUnit: { color: TEXT_SECONDARY, fontSize: 14 },
   datePicker: { alignSelf: 'center' },
-  pickerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  picker: { width: 110, height: 216 },
-  pickerNarrow: { width: 80, height: 216 },
-  pickerItem: { color: TEXT_PRIMARY, fontSize: 22 },
-  wheelUnit: { color: TEXT_SECONDARY, fontSize: 18, fontWeight: '700', marginLeft: 8 },
 
 })
