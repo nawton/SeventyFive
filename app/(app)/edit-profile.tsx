@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase'
 import { compressImage } from '@/lib/image'
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { SubscriptionCard } from '@/components/SubscriptionCard'
 
 const AVATAR_SECTIONS = [
   { label: 'Träning',    items: ['💪', '🏋️', '🏃', '🧘', '🥊', '🚴', '🤸', '🏊'] },
@@ -208,21 +209,6 @@ export default function EditProfileScreen() {
 
               <View style={styles.rowDivider} />
 
-              <TouchableOpacity
-                style={styles.row}
-                onPress={() => router.push('/premium' as never)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.rowIconBox}>
-                  <Ionicons name="diamond-outline" size={17} color={ORANGE} />
-                </View>
-                <Text style={styles.rowLabel}>Abonnemang</Text>
-                <Text style={styles.rowValue} numberOfLines={1}>Premium</Text>
-                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
-              </TouchableOpacity>
-
-              <View style={styles.rowDivider} />
-
               <View style={[styles.row, { opacity: 0.55 }]}>
                 <View style={[styles.rowIconBox, { backgroundColor: BORDER }]}>
                   <Ionicons name="mail-outline" size={17} color={TEXT_SECONDARY} />
@@ -232,6 +218,12 @@ export default function EditProfileScreen() {
                 <Ionicons name="lock-closed-outline" size={14} color={TEXT_SECONDARY} />
               </View>
             </View>
+          </View>
+
+          {/* ── Abonnemang — premiumbannern leder till paywallen ── */}
+          <View style={styles.fieldSection}>
+            <Text style={styles.fieldLabel}>ABONNEMANG</Text>
+            <SubscriptionCard name={name} />
           </View>
 
         </ScrollView>

@@ -41,7 +41,6 @@ import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import { getAchievementSummary, type AchievementSummary } from '@/services/achievementSummary'
-import { SubscriptionCard } from '@/components/SubscriptionCard'
 import { MedalBadge } from '@/components/MedalBadge'
 import type { UserChallengeWithLevel } from '@/types/database'
 
@@ -326,9 +325,6 @@ export default function ProfileScreen() {
           </View>
           <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
         </TouchableOpacity>
-
-        {/* Premium-bannern — leder till paywallen/statussidan */}
-        <SubscriptionCard name={name} />
 
         {/* Lägg till foto — grönt kvittoläge när dagens redan är taget */}
         {challenge && (hasTodayPhoto ? (
