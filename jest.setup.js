@@ -35,6 +35,21 @@ jest.mock('expo-glass-effect', () => {
   return { GlassView: View, isLiquidGlassAvailable: () => false }
 })
 
+// Glasknapparna är geststyrda (Gesture.Tap) och kan inte tryckas via
+// fireEvent — i test blir de vanliga knappar med texten "glassbtn:<ikon>"
+jest.mock('@/components/GlassButton', () => {
+  const React = require('react')
+  const { TouchableOpacity, Text } = require('react-native')
+  const Btn = ({ icon, onPress, children }) =>
+    React.createElement(
+      TouchableOpacity,
+      { onPress },
+      children ?? null,
+      icon ? React.createElement(Text, null, `glassbtn:${icon}`) : null,
+    )
+  return { GlassCircleButton: Btn, GlassPill: Btn }
+})
+
 // Apple Maps — karta/polyline/markörer renderas som tomma vyer, och
 // kamerametoderna på ref:en är no-ops så spårningsloopen kan anropa dem
 jest.mock('react-native-maps', () => {
