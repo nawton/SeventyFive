@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { setFiveKTime } from '@/lib/prefs'
+import { setFiveKTime, setRaceDate } from '@/lib/prefs'
 import { createWorkoutSession } from './workoutSchedule'
 import type { WizardResult } from '@/components/ScheduleWizard'
 
@@ -556,5 +556,28 @@ export async function generateScheduleFromWizard(
   }
   // Spara testtiden så den kan uppdateras senare under Anpassning
   if (result.fiveKTimeSec) await setFiveKTime(result.fiveKTimeSec)
+
+  // Tävlingsdatum: ankaret för löpplanen — planen slutar på loppet och
+  // tävlingsdagen läggs in som ett engångspass i kalendern. En ny löpplan
+  // utan lopp rensar ett gammalt datum så det inte spökar i horisonten.
+  if (result.goal === 'running') {
+    await setRaceDate(result.raceDate ?? null)
+    if (result.raceDate) {
+      const label = RACE_LABELS[result.runDistance ?? '5k'] ?? 'loppet'
+      await createWorkoutSession(
+        userId,
+        `ONCE:${result.raceDate}:Tävlingsdag 🏁`,
+        [],
+        [],
+        `Dagen du tränat för — ${label}! Starta lugnt, lita på träningen och njut av loppet.`,
+        'cardio',
+        'running',
+      ).catch(() => { /* tävlingsdagen är grädde — får inte fälla schemat */ })
+    }
+  }
   return plan.length
+}
+
+const RACE_LABELS: Record<string, string> = {
+  '5k': '5 km', '10k': '10 km', half: 'halvmarathon', marathon: 'marathon',
 }

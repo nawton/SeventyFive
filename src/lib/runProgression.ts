@@ -72,38 +72,41 @@ export interface RunTarget {
   week: number
   /** Lugnare vecka (cutback) — volymen är nerdragen ~25 % */
   cutback: boolean
+  /** Nedtrappning inför loppet — volymen är nerdragen 30–50 % */
+  taper: boolean
 }
 
 const PACE_RE = /·?\s*ca\s+([0-9]+:[0-9]{2}(?:–[0-9]+:[0-9]{2})?)\s*\/km/
 
-export function parseRunTarget(notes: string | null, week: number): RunTarget {
+export function parseRunTarget(notes: string | null, week: number, weeksToRace?: number | null): RunTarget {
   const w = Math.max(0, week)
   const improved = notes ? improvePaceIn(notes, w) : null
   const paceM = improved?.match(PACE_RE) ?? null
   const pace = paceM ? `${paceM[1]} /km` : null
   const strip = (s: string) => s.replace(PACE_RE, '').replace(/\s*·\s*$/, '').trim()
 
-  const cutback = isCutbackWeek(w)
+  const taper = taperFactor(weeksToRace) !== null
+  const cutback = !taper && isCutbackWeek(w)
   if (notes) {
     const d = notes.match(DIST_RE)
     if (d) {
       return {
         kind: 'distance',
-        km: distTarget(num(d[1]), num(d[2]), num(d[3]), w),
-        label: strip(d[4].trim()), pace, week: w, cutback,
+        km: distTarget(num(d[1]), num(d[2]), num(d[3]), w, weeksToRace),
+        label: strip(d[4].trim()), pace, week: w, cutback, taper,
       }
     }
     const iv = notes.match(INT_RE)
     if (iv) {
       return {
         kind: 'interval',
-        reps: repsTarget(parseInt(iv[1], 10), parseInt(iv[3], 10), parseInt(iv[4], 10), w),
+        reps: repsTarget(parseInt(iv[1], 10), parseInt(iv[3], 10), parseInt(iv[4], 10), w, weeksToRace),
         intervalM: parseInt(iv[2], 10),
-        label: strip(iv[5].trim()), pace, week: w, cutback,
+        label: strip(iv[5].trim()), pace, week: w, cutback, taper,
       }
     }
   }
-  return { kind: 'plain', label: strip(notes ?? ''), pace, week: w, cutback: false }
+  return { kind: 'plain', label: strip(notes ?? ''), pace, week: w, cutback: false, taper: false }
 }
 
 /** "5:45" → sekunder */
@@ -196,16 +199,28 @@ export function isCutbackWeek(week: number): boolean {
   return week > 0 && (week + 1) % 4 === 0
 }
 
-/** Distansmål för veckan inkl. cutback — aldrig under planens startnivå */
-function distTarget(start: number, step: number, max: number, week: number): number {
+/** Nedtrappning (taper) inför loppet: veckan före → 70 % volym,
+    tävlingsveckan → 50 %. Trumfar cutback — och får, till skillnad från
+    cutback, gå under planens startnivå: färska ben är hela poängen. */
+export function taperFactor(weeksToRace: number | null | undefined): number | null {
+  if (weeksToRace == null || weeksToRace < 0 || weeksToRace > 1) return null
+  return weeksToRace === 0 ? 0.5 : 0.7
+}
+
+/** Distansmål för veckan inkl. taper/cutback */
+function distTarget(start: number, step: number, max: number, week: number, weeksToRace?: number | null): number {
   const val = Math.min(start + step * week, max)
+  const tf = taperFactor(weeksToRace)
+  if (tf) return Math.max(2, Math.round(val * tf * 2) / 2)
   if (!isCutbackWeek(week)) return val
   return Math.max(start, Math.round(val * 0.75 * 2) / 2)
 }
 
-/** Antal intervaller för veckan inkl. cutback — aldrig under startantalet */
-function repsTarget(start: number, step: number, max: number, week: number): number {
+/** Antal intervaller för veckan inkl. taper/cutback */
+function repsTarget(start: number, step: number, max: number, week: number, weeksToRace?: number | null): number {
   const val = Math.min(start + step * week, max)
+  const tf = taperFactor(weeksToRace)
+  if (tf) return Math.max(2, Math.round(val * tf))
   if (!isCutbackWeek(week)) return val
   return Math.max(start, Math.round(val * 0.75))
 }
@@ -215,22 +230,26 @@ export function resolveRunProgression(
   notes: string | null,
   week: number,
   unit: UnitSystem = 'metric',
+  weeksToRace?: number | null,
 ): string | null {
   if (!notes) return notes
   const w = Math.max(0, week)
 
-  const cutTag = isCutbackWeek(w) ? ' · lugnare vecka' : ''
+  const taper = taperFactor(weeksToRace) !== null
+  const cutTag = taper
+    ? ' · nedtrappning inför loppet'
+    : isCutbackWeek(w) ? ' · lugnare vecka' : ''
 
   const d = notes.match(DIST_RE)
   if (d) {
-    const val = distTarget(num(d[1]), num(d[2]), num(d[3]), w)
+    const val = distTarget(num(d[1]), num(d[2]), num(d[3]), w, weeksToRace)
     const suffix = convertPaceToken(improvePaceIn(d[4].trim(), w), unit)
     return `${fmt(toDisplayDistance(val, unit))} ${distanceUnitLabel(unit)}${suffix ? ` ${suffix}` : ''} · vecka ${w + 1}${cutTag}`
   }
 
   const iv = notes.match(INT_RE)
   if (iv) {
-    const count = repsTarget(parseInt(iv[1], 10), parseInt(iv[3], 10), parseInt(iv[4], 10), w)
+    const count = repsTarget(parseInt(iv[1], 10), parseInt(iv[3], 10), parseInt(iv[4], 10), w, weeksToRace)
     const suffix = convertPaceToken(improvePaceIn(iv[5].trim(), w), unit)
     return `${count}×${iv[2]} m${suffix ? ` ${suffix}` : ''} · vecka ${w + 1}${cutTag}`
   }

@@ -45,7 +45,7 @@ import {
   completeExercise,
   uncompleteExercise,
   deleteRepeatingSessions,
-  PLAN_WEEKS,
+  planEndDateStr,
   type WorkoutSession,
 } from '@/services/workoutSchedule'
 import { SessionEditor } from '@/components/SessionEditor'
@@ -58,6 +58,8 @@ import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
+import { getRaceDate } from '@/lib/prefs'
+import { parseLocalDate } from '@/lib/date'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { DayPage, EMPTY_CHECKED, EMPTY_COMPLETED, EMPTY_CARDIO_STATS, EMPTY_CARDIO_LOGS, EMPTY_LOGGED, type DayPageApi } from '@/components/schedule/DayPage'
 import { PAGER_DATA, CENTER_IDX, isoDate, todayMidnight, indexToDate, dateToIndex } from '@/lib/scheduleDates'
@@ -98,6 +100,8 @@ export default function SchemaScreen() {
   const [exerciseProgress, setExerciseProgress] = useState<Record<string, number>>({})
   // km/miles — löpplanernas mål visas i vald enhet
   const [unit, setUnit] = useState<UnitSystem>('metric')
+  // Tävlingsdatum — styr planens slut, nedtrappningen och RACE DAY i schemat
+  const [raceDate, setRaceDateState] = useState<string | null>(null)
   const pagerRef    = useRef<FlatList<number>>(null)
   const [refreshing, setRefreshing] = useState(false)
   const refreshingRef = useRef(false)
@@ -123,9 +127,7 @@ export default function SchemaScreen() {
     const cardio = sessions.filter(s => s.weekdays.length > 0 && s.session_type === 'cardio')
     if (cardio.length === 0) return null
     const newest = cardio.reduce((a, b) => (a.created_at > b.created_at ? a : b))
-    const end = new Date(newest.created_at)
-    end.setHours(0, 0, 0, 0)
-    end.setDate(end.getDate() + PLAN_WEEKS * 7)
+    const end = parseLocalDate(planEndDateStr(newest.created_at, raceDate))
     const daysLeft = Math.round((end.getTime() - todayMidnight().getTime()) / 86400000)
     if (daysLeft > 7) return null
     return { ended: daysLeft <= 0, key: isoDate(end) }
@@ -214,6 +216,7 @@ export default function SchemaScreen() {
     const uid = userIdRef.current
     if (uid) loadData(uid)
     getUnitSystem().then(setUnit).catch(() => {})
+    getRaceDate().then(setRaceDateState).catch(() => {})
   }, []))
 
   useEffect(() => {
@@ -517,6 +520,7 @@ export default function SchemaScreen() {
         completedByDate={completedByDate}
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
+        raceDate={raceDate}
       />
 
       {/* Manage sessions link */}
@@ -576,6 +580,7 @@ export default function SchemaScreen() {
               userId={userId}
               dayAnimStyle={dayAnimStyle}
               api={api}
+              raceDate={raceDate}
             />
           )
         }}
@@ -674,6 +679,7 @@ export default function SchemaScreen() {
               if (replaceExisting) await deleteRepeatingSessions(userId)
               const count = await generateScheduleFromWizard(userId, result)
               await loadData(userId)
+              getRaceDate().then(setRaceDateState).catch(() => {})
               Alert.alert('Schema skapat', `${count} pass har lagts till i ditt veckoschema.`)
             } catch (e: any) {
               Alert.alert('Kunde inte skapa schemat', e.message)

@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
-import { PLAN_WEEKS, type WorkoutSession } from '@/services/workoutSchedule'
+import { planEndDateStr, type WorkoutSession } from '@/services/workoutSchedule'
 
 const GREEN       = '#3BE862'
 const SCREEN_W    = Dimensions.get('window').width
@@ -133,11 +133,14 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
   completedByDate,
   selectedDate,
   onSelectDate,
+  raceDate,
 }: {
   sessions:         WorkoutSession[]
   completedByDate:  Record<string, Set<string>>
   selectedDate:     Date
   onSelectDate:     (date: Date) => void
+  /** Tävlingsdatum — cardio-planen slutar dagen efter loppet */
+  raceDate:         string | null
 }) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -281,12 +284,9 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
     const rangeById = new Map<string, { start: string; end: string | null }>()
     for (const sess of sessions) {
       if (sess.weekdays.length > 0) {
-        const start = new Date(sess.created_at)
-        const end = new Date(start)
-        end.setDate(end.getDate() + PLAN_WEEKS * 7)
         rangeById.set(sess.id, {
-          start: toLocalDateString(start),
-          end: sess.session_type === 'cardio' ? toLocalDateString(end) : null,
+          start: toLocalDateString(new Date(sess.created_at)),
+          end: sess.session_type === 'cardio' ? planEndDateStr(sess.created_at, raceDate) : null,
         })
       }
     }
@@ -311,7 +311,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
       for (const wd of sess.weekdays) byWeekday[wd]?.push(sess)
     }
     return { byWeekday, onceByDate, skipByDate, rangeById }
-  }, [sessions])
+  }, [sessions, raceDate])
 
   function sessionInfo(date: Date) {
     const wd      = toWeekday(date)

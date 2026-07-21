@@ -62,6 +62,9 @@ export type WizardResult = {
   runExperience: RunExperience | null
   /** 5 km-testtid i sekunder — ger tempozoner i passen; null = inte angiven */
   fiveKTimeSec:  number | null
+  /** Tävlingsdatum (YYYY-MM-DD) — planen slutar där, med nedtrappning sista
+      två veckorna och RACE DAY i kalendern; null = ingen tävling planerad */
+  raceDate:      string | null
 }
 
 const EXPERIENCE_OPTIONS: Array<{ key: RunExperience; label: string; sub: string; icon: string }> = [
@@ -116,6 +119,7 @@ export function ScheduleWizard({
   const [runExperience, setRunExperience] = useState<RunExperience | null>(null)
   const [fiveKMin, setFiveKMin]       = useState('')
   const [fiveKSec, setFiveKSec]       = useState('')
+  const [raceDateStr, setRaceDateStr] = useState('')
   const [musclePlan, setMusclePlan]   = useState<MusclePlan>(null)
   const [focusGroups, setFocusGroups] = useState<string[]>([])
   const [weekdays, setWeekdays]       = useState<number[]>([])
@@ -123,10 +127,29 @@ export function ScheduleWizard({
 
   function reset() {
     setStep('goal'); setGoal(null); setRunDistance(null)
-    setRunExperience(null); setFiveKMin(''); setFiveKSec('')
+    setRunExperience(null); setFiveKMin(''); setFiveKSec(''); setRaceDateStr('')
     setMusclePlan(null); setFocusGroups([])
     setWeekdays([]); setLimitations([])
   }
+
+  // Tävlingsdatum: siffror formateras till ÅÅÅÅ-MM-DD medan man skriver.
+  // Giltigt = riktigt datum som inte redan varit; tomt är alltid okej.
+  function formatRaceInput(v: string): string {
+    const d = v.replace(/[^0-9]/g, '').slice(0, 8)
+    if (d.length <= 4) return d
+    if (d.length <= 6) return `${d.slice(0, 4)}-${d.slice(4)}`
+    return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`
+  }
+  const raceParsed = (() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raceDateStr)) return null
+    const [y, m, d] = raceDateStr.split('-').map(Number)
+    const date = new Date(y, m - 1, d)
+    if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null
+    return date
+  })()
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const raceValid   = raceParsed !== null && raceParsed.getTime() >= today.getTime()
+  const raceInvalid = raceDateStr.length > 0 && !raceValid
 
   function toggleWeekday(day: number) {
     setWeekdays(prev =>
@@ -357,9 +380,32 @@ export function ScheduleWizard({
                       </Text>
                     </View>
 
+                    {/* Tävlingsdatum — frivilligt; planen slutar på loppet med
+                        nedtrappning sista två veckorna och RACE DAY i schemat */}
+                    <View style={s.testCard}>
+                      <View style={s.testTitleRow}>
+                        <Ionicons name="flag-outline" size={17} color={ORANGE} />
+                        <Text style={s.testTitle}>Har du ett lopp inbokat?</Text>
+                      </View>
+                      <TextInput
+                        style={[s.testInput, { width: 190, textAlign: 'center', alignSelf: 'center' }]}
+                        value={raceDateStr}
+                        onChangeText={v => setRaceDateStr(formatRaceInput(v))}
+                        keyboardType="number-pad"
+                        returnKeyType="done"
+                        placeholder="2026-10-18"
+                        placeholderTextColor="rgba(255,255,255,0.22)"
+                      />
+                      <Text style={raceInvalid ? s.testWarn : s.testHint}>
+                        {raceInvalid
+                          ? 'Ange ett riktigt datum framåt i tiden, t.ex. 2026-10-18.'
+                          : 'Frivilligt — med ett datum siktar planen på loppet: nedtrappning sista två veckorna och tävlingsdagen i schemat.'}
+                      </Text>
+                    </View>
+
                     <NextButton
-                      disabled={!runExperience || implausible}
-                      onPress={() => runExperience && !implausible && setStep('days')}
+                      disabled={!runExperience || implausible || raceInvalid}
+                      onPress={() => runExperience && !implausible && !raceInvalid && setStep('days')}
                     />
                   </>
                 )
@@ -630,6 +676,7 @@ export function ScheduleWizard({
                     runExperience,
                     // Bara rimliga totaltider — annars inga tempoförslag alls
                     fiveKTimeSec: total >= 12 * 60 && total <= 90 * 60 ? total : null,
+                    raceDate: goal === 'running' && raceValid ? raceDateStr : null,
                   }
                   reset()
                   onFinish(result)

@@ -89,6 +89,14 @@ describe('run-workout — långpass och återhämtning', () => {
     expect(screen.getByText('Lugnare vecka')).toBeOnTheScreen()
   })
 
+  it('veckan före loppet: nedtrappat mål och taper-chip', () => {
+    renderWith({ name: 'Långpass', cardioType: 'running', notes: LONG_NOTES, week: '5', weeksToRace: '1' })
+    expect(screen.getByText('14 km')).toBeOnTheScreen()   // 0,7 × 20
+    expect(screen.getByText('Nedtrappning inför loppet')).toBeOnTheScreen()
+    fireEvent.press(screen.getByText('Starta passet'))
+    expect(lastReplaceParams().goalKm).toBe('14.00')      // GPS-målet följer taperingen
+  })
+
   it('återhämtning: tidsmål från minutspannet', () => {
     renderWith({ name: 'Återhämtning', cardioType: 'running', notes: PLAIN_NOTES, week: '0' })
     expect(screen.getByText('30–45 min')).toBeOnTheScreen()

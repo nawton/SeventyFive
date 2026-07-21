@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { toLocalDateString, weekdayOf } from '@/lib/date'
+import { toLocalDateString, parseLocalDate, weekdayOf } from '@/lib/date'
 
 export interface SessionExercise {
   id: string
@@ -30,14 +30,28 @@ export interface WorkoutSession {
 // styrs av sitt eget datum.
 export const PLAN_WEEKS = 16
 
-export function sessionActiveOn(session: WorkoutSession, dateStr: string): boolean {
-  if (session.weekdays.length === 0) return true
-  const start = new Date(session.created_at)
-  if (dateStr < toLocalDateString(start)) return false
-  if (session.session_type !== 'cardio') return true
+/** Cardio-planens slutdatum (exklusivt): dagen efter loppet när ett
+    tävlingsdatum finns efter planstarten — loppet är målet och planen slutar
+    där, oavsett om det är tidigare eller senare än 16 veckor. Utan
+    tävlingsdatum gäller 16-veckorshorisonten. */
+export function planEndDateStr(createdAt: string, raceDate?: string | null): string {
+  const start = new Date(createdAt)
+  start.setHours(0, 0, 0, 0)
+  if (raceDate && raceDate >= toLocalDateString(start)) {
+    const dayAfter = parseLocalDate(raceDate)
+    dayAfter.setDate(dayAfter.getDate() + 1)
+    return toLocalDateString(dayAfter)
+  }
   const end = new Date(start)
   end.setDate(end.getDate() + PLAN_WEEKS * 7)
-  return dateStr < toLocalDateString(end)
+  return toLocalDateString(end)
+}
+
+export function sessionActiveOn(session: WorkoutSession, dateStr: string, raceDate?: string | null): boolean {
+  if (session.weekdays.length === 0) return true
+  if (dateStr < toLocalDateString(new Date(session.created_at))) return false
+  if (session.session_type !== 'cardio') return true
+  return dateStr < planEndDateStr(session.created_at, raceDate)
 }
 
 export async function getWorkoutSessions(userId: string): Promise<WorkoutSession[]> {

@@ -247,3 +247,19 @@ export async function getLastMapCoord(): Promise<{ latitude: number; longitude: 
 export async function setLastMapCoord(c: { latitude: number; longitude: number }): Promise<void> {
   await AsyncStorage.setItem('lastMapCoord', JSON.stringify(c)).catch(() => {})
 }
+
+// Tävlingsdatum (YYYY-MM-DD) — löpplanens ankare. Sätts i schemaguiden och
+// styr planens slut, nedtrappningen sista veckorna och RACE DAY i kalendern.
+export async function getRaceDate(): Promise<string | null> {
+  try {
+    const v = await AsyncStorage.getItem('raceDate')
+    return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null
+  } catch {
+    return null
+  }
+}
+
+export async function setRaceDate(date: string | null): Promise<void> {
+  if (date) await AsyncStorage.setItem('raceDate', date).catch(() => {})
+  else await AsyncStorage.removeItem('raceDate').catch(() => {})
+}

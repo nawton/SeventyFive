@@ -34,6 +34,7 @@ export default function RunWorkoutScreen() {
     cardioType?: string
     notes?: string
     week?: string
+    weeksToRace?: string
     date?: string
   }>()
 
@@ -42,9 +43,13 @@ export default function RunWorkoutScreen() {
   useEffect(() => { getUnitSystem().then(setUnit).catch(() => {}) }, [])
 
   const week     = Math.max(0, parseInt(params.week ?? '0', 10) || 0)
+  // Hela veckor kvar till loppet — 0/1 ger nedtrappad volym (taper)
+  const wtr      = params.weeksToRace != null && params.weeksToRace !== ''
+    ? parseInt(params.weeksToRace, 10)
+    : null
   const name     = params.name ?? 'Löppass'
   const baseName = name.replace(/\s+\d+$/, '')
-  const target   = parseRunTarget(params.notes ?? null, week)
+  const target   = parseRunTarget(params.notes ?? null, week, Number.isFinite(wtr as number) ? wtr : null)
   const parts    = buildParts(baseName, target, unit)
   const est      = estimateMinutes(baseName, target)
   const info     = RUN_SESSION_INFO[baseName]
@@ -138,6 +143,12 @@ export default function RunWorkoutScreen() {
             <View style={s.metaChip}>
               <Ionicons name="leaf-outline" size={15} color={CARDIO_BLUE} />
               <Text style={s.metaChipText}>Lugnare vecka</Text>
+            </View>
+          )}
+          {target.taper && (
+            <View style={s.metaChip}>
+              <Ionicons name="flag-outline" size={15} color={CARDIO_BLUE} />
+              <Text style={s.metaChipText}>Nedtrappning inför loppet</Text>
             </View>
           )}
         </View>

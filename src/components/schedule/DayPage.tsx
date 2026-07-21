@@ -19,7 +19,7 @@ import { WEEKDAYS } from '@/components/SessionEditor'
 import { scaledReps } from '@/lib/progression'
 import { resolveRunProgression } from '@/lib/runProgression'
 import type { UnitSystem } from '@/lib/units'
-import { weekdayOf } from '@/lib/date'
+import { weekdayOf, parseLocalDate } from '@/lib/date'
 import { isoDate, todayMidnight, indexToDate, DAY_SHORT } from '@/lib/scheduleDates'
 import { ORANGE, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { sessionActiveOn, type WorkoutSession } from '@/services/workoutSchedule'
@@ -55,7 +55,7 @@ export interface DayPageApi {
 // vars props faktiskt ändrats — inte alla monterade sidor i pagern.
 
 export const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, unit, userId, dayAnimStyle, api,
+  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, unit, userId, dayAnimStyle, api, raceDate,
 }: {
   idx: number
   sessions: WorkoutSession[]
@@ -72,6 +72,8 @@ export const DayPage = React.memo(function DayPage({
   userId: string | null
   dayAnimStyle: AnimatedStyle<ViewStyle>
   api: DayPageApi
+  /** Tävlingsdatum (YYYY-MM-DD) — styr planens slut och nedtrappningen */
+  raceDate: string | null
 }) {
           const onScrollShrink = useTabBarShrinkOnScroll()
           const pullArmed = useRef(true)
@@ -99,7 +101,7 @@ export const DayPage = React.memo(function DayPage({
             if (s.name.startsWith('SKIP:')) return false
             if (skipIds.includes(s.id))     return false
             return (
-              (s.weekdays.includes(weekday) && sessionActiveOn(s, dateStr)) ||
+              (s.weekdays.includes(weekday) && sessionActiveOn(s, dateStr, raceDate)) ||
               (s.weekdays.length === 0 && s.name === dateStr) ||
               (s.weekdays.length === 0 && s.name.startsWith(`ONCE:${dateStr}:`))
             )
@@ -182,8 +184,13 @@ export const DayPage = React.memo(function DayPage({
                     planStart.setHours(0, 0, 0, 0)
                     const planDays = Math.round((date.getTime() - planStart.getTime()) / 86400000)
                     const planWeek = Math.floor(planDays / 7)
+                    // Nedtrappning: hela veckor kvar till loppet från den visade dagen
+                    const raceDays = raceDate
+                      ? Math.round((parseLocalDate(raceDate).getTime() - date.getTime()) / 86400000)
+                      : null
+                    const weeksToRace = raceDays !== null && raceDays >= 0 ? Math.floor(raceDays / 7) : null
                     const displayNotes = s.session_type === 'cardio'
-                      ? resolveRunProgression(s.notes, planWeek, unit)
+                      ? resolveRunProgression(s.notes, planWeek, unit, weeksToRace)
                       : s.notes
                     const displaySession = { ...s, name: sessionDisplayName(s), notes: displayNotes, exercises: scaled.map(x => x.ex) }
                     // Faktisk statistik för avklarade gympass (från loggade set)
@@ -222,6 +229,7 @@ export const DayPage = React.memo(function DayPage({
                             cardioType: s.cardio_type ?? 'running',
                             notes: s.notes ?? '',
                             week: String(Math.max(0, planWeek)),
+                            ...(weeksToRace !== null ? { weeksToRace: String(weeksToRace) } : {}),
                             date: dateStr,
                           } })
                           }

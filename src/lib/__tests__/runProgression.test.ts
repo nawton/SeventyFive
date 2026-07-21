@@ -72,6 +72,40 @@ describe('resolveRunProgression — intervaller och övrigt', () => {
   })
 })
 
+describe('nedtrappning inför loppet (taper)', () => {
+  it('veckan före loppet: 70 % volym, tävlingsveckan: 50 %', () => {
+    // w=5: 10 + 2*5 = 20 km → 14 km resp. 10 km
+    expect(resolveRunProgression(LONG_NOTES, 5, 'metric', 1)).toContain('14 km')
+    expect(resolveRunProgression(LONG_NOTES, 5, 'metric', 0)).toContain('10 km')
+    expect(resolveRunProgression(LONG_NOTES, 5, 'metric', 0)).toContain('nedtrappning inför loppet')
+  })
+  it('taper får gå under startnivån — färska ben är poängen', () => {
+    // w=0: 10 km → tävlingsveckan 5 km, under starten på 10
+    expect(resolveRunProgression(LONG_NOTES, 0, 'metric', 0)).toContain('5 km')
+  })
+  it('taper trumfar cutback-veckan', () => {
+    // w=3 är cutback (12 km) — men med loppet nästa vecka gäller taper: 0,7*16 ≈ 11 km
+    const res = resolveRunProgression(LONG_NOTES, 3, 'metric', 1)!
+    expect(res).toContain('11 km')
+    expect(res).not.toContain('lugnare vecka')
+  })
+  it('intervaller trappas också ner men aldrig under 2', () => {
+    expect(resolveRunProgression(INT_NOTES, 0, 'metric', 0)).toContain('3×1000 m')  // 0,5*5 → 2,5 → 3
+    const t = parseRunTarget('Start 2×400 m · +1 per vecka · max 8×400 m', 0, 0)
+    expect(t.reps).toBe(2)
+  })
+  it('två eller fler veckor kvar: ingen taper', () => {
+    expect(resolveRunProgression(LONG_NOTES, 5, 'metric', 2)).toContain('20 km')
+    expect(parseRunTarget(LONG_NOTES, 5, 2).taper).toBe(false)
+  })
+  it('parseRunTarget flaggar taper åt detaljskärmen', () => {
+    const t = parseRunTarget(LONG_NOTES, 5, 1)
+    expect(t.taper).toBe(true)
+    expect(t.cutback).toBe(false)
+    expect(t.km).toBe(14)
+  })
+})
+
 describe('parseRunTarget', () => {
   it('ger strukturerad distansdata med cutback-flaggan', () => {
     const t = parseRunTarget(LONG_NOTES, 3)
