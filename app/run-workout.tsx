@@ -8,7 +8,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
-import { parseRunTarget, paceToSec, paceRangeForUnit, type RunTarget } from '@/lib/runProgression'
+import { parseRunTarget, paceToSec, paceRangeForUnit, buildRunSegments, type RunTarget } from '@/lib/runProgression'
 import { RUN_SESSION_INFO } from '@/services/scheduleGenerator'
 
 // =============================================================================
@@ -146,15 +146,25 @@ export default function RunWorkoutScreen() {
 
   function startRun() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    // Kvalitetspass (intervaller/tempo/maraton/fartlek) skickar hela
+    // segmentupplägget — GPS-vyn guidar då genom passet och km/min-målet
+    // utelämnas så inga krockande målannonseringar sker. Enkla pass
+    // (långpass m.fl.) behåller det vanliga målflödet.
+    const segs = buildRunSegments(baseName, target)
+    const guided = segs.length > 1
     router.replace({
       pathname: '/cardio',
       params: {
         name: params.cardioType ?? 'running',
         ...(params.sessionId ? { sessionId: params.sessionId, sessionDate: params.date } : {}),
-        // Målet förifylls från planen — distansmål för distanspass,
-        // tidsmål för återhämtningspass med minutspann
-        ...(target.kind === 'distance' && target.km ? { goalKm: target.km.toFixed(2) } : {}),
-        ...(target.kind === 'plain' && est ? { goalMin: String(est[1]) } : {}),
+        ...(guided
+          ? { segments: JSON.stringify(segs) }
+          : {
+              // Målet förifylls från planen — distansmål för distanspass,
+              // tidsmål för återhämtningspass med minutspann
+              ...(target.kind === 'distance' && target.km ? { goalKm: target.km.toFixed(2) } : {}),
+              ...(target.kind === 'plain' && est ? { goalMin: String(est[1]) } : {}),
+            }),
       },
     })
   }

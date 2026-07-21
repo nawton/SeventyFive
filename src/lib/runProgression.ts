@@ -112,6 +112,68 @@ export function paceToSec(p: string): number {
   return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : 0
 }
 
+// ─── Segmentbygge — GPS-vyns intervallguidning ───────────────────────────────
+// Översätter veckans mål till en körbar segmentlista (uppvärmning → arbete/vila
+// → nedvarvning) som run-workout skickar till GPS-skärmen. Långpass och andra
+// enkla pass returnerar [] — de guidas av det vanliga distansmålet istället.
+
+export interface RunSegment {
+  kind: 'warmup' | 'work' | 'rest' | 'cooldown'
+  /** Exakt en av distanceM/durationS per segment */
+  distanceM?: number
+  durationS?: number
+  /** T.ex. "Intervall 3 av 6", "Vila", "Uppvärmning" — visas i UI + läses upp */
+  label: string
+  /** Tempoförslag i sek/km — bara på work-segment, bara när 5 km-test angetts */
+  paceSecLo?: number
+  paceSecHi?: number
+}
+
+export function buildRunSegments(baseName: string, t: RunTarget): RunSegment[] {
+  // Tempozon från "5:45–6:10 /km" (eller enkel "4:55 /km" → samma lo/hi)
+  let paceSecLo: number | undefined
+  let paceSecHi: number | undefined
+  if (t.pace) {
+    const [lo, hi] = t.pace.includes('–') ? t.pace.split('–') : [t.pace, t.pace]
+    const loSec = paceToSec(lo)
+    const hiSec = paceToSec(hi)
+    if (loSec > 0) { paceSecLo = loSec; paceSecHi = hiSec > 0 ? hiSec : loSec }
+  }
+  const work = (distanceM: number, label: string): RunSegment =>
+    ({ kind: 'work', distanceM, label, ...(paceSecLo ? { paceSecLo, paceSecHi } : {}) })
+
+  if (t.kind === 'interval' && t.reps && t.intervalM) {
+    const segs: RunSegment[] = [{ kind: 'warmup', distanceM: 1500, label: 'Uppvärmning' }]
+    for (let i = 1; i <= t.reps; i++) {
+      segs.push(work(t.intervalM, `Intervall ${i} av ${t.reps}`))
+      if (i < t.reps) segs.push({ kind: 'rest', durationS: 90, label: 'Vila' })
+    }
+    segs.push({ kind: 'cooldown', distanceM: 1500, label: 'Nedvarvning' })
+    return segs
+  }
+
+  if (t.kind === 'distance' && t.km) {
+    const workM = Math.round(t.km * 1000)
+    if (baseName === 'Tempopass' || baseName === 'Maratonfart') {
+      return [
+        { kind: 'warmup', distanceM: 1500, label: 'Uppvärmning' },
+        work(workM, baseName === 'Tempopass' ? 'Tempo' : 'Maratonfart'),
+        { kind: 'cooldown', distanceM: 1000, label: 'Nedvarvning' },
+      ]
+    }
+    if (baseName === 'Fartlek') {
+      return [
+        { kind: 'warmup', durationS: 600, label: 'Uppvärmning' },
+        work(workM, 'Fartlek'),
+        { kind: 'cooldown', durationS: 300, label: 'Nedvarvning' },
+      ]
+    }
+  }
+
+  // Långpass, Distanspass, Återhämtning m.fl. — inget guidat upplägg
+  return []
+}
+
 // Var fjärde planvecka är en lugnare vecka (cutback): volymen dras ner ~25 %
 // så kroppen hinner ta till sig träningen — som etablerade planer gör.
 // Vecka 4, 8, 12, 16 räknat från planens start.
