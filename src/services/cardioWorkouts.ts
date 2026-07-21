@@ -7,6 +7,14 @@ export interface CardioSplit {
   paceSec: number  // sekunder för den kilometern (= tid för full km)
 }
 
+/** Resultat för ett avklarat arbetssegment i ett guidat pass */
+export interface CardioInterval {
+  label: string      // "Intervall 1 av 6", "Tempo"
+  distanceM: number  // faktisk distans i meter
+  durationS: number  // faktisk tid i sekunder
+  paceSec: number    // sek/km för segmentet
+}
+
 export interface CardioData {
   category: 'cardio'
   type: string
@@ -15,6 +23,10 @@ export interface CardioData {
   calories: number
   route?: Array<[number, number]>
   splits?: CardioSplit[]
+  /** Guidade pass: resultat per avklarat arbetssegment */
+  intervals?: CardioInterval[]
+  /** Guidade pass: planerat antal arbetssegment — så "4 av 6" kan visas */
+  intervals_planned?: number
   /** Upplevd ansträngning (RPE) 1–10 — sätts av användaren efter passet */
   effort?: number
 }
@@ -35,6 +47,8 @@ export async function saveCardioWorkout(params: {
   calories: number
   route?: Array<[number, number]>
   splits?: CardioSplit[]
+  intervals?: CardioInterval[]
+  intervalsPlanned?: number
   effort?: number
 }): Promise<void> {
   const entry: CardioData = {
@@ -45,6 +59,8 @@ export async function saveCardioWorkout(params: {
     calories: params.calories,
     route: params.route,
     splits: params.splits,
+    intervals: params.intervals,
+    intervals_planned: params.intervalsPlanned,
     effort: params.effort,
   }
   const { error } = await supabase.from('user_workouts').insert({
@@ -87,6 +103,8 @@ export async function getCardioWorkoutById(userId: string, id: string): Promise<
       calories:         raw.calories         ?? 0,
       route:            raw.route,
       splits:           raw.splits,
+      intervals:        raw.intervals,
+      intervals_planned: raw.intervals_planned,
       effort:           raw.effort,
     } satisfies CardioData,
   }
@@ -134,6 +152,8 @@ export async function getCardioWorkoutsForDate(userId: string, date: string): Pr
           calories:         raw.calories         ?? 0,
           route:            raw.route,
           splits:           raw.splits,
+          intervals:        raw.intervals,
+          intervals_planned: raw.intervals_planned,
           effort:           raw.effort,
         } satisfies CardioData,
       }
@@ -166,6 +186,8 @@ export async function getCardioWorkouts(userId: string, limit = 30): Promise<Car
           calories:         raw.calories         ?? 0,
           route:            raw.route,
           splits:           raw.splits,
+          intervals:        raw.intervals,
+          intervals_planned: raw.intervals_planned,
           effort:           raw.effort,
         } satisfies CardioData,
       }

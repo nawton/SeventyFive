@@ -156,6 +156,11 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   ]
   const splits = d.splits ?? []
   const fastestSplit = splits.length ? Math.min(...splits.map(sp => sp.paceSec)) : 0
+  // Guidade pass: per-intervall-resultat + planerat antal ("4 av 6")
+  const intervals = d.intervals ?? []
+  const fastestInterval = intervals.length
+    ? Math.min(...intervals.map(iv => iv.paceSec || Infinity))
+    : 0
 
   return (
     <View style={s.root}>
@@ -237,6 +242,47 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
               </View>
             ))}
           </View>
+
+          {/* Intervallresultat — guidade pass, snabbaste markerad */}
+          {intervals.length > 0 && (
+            <View style={s.splitsCard}>
+              <View style={s.splitsHead}>
+                <Text style={s.splitsTitle}>
+                  Intervaller
+                  {d.intervals_planned ? ` · ${intervals.length} av ${d.intervals_planned}` : ''}
+                </Text>
+                <Text style={s.splitsUnit}>min/{unitLabel}</Text>
+              </View>
+              {intervals.map((iv, i) => {
+                const fastest = iv.paceSec > 0 && iv.paceSec === fastestInterval
+                return (
+                  <View key={i} style={s.splitRow}>
+                    <Text style={s.ivMeta}>
+                      {iv.label.startsWith('Intervall') ? `${i + 1}` : iv.label}
+                      <Text style={s.ivMetaDist}>  {iv.distanceM >= 1000 && iv.distanceM % 100 === 0
+                        ? `${String(iv.distanceM / 1000).replace('.', ',')} km`
+                        : `${iv.distanceM} m`}</Text>
+                    </Text>
+                    <View style={s.splitBarTrack}>
+                      <View
+                        style={[
+                          s.splitBar,
+                          fastest && s.splitBarFastest,
+                          { width: `${iv.paceSec > 0 ? Math.max(12, (fastestInterval / iv.paceSec) * 100) : 12}%` as never },
+                        ]}
+                      />
+                    </View>
+                    <View style={s.splitPaceWrap}>
+                      {fastest && <Ionicons name="flash" size={11} color={CARDIO_BLUE} />}
+                      <Text style={[s.splitPace, fastest && s.splitPaceFastest]}>
+                        {fmtPace(paceForUnit(iv.paceSec, unit))}
+                      </Text>
+                    </View>
+                  </View>
+                )
+              })}
+            </View>
+          )}
 
           {splits.length > 0 && (
             <View style={s.splitsCard}>
@@ -398,6 +444,8 @@ const s = StyleSheet.create({
   splitsUnit: { color: 'rgba(255,255,255,0.30)', fontSize: 11, fontFamily: NUM_FONT_SEMI },
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
   splitKm: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT_SEMI, width: 52, fontVariant: ['tabular-nums'] },
+  ivMeta: { color: TEXT_PRIMARY, fontSize: 13, fontFamily: NUM_FONT_SEMI, width: 74, fontVariant: ['tabular-nums'] },
+  ivMetaDist: { color: TEXT_SECONDARY, fontSize: 11, fontFamily: NUM_FONT_SEMI },
   splitBarTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
   splitBar: { height: '100%', borderRadius: 5, backgroundColor: CARDIO_BLUE, opacity: 0.55 },
   splitBarFastest: { opacity: 1 },

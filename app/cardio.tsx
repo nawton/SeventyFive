@@ -25,7 +25,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated'
 import { ORANGE, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
-import { saveCardioWorkout } from '@/services/workouts'
+import { saveCardioWorkout, type CardioInterval } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
@@ -371,6 +371,8 @@ export default function CardioScreen() {
     completedWork: 0,
     done: false,
   })
+  // Faktiskt resultat per avklarat arbetssegment — sparas med passet
+  const intervalResults = useRef<CardioInterval[]>([])
   const [engineUi, setEngineUi] = useState({
     idx: 0, segStartDistKm: 0, segStartElapsed: 0, completedWork: 0, done: false,
   })
@@ -565,7 +567,20 @@ export default function CardioScreen() {
     let changed = false
     while (st.idx < segs.length && segRemaining(segs[st.idx]) <= 0) {
       const finished = segs[st.idx]
-      if (finished.kind === 'work') st.completedWork += 1
+      if (finished.kind === 'work') {
+        st.completedWork += 1
+        // Faktiskt resultat — mäts INNAN segStart-markörerna nollställs.
+        // Distanssegment: måldistansen (triggern), faktisk tid från klockan.
+        // Tidssegment (fartlek): måltiden, faktisk distans från GPS:en.
+        const durationS = finished.durationS ?? Math.max(1, elapsedRef.current - st.segStartElapsed)
+        const distanceM = finished.distanceM ?? Math.round((distanceRef.current - st.segStartDistKm) * 1000)
+        intervalResults.current.push({
+          label: finished.label,
+          distanceM,
+          durationS,
+          paceSec: distanceM > 0 ? Math.round(durationS / (distanceM / 1000)) : 0,
+        })
+      }
       st.idx += 1
       st.segStartDistKm = distanceRef.current
       st.segStartElapsed = elapsedRef.current
@@ -934,6 +949,9 @@ export default function CardioScreen() {
         calories: summary.calories,
         route: summary.route,
         splits: summary.splits,
+        // Guidade pass: per-intervall-resultat + planerat antal ("4 av 6")
+        intervals: guided && intervalResults.current.length > 0 ? intervalResults.current : undefined,
+        intervalsPlanned: guided && totalWork > 1 ? totalWork : undefined,
         effort: effort ?? undefined,
       })
 
@@ -1593,14 +1611,34 @@ export default function CardioScreen() {
             {summary && guided && totalWork > 1 && (() => {
               const all = engineUi.completedWork >= totalWork
               return (
-                <View style={styles.summaryGoalRow}>
-                  <Ionicons name={all ? 'trophy' : 'flash-outline'} size={16} color={all ? '#FFD54F' : 'rgba(255,255,255,0.6)'} />
-                  <Text style={[styles.summaryGoalText, all && { color: '#FFD54F' }]}>
-                    {all
-                      ? `Alla ${totalWork} intervaller avklarade!`
-                      : `${engineUi.completedWork} av ${totalWork} intervaller`}
-                  </Text>
-                </View>
+                <>
+                  <View style={styles.summaryGoalRow}>
+                    <Ionicons name={all ? 'trophy' : 'flash-outline'} size={16} color={all ? '#FFD54F' : 'rgba(255,255,255,0.6)'} />
+                    <Text style={[styles.summaryGoalText, all && { color: '#FFD54F' }]}>
+                      {all
+                        ? `Alla ${totalWork} intervaller avklarade!`
+                        : `${engineUi.completedWork} av ${totalWork} intervaller`}
+                    </Text>
+                  </View>
+                  {/* Tempo per intervall — snabbaste markerad */}
+                  {intervalResults.current.length > 0 && (() => {
+                    const fastest = Math.min(...intervalResults.current.map(r => r.paceSec || Infinity))
+                    return (
+                      <View style={styles.summaryIvChips}>
+                        {intervalResults.current.map((r, i) => {
+                          const isFastest = r.paceSec > 0 && r.paceSec === fastest
+                          return (
+                            <View key={i} style={[styles.summaryIvChip, isFastest && styles.summaryIvChipFast]}>
+                              <Text style={[styles.summaryIvChipText, isFastest && { color: CARDIO_ACCENT }]}>
+                                {i + 1} · {formatPace(1, paceForUnit(r.paceSec, unit))}
+                              </Text>
+                            </View>
+                          )
+                        })}
+                      </View>
+                    )
+                  })()}
+                </>
               )
             })()}
 
@@ -2262,6 +2300,21 @@ const styles = StyleSheet.create({
   infoPlanPace: {
     color: '#9BA0A6', fontSize: 11, fontFamily: NUM_FONT_SEMI,
     fontVariant: ['tabular-nums'], marginTop: 1,
+  },
+
+  // Per-intervall-tempon i summeringen
+  summaryIvChips: {
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
+    gap: 6, marginTop: 2,
+  },
+  summaryIvChip: {
+    backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 9,
+    paddingHorizontal: 9, paddingVertical: 4,
+  },
+  summaryIvChipFast: { backgroundColor: CARDIO_ACCENT + '1E' },
+  summaryIvChipText: {
+    color: 'rgba(255,255,255,0.8)', fontSize: 12, fontFamily: NUM_FONT_SEMI,
+    fontVariant: ['tabular-nums'],
   },
   root: { flex: 1, backgroundColor: '#e8e8e8' },
 
