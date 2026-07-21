@@ -303,6 +303,12 @@ export default function CardioScreen() {
   const routeCoords = useRef<Array<[number, number]>>([])
   const mapReady = useRef(false)
   const elapsedRef = useRef(0)
+  // Väggklocksbaserad tid: passets tid = elapsedBase (ackumulerat före nuvarande
+  // körsträcka) + tid sedan runStartTs. Timer-ticken UPPDATERAR bara visningen —
+  // den räknar inte. Så överlever klockan låst skärm/bakgrund, där JS-timers
+  // pausas och tick-räkning skulle tappa sekunder.
+  const elapsedBaseRef = useRef(0)
+  const runStartTs = useRef(0)
   const distanceRef = useRef(0)
   const splitKm = useRef(1)
   const lastSplitElapsed = useRef(0)
@@ -657,14 +663,13 @@ export default function CardioScreen() {
     lastMoveTs.current = Date.now()
     autoPausedRef.current = false
     setAutoPaused(false)
+    runStartTs.current = Date.now()
     timerRef.current = setInterval(() => {
       // Auto-paus fryser klockan — allt annat i ticken rullar vidare
       if (!autoPausedRef.current) {
-        setElapsed(s => {
-          const v = s + 1
-          elapsedRef.current = v
-          return v
-        })
+        const v = Math.round(elapsedBaseRef.current + (Date.now() - runStartTs.current) / 1000)
+        elapsedRef.current = v
+        setElapsed(v)
       }
       // Ingen GPS-fix på 8 sekunder → visa "ingen signal"
       if (lastFixTs.current > 0 && Date.now() - lastFixTs.current > 8000) {
@@ -687,6 +692,8 @@ export default function CardioScreen() {
       ) {
         autoPausedRef.current = true
         setAutoPaused(true)
+        // Frys väggklockan: banka in det upplupna och vänta på rörelse
+        elapsedBaseRef.current = elapsedRef.current
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
         speak('Autopaus.')
       }
@@ -735,6 +742,7 @@ export default function CardioScreen() {
           if (autoPausedRef.current) {
             autoPausedRef.current = false
             setAutoPaused(false)
+            runStartTs.current = Date.now()   // klockan rullar igen härifrån
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
             speak('Återupptar.')
           }
@@ -807,6 +815,8 @@ export default function CardioScreen() {
 
   function pauseTracking() {
     speak('Pausat.')
+    // Banka in det upplupna — Återuppta startar en ny körsträcka
+    elapsedBaseRef.current = elapsedRef.current
     setStatus('paused')
     locationSub.current?.remove()
     locationSub.current = null

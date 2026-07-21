@@ -165,6 +165,33 @@ describe('simulerad fri runda', () => {
   })
 })
 
+describe('väggklockstid — telefonen i fickan', () => {
+  it('tappade timer-tick hinner ikapp: klockan visar verklig tid', async () => {
+    await startRun({ name: 'running' })
+    run(30, 5)                                    // 30 s normal löpning
+    expect(screen.getAllByText('00:00:30').length).toBeGreaterThan(0)
+
+    // Skärmen låses: JS-timers pausas i 60 s men väggklockan går vidare.
+    // setSystemTime flyttar Date.now() utan att fyra av intervall-tick.
+    act(() => { jest.setSystemTime(Date.now() + 60_000) })
+    fix(50)                                       // GPS:en vaknar med ett hopp
+    second()                                      // första ticken efter uppvaknandet
+    // Tick-räkning hade visat 00:00:31 — väggklockan visar de verkliga ~91
+    expect(screen.getAllByText('00:01:31').length).toBeGreaterThan(0)
+  })
+
+  it('manuell paus räknar inte väggtid', async () => {
+    await startRun({ name: 'running' })
+    run(20, 5)
+    fireEvent.press(screen.getByText('Pausa'))
+    act(() => { jest.setSystemTime(Date.now() + 120_000) })   // 2 min paus
+    fireEvent.press(screen.getByText('Återuppta'))
+    await act(async () => {})
+    run(10, 5)
+    expect(screen.getAllByText('00:00:30').length).toBeGreaterThan(0)
+  })
+})
+
 // ─── Autopaus ────────────────────────────────────────────────────────────────
 
 describe('simulerad autopaus', () => {
