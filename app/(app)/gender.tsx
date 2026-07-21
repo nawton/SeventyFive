@@ -13,7 +13,7 @@ import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/th
 // alternativen. Valet sparas direkt och sidan stängs.
 // =============================================================================
 
-const OPTIONS = ['Man', 'Kvinna', 'Icke-binär', 'Vill inte ange']
+const OPTIONS = ['Man', 'Kvinna', 'Annat', 'Vill inte ange']
 
 export default function GenderScreen() {
   const [gender, setGender] = useState<string | null>(null)

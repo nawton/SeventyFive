@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react'
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal,
-  TextInput, Pressable, KeyboardAvoidingView, Platform,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -9,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
 import { setBodyWeightKg } from '@/lib/prefs'
-import { splitName, combineName } from '@/lib/profileName'
+import { splitName } from '@/lib/profileName'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import DateTimePicker from '@react-native-community/datetimepicker'
@@ -60,9 +59,6 @@ export default function AccountScreen() {
   const [heightCm, setHeightCm]   = useState<number | null>(null)
 
   const [sheet, setSheet] = useState<SheetKind>(null)
-  // Namnredigering: vilken del + utkastet
-  const [nameEdit, setNameEdit] = useState<null | 'first' | 'last'>(null)
-  const [nameDraft, setNameDraft] = useState('')
 
   // Utkast — committas först på Klar. Apples inbyggda hjul används rakt av.
   const [dDate, setDDate] = useState(new Date(2000, 0, 9))
@@ -134,19 +130,6 @@ export default function AccountScreen() {
     setSheet(null)
   }
 
-  function openNameEdit(part: 'first' | 'last') {
-    setNameDraft(part === 'first' ? first : last)
-    setNameEdit(part)
-  }
-  function saveNameEdit() {
-    const nextFirst = nameEdit === 'first' ? nameDraft : first
-    const nextLast  = nameEdit === 'last' ? nameDraft : last
-    setFirst(nextFirst.trim())
-    setLast(nextLast.trim())
-    save({ name: combineName(nextFirst, nextLast) })
-    setNameEdit(null)
-  }
-
   const birthLabel = birthDate ?? 'Ej angivet'
   const weightLabel = weightKg != null ? `${String(weightKg).replace('.', ',')} kg` : 'Ej specificerad'
   const heightLabel = heightCm != null ? `${heightCm} cm` : 'Ej specificerad'
@@ -163,9 +146,9 @@ export default function AccountScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.rowsCard}>
-          <Row label="Förnamn" value={first || 'Lägg till'} onPress={() => openNameEdit('first')} />
+          <Row label="Förnamn" value={first || 'Lägg till'} onPress={() => router.push('/name-edit?part=first' as never)} />
           <View style={styles.rowDivider} />
-          <Row label="Efternamn" value={last || 'Lägg till'} onPress={() => openNameEdit('last')} />
+          <Row label="Efternamn" value={last || 'Lägg till'} onPress={() => router.push('/name-edit?part=last' as never)} />
           <View style={styles.rowDivider} />
           <Row label="Födelsedatum" value={birthLabel} onPress={openBirth} />
           <View style={styles.rowDivider} />
@@ -190,9 +173,20 @@ export default function AccountScreen() {
       <Modal visible={sheet !== null} transparent animationType="slide" onRequestClose={() => setSheet(null)}>
         <Pressable style={styles.overlay} onPress={() => setSheet(null)}>
           <Pressable style={styles.sheet} onPress={() => {}}>
-            <Text style={styles.sheetTitle}>
-              {sheet === 'birth' ? 'Födelsedatum' : sheet === 'weight' ? 'Vikt' : 'Längd'}
-            </Text>
+            <View style={styles.sheetHeader}>
+              <TouchableOpacity onPress={() => setSheet(null)} hitSlop={8}>
+                <Text style={styles.sheetCancel}>Avbryt</Text>
+              </TouchableOpacity>
+              <Text style={styles.sheetTitle}>
+                {sheet === 'birth' ? 'Födelsedatum' : sheet === 'weight' ? 'Vikt' : 'Längd'}
+              </Text>
+              <TouchableOpacity
+                onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
+                hitSlop={8}
+              >
+                <Text style={styles.sheetDone}>Klar</Text>
+              </TouchableOpacity>
+            </View>
 
             {sheet === 'birth' && (
               <DateTimePicker
@@ -243,39 +237,10 @@ export default function AccountScreen() {
               </View>
             )}
 
-            <TouchableOpacity
-              style={styles.doneBtn}
-              onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.doneBtnText}>Klar</Text>
-            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
 
-      {/* ── Namnredigering ── */}
-      <Modal visible={nameEdit !== null} transparent animationType="fade" onRequestClose={() => setNameEdit(null)}>
-        <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setNameEdit(null)} />
-          <View style={styles.nameCard}>
-            <Text style={styles.sheetTitle}>{nameEdit === 'first' ? 'Förnamn' : 'Efternamn'}</Text>
-            <TextInput
-              style={styles.nameInput}
-              value={nameDraft}
-              onChangeText={setNameDraft}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={saveNameEdit}
-              placeholder={nameEdit === 'first' ? 'Anton' : 'Wretenberg'}
-              placeholderTextColor="rgba(255,255,255,0.25)"
-            />
-            <TouchableOpacity style={styles.doneBtn} onPress={saveNameEdit} activeOpacity={0.85}>
-              <Text style={styles.doneBtnText}>Spara</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </SafeAreaView>
   )
 }
@@ -312,7 +277,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
     padding: 22, paddingBottom: 34, gap: 16,
   },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sheetTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800', textAlign: 'center' },
+  sheetCancel: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
+  sheetDone: { color: ORANGE, fontSize: 16, fontWeight: '800' },
   datePicker: { alignSelf: 'center' },
   pickerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   picker: { width: 110, height: 216 },
@@ -320,19 +288,4 @@ const styles = StyleSheet.create({
   pickerItem: { color: TEXT_PRIMARY, fontSize: 22 },
   wheelUnit: { color: TEXT_SECONDARY, fontSize: 18, fontWeight: '700', marginLeft: 8 },
 
-  doneBtn: {
-    backgroundColor: ORANGE, borderRadius: 14, paddingVertical: 14,
-    alignItems: 'center',
-  },
-  doneBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
-
-  nameCard: {
-    marginHorizontal: 24, marginBottom: 'auto', marginTop: 'auto',
-    backgroundColor: BG, borderRadius: 20, borderWidth: 1, borderColor: BORDER,
-    padding: 22, gap: 16,
-  },
-  nameInput: {
-    backgroundColor: CARD, borderRadius: 12, borderWidth: 1, borderColor: BORDER,
-    color: TEXT_PRIMARY, fontSize: 17, paddingHorizontal: 14, paddingVertical: 12,
-  },
 })

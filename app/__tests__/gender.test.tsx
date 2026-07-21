@@ -26,7 +26,7 @@ beforeEach(() => jest.clearAllMocks())
 describe('Kön-sidan', () => {
   it('visar de fyra alternativen med nuvarande val markerat', async () => {
     render(<GenderScreen />)
-    for (const opt of ['Man', 'Kvinna', 'Icke-binär', 'Vill inte ange']) {
+    for (const opt of ['Man', 'Kvinna', 'Annat', 'Vill inte ange']) {
       expect(await screen.findByText(opt)).toBeOnTheScreen()
     }
   })
@@ -36,11 +36,11 @@ describe('Kön-sidan', () => {
     const { router } = require('expo-router')
     render(<GenderScreen />)
     // Vänta in profilladdningen så userId finns när valet görs
-    await screen.findByText('Icke-binär')
+    await screen.findByText('Annat')
     await waitFor(() => expect(getProfile).toHaveBeenCalled())
-    fireEvent.press(screen.getByText('Icke-binär'))
+    fireEvent.press(screen.getByText('Annat'))
     await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { gender: 'Icke-binär' }))
+      expect(updateProfile).toHaveBeenCalledWith('u1', { gender: 'Annat' }))
     jest.advanceTimersByTime(300)
     expect(router.back).toHaveBeenCalled()
     jest.useRealTimers()

@@ -75,14 +75,13 @@ describe('Profilinställningar', () => {
     expect(await getBodyWeightKg()).toBe(76)    // prefs rundar till hela kg
   })
 
-  it('förnamnet redigeras och sparas ihop med efternamnet', async () => {
+  it('namnraderna leder till namnsidan med rätt del', async () => {
+    const { router } = require('expo-router')
     render(<AccountScreen />)
     fireEvent.press(await screen.findByText('Förnamn'))
-    const input = screen.getByDisplayValue('Anton')
-    fireEvent.changeText(input, 'Tony')
-    fireEvent.press(screen.getByText('Spara'))
-    await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Wretenberg' }))
+    expect(router.push).toHaveBeenCalledWith('/name-edit?part=first')
+    fireEvent.press(screen.getByText('Efternamn'))
+    expect(router.push).toHaveBeenCalledWith('/name-edit?part=last')
   })
 
   it('födelsedatumshjulet sparar valt datum', async () => {
