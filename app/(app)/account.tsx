@@ -69,23 +69,58 @@ function Row({ label, value, onPress, locked, chevron = true }: {
   )
 }
 
-/** Flytande Klar-knapp — liquid glass i iOS-systemblått, dragbar som Apples egen */
-function KlarPill({ onPress, testID }: { onPress: () => void; testID?: string }) {
+/** Flytande Done-knapp som Apples inbyggda: rent otonat liquid glass,
+    engelsk etikett, dragbar (håll och dra — fjädrar tillbaka) */
+function DonePill({ onPress, testID }: { onPress: () => void; testID?: string }) {
   return (
     <GlassPill
       onPress={onPress}
       draggable
       style={styles.klarPill}
-      tint="rgba(10,132,255,0.75)"
+      tint="transparent"
       fallbackStyle={styles.klarFallback}
     >
-      <Text testID={testID} style={styles.klarPillText}>Klar</Text>
+      <Text testID={testID} style={styles.klarPillText}>Done</Text>
     </GlassPill>
   )
 }
 
-// Kopplar namnfälten till Klar-pillen ovanför tangentbordet (InputAccessoryView)
-const NAME_KLAR_ID = 'nameKlarAccessory'
+/** Done ovanför tangentbordet. Varje namnfält får en EGEN accessory —
+    delar två fält samma nativeID tappar iOS pillen när fokus flyttas
+    till det andra fältet. Pressable istället för GlassPill eftersom
+    gesture-handler inte når tangentbordets fönster. */
+function DoneAccessory({ nativeID, testID, onPress }: {
+  nativeID: string; testID: string; onPress: () => void
+}) {
+  return (
+    <InputAccessoryView nativeID={nativeID} backgroundColor="transparent">
+      <View style={styles.accessoryBar} pointerEvents="box-none">
+        <Pressable
+          testID={testID}
+          onPress={onPress}
+          style={({ pressed }) => [
+            styles.klarPill, styles.accessoryPill,
+            !LIQUID_GLASS && styles.klarFallback,
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          {LIQUID_GLASS && (
+            <GlassView
+              glassEffectStyle="regular"
+              colorScheme="dark"
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+          )}
+          <Text style={styles.klarPillText}>Done</Text>
+        </Pressable>
+      </View>
+    </InputAccessoryView>
+  )
+}
+
+const FIRST_NAME_DONE_ID = 'firstNameDoneAccessory'
+const LAST_NAME_DONE_ID  = 'lastNameDoneAccessory'
 
 export default function AccountScreen() {
   const [userId, setUserId] = useState<string | null>(null)
@@ -212,7 +247,7 @@ export default function AccountScreen() {
               style={styles.rowInput}
               value={first}
               onChangeText={setFirst}
-              inputAccessoryViewID={NAME_KLAR_ID}
+              inputAccessoryViewID={FIRST_NAME_DONE_ID}
               onBlur={saveNames}
               returnKeyType="done"
               onSubmitEditing={doneEditingNames}
@@ -227,7 +262,7 @@ export default function AccountScreen() {
               style={styles.rowInput}
               value={last}
               onChangeText={setLast}
-              inputAccessoryViewID={NAME_KLAR_ID}
+              inputAccessoryViewID={LAST_NAME_DONE_ID}
               onBlur={saveNames}
               returnKeyType="done"
               onSubmitEditing={doneEditingNames}
@@ -260,7 +295,7 @@ export default function AccountScreen() {
       <Modal visible={sheet !== null} transparent animationType="fade" onRequestClose={() => setSheet(null)}>
         <Pressable testID="sheetOverlay" style={styles.overlay} onPress={() => setSheet(null)}>
           <View style={styles.floatWrap} pointerEvents="box-none">
-            <KlarPill
+            <DonePill
               testID="panelKlar"
               onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
             />
@@ -332,36 +367,14 @@ export default function AccountScreen() {
         </Pressable>
       </Modal>
 
-      {/* ── Klar ovanför Apples tangentbord vid namnredigering — som cardio-
+      {/* ── Done ovanför Apples tangentbord vid namnredigering — som cardio-
           målens Done, fast via InputAccessoryView eftersom texttangentbord
-          (till skillnad från sifferknappsatser) inte får Apples pill gratis.
-          Pressable istället för GlassPill: gesture-handler når inte
-          tangentbordets fönster. ── */}
+          (till skillnad från sifferknappsatser) inte får Apples pill gratis ── */}
       {Platform.OS === 'ios' && (
-        <InputAccessoryView nativeID={NAME_KLAR_ID} backgroundColor="transparent">
-          <View style={styles.accessoryBar} pointerEvents="box-none">
-            <Pressable
-              testID="nameKlar"
-              onPress={doneEditingNames}
-              style={({ pressed }) => [
-                styles.klarPill, styles.accessoryPill,
-                !LIQUID_GLASS && styles.klarFallback,
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              {LIQUID_GLASS && (
-                <GlassView
-                  glassEffectStyle="regular"
-                  colorScheme="dark"
-                  tintColor="rgba(10,132,255,0.75)"
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                />
-              )}
-              <Text style={styles.klarPillText}>Klar</Text>
-            </Pressable>
-          </View>
-        </InputAccessoryView>
+        <>
+          <DoneAccessory nativeID={FIRST_NAME_DONE_ID} testID="firstNameDone" onPress={doneEditingNames} />
+          <DoneAccessory nativeID={LAST_NAME_DONE_ID} testID="lastNameDone" onPress={doneEditingNames} />
+        </>
       )}
     </SafeAreaView>
   )
@@ -404,7 +417,10 @@ const styles = StyleSheet.create({
   accessoryBar: { alignItems: 'flex-end', paddingHorizontal: 14, paddingVertical: 10 },
   accessoryPill: { overflow: 'hidden' },
   klarPill: { borderRadius: 24, paddingHorizontal: 26, paddingVertical: 12 },
-  klarFallback: { backgroundColor: '#0A84FF' },
+  klarFallback: {
+    backgroundColor: 'rgba(40,40,44,0.96)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+  },
   klarPillText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   rowInput: {
     flex: 1, color: TEXT_PRIMARY, fontSize: 15, textAlign: 'right', padding: 0,

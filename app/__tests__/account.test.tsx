@@ -109,13 +109,22 @@ describe('Profilinställningar', () => {
       expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Anton Berg' }))
   })
 
-  it('Klar-pillen över tangentbordet sparar namnen', async () => {
+  it('Done-pillen över tangentbordet sparar förnamnet', async () => {
     render(<AccountScreen />)
     const input = await screen.findByDisplayValue('Anton')
     fireEvent.changeText(input, 'Tony')
-    fireEvent.press(screen.getByTestId('nameKlar'))
+    fireEvent.press(screen.getByTestId('firstNameDone'))
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Wretenberg' }))
+  })
+
+  it('efternamnet har en egen Done-pill (delad accessory tappas av iOS)', async () => {
+    render(<AccountScreen />)
+    const input = await screen.findByDisplayValue('Wretenberg')
+    fireEvent.changeText(input, 'Berg')
+    fireEvent.press(screen.getByTestId('lastNameDone'))
+    await waitFor(() =>
+      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Anton Berg' }))
   })
 
   it('födelsedatumshjulet: Klar sparar valt datum', async () => {
