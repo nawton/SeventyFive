@@ -16,6 +16,7 @@ import { signInWithGoogle } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
 import { updateProfile } from '@/services/profile'
 import { BG, BORDER, CARD, ACCENT } from '@/lib/theme'
+import { AppTextInput } from '@/components/AppTextInput'
 
 type Mode = 'login' | 'register'
 
@@ -164,7 +165,7 @@ export default function LoginScreen() {
           </View>
 
           {mode === 'register' && (
-            <TextInput
+            <AppTextInput
               style={styles.input}
               placeholder="Ditt namn"
               placeholderTextColor="#555"
@@ -176,7 +177,7 @@ export default function LoginScreen() {
               onSubmitEditing={() => emailRef.current?.focus()}
             />
           )}
-          <TextInput
+          <AppTextInput
             ref={emailRef}
             style={styles.input}
             placeholder="Email"
@@ -189,7 +190,7 @@ export default function LoginScreen() {
             returnKeyType="next"
             onSubmitEditing={() => passwordRef.current?.focus()}
           />
-          <TextInput
+          <AppTextInput
             ref={passwordRef}
             style={styles.input}
             placeholder="Lösenord"

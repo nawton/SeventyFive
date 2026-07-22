@@ -26,7 +26,6 @@ export default function RootLayout() {
         {/* auto: vita ikoner i mörkt läge, svarta i ljust */}
         <StatusBar style="auto" />
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="edit-name" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="records" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="change-password" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="cardio-session" options={{ animation: 'slide_from_right', gestureEnabled: true }} />

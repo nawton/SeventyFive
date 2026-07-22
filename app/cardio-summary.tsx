@@ -72,7 +72,11 @@ export default function CardioSummaryScreen() {
           {
             text: 'Radera', style: 'destructive',
             onPress: async () => {
-              await deleteCardioWorkout(workout.id).catch(() => {})
+              const ok = await deleteCardioWorkout(workout.id).catch(() => false)
+              if (!ok) {
+                Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
+                return
+              }
               router.back()
             },
           },

@@ -182,7 +182,6 @@ export default function AppLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="dashboard" />
-      <Tabs.Screen name="activity" options={{ href: null }} />
       <Tabs.Screen name="add" />
       <Tabs.Screen name="stats" />
       <Tabs.Screen name="community" />

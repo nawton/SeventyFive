@@ -13,6 +13,7 @@ import Animated, {
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import { TASK_COLORS } from '@/components/TaskGridCard'
 import { BORDER, CARD, ACCENT, useThemeStrings } from '@/lib/theme'
+import { AppTextInput } from '@/components/AppTextInput'
 
 const CARD_BG     = CARD
 const CARD_BORDER = BORDER
@@ -144,7 +145,7 @@ export function AddRuleSheet({ visible, onClose, onCreate }: {
             </View>
 
             <Text style={s.fieldLabel}>NAMN</Text>
-            <TextInput
+            <AppTextInput
               style={s.input}
               value={name}
               onChangeText={setName}

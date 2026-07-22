@@ -33,7 +33,9 @@ BEGIN
     url     := 'https://vmnvtendcmnypcpwfuva.supabase.co/functions/v1/push-notify',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'x-push-secret', '7098a5a5e683b090d3c38ce3286420d40cb7b0e8c6cacb03'
+      -- Hemligheten låg här i klartext — ROTERAD 2026-07-23; funktionen
+      -- ersätts av 20260723000001 som läser ur Vault istället
+      'x-push-secret', '<roterad-och-ogiltig>'
     ),
     body := jsonb_build_object(
       'table',  TG_TABLE_NAME,

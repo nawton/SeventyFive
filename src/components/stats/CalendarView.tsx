@@ -121,7 +121,11 @@ export function CalendarView({
     Alert.alert('Radera träning', 'Det här går inte att ångra.', [
       { text: 'Avbryt', style: 'cancel' },
       { text: 'Radera', style: 'destructive', onPress: async () => {
-        await deleteCardioWorkout(w.id).catch(() => {})
+        const ok = await deleteCardioWorkout(w.id).catch(() => false)
+        if (!ok) {
+          Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
+          return
+        }
         onDeleteWorkout?.(w.id)
         setFsWorkout(null)
       } },

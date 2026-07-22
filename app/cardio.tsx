@@ -39,6 +39,7 @@ import { EffortRating, effortColor, effortLabel } from '@/components/EffortRatin
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
 import { LIQUID_GLASS } from '@/lib/glass'
+import { AppTextInput } from '@/components/AppTextInput'
 import {
   nameToType, cardinalLabel, formatTime, spokenTime, formatPace, haversineDistance,
   type Coord, type ExerciseType,
@@ -1477,12 +1478,11 @@ export default function CardioScreen() {
             {/* Namnge passet */}
             <View style={styles.nameField}>
               <Text style={styles.nameFieldLabel}>PASSNAMN</Text>
-              <TextInput
+              <AppTextInput
                 style={styles.nameFieldInput}
                 value={workoutName}
                 onChangeText={setWorkoutName}
                 placeholder={`T.ex. Morgonrunda (annars "${selectedExercise.label}")`}
-                placeholderTextColor="rgba(255,255,255,0.25)"
                 autoCorrect={false}
                 returnKeyType="done"
               />
