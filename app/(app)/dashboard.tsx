@@ -63,7 +63,7 @@ import type { UserChallengeWithLevel } from '@/types/database'
 import { getGreetingSubtitle } from '@/lib/getGreetingSubtitle'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
-import { BG, BORDER, CARD, useThemeStrings, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
+import { BG, BORDER, CARD, TEXT_PRIMARY, useThemeStrings, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
 
 const NUM_FONT  = 'Nunito_700Bold'
 const SCENE_BG  = BG
@@ -149,7 +149,7 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
       >
         <Circle
           cx={R_SIZE / 2} cy={R_SIZE / 2} r={R_RADIUS}
-          stroke="#1E1E21" strokeWidth={R_STROKE} fill="none"
+          stroke={T.BORDER} strokeWidth={R_STROKE} fill="none"
         />
         <AnimatedCircle
           cx={R_SIZE / 2} cy={R_SIZE / 2} r={R_RADIUS}
@@ -172,8 +172,9 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
 export default function DashboardScreen() {
   const onScrollShrink = useTabBarShrinkOnScroll()
   // Gradienter kräver strängfärger — välj par efter aktuellt tema
-  const heroShadow = useColorScheme() === 'light' ? '#2B4EAE' : '#FFA817'
-  const heroGradient: [string, string] = useColorScheme() === 'light'
+  const lightMode = useColorScheme() === 'light'
+  const heroShadow = lightMode ? '#2B4EAE' : '#FFA817'
+  const heroGradient: [string, string] = lightMode
     ? ['#FFFFFF', '#F1F1F3'] : ['#1C1915', '#0F0F11']
   const insets = useSafeAreaInsets()
   const [userName, setUserName]     = useState('')
@@ -524,8 +525,11 @@ export default function DashboardScreen() {
 
         {/* ── Header ── */}
         <View style={s.header}>
-          <View>
-            <Text style={s.greeting}>{getGreeting()}, {userName}</Text>
+          {/* flex: 1 — långa namn krymper istället för att trycka ut avataren */}
+          <View style={{ flex: 1, paddingRight: 12 }}>
+            <Text style={s.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+              {getGreeting()}, {userName}
+            </Text>
             <Text style={s.subtitle}>{getGreetingSubtitle(new Date().getHours(), completedCount, tasks.length, currentDay)}</Text>
           </View>
           <TouchableOpacity
@@ -538,7 +542,7 @@ export default function DashboardScreen() {
             ) : userAvatar ? (
               <Text style={s.avatarEmoji}>{userAvatar}</Text>
             ) : (
-              <Text style={s.avatarText}>{userName[0]?.toUpperCase()}</Text>
+              <Text style={[s.avatarText, lightMode && { color: '#fff' }]}>{userName[0]?.toUpperCase()}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -783,7 +787,7 @@ const s = StyleSheet.create({
 
   // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  greeting: { color: '#FFFFFF', fontSize: 23, fontWeight: '700', letterSpacing: -0.4 },
+  greeting: { color: TEXT_PRIMARY, fontSize: 23, fontWeight: '700', letterSpacing: -0.4 },
   subtitle: { color: '#4A4A50', fontSize: 13, marginTop: 3 },
   avatar: {
     width: 44, height: 44, borderRadius: 22,
