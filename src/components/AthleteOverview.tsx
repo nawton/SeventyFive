@@ -89,6 +89,7 @@ function Avatar({ url, fallback, size }: { url: string | null; fallback: string;
 export function AthleteOverview({
   isOwn, name, avatarUrl, workouts, gymCount, counts, unit,
   followStatus, statsUnlocked, onToggleFollow, onOpenActivities, onPressHero, onPressFollows,
+  streak, onPressStreak,
 }: {
   isOwn: boolean
   name: string
@@ -108,6 +109,9 @@ export function AthleteOverview({
   onPressHero?: () => void
   /** Gör Följare/Följer-räknarna tryckbara (egna profilen: öppna listorna) */
   onPressFollows?: (tab: 'followers' | 'following') => void
+  /** Egna profilen: dagars streak ersätter Totalt km (statistiken har egen flik) */
+  streak?: number
+  onPressStreak?: () => void
 }) {
   const { width: screenW } = useWindowDimensions()
   const [type, setType] = useState<CardioType>('running')
@@ -172,10 +176,26 @@ export function AthleteOverview({
       ) : hero}
 
       <View style={s.countersRow}>
-        <View style={s.counter}>
-          <Text style={s.counterValue}>{statsUnlocked ? totalKm : '–'}</Text>
-          <Text style={s.counterLabel}>Totalt km</Text>
-        </View>
+        {isOwn && streak !== undefined ? (
+          <TouchableOpacity
+            style={s.counter}
+            onPress={onPressStreak}
+            disabled={!onPressStreak}
+            activeOpacity={0.6}
+            testID="streakCounter"
+          >
+            <View style={s.streakValueRow}>
+              <Ionicons name="flame" size={18} color={ORANGE} />
+              <Text style={s.counterValue}>{streak}</Text>
+            </View>
+            <Text style={s.counterLabel}>Streak</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={s.counter}>
+            <Text style={s.counterValue}>{statsUnlocked ? totalKm : '–'}</Text>
+            <Text style={s.counterLabel}>Totalt km</Text>
+          </View>
+        )}
         <View style={s.counterDivider} />
         <TouchableOpacity
           style={s.counter}
@@ -325,6 +345,7 @@ const s = StyleSheet.create({
     marginTop: 20, paddingVertical: 4,
   },
   counter: { flex: 1, alignItems: 'center', gap: 2 },
+  streakValueRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   counterValue: { color: TEXT_PRIMARY, fontSize: 24, fontFamily: NUM_FONT },
   counterLabel: { color: TEXT_SECONDARY, fontSize: 13 },
   counterDivider: { width: StyleSheet.hairlineWidth, height: 34, backgroundColor: 'rgba(255,255,255,0.15)' },

@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { toLocalDateString, parseLocalDate } from '@/lib/date'
+import { toLocalDateString, parseLocalDate, startOfWeek } from '@/lib/date'
 import type { TaskType, UserChallenge } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -319,6 +319,21 @@ export async function getStreak(challengeId: string): Promise<number> {
     checkDate.setDate(checkDate.getDate() - 1)
   }
   return streak
+}
+
+/** Status per datum för innevarande vecka (mån–sön) — till streaksidan */
+export async function getWeekStatuses(challengeId: string): Promise<Record<string, string>> {
+  const monday = startOfWeek()
+  const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6)
+  const { data } = await supabase
+    .from('daily_logs')
+    .select('date, status')
+    .eq('challenge_id', challengeId)
+    .gte('date', toLocalDateString(monday))
+    .lte('date', toLocalDateString(sunday))
+  const map: Record<string, string> = {}
+  for (const row of data ?? []) map[row.date] = row.status
+  return map
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

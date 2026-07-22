@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
 import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
+import { getActiveChallenge } from '@/services/challenge'
+import { getStreak } from '@/services/dailyLog'
 import {
   getFollowCounts, getFollowStatus, follow, unfollow, subscribeToFollows,
   type FollowCounts, type FollowStatus,
@@ -38,6 +40,7 @@ export default function AthleteScreen() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(paramAvatar)
   const [workouts, setWorkouts] = useState<CardioWorkout[]>([])
   const [gymCount, setGymCount] = useState(0)
+  const [streak, setStreak] = useState(0)
   const [unit, setUnit] = useState<UnitSystem>('metric')
   // Vänförfrågningar: min status mot den visade profilen och profilens
   // räknare. Uppdateras optimistiskt vid tryck och live via realtime.
@@ -98,6 +101,11 @@ export default function AthleteScreen() {
       // Gymdagar räknas som pass i aktivitetsknappen — samma gruppering
       // som flödet använder
       setGymCount(strengthToPosts(strength, '', null).length)
+      // Streakräknaren (ersätter Totalt km på egna profilen)
+      getActiveChallenge(session.user.id)
+        .then(c => c ? getStreak(c.id) : 0)
+        .then(days => { if (alive) setStreak(days) })
+        .catch(() => {})
     })
     return () => { alive = false; unsubscribe?.() }
   }, [otherId, paramName, paramAvatar]))
@@ -161,6 +169,8 @@ export default function AthleteScreen() {
           onPressFollows={isOwn
             ? tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)
             : undefined}
+          streak={isOwn ? streak : undefined}
+          onPressStreak={() => router.push('/(app)/streak' as never)}
         />
       </ScrollView>
     </SafeAreaView>

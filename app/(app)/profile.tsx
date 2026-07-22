@@ -35,6 +35,7 @@ import {
   getOrCreateTaskCompletions,
   setTaskCompleted,
   markDayPending,
+  getStreak,
 } from '@/services/dailyLog'
 import {
   getProgressPhotos,
@@ -73,6 +74,7 @@ export default function ProfileScreen() {
   const [gymCount, setGymCount]     = useState(0)
   const [counts, setCounts]         = useState<FollowCounts>({ followers: 0, following: 0 })
   const [requestCount, setRequestCount] = useState(0)
+  const [streak, setStreak]         = useState(0)
   const [unit, setUnit]             = useState<UnitSystem>('metric')
   const [loading, setLoading]       = useState(true)
   const [composerUri, setComposerUri] = useState<string | null>(null)
@@ -165,7 +167,10 @@ export default function ProfileScreen() {
 
       if (active.status === 'fulfilled') {
         setChallenge(active.value)
-        if (active.value) setCurrentDay(calculateCurrentDay(active.value.start_date))
+        if (active.value) {
+          setCurrentDay(calculateCurrentDay(active.value.start_date))
+          getStreak(active.value.id).then(setStreak).catch(() => {})
+        }
       }
 
       if (photoItems.status === 'fulfilled') {
@@ -316,6 +321,8 @@ export default function ProfileScreen() {
           } as never)}
           onPressHero={() => router.push('/(app)/edit-profile')}
           onPressFollows={tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)}
+          streak={streak}
+          onPressStreak={() => router.push('/(app)/streak' as never)}
         />
 
         <View style={s.sectionHeadRow}>

@@ -20,6 +20,12 @@ jest.mock('@/services/cardioWorkouts', () => ({
 jest.mock('@/services/strengthWorkouts', () => ({
   getStrengthWorkouts: jest.fn().mockResolvedValue([]),
 }))
+jest.mock('@/services/challenge', () => ({
+  getActiveChallenge: jest.fn().mockResolvedValue({ id: 'c1' }),
+}))
+jest.mock('@/services/dailyLog', () => ({
+  getStreak: jest.fn().mockResolvedValue(4),
+}))
 jest.mock('@/services/follows', () => ({
   getFollowCounts: jest.fn().mockResolvedValue({ followers: 0, following: 0 }),
   getFollowStatus: jest.fn().mockResolvedValue('none'),
@@ -79,15 +85,19 @@ beforeEach(() => {
 })
 
 describe('Atletprofil', () => {
-  it('egna profilen: räknare men INGEN statistiksektion (den har egen flik)', async () => {
+  it('egna profilen: streak istället för Totalt km, ingen statistiksektion', async () => {
+    const { router } = require('expo-router')
     render(<AthleteScreen />)
     expect(await screen.findByText('Anton Wretenberg')).toBeOnTheScreen()
-    expect(screen.getByText('16')).toBeOnTheScreen()        // 5,5 + 10 avrundat
-    expect(screen.getByText('Totalt km')).toBeOnTheScreen()
+    expect(await screen.findByText('Streak')).toBeOnTheScreen()
+    expect(within(screen.getByTestId('streakCounter')).getByText('4')).toBeOnTheScreen()
+    expect(screen.queryByText('Totalt km')).not.toBeOnTheScreen()
     expect(screen.getByText('Följare')).toBeOnTheScreen()
     expect(screen.queryByText('Den här veckan')).not.toBeOnTheScreen()
     expect(screen.queryByText('chart:12')).not.toBeOnTheScreen()
     expect(screen.getByText('Aktiviteter')).toBeOnTheScreen()   // historiken finns kvar
+    fireEvent.press(screen.getByTestId('streakCounter'))
+    expect(router.push).toHaveBeenCalledWith('/(app)/streak')
   })
 
   it('vald punkt i grafen styr veckosektionen — på en godkänd väns profil', async () => {

@@ -173,6 +173,7 @@ export default function AppLayout() {
       <Tabs.Screen name="profile" />
       <Tabs.Screen name="general" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="streak" options={{ href: null }} />
       <Tabs.Screen name="anpassning" options={{ href: null }} />
       <Tabs.Screen name="edit-profile" options={{ href: null }} />
       <Tabs.Screen name="account" options={{ href: null }} />
