@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable,
-  TextInput, Keyboard, InputAccessoryView, Platform,
+  TextInput, Keyboard, InputAccessoryView, Platform, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
 import { setBodyWeightKg } from '@/lib/prefs'
 import { splitName, combineName } from '@/lib/profileName'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD, LIQUID_GLASS } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -50,8 +50,9 @@ type SheetKind = null | 'birth' | 'weight' | 'height'
 // Utanför skärmkomponenten — en inline-definierad Row blir en NY komponenttyp
 // varje render, vilket monterar om raderna i onödan (och kan sluka tryck som
 // landar mitt i en omrendering)
-function Row({ label, value, onPress, locked, chevron = true }: {
-  label: string; value: string; onPress?: () => void; locked?: boolean; chevron?: boolean
+function Row({ label, value, onPress, locked, chevron = true, danger }: {
+  label: string; value: string; onPress?: () => void; locked?: boolean
+  chevron?: boolean; danger?: boolean
 }) {
   return (
     <TouchableOpacity
@@ -60,7 +61,7 @@ function Row({ label, value, onPress, locked, chevron = true }: {
       disabled={!onPress}
       activeOpacity={0.7}
     >
-      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={[styles.rowLabel, danger && styles.rowLabelDanger]}>{label}</Text>
       <Text style={styles.rowValue} numberOfLines={1}>{value}</Text>
       {locked
         ? <Ionicons name="lock-closed-outline" size={14} color={TEXT_SECONDARY} />
@@ -119,6 +120,7 @@ const LAST_NAME_DONE_ID  = 'lastNameDoneAccessory'
 export default function AccountScreen() {
   const [userId, setUserId] = useState<string | null>(null)
   const [email, setEmail]   = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [first, setFirst]   = useState('')
   const [last, setLast]     = useState('')
   const [birthDate, setBirthDate] = useState<string | null>(null)   // YYYY-MM-DD
@@ -146,6 +148,7 @@ export default function AccountScreen() {
         const parts = splitName(p.name)
         setFirst(parts.first)
         setLast(parts.last)
+        setAvatarUrl(p.avatar_url ?? null)
         setBirthDate(p.birth_date ?? null)
         setGender(p.gender ?? null)
         setWeightKg(p.weight_kg != null ? Number(p.weight_kg) : null)
@@ -228,9 +231,28 @@ export default function AccountScreen() {
     else if (sheet === 'height') saveHeight()
   }
 
+  function handleLogout() {
+    Alert.alert(
+      'Logga ut',
+      'Är du säker på att du vill logga ut? Din data sparas.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Logga ut',
+          style: 'destructive',
+          onPress: async () => {
+            await supabase.auth.signOut()
+            router.replace('/(auth)/welcome')
+          },
+        },
+      ]
+    )
+  }
+
   const birthLabel  = birthDate ?? 'Ej angivet'
   const weightLabel = weightKg != null ? `${String(weightKg).replace('.', ',')} kg` : 'Ej specificerad'
   const heightLabel = heightCm != null ? `${heightCm} cm` : 'Ej specificerad'
+  const avatarLabel = avatarUrl?.startsWith('http') ? 'Foto' : avatarUrl ?? 'Ej vald'
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -256,6 +278,8 @@ export default function AccountScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.rowsCard}>
+          <Row label="Profilbild" value={avatarLabel} onPress={() => router.push('/(app)/edit-profile' as never)} />
+          <View style={styles.rowDivider} />
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Förnamn</Text>
             <TextInput
@@ -297,11 +321,18 @@ export default function AccountScreen() {
           <Row label="Språk" value="Svenska" locked />
         </View>
 
+        <Text style={styles.sectionLabel}>INSTÄLLNINGAR</Text>
+        <View style={styles.rowsCard}>
+          <Row label="Allmänt" value="" onPress={() => router.push('/(app)/general' as never)} />
+        </View>
+
         <Text style={styles.sectionLabel}>KONTO</Text>
         <View style={styles.rowsCard}>
           <Row label="Lösenord" value="••••••••" onPress={() => router.push('/change-password?from=profile' as never)} />
           <View style={styles.rowDivider} />
           <Row label="E-post" value={email} locked />
+          <View style={styles.rowDivider} />
+          <Row label="Logga ut" value="" onPress={handleLogout} chevron={false} danger />
         </View>
       </ScrollView>
 
@@ -412,6 +443,7 @@ const styles = StyleSheet.create({
   },
   rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 16 },
   rowLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  rowLabelDanger: { color: RED },
   rowValue: { flex: 1, color: TEXT_SECONDARY, fontSize: 14, textAlign: 'right' },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'flex-end' },

@@ -171,7 +171,7 @@ export default function AppLayout() {
       <Tabs.Screen name="activities" options={{ href: null }} />
       <Tabs.Screen name="search-users" options={{ href: null }} />
       <Tabs.Screen name="profile" />
-      <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="general" options={{ href: null }} />
       <Tabs.Screen name="anpassning" options={{ href: null }} />
       <Tabs.Screen name="edit-profile" options={{ href: null }} />
       <Tabs.Screen name="account" options={{ href: null }} />

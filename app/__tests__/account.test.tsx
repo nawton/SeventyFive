@@ -70,6 +70,15 @@ describe('Profilinställningar', () => {
     expect(router.back).toHaveBeenCalled()
   })
 
+  it('Profilbild och Allmänt leder till sina sidor', async () => {
+    const { router } = require('expo-router')
+    render(<AccountScreen />)
+    fireEvent.press(await screen.findByText('Profilbild'))
+    expect(router.push).toHaveBeenCalledWith('/(app)/edit-profile')
+    fireEvent.press(screen.getByText('Allmänt'))
+    expect(router.push).toHaveBeenCalledWith('/(app)/general')
+  })
+
   it('könsraden leder till den egna könssidan', async () => {
     const { router } = require('expo-router')
     render(<AccountScreen />)

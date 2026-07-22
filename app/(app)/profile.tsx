@@ -45,7 +45,6 @@ import { PhotoViewer } from '@/components/PhotoViewer'
 import { PhotoCompare } from '@/components/PhotoCompare'
 import { ORANGE, GREEN, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
-import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import type { UserChallengeWithLevel } from '@/types/database'
 
@@ -302,7 +301,7 @@ export default function ProfileScreen() {
           following={false}
           onToggleFollow={() => {}}
           onOpenActivities={() => router.push('/(app)/activities' as never)}
-          onPressHero={() => router.push('/(app)/edit-profile')}
+          onPressHero={() => router.push('/(app)/account' as never)}
           onPressFollows={tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)}
         />
 
@@ -391,18 +390,10 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      {/* Fast topp: titel + kugghjul står stilla, allt under uppdateras */}
+      {/* Fast topp: titeln står stilla, allt under uppdateras. Inställningar
+          nås via toppen av profilen (→ Profilinställningar) */}
       <View style={s.fixedTop}>
-        <View style={s.topRow}>
-          <Text style={s.title}>Profil</Text>
-          <GlassCircleButton
-            icon="settings-outline"
-            size={40}
-            iconColor={TEXT_PRIMARY}
-            onPress={() => router.push('/(app)/settings')}
-            fallbackStyle={s.gearButton}
-          />
-        </View>
+        <Text style={s.title}>Profil</Text>
         {refreshing && <ActivityIndicator color={ORANGE} style={s.refreshSpinner} />}
       </View>
 
@@ -455,18 +446,8 @@ const s = StyleSheet.create({
   fixedTop: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
 
   headerWrap: { gap: 16, marginBottom: 13 },   // 13 + rutnätets 3 ≈ sektionsluft
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   title: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '700' },
   refreshSpinner: { marginTop: 12, marginBottom: 2 },
-  gearButton: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: CARD,
-    alignItems: 'center', justifyContent: 'center',
-  },
 
   // Lägg till-plattan — första rutan i rutnätet
   addTile: {
