@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, Pressable,
-} from 'react-native'
+, useColorScheme } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { clamp, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { Ionicons } from '@/components/Icon'
 import MapView, { Polyline, Marker } from 'react-native-maps'
-import { BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, useThemeStrings, ACCENT, CARD_BORDER } from '@/lib/theme'
+import { BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, useThemeStrings, ACCENT, useCardChrome } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { fmtTime, fmtPace } from '@/lib/format'
 import type { CardioWorkout } from '@/services/workouts'
@@ -34,6 +34,8 @@ const TYPE_META: Record<string, { label: string; icon: React.ComponentProps<type
 
 // Tre stigande staplar som fylls efter betyget — som Apples ansträngningsikon
 function EffortBars({ effort, color }: { effort: number; color: import('react-native').ColorValue }) {
+  // Ofyllda staplar: vit-alfa försvann på ljus botten
+  const dimBar = useColorScheme() === 'light' ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.18)'
   return (
     <View style={s.effortBars}>
       {[0.45, 0.7, 1].map((h, i) => {
@@ -41,7 +43,7 @@ function EffortBars({ effort, color }: { effort: number; color: import('react-na
         return (
           <View
             key={i}
-            style={[s.effortBar, { height: 26 * h, backgroundColor: filled ? color : 'rgba(255,255,255,0.18)' }]}
+            style={[s.effortBar, { height: 26 * h, backgroundColor: filled ? color : dimBar }]}
           />
         )
       })}
@@ -75,6 +77,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   social?: { postKey: string; ownerId: string; onOpenComments?: () => void }
 }) {
   const T = useThemeStrings()
+  const chrome = useCardChrome()
   const insets = useSafeAreaInsets()
   const d = workout.data
   const meta = TYPE_META[d.type] ?? TYPE_META.running
@@ -154,11 +157,13 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   const hasRoute = route.length > 1
   const avgPaceSec = distKm > 0.01 ? paceForUnit(dur / distKm, unit) : 0
 
+  // Neon på vitt skär sig — ljust läge får djupare, fortfarande popiga toner
+  const lightStats = T.TEXT_PRIMARY !== '#FFFFFF'
   const stats: { label: string; value: string; color: string }[] = [
-    { label: `Distans (${unitLabel})`, value: toDisplayDistance(distKm, unit).toFixed(2), color: CARDIO_BLUE },
-    { label: 'Tid',                    value: fmtTime(dur),                            color: STAT_YELLOW },
-    { label: `Snitt /${unitLabel}`,    value: fmtPace(avgPaceSec),                     color: STAT_TEAL },
-    { label: 'Kcal',                   value: String(d.calories ?? 0),                    color: STAT_PINK },
+    { label: `Distans (${unitLabel})`, value: toDisplayDistance(distKm, unit).toFixed(2), color: lightStats ? '#2E86C9' : CARDIO_BLUE },
+    { label: 'Tid',                    value: fmtTime(dur),                            color: lightStats ? '#D68F00' : STAT_YELLOW },
+    { label: `Snitt /${unitLabel}`,    value: fmtPace(avgPaceSec),                     color: lightStats ? '#1FA89C' : STAT_TEAL },
+    { label: 'Kcal',                   value: String(d.calories ?? 0),                    color: lightStats ? '#CE4568' : STAT_PINK },
   ]
   // Förhandsvisningsregion: rundans mittpunkt, tät zoom
   const midPoint = route.length > 0 ? route[Math.floor(route.length / 2)] : null
@@ -256,7 +261,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
 
           {/* Intervallresultat — guidade pass, snabbaste markerad */}
           {intervals.length > 0 && (
-            <View style={s.splitsCard}>
+            <View style={[s.splitsCard, chrome]}>
               <View style={s.splitsHead}>
                 <Text style={s.splitsTitle}>
                   Intervaller
@@ -296,7 +301,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
           )}
 
           {splits.length > 0 && (
-            <View style={s.splitsCard}>
+            <View style={[s.splitsCard, chrome]}>
               <View style={s.splitsHead}>
                 <Text style={s.splitsTitle}>Kilometersplittar</Text>
                 <Text style={s.splitsUnit}>min/{unitLabel}</Text>
@@ -477,7 +482,6 @@ const s = StyleSheet.create({
   statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   splitsCard: {
     backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1, borderColor: CARD_BORDER,
     paddingHorizontal: 18, paddingVertical: 16, gap: 4,
   },
   splitsHead: {
