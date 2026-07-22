@@ -181,9 +181,10 @@ export default function DashboardScreen() {
   const onScrollShrink = useTabBarShrinkOnScroll()
   // Gradienter kräver strängfärger — välj par efter aktuellt tema
   const lightMode = useColorScheme() === 'light'
-  const heroShadow = lightMode ? '#3156C4' : '#FFA817'
+  const heroShadow = lightMode ? '#101425' : '#FFA817'
+  // Ljust läge: platt vit yta utan gradient och ram — bara mjuk skugga
   const heroGradient: [string, string] = lightMode
-    ? ['#FFFFFF', '#F1F1F3'] : ['#1C1915', '#0F0F11']
+    ? ['#FFFFFF', '#FFFFFF'] : ['#1C1915', '#0F0F11']
   const insets = useSafeAreaInsets()
   const [userName, setUserName]     = useState('')
   const [userAvatar, setUserAvatar] = useState<string | null>(null)
@@ -605,12 +606,12 @@ export default function DashboardScreen() {
         </View>
 
         {/* ── Hero Card — 3D floating ── */}
-        <Animated.View style={[s.heroOuter, { shadowColor: heroShadow }, heroAnimStyle]}>
+        <Animated.View style={[s.heroOuter, { shadowColor: heroShadow }, lightMode && { shadowOpacity: 0.10, shadowRadius: 14 }, heroAnimStyle]}>
           <LinearGradient
             colors={heroGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={s.heroCard}
+            style={[s.heroCard, lightMode && { borderWidth: 0 }]}
           >
             <View style={s.heroLeft}>
               {levelName ? (
@@ -781,7 +782,7 @@ export default function DashboardScreen() {
         </View>
 
         {(levelRules.length > 0 || customTasks.length > 0) && (
-          <View style={s.rulesCard}>
+          <View style={[s.rulesCard, lightMode ? [{ borderWidth: 0 }, chrome] : null]}>
             {levelRules.map((r: any, i: number) => {
               const ruleText: string = typeof r === 'string' ? r : (r.rule ?? '')
               const icon = typeof r === 'object' && r.icon ? safeIcon(r.icon) : levelRuleIcon(ruleText)
@@ -835,7 +836,7 @@ export default function DashboardScreen() {
         )}
 
         {levelRules.length === 0 && customTasks.length === 0 && (
-          <TouchableOpacity style={s.rulesEmptyCard} onPress={openAddRule} activeOpacity={0.8}>
+          <TouchableOpacity style={[s.rulesEmptyCard, lightMode && { borderColor: 'rgba(0,0,0,0.18)' }]} onPress={openAddRule} activeOpacity={0.8}>
             <Ionicons name="add-circle-outline" size={20} color="#3A3A40" />
             <Text style={s.rulesEmptyText}>Lägg till en egen daglig regel</Text>
           </TouchableOpacity>
@@ -1076,7 +1077,7 @@ const s = StyleSheet.create({
   ruleItemTextDone: { color: '#3A3A40', textDecorationLine: 'line-through' },
   ruleCheckBox: {
     width: 21, height: 21, borderRadius: 11,
-    borderWidth: 1.5, borderColor: '#2A2A2E',
+    borderWidth: 1.5, borderColor: 'rgba(128,128,128,0.45)',
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },

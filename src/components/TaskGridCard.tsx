@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, useColorScheme } from 'react-native'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import Animated, {
@@ -45,6 +45,9 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
   fullWidth?: boolean
 }) {
   const T = useThemeStrings()
+  // Ljust läge: inga ramar på korten — mjuk skugga på ytterhöljet istället
+  // (kortet klipper med overflow hidden, så skuggan måste ligga utanför)
+  const light = useColorScheme() === 'light'
   const color = TASK_COLORS[task.type] ?? T.ACCENT
   const icon  = TASK_ICONS[task.type]  ?? 'checkmark-outline'
   const scale = useSharedValue(1)
@@ -63,14 +66,16 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
   }
 
   return (
-    <Animated.View style={[aStyle, { width: fullWidth ? SW - 40 : TASK_W }]}>
+    <Animated.View style={[aStyle, { width: fullWidth ? SW - 40 : TASK_W }, light && LIGHT_SHADOW]}>
       <TouchableOpacity
         style={[
           s.taskCard,
+          light && { borderWidth: 0 },
           task.completed && {
             borderColor: color + '45',
             backgroundColor: color + '0E',
           },
+          task.completed && light && { borderWidth: 0 },
         ]}
         onPress={handlePress}
         activeOpacity={0.85}
@@ -134,6 +139,11 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
     </Animated.View>
   )
 }
+
+const LIGHT_SHADOW = {
+  shadowColor: '#101425', shadowOpacity: 0.07, shadowRadius: 10,
+  shadowOffset: { width: 0, height: 4 }, elevation: 2,
+} as const
 
 const s = StyleSheet.create({
   taskCard: {
