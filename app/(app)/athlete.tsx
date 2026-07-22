@@ -140,6 +140,24 @@ export default function AthleteScreen() {
 
   const buckets = useMemo(() => buildWeekBuckets(workouts, type), [workouts, type])
 
+  // Scrub: håll fingret på grafen → vald veckas detaljer visas ovanför
+  const [scrubKey, setScrubKey] = useState<string | null>(null)
+  const scrubInfo = useMemo(() => {
+    if (!scrubKey) return null
+    const mon = new Date(scrubKey + 'T12:00:00')
+    const sun = new Date(mon); sun.setDate(sun.getDate() + 6)
+    let km = 0, secs = 0, passes = 0
+    for (const w of workouts) {
+      if (w.data.type !== type) continue
+      if (toLocalDateString(startOfWeek(new Date(w.created_at))) !== scrubKey) continue
+      km += w.data.distance_km
+      secs += w.data.duration_seconds
+      passes += 1
+    }
+    const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
+    return `${fmt(mon)} – ${fmt(sun)} · ${km.toFixed(1).replace('.', ',')} km · ${passes} pass · ${fmtDuration(secs)}`
+  }, [scrubKey, workouts, type])
+
   function toggleFollow() {
     Haptics.selectionAsync()
     setFollowing(v => !v)
@@ -239,12 +257,18 @@ export default function AthleteScreen() {
           </View>
 
           <View style={s.chartCard}>
-            <Text style={s.chartHint}>km per vecka, senaste {CHART_WEEKS} veckorna</Text>
+            {/* Under scrub visas den valda veckans detaljer i stället för hinten */}
+            <Text style={[s.chartHint, scrubInfo != null && s.chartHintActive]}>
+              {scrubInfo ?? `km per vecka, senaste ${CHART_WEEKS} veckorna — håll för detaljer`}
+            </Text>
             <DistanceAreaChart
               buckets={buckets}
               width={screenW - 40 - 32}
               height={170}
               unit={unit}
+              selectedKey={scrubKey}
+              onScrub={setScrubKey}
+              onScrubEnd={() => setScrubKey(null)}
             />
           </View>
         </Animated.View>
@@ -326,6 +350,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER, padding: 16, gap: 10,
   },
   chartHint: { color: TEXT_SECONDARY, fontSize: 12 },
+  chartHintActive: { color: TEXT_PRIMARY, fontWeight: '700' },
 
   activitiesBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 14,

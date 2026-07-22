@@ -24,7 +24,11 @@ jest.mock('expo-router', () => ({
     useEffect(cb, [cb])
   },
 }))
-jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }))
+jest.mock('expo-haptics', () => ({
+  selectionAsync: jest.fn(),
+  impactAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'light' },
+}))
 // Detaljvyn har ett eget testpaket — här räcker det att se att den öppnas
 jest.mock('@/components/CardioSummaryView', () => {
   const React = require('react')
@@ -46,18 +50,19 @@ beforeEach(() => {
 })
 
 describe('Aktiviteter', () => {
-  it('listar pass med rubrik, datum och statistik', async () => {
+  it('listar passen som flödeskort med statistik', async () => {
     render(<ActivitiesScreen />)
-    expect(await screen.findByText('Morgonrunda')).toBeOnTheScreen()
-    expect(screen.getByText('16 juli 2026')).toBeOnTheScreen()
-    expect(screen.getByText('5,01 km')).toBeOnTheScreen()
-    expect(screen.getByText('45:09 · 9:00/km')).toBeOnTheScreen()
+    expect(await screen.findByText('Anton Wretenberg')).toBeOnTheScreen()
+    expect(screen.getByText(/Löpning — /)).toBeOnTheScreen()
+    expect(screen.getByText('5,01')).toBeOnTheScreen()
+    expect(screen.getByText('45:09')).toBeOnTheScreen()
+    expect(screen.getByText('min/km')).toBeOnTheScreen()
   })
 
-  it('tryck på en rad öppnar passdetaljvyn', async () => {
+  it('tryck på ett kort öppnar passdetaljvyn', async () => {
     render(<ActivitiesScreen />)
-    await screen.findByText('Morgonrunda')
-    fireEvent.press(screen.getByTestId('activity-w1'))
+    await screen.findByText('Anton Wretenberg')
+    fireEvent.press(screen.getByTestId('post-w1'))
     expect(screen.getByText('summary:Morgonrunda')).toBeOnTheScreen()
   })
 
