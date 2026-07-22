@@ -30,6 +30,7 @@ export function GlassSegment<T extends string>({
 }) {
   const T = useThemeStrings()
   const resolvedTint = tint === undefined ? T.ACCENT : tint
+  const neutralThumb = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.08)'
   const n = options.length
   const [segW, setSegW] = useState(0)
   const slotW = segW / n
@@ -96,14 +97,18 @@ export function GlassSegment<T extends string>({
           />
         ) : (
           <Animated.View
-            style={[s.segThumb, { backgroundColor: T.ACCENT }, resolvedTint == null && s.segThumbNeutral, { width: slotW }, thumbStyle]}
+            style={[s.segThumb, { backgroundColor: T.ACCENT }, resolvedTint == null && { backgroundColor: neutralThumb }, { width: slotW }, thumbStyle]}
           />
         ))}
         {options.map(o => (
           <TouchableOpacity key={o.key} style={s.segBtn} onPress={() => choose(o.key)} activeOpacity={0.8}>
             <Text style={[
               s.segText,
-              value === o.key && ((LIQUID_GLASS || resolvedTint == null) ? s.segTextActiveGlass : s.segTextActive),
+              // Otonat glas: temats textfärg (vit text försvann på ljus tumme);
+              // tonad accenttumme: vit text funkar i båda lägena
+              value === o.key && (resolvedTint == null
+                ? { color: T.TEXT_PRIMARY, fontWeight: '700' as const }
+                : (LIQUID_GLASS ? s.segTextActiveGlass : s.segTextActive)),
             ]}>
               {o.label}
             </Text>

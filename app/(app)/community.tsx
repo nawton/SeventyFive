@@ -24,7 +24,7 @@ import {
   FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
 } from '@/components/FeedWorkoutCard'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings, THEME_DARK } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 // =============================================================================
@@ -170,6 +170,9 @@ export default function CommunityScreen() {
   }, [loadFeed]))
 
   const { refreshing, onRefresh } = useAppRefresh(loadFeed)
+  // Chipramar som strängar per schema — dynamiska ramfärger fryser i modaler
+  const T = useThemeStrings()
+  const chipEdge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'transparent'
 
   // Oändlig scroll: nästa sida börjar där förra slutade (cursor)
   async function loadMore() {
@@ -291,7 +294,7 @@ export default function CommunityScreen() {
                 return (
                   <TouchableOpacity
                     key={f.key}
-                    style={[s.chip, on && s.chipActive]}
+                    style={[s.chip, { borderColor: on ? T.ACCENT : chipEdge }]}
                     onPress={() => {
                       if (f.key === filter) return
                       Haptics.selectionAsync()
@@ -384,11 +387,11 @@ const s = StyleSheet.create({
   chipsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 4 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1, borderColor: CARD_BORDER, borderRadius: 17,
+    borderWidth: 1, borderRadius: 17,
     paddingHorizontal: 11, paddingVertical: 7,
     backgroundColor: CARD,
   },
-  chipActive: { borderColor: ACCENT },
+  chipActive: {},
   chipText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
   chipTextActive: { color: ACCENT, fontWeight: '700' },
 
