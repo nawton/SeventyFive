@@ -191,7 +191,9 @@ export function DistanceAreaChart({
         <SvgText
           key={b.key}
           x={px(i)} y={height - 6}
-          fontSize={10} textAnchor="middle"
+          // Första/sista etiketten ankras inåt — mittankring klipper dem
+          // mot plottens kanter ("feb" blev "eb")
+          fontSize={10} textAnchor={i === 0 ? 'start' : i === buckets.length - 1 ? 'end' : 'middle'}
           fontWeight={b.isCurrent || selectedKey === b.key ? '700' : '400'}
           fill={selectedKey === b.key ? selText : b.isCurrent ? color : axisDim}
         >
