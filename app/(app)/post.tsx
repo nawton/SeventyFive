@@ -27,6 +27,7 @@ import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { timeAgo } from '@/lib/format'
 import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, ACCENT } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useRouteColor } from '@/lib/routeColor'
 
 // =============================================================================
 // DISKUSSION — ett inläggs egen sida (Strava-stil): kartan högst upp,
@@ -36,6 +37,7 @@ import { AppTextInput } from '@/components/AppTextInput'
 // =============================================================================
 
 export default function PostScreen() {
+  const routeColor = useRouteColor()
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{
     postKey?: string; ownerId?: string; ownerName?: string; ownerAvatar?: string
@@ -218,7 +220,7 @@ export default function PostScreen() {
               >
                 <Polyline
                   coordinates={route.map(([la, ln]) => ({ latitude: la, longitude: ln }))}
-                  strokeColor={CARDIO_BLUE}
+                  strokeColor={routeColor}
                   strokeWidth={4}
                 />
                 <Marker coordinate={{ latitude: route[0][0], longitude: route[0][1] }} anchor={{ x: 0.5, y: 0.5 }}>

@@ -8,6 +8,7 @@ import type { StrengthWorkout } from '@/services/strengthWorkouts'
 import { formatPace } from '@/lib/cardioUtils'
 import { fmtTime } from '@/lib/format'
 import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, useCardChrome, accentAlpha, ACCENT } from '@/lib/theme'
+import { useRouteColor } from '@/lib/routeColor'
 
 // =============================================================================
 // FLÖDESKORT — delat mellan community-flödet och atletprofilens
@@ -193,6 +194,7 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
   onOpenComments?: () => void
 }) {
   const chrome = useCardChrome()
+  const routeColor = useRouteColor()
   const [localLiked, setLocalLiked] = useState(false)
   const liked = social ? social.likedByMe : localLiked
   const route = post.kind === 'cardio' ? post.route ?? [] : []
@@ -263,7 +265,7 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
           >
             <Polyline
               coordinates={route.map(([la, ln]) => ({ latitude: la, longitude: ln }))}
-              strokeColor={CARDIO_BLUE}
+              strokeColor={routeColor}
               strokeWidth={4}
             />
             <Marker coordinate={{ latitude: route[0][0], longitude: route[0][1] }} anchor={{ x: 0.5, y: 0.5 }}>

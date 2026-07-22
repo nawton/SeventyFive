@@ -40,6 +40,7 @@ import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
 import { LIQUID_GLASS } from '@/lib/glass'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useRouteColor } from '@/lib/routeColor'
 import {
   nameToType, cardinalLabel, formatTime, spokenTime, formatPace, haversineDistance,
   type Coord, type ExerciseType,
@@ -113,6 +114,7 @@ const APPLE_MAP_TYPES: Record<string, 'standard' | 'satellite' | 'mutedStandard'
 
 export default function CardioScreen() {
   const T = useThemeStrings()
+  const routeColor = useRouteColor()
   // Skärmen släcks inte medan GPS-skärmen är öppen (som Strava under pass)
   useKeepAwake()
   // SafeAreaView får noll-insets inne i modaler på iOS — padda explicit
@@ -957,7 +959,7 @@ export default function CardioScreen() {
         {routeLine.length > 1 && (
           <Polyline
             coordinates={routeLine}
-            strokeColor={CARDIO_ACCENT}
+            strokeColor={routeColor}
             strokeWidth={5}
             lineCap="round"
             lineJoin="round"

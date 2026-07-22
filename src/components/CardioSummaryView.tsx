@@ -19,6 +19,7 @@ import { getDefaultMapStyle } from '@/lib/prefs'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
 import { LIQUID_GLASS } from '@/lib/glass'
+import { useRouteColor } from '@/lib/routeColor'
 
 // Apple Fitness-paletten — en neonfärg per mätvärde
 const STAT_YELLOW = '#FFE60A'
@@ -78,6 +79,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   social?: { postKey: string; ownerId: string; onOpenComments?: () => void }
 }) {
   const T = useThemeStrings()
+  const routeColor = useRouteColor()
   const chrome = useCardChrome()
   const insets = useSafeAreaInsets()
   const d = workout.data
@@ -198,7 +200,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
         >
           <Polyline
             coordinates={route.map(([la, ln]) => ({ latitude: la, longitude: ln }))}
-            strokeColor="#FC4C02"
+            strokeColor={routeColor}
             strokeWidth={5}
             lineCap="round"
             lineJoin="round"

@@ -13,6 +13,7 @@ import { GlassSegment } from '@/components/GlassSegment'
 import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
 import { getTabBarShrinkEnabled, setTabBarShrinkEnabled } from '@/lib/tabBar'
 import { getThemeMode, setThemeMode, type ThemeMode } from '@/lib/themeMode'
+import { ROUTE_COLORS, getRouteColorKey, setRouteColorKey, type RouteColorKey } from '@/lib/routeColor'
 import { updateRunPaces } from '@/services/scheduleGenerator'
 import {
   getVoiceCues, setVoiceCues,
@@ -76,6 +77,14 @@ function SwitchRow({ icon, label, hint, value, onChange, last }: {
 }
 
 export default function AnpassningScreen() {
+  // Ruttfärgen på kartorna — blå standard, byts här
+  const [routeKey, setRouteKey] = useState<RouteColorKey>('blue')
+  useEffect(() => { getRouteColorKey().then(setRouteKey) }, [])
+  function chooseRouteColor(k: RouteColorKey) {
+    Haptics.selectionAsync()
+    setRouteKey(k)
+    setRouteColorKey(k)
+  }
   const T = useThemeStrings()
   // Ljust/mörkt läge — mörkt är standard, växlingen slår igenom direkt
   const [themeMode, setThemeModeState] = useState<ThemeMode>('dark')
@@ -197,6 +206,28 @@ export default function AnpassningScreen() {
 
         {/* Cardio */}
         <Section title="Cardio">
+          <View style={[s.segBlock, s.rowBorder]}>
+            <View style={s.segLabelRow}>
+              <Ionicons name="color-palette-outline" size={20} color={TEXT_SECONDARY} />
+              <Text style={s.rowLabel}>Ruttfärg</Text>
+            </View>
+            <View style={s.swatchRow}>
+              {ROUTE_COLORS.map(c => (
+                <TouchableOpacity
+                  key={c.key}
+                  onPress={() => chooseRouteColor(c.key)}
+                  activeOpacity={0.8}
+                  hitSlop={6}
+                  testID={`route-${c.key}`}
+                >
+                  <View style={[s.swatch, { backgroundColor: c.hex }, routeKey === c.key && s.swatchActive]}>
+                    {routeKey === c.key && <Ionicons name="checkmark" size={16} color="#fff" />}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={s.segHint}>Färgen på din rutt på alla kartor</Text>
+          </View>
           <View style={[s.segBlock, s.rowBorder]}>
             <View style={s.segLabelRow}>
               <Ionicons name="map-outline" size={20} color={TEXT_SECONDARY} />
@@ -333,6 +364,13 @@ export default function AnpassningScreen() {
 }
 
 const s = StyleSheet.create({
+  swatchRow: { flexDirection: 'row', gap: 14, paddingVertical: 4 },
+  swatch: {
+    width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  swatchActive: { borderWidth: 3, borderColor: 'rgba(128,128,128,0.55)' },
+
   rowValue: { color: TEXT_SECONDARY, fontSize: 14 },
   themeIntro: { color: TEXT_PRIMARY, fontSize: 15, lineHeight: 22, marginBottom: 26 },
   themeOption: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16 },
