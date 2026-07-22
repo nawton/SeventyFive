@@ -49,6 +49,23 @@ export async function getFollowStatus(targetId: string): Promise<FollowStatus> {
   return (data?.status as FollowStatus | undefined) ?? 'none'
 }
 
+/** Min status mot flera användare på en gång — till sökträffarna */
+export async function getFollowStatuses(targetIds: string[]): Promise<Record<string, FollowStatus>> {
+  const result: Record<string, FollowStatus> = {}
+  for (const id of targetIds) result[id] = 'none'
+  const uid = await ownId()
+  if (!uid || targetIds.length === 0) return result
+  const { data } = await supabase
+    .from('follows')
+    .select('followee_id, status')
+    .eq('follower_id', uid)
+    .in('followee_id', targetIds)
+  for (const row of data ?? []) {
+    result[row.followee_id as string] = row.status as FollowStatus
+  }
+  return result
+}
+
 /** Skickar en vänförfrågan — hamnar som 'pending' tills mottagaren godkänner */
 export async function follow(targetId: string): Promise<void> {
   const uid = await ownId()

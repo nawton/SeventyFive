@@ -6,16 +6,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { searchProfiles, type ProfileSearchHit } from '@/services/profile'
+import {
+  getFollowStatuses, getFollowStatus, follow, unfollow, type FollowStatus,
+} from '@/services/follows'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 // =============================================================================
 // SÖK ANVÄNDARE — riktig sökning mot databasen via search_profiles-RPC:n
-// (bara id/namn/avatar lämnas ut). Debounce så vi inte spammar Supabase
-// medan man skriver. Följ-knappar kommer när följ-systemet byggs — tills
-// dess visas träffarna som rena rader.
+// (bara id/namn/avatar lämnas ut, blockerade par filtreras bort).
+// Debounce så vi inte spammar Supabase medan man skriver. Varje träff
+// visar följstatusen som en pill: Följ → Förfrågad → Följer, med samma
+// optimistiska toggle som resten av appen.
 // =============================================================================
 
 const DEBOUNCE_MS = 300
@@ -23,6 +28,7 @@ const DEBOUNCE_MS = 300
 export default function SearchUsersScreen() {
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<ProfileSearchHit[]>([])
+  const [statuses, setStatuses] = useState<Record<string, FollowStatus>>({})
   const [searching, setSearching] = useState(false)
   const [searched, setSearched] = useState(false)   // minst en sökning har körts
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -40,10 +46,13 @@ export default function SearchUsersScreen() {
     timer.current = setTimeout(() => {
       let alive = true
       searchProfiles(trimmed)
-        .then(result => {
+        .then(async result => {
           if (!alive) return
           setHits(result)
           setSearched(true)
+          // Följstatus per träff — så man ser vilka man redan följer
+          const map = await getFollowStatuses(result.map(h => h.id)).catch(() => ({}))
+          if (alive) setStatuses(prev => ({ ...prev, ...map }))
         })
         .finally(() => { if (alive) setSearching(false) })
       // Städas inte per timeout — senaste svaret vinner via ny debounce-runda
@@ -51,6 +60,25 @@ export default function SearchUsersScreen() {
     }, DEBOUNCE_MS)
     return () => { if (timer.current) clearTimeout(timer.current) }
   }, [query])
+
+  // Samma optimistiska följ-toggle som resten av appen. Offentliga
+  // profiler godkänns direkt av servertriggern, därav omfrågan efteråt.
+  function toggleFollow(id: string) {
+    Haptics.selectionAsync()
+    const current = statuses[id] ?? 'none'
+    const setStatus = (st: FollowStatus) =>
+      setStatuses(prev => ({ ...prev, [id]: st }))
+    if (current === 'none') {
+      setStatus('pending')
+      follow(id)
+        .then(() => getFollowStatus(id))
+        .then(setStatus)
+        .catch(() => setStatus('none'))
+    } else {
+      setStatus('none')
+      unfollow(id).catch(() => setStatus(current))
+    }
+  }
 
   return (
     <SafeAreaView style={s.screen}>
@@ -88,29 +116,44 @@ export default function SearchUsersScreen() {
         data={hits}
         keyExtractor={h => h.id}
         keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={s.row}
-            activeOpacity={0.7}
-            testID={`hit-${item.id}`}
-            onPress={() => router.push({
-              pathname: '/(app)/athlete',
-              params: {
-                userId: item.id,
-                name: item.name ?? 'Namnlös',
-                avatar: item.avatar_url ?? '',
-              },
-            } as never)}
-          >
-            <FeedAvatar
-              url={item.avatar_url}
-              fallback={(item.name ?? '?').charAt(0).toUpperCase()}
-              size={52}
-            />
-            <Text style={s.rowName} numberOfLines={1}>{item.name ?? 'Namnlös'}</Text>
-            <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const status = statuses[item.id] ?? 'none'
+          return (
+            <View style={s.row}>
+              <TouchableOpacity
+                style={s.rowPerson}
+                activeOpacity={0.7}
+                testID={`hit-${item.id}`}
+                onPress={() => router.push({
+                  pathname: '/(app)/athlete',
+                  params: {
+                    userId: item.id,
+                    name: item.name ?? 'Namnlös',
+                    avatar: item.avatar_url ?? '',
+                  },
+                } as never)}
+              >
+                <FeedAvatar
+                  url={item.avatar_url}
+                  fallback={(item.name ?? '?').charAt(0).toUpperCase()}
+                  size={52}
+                />
+                <Text style={s.rowName} numberOfLines={1}>{item.name ?? 'Namnlös'}</Text>
+              </TouchableOpacity>
+              {/* Följstatusen direkt i träffen: Följ → Förfrågad → Följer */}
+              <TouchableOpacity
+                style={[s.followPill, status === 'none' && s.followPillInvite]}
+                onPress={() => toggleFollow(item.id)}
+                activeOpacity={0.8}
+                testID={`follow-${item.id}`}
+              >
+                <Text style={[s.followPillText, status === 'none' && s.followPillTextInvite]}>
+                  {status === 'accepted' ? 'Följer' : status === 'pending' ? 'Förfrågad' : 'Följ'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )
+        }}
         ItemSeparatorComponent={() => <View style={s.rowDivider} />}
         contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
@@ -151,9 +194,19 @@ const s = StyleSheet.create({
   searchInput: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, paddingVertical: 12 },
 
   listContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  rowPerson: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 },
   rowName: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 66 },
+
+  followPill: {
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
+    minWidth: 92, alignItems: 'center',
+  },
+  followPillInvite: { borderColor: ORANGE },
+  followPillText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
+  followPillTextInvite: { color: ORANGE },
 
   empty: { alignItems: 'center', gap: 8, paddingTop: 70, paddingHorizontal: 40 },
   emptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },
