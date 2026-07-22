@@ -24,7 +24,9 @@ import { getProfile } from '@/services/profile'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
 import { getStrengthWorkouts } from '@/services/strengthWorkouts'
-import { getFollowCounts, subscribeToFollows, type FollowCounts } from '@/services/follows'
+import {
+  getFollowCounts, getIncomingRequestCount, subscribeToFollows, type FollowCounts,
+} from '@/services/follows'
 import { strengthToPosts } from '@/components/FeedWorkoutCard'
 import { AthleteOverview } from '@/components/AthleteOverview'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
@@ -70,6 +72,7 @@ export default function ProfileScreen() {
   const [workouts, setWorkouts]     = useState<CardioWorkout[]>([])
   const [gymCount, setGymCount]     = useState(0)
   const [counts, setCounts]         = useState<FollowCounts>({ followers: 0, following: 0 })
+  const [requestCount, setRequestCount] = useState(0)
   const [unit, setUnit]             = useState<UnitSystem>('metric')
   const [loading, setLoading]       = useState(true)
   const [composerUri, setComposerUri] = useState<string | null>(null)
@@ -105,12 +108,14 @@ export default function ProfileScreen() {
   useFocusEffect(useCallback(() => {
     let unsubscribe: (() => void) | null = null
     load()
-    // Följer någon dig medan fliken är öppen tickar räknaren upp direkt
+    // Följer någon dig eller skickar en förfrågan medan fliken är öppen
+    // uppdateras räknaren och klockans badge direkt
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) return
       const uid = session.user.id
       unsubscribe = subscribeToFollows(uid, () => {
         getFollowCounts(uid).then(setCounts).catch(() => {})
+        getIncomingRequestCount().then(setRequestCount).catch(() => {})
       })
     })
     return () => { unsubscribe?.() }
@@ -141,13 +146,14 @@ export default function ProfileScreen() {
 
       // allSettled — ett fel i en del (t.ex. foto-hämtningen innan
       // caption-migrationen körts) får inte blanka profil och knappar
-      const [profile, active, photoItems, cardio, strength, followCounts] = await Promise.allSettled([
+      const [profile, active, photoItems, cardio, strength, followCounts, pendingCount] = await Promise.allSettled([
         getProfile(uid),
         getActiveChallenge(uid),
         getProgressPhotos(uid),
         getCardioWorkouts(uid, 200),
         getStrengthWorkouts(uid, 500),
         getFollowCounts(uid),
+        getIncomingRequestCount(),
       ])
 
       if (profile.status === 'fulfilled') {
@@ -175,6 +181,7 @@ export default function ProfileScreen() {
         setGymCount(strengthToPosts(strength.value, '', null).length)
       }
       if (followCounts.status === 'fulfilled') setCounts(followCounts.value)
+      if (pendingCount.status === 'fulfilled') setRequestCount(pendingCount.value)
 
     } finally {
       setLoading(false)
@@ -400,13 +407,23 @@ export default function ProfileScreen() {
       <View style={s.fixedTop}>
         <View style={s.topRow}>
           <Text style={s.title}>Profil</Text>
-          <GlassCircleButton
-            icon="notifications-outline"
-            size={40}
-            iconColor={TEXT_PRIMARY}
-            onPress={() => router.push('/(app)/notifications' as never)}
-            fallbackStyle={s.bellButton}
-          />
+          <View>
+            <GlassCircleButton
+              icon="notifications-outline"
+              size={40}
+              iconColor={TEXT_PRIMARY}
+              onPress={() => router.push('/(app)/notifications' as never)}
+              fallbackStyle={s.bellButton}
+            />
+            {/* Röd badge när det finns olästa förfrågningar/notiser */}
+            {requestCount > 0 && (
+              <View style={s.bellBadge} pointerEvents="none" testID="bellBadge">
+                <Text style={s.bellBadgeText}>
+                  {requestCount > 9 ? '9+' : requestCount}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
         {refreshing && <ActivityIndicator color={ORANGE} style={s.refreshSpinner} />}
       </View>
@@ -466,6 +483,13 @@ const s = StyleSheet.create({
   title: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '700' },
   refreshSpinner: { marginTop: 12, marginBottom: 2 },
   bellButton: { backgroundColor: CARD },
+  bellBadge: {
+    position: 'absolute', top: -4, right: -4,
+    minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
+    backgroundColor: RED, borderWidth: 2, borderColor: BG,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  bellBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
 
   // Lägg till-plattan — första rutan i rutnätet
   addTile: {

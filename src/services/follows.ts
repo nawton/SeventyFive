@@ -84,6 +84,18 @@ export async function declineFollower(followerId: string): Promise<void> {
   if (error) throw error
 }
 
+/** Antal väntande förfrågningar — till notisklockans badge */
+export async function getIncomingRequestCount(): Promise<number> {
+  const uid = await ownId()
+  if (!uid) return 0
+  const { count } = await supabase
+    .from('follows')
+    .select('follower_id', { count: 'exact', head: true })
+    .eq('followee_id', uid)
+    .eq('status', 'pending')
+  return count ?? 0
+}
+
 /** Inkommande väntande förfrågningar med namn/avatar — till notiscentret */
 export async function getIncomingRequests(): Promise<FollowProfile[]> {
   const uid = await ownId()
