@@ -7,7 +7,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { clamp, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline, Marker } from 'react-native-maps'
-import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, useThemeStrings } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { fmtTime, fmtPace } from '@/lib/format'
 import type { CardioWorkout } from '@/services/workouts'
@@ -74,6 +74,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   /** Community: gilla/kommentera/dela-raden under detaljerna */
   social?: { postKey: string; ownerId: string; onOpenComments?: () => void }
 }) {
+  const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const d = workout.data
   const meta = TYPE_META[d.type] ?? TYPE_META.running
@@ -222,7 +223,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
       )}
 
       <GestureDetector gesture={detailPan}>
-        <Animated.View style={[s.sheet, { height: SCREEN_H }, detailStyle]}>
+        <Animated.View style={[s.sheet, { height: SCREEN_H, backgroundColor: T.BG }, detailStyle]}>
           <View style={s.grip} />
 
           <View style={s.hero}>
@@ -368,7 +369,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
       {styleMenuOpen && (
         <>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeStyleSheet} />
-          <Animated.View style={[s.styleSheet, LIQUID_GLASS && s.styleSheetGlass, styleSheetStyle]}>
+          <Animated.View style={[s.styleSheet, { backgroundColor: T.CARD }, LIQUID_GLASS && s.styleSheetGlass, styleSheetStyle]}>
             {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={styleDrag}>
               <View style={s.styleGrip}>
@@ -415,7 +416,6 @@ const s = StyleSheet.create({
   },
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: BG,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: 20, paddingTop: 10,
     gap: 18, zIndex: 10,
@@ -483,7 +483,6 @@ const s = StyleSheet.create({
   splitPaceFastest: { color: CARDIO_BLUE },
   styleSheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: CARD,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: 16, paddingBottom: 12, zIndex: 40,
     shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.35, shadowRadius: 16,

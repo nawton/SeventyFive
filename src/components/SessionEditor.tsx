@@ -26,7 +26,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import Body from 'react-native-body-highlighter'
 import { getMusclesForName, bestSideForMuscles, SLUG_LABELS, getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
 import { toLocalDateString, weekdayOf } from '@/lib/date'
 import {
   CATEGORY_LABELS,
@@ -109,6 +109,7 @@ export function SessionEditor({
   initialDate?:  Date
   allowDelete?:  boolean
 }) {
+  const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const [name, setName]                 = useState('')
   const [notes, setNotes]               = useState('')
@@ -339,7 +340,7 @@ export function SessionEditor({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         pointerEvents="box-none"
       >
-        <Animated.View style={[s.sheet, editorSheetStyle]}>
+        <Animated.View style={[s.sheet, { backgroundColor: T.BG }, editorSheetStyle]}>
           <GestureDetector gesture={editorHandleGesture}>
             <View style={s.handleWrap}>
               <View style={s.handleBar} />
@@ -784,7 +785,6 @@ export function SessionEditor({
 const s = StyleSheet.create({
   overlayKAV: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: BG,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     height: '88%',
   },

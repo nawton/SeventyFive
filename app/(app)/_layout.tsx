@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Tabs } from 'expo-router'
-import { View, Pressable, StyleSheet, Keyboard, Platform } from 'react-native'
+import { View, Pressable, StyleSheet, Keyboard, Platform, useColorScheme } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, runOnJS } from 'react-native-reanimated'
@@ -9,7 +9,7 @@ import { GlassView } from 'expo-glass-effect'
 import * as Haptics from 'expo-haptics'
 import { LIQUID_GLASS } from '@/lib/glass'
 import { tabBarShrink } from '@/lib/tabBar'
-import { ORANGE, TAB_INACTIVE, GLASS_KNOB, DIVIDER, BAR_FALLBACK } from '@/lib/theme'
+import { ORANGE, TAB_INACTIVE, DIVIDER, BAR_FALLBACK } from '@/lib/theme'
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
 
@@ -36,6 +36,10 @@ const NO_TAB_BAR_ROUTES = new Set(['post'])
 
 function GlassTabBar({ state, navigation }: BottomTabBarProps) {
   const activeName = state.routes[state.index]?.name
+
+  // Reanimated kraschar på dynamiska färgobjekt — bubblan får temasträngar
+  const light = useColorScheme() === 'light'
+  const knobColor = light ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.14)'
 
   // Pillen viker undan när tangentbordet är uppe — annars svävar den
   // ovanpå tangentbord och skrivfält
@@ -139,14 +143,14 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
       <GestureDetector gesture={pan}>
         <View style={styles.pill} onLayout={e => setBarW(e.nativeEvent.layout.width)}>
           {LIQUID_GLASS ? (
-            <GlassView glassEffectStyle="regular" colorScheme="dark" style={styles.barBg} />
+            <GlassView glassEffectStyle="regular" colorScheme={light ? 'light' : 'dark'} style={styles.barBg} />
           ) : (
             <View style={[styles.barBg, styles.barBgFallback]} />
           )}
 
           {barW > 0 && (
             <Animated.View
-              style={[styles.bubble, { width: slotW - 14, marginLeft: 7 }, bubbleStyle]}
+              style={[styles.bubble, { width: slotW - 14, marginLeft: 7, backgroundColor: knobColor }, bubbleStyle]}
             />
           )}
 
@@ -229,7 +233,6 @@ const styles = StyleSheet.create({
     height: BUBBLE_H,
     top: (64 - BUBBLE_H) / 2,
     borderRadius: BUBBLE_H / 2,
-    backgroundColor: GLASS_KNOB,
   },
   row: {
     flexDirection: 'row',

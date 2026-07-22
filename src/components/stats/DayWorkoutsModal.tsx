@@ -7,7 +7,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, DIVIDER } from '@/lib/theme'
+import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, DIVIDER, useThemeStrings } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { fmtTime } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
@@ -114,6 +114,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
   onClose: () => void
   onSelectWorkout: (w: CardioWorkout) => void
 }) {
+  const T = useThemeStrings()
   const insets    = useSafeAreaInsets()
   const FULL_TOP  = insets.top + 8
   const sheetTop     = useSharedValue(SCREEN_HEIGHT)
@@ -205,7 +206,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={dismiss} activeOpacity={1} />
       </Animated.View>
 
-      <Animated.View style={[s.sheet, sheetStyle]}>
+      <Animated.View style={[s.sheet, { backgroundColor: T.CARD, borderColor: T.BORDER }, sheetStyle]}>
         <GestureDetector gesture={panGesture}>
           <View style={s.dragArea}>
             <View style={s.handle} />
@@ -419,9 +420,8 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
 const s = StyleSheet.create({
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: CARD,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    borderWidth: 1, borderBottomWidth: 0, borderColor: BORDER,
+    borderWidth: 1, borderBottomWidth: 0,
     overflow: 'hidden',
   },
   dragArea: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12 },

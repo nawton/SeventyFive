@@ -1,4 +1,4 @@
-import { StyleSheet, useColorScheme, type StyleProp, type ViewStyle } from 'react-native'
+import { View, StyleSheet, useColorScheme, type StyleProp, type ViewStyle } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, {
   useAnimatedStyle, useSharedValue, withSpring, runOnJS,
@@ -115,8 +115,12 @@ export function GlassCircleButton({
           {content}
         </AnimatedGlassView>
       ) : (
-        <Animated.View style={[s.center, fallbackStyle ?? s.fallbackCircle, circle, anim, style]}>
-          {content}
+        // Färgbärande fallback på en inre oanimerad vy — reanimated kraschar
+        // på dynamiska färgobjekt om de ligger på den animerade noden
+        <Animated.View style={[circle, anim, style]}>
+          <View style={[s.center, StyleSheet.absoluteFillObject, fallbackStyle ?? s.fallbackCircle, { borderRadius: size / 2 }]}>
+            {content}
+          </View>
         </Animated.View>
       )}
     </GestureDetector>
@@ -144,7 +148,14 @@ export function GlassPill({
   // träffyta (den nativa glasvyn släpper annars bara igenom tryck på barnen)
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View style={[s.pill, !GLASS && (fallbackStyle ?? s.fallbackPill), style, anim]}>
+      <Animated.View style={[s.pill, style, anim]}>
+        {/* Fallbackens färger på en inre vy — inte på den animerade noden */}
+        {!GLASS && (
+          <View
+            style={[StyleSheet.absoluteFillObject, fallbackStyle ?? s.fallbackPill]}
+            pointerEvents="none"
+          />
+        )}
         {GLASS && (
           <GlassView
             glassEffectStyle="regular"

@@ -83,7 +83,7 @@ export function EffortRating({ visible, initial, onDone }: Props) {
   const bgStr = useColorScheme() === 'light' ? THEME_LIGHT.BG : THEME_DARK.BG
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} style={s.root}>
+    <Animated.View entering={FadeIn.duration(200)} style={[s.root, { backgroundColor: bgStr }]}>
       {/* Hela bakgrunden tonas i betygets färg */}
       <LinearGradient
         colors={sel ? [accent + '8C', accent + '26', bgStr] : [bgStr, bgStr]}
@@ -152,7 +152,6 @@ export function EffortRating({ visible, initial, onDone }: Props) {
 const s = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: BG,
     zIndex: 50,
     alignItems: 'center',
     justifyContent: 'center',

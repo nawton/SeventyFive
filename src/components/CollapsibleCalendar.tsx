@@ -8,7 +8,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, useThemeStrings } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import { planEndDateStr, type WorkoutSession } from '@/services/workoutSchedule'
 
@@ -142,6 +142,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
   /** Tävlingsdatum — cardio-planen slutar dagen efter loppet */
   raceDate:         string | null
 }) {
+  const T = useThemeStrings()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -411,7 +412,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
 
   return (
     <GestureDetector gesture={gestures}>
-    <Animated.View style={[s.wrapper, containerStyle]}>
+    <Animated.View style={[s.wrapper, { backgroundColor: T.BG, borderBottomColor: T.BORDER }, containerStyle]}>
 
       {/* Month header */}
       <View style={s.monthHeader}>
@@ -478,9 +479,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
 
 const s = StyleSheet.create({
   wrapper: {
-    backgroundColor: BG,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
     overflow: 'hidden',
   },
 

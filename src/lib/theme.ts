@@ -1,4 +1,4 @@
-import { DynamicColorIOS, Platform, type ColorValue } from 'react-native'
+import { DynamicColorIOS, Platform, useColorScheme, type ColorValue } from 'react-native'
 
 // =============================================================================
 // Tema: mörkt är appens standard (exakt samma värden som alltid), ljust är
@@ -27,6 +27,13 @@ export const THEME_LIGHT = {
   TEXT_SECONDARY: '#75777D',
   DIVIDER: 'rgba(0,0,0,0.08)',
 } as const
+
+/** Temats råa strängfärger för AKTUELLT läge. Reanimated (Animated.View
+    m.fl.) kraschar på dynamiska färgobjekt — animerade element måste få
+    sina färger härifrån som inline-stil istället för från konstanterna. */
+export function useThemeStrings() {
+  return useColorScheme() === 'light' ? THEME_LIGHT : THEME_DARK
+}
 
 const dyn = (dark: string, light: string): ColorValue =>
   Platform.OS === 'ios' ? DynamicColorIOS({ dark, light }) : dark

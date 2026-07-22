@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, BORDER, ORANGE, RED, TEXT_PRIMARY, DIVIDER } from '@/lib/theme'
+import { BG, BORDER, ORANGE, RED, TEXT_PRIMARY, DIVIDER, useThemeStrings } from '@/lib/theme'
 
 // =============================================================================
 // GILLARLISTAN — dragbar bottom sheet (Strava-stil): öppnar till halva
@@ -27,6 +27,7 @@ export function LikersSheet({ likers, count, onClose, onPressPerson }: {
   onClose: () => void
   onPressPerson?: (person: FollowProfile) => void
 }) {
+  const T = useThemeStrings()
   const { height: screenH } = useWindowDimensions()
   const FULL_TOP = screenH * 0.10
   const HALF_TOP = screenH * 0.48
@@ -78,7 +79,7 @@ export function LikersSheet({ likers, count, onClose, onPressPerson }: {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Pressable style={s.backdrop} onPress={onClose} />
         <GestureDetector gesture={pan}>
-          <Animated.View style={[s.sheet, { height: screenH }, sheetStyle]}>
+          <Animated.View style={[s.sheet, { height: screenH, backgroundColor: T.BG, borderColor: T.BORDER }, sheetStyle]}>
             <View style={s.handle} />
             {/* Flik-rubrik som förlagan: antal + hjärta med orange underlinje */}
             <View style={s.headerRow}>
@@ -128,9 +129,8 @@ const s = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {
     position: 'absolute', left: 0, right: 0, top: 0,
-    backgroundColor: BG,
     borderTopLeftRadius: 22, borderTopRightRadius: 22,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1,
   },
   handle: {
     alignSelf: 'center', width: 44, height: 5, borderRadius: 3,

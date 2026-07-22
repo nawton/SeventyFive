@@ -293,7 +293,6 @@ const r = StyleSheet.create({
     alignItems:      'center',
     overflow:        'hidden',
     minHeight:       62,
-    backgroundColor: CARD,
   },
   rowDone:  { backgroundColor: '#0B2418' },
   text:     { flex: 1, paddingVertical: 13, paddingHorizontal: 16 },

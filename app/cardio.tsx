@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline } from 'react-native-maps'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated'
-import { ORANGE, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, BG, BORDER, CARD, DIVIDER } from '@/lib/theme'
+import { ORANGE, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, BG, BORDER, CARD, DIVIDER, useThemeStrings } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { saveCardioWorkout, type CardioInterval } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
@@ -110,6 +110,7 @@ const APPLE_MAP_TYPES: Record<string, 'standard' | 'satellite' | 'mutedStandard'
 
 
 export default function CardioScreen() {
+  const T = useThemeStrings()
   // Skärmen släcks inte medan GPS-skärmen är öppen (som Strava under pass)
   useKeepAwake()
   // SafeAreaView får noll-insets inne i modaler på iOS — padda explicit
@@ -1364,7 +1365,7 @@ export default function CardioScreen() {
         <>
           {/* Osynlig yta bakom sheeten: tryck utanför stänger, utan att mörka kartan */}
           <Pressable style={styles.sheetDismiss} onPress={closePicker} />
-          <Animated.View style={[styles.sheetWrap, LIQUID_GLASS && styles.glassSurface, sheetStyle]}>
+          <Animated.View style={[styles.sheetWrap, { backgroundColor: T.CARD }, LIQUID_GLASS && styles.glassSurface, sheetStyle]}>
             {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={sheetDrag}>
               <View style={styles.sheetGrip}>
@@ -1403,7 +1404,7 @@ export default function CardioScreen() {
       {styleMenuOpen && (
         <>
           <Pressable style={styles.sheetDismiss} onPress={closeStyleSheet} />
-          <Animated.View style={[styles.sheetWrap, LIQUID_GLASS && styles.glassSurface, styleSheetStyle]}>
+          <Animated.View style={[styles.sheetWrap, { backgroundColor: T.CARD }, LIQUID_GLASS && styles.glassSurface, styleSheetStyle]}>
             {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={styleDrag}>
               <View style={styles.sheetGrip}>
@@ -2708,7 +2709,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: CARD,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
