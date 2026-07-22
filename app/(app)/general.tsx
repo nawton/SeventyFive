@@ -260,6 +260,15 @@ export default function GeneralScreen() {
           />
         </Section>
 
+        <Section title="Integritet">
+          <SettingRow
+            icon="shield-checkmark-outline"
+            label="Integritetsinställningar"
+            onPress={() => router.push('/(app)/privacy' as any)}
+            last
+          />
+        </Section>
+
         <Section title="Notiser">
           <SettingRow
             icon="notifications-outline"

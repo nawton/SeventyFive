@@ -70,14 +70,6 @@ describe('Profilinställningar', () => {
     expect(router.back).toHaveBeenCalled()
   })
 
-  it('offentlig profil-switchen sparar direkt', async () => {
-    render(<AccountScreen />)
-    const sw = await screen.findByTestId('publicSwitch')
-    fireEvent(sw, 'valueChange', true)
-    await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { is_public: true }))
-  })
-
   it('könsraden leder till den egna könssidan', async () => {
     const { router } = require('expo-router')
     render(<AccountScreen />)

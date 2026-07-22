@@ -11,12 +11,16 @@ export interface ProfileData {
   height_cm: number | null
   /** Offentlig profil: följare godkänns automatiskt */
   is_public: boolean | null
+  /** Går att hitta via sökningen */
+  searchable: boolean | null
+  /** Vem ser pass och statistik: 'followers' (godkända) eller 'private' */
+  activity_visibility: 'followers' | 'private' | null
 }
 
 export async function getProfile(userId: string): Promise<ProfileData | null> {
   const { data } = await supabase
     .from('profiles')
-    .select('name, avatar_url, birth_date, gender, weight_kg, height_cm, is_public')
+    .select('name, avatar_url, birth_date, gender, weight_kg, height_cm, is_public, searchable, activity_visibility')
     .eq('id', userId)
     .maybeSingle()
   return data
