@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -49,14 +49,6 @@ export default function PostScreen() {
   const [comments, setComments] = useState<PostComment[]>([])
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
-  const inputRef = useRef<TextInput>(null)
-
-  // Sidan öppnas från pratbubblan — tangentbordet ska upp direkt.
-  // Kort fördröjning så slide-animationen hinner klart först.
-  useFocusEffect(useCallback(() => {
-    const timer = setTimeout(() => inputRef.current?.focus(), 400)
-    return () => clearTimeout(timer)
-  }, [postKey]))
 
   useFocusEffect(useCallback(() => {
     if (!postKey) return
@@ -205,9 +197,29 @@ export default function PostScreen() {
 
             <View style={s.divider} />
 
-            {/* Kommentarstråden */}
+            {/* Kommentarstråden — tryck på en kommentar öppnar personens
+                profil (egen kommentar → profilfliken) */}
             {comments.map(c => (
-              <View key={c.id} style={s.commentRow}>
+              <TouchableOpacity
+                key={c.id}
+                style={s.commentRow}
+                activeOpacity={0.7}
+                testID={`comment-${c.id}`}
+                onPress={() => {
+                  if (c.authorId === ownId) {
+                    router.push('/(app)/profile' as never)
+                  } else {
+                    router.push({
+                      pathname: '/(app)/athlete',
+                      params: {
+                        userId: c.authorId,
+                        name: c.authorName ?? 'Namnlös',
+                        avatar: c.authorAvatar ?? '',
+                      },
+                    } as never)
+                  }
+                }}
+              >
                 <FeedAvatar
                   url={c.authorAvatar}
                   fallback={(c.authorName ?? '?').charAt(0).toUpperCase()}
@@ -220,7 +232,7 @@ export default function PostScreen() {
                   </View>
                   <Text style={s.commentBody}>{c.body}</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
             {comments.length === 0 && (
               <Text style={s.emptyComments}>Inga kommentarer ännu — bli först!</Text>
@@ -231,7 +243,6 @@ export default function PostScreen() {
         {/* Skrivfältet ligger fast i botten och lyfter med tangentbordet */}
         <View style={[s.inputRow, { paddingBottom: Math.max(insets.bottom, 10) }]}>
           <TextInput
-            ref={inputRef}
             style={s.input}
             value={draft}
             onChangeText={setDraft}

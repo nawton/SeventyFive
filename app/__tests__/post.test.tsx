@@ -81,6 +81,17 @@ describe('Diskussion', () => {
     expect(screen.getByText('3')).toBeOnTheScreen()
   })
 
+  it('tryck på en kommentar öppnar personens profil', async () => {
+    const { router } = require('expo-router')
+    render(<PostScreen />)
+    await screen.findByText('Johan Wretenberg')
+    fireEvent.press(screen.getByTestId('comment-c1'))
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/(app)/athlete',
+      params: { userId: 'u3', name: 'Johan Wretenberg', avatar: '' },
+    })
+  })
+
   it('skicka lägger till kommentaren', async () => {
     render(<PostScreen />)
     await screen.findByText('Löpning på eftermiddagen')

@@ -213,15 +213,12 @@ describe('Community', () => {
     expect(screen.getByText('summary:Löpning')).toBeOnTheScreen()
   })
 
-  it('egna avataren leder till egna profilen — med rensade params', async () => {
+  it('egna avataren leder direkt till profilfliken', async () => {
     const { router } = require('expo-router')
     render(<CommunityScreen />)
     await screen.findByText('Anton Wretenberg')
     fireEvent.press(screen.getByTestId('avatar-w1'))
-    expect(router.push).toHaveBeenCalledWith({
-      pathname: '/(app)/athlete',
-      params: { userId: '', name: '', avatar: '' },
-    })
+    expect(router.push).toHaveBeenCalledWith('/(app)/profile')
   })
 
   it('följer-knappen leder till Följer-sidan', async () => {

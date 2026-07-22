@@ -199,14 +199,18 @@ export default function CommunityScreen() {
               social={social[item.id]}
               onToggleLike={() => toggleLike(item)}
               onOpenComments={() => openDiscussion(item)}
-              // Egen avatar → egna profilen (tomma params skriver över
-              // kvarliggande), väns avatar → deras atletprofil
-              onAvatarPress={() => router.push({
-                pathname: '/(app)/athlete',
-                params: item.authorId === ownId
-                  ? { userId: '', name: '', avatar: '' }
-                  : { userId: item.authorId, name: item.authorName, avatar: item.authorAvatar ?? '' },
-              } as never)}
+              // Egen avatar → profilfliken (hela egna profilen med foton),
+              // väns avatar → deras atletprofil
+              onAvatarPress={() => {
+                if (item.authorId === ownId) {
+                  router.push('/(app)/profile' as never)
+                } else {
+                  router.push({
+                    pathname: '/(app)/athlete',
+                    params: { userId: item.authorId, name: item.authorName, avatar: item.authorAvatar ?? '' },
+                  } as never)
+                }
+              }}
             />
           )}
           contentContainerStyle={s.listContent}
