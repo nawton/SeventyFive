@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { CardioWorkout } from '@/services/cardioWorkouts'
-import type { FollowCounts } from '@/services/follows'
+import type { FollowCounts, FollowStatus } from '@/services/follows'
 import { DistanceAreaChart, type AreaBucket } from '@/components/stats/DistanceAreaChart'
 import { fmtDuration } from '@/lib/format'
 import type { UnitSystem } from '@/lib/units'
@@ -88,17 +88,20 @@ function Avatar({ url, fallback, size }: { url: string | null; fallback: string;
 
 export function AthleteOverview({
   isOwn, name, avatarUrl, workouts, gymCount, counts, unit,
-  following, onToggleFollow, onOpenActivities, onPressHero, onPressFollows,
+  followStatus, statsUnlocked, onToggleFollow, onOpenActivities, onPressHero, onPressFollows,
 }: {
   isOwn: boolean
   name: string
   avatarUrl: string | null
-  /** Cardio-passen som statistiken bygger på (tom för andras profiler) */
+  /** Cardio-passen som statistiken bygger på (tom för låsta profiler) */
   workouts: CardioWorkout[]
   gymCount: number
   counts: FollowCounts
   unit: UnitSystem
-  following: boolean
+  /** Min relation till profilen: ingen, väntande förfrågan eller godkänd */
+  followStatus: FollowStatus
+  /** Statistiken visas — egen profil eller godkänd vänförfrågan */
+  statsUnlocked: boolean
   onToggleFollow: () => void
   onOpenActivities: () => void
   /** Gör toppen tryckbar (profilfliken: gå till Redigera profil) */
@@ -155,7 +158,7 @@ export function AthleteOverview({
       <View style={{ flex: 1 }}>
         <Text style={s.name}>{name}</Text>
         <Text style={s.activeMeta}>
-          {isOwn ? activeLabel(latestIso) : 'Delar inga pass ännu'}
+          {statsUnlocked ? activeLabel(latestIso) : 'Privat profil'}
         </Text>
       </View>
       {onPressHero && <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />}
@@ -170,7 +173,7 @@ export function AthleteOverview({
 
       <View style={s.countersRow}>
         <View style={s.counter}>
-          <Text style={s.counterValue}>{isOwn ? totalKm : '–'}</Text>
+          <Text style={s.counterValue}>{statsUnlocked ? totalKm : '–'}</Text>
           <Text style={s.counterLabel}>Totalt km</Text>
         </View>
         <View style={s.counterDivider} />
@@ -198,30 +201,33 @@ export function AthleteOverview({
       </View>
 
       {/* Följ-knappen finns bara på ANDRAS profiler — man kan inte följa
-          sig själv. Bara kantlinje; orange ram + text när man inte
-          följer ännu. */}
+          sig själv. Bara kantlinje; orange ram + text när ingen förfrågan
+          skickats ännu. */}
       {!isOwn && (
         <TouchableOpacity
-          style={[s.followBtn, !following && s.followBtnInvite]}
+          style={[s.followBtn, followStatus === 'none' && s.followBtnInvite]}
           onPress={onToggleFollow}
           activeOpacity={0.8}
           testID="athleteFollow"
         >
-          <Text style={[s.followBtnText, !following && s.followBtnTextInvite]}>
-            {following ? 'Följer' : 'Följ'}
+          <Text style={[s.followBtnText, followStatus === 'none' && s.followBtnTextInvite]}>
+            {followStatus === 'accepted' ? 'Följer'
+              : followStatus === 'pending' ? 'Förfrågan skickad' : 'Följ'}
           </Text>
         </TouchableOpacity>
       )}
 
-      {/* ── Strava-delen: typ-chips, veckan och distansgraf — bara för den
-          egna profilen tills delnings-backenden gör andras pass läsbara ── */}
-      {!isOwn ? (
+      {/* ── Strava-delen: typ-chips, veckan och distansgraf — visas för den
+          egna profilen och för profiler som godkänt ens vänförfrågan.
+          Framstegsfoton visas ALDRIG för andra, oavsett godkännande. ── */}
+      {!statsUnlocked ? (
         <View style={s.otherEmpty}>
           <Ionicons name="lock-closed-outline" size={38} color={TEXT_SECONDARY} />
-          <Text style={s.otherEmptyTitle}>Inga delade pass ännu</Text>
+          <Text style={s.otherEmptyTitle}>Statistiken är privat</Text>
           <Text style={s.otherEmptyBody}>
-            När delning finns på plats ser du {name.split(' ')[0] || 'personens'} statistik
-            och aktiviteter här.
+            {followStatus === 'pending'
+              ? `Väntar på godkännande — när ${name.split(' ')[0] || 'personen'} godkänner din förfrågan ser du statistiken här.`
+              : `Skicka en vänförfrågan för att se ${name.split(' ')[0] || 'personens'} statistik och aktiviteter.`}
           </Text>
         </View>
       ) : (<>

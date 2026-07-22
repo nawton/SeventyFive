@@ -32,6 +32,7 @@ jest.mock('expo-router', () => ({
     const { useEffect } = require('react')
     useEffect(cb, [cb])
   },
+  useLocalSearchParams: () => ({}),
 }))
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),

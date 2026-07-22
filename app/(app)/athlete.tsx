@@ -8,8 +8,8 @@ import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
 import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
 import {
-  getFollowCounts, isFollowing, follow, unfollow, subscribeToFollows,
-  type FollowCounts,
+  getFollowCounts, getFollowStatus, follow, unfollow, subscribeToFollows,
+  type FollowCounts, type FollowStatus,
 } from '@/services/follows'
 import { strengthToPosts } from '@/components/FeedWorkoutCard'
 import { AthleteOverview } from '@/components/AthleteOverview'
@@ -39,10 +39,12 @@ export default function AthleteScreen() {
   const [workouts, setWorkouts] = useState<CardioWorkout[]>([])
   const [gymCount, setGymCount] = useState(0)
   const [unit, setUnit] = useState<UnitSystem>('metric')
-  // Riktiga följen: status mot follows-tabellen, räknare för den visade
-  // profilen. Uppdateras optimistiskt vid tryck och live via realtime.
-  const [following, setFollowing] = useState(false)
+  // Vänförfrågningar: min status mot den visade profilen och profilens
+  // räknare. Uppdateras optimistiskt vid tryck och live via realtime.
+  const [followStatus, setFollowStatus] = useState<FollowStatus>('none')
   const [counts, setCounts] = useState<FollowCounts>({ followers: 0, following: 0 })
+
+  const statsUnlocked = isOwn || followStatus === 'accepted'
 
   useFocusEffect(useCallback(() => {
     let alive = true
@@ -67,8 +69,21 @@ export default function AthleteScreen() {
         // synk här visas första besökta profilen för alltid
         setName(paramName)
         setAvatarUrl(paramAvatar)
-        setFollowing(false)
-        isFollowing(otherId!).then(v => { if (alive) setFollowing(v) }).catch(() => {})
+        setWorkouts([])
+        setGymCount(0)
+        setFollowStatus('none')
+        const status = await getFollowStatus(otherId!).catch(() => 'none' as FollowStatus)
+        if (!alive) return
+        setFollowStatus(status)
+        if (status !== 'accepted') return
+        // Godkänd förfrågan — RLS släpper igenom personens pass
+        const [all, strength] = await Promise.all([
+          getCardioWorkouts(otherId!, 200).catch(() => [] as CardioWorkout[]),
+          getStrengthWorkouts(otherId!, 500).catch(() => [] as StrengthWorkout[]),
+        ])
+        if (!alive) return
+        setWorkouts(all)
+        setGymCount(strengthToPosts(strength, '', null).length)
         return
       }
       const [profile, all, strength] = await Promise.all([
@@ -90,14 +105,24 @@ export default function AthleteScreen() {
   function toggleFollow() {
     if (isOwn || !otherId) return   // man kan inte följa sig själv
     Haptics.selectionAsync()
-    const next = !following
-    // Optimistiskt: knapp + följarräknare direkt, backa vid fel
-    setFollowing(next)
-    setCounts(c => ({ ...c, followers: Math.max(0, c.followers + (next ? 1 : -1)) }))
-    ;(next ? follow(otherId) : unfollow(otherId)).catch(() => {
-      setFollowing(!next)
-      setCounts(c => ({ ...c, followers: Math.max(0, c.followers + (next ? -1 : 1)) }))
-    })
+    const prev = followStatus
+    if (prev === 'none') {
+      // Skicka vänförfrågan — räknarna rörs inte förrän den godkänts
+      setFollowStatus('pending')
+      follow(otherId).catch(() => setFollowStatus('none'))
+    } else {
+      // Ångra förfrågan eller avfölj — godkända följen sänker räknaren
+      setFollowStatus('none')
+      if (prev === 'accepted') {
+        setWorkouts([])
+        setGymCount(0)
+        setCounts(c => ({ ...c, followers: Math.max(0, c.followers - 1) }))
+      }
+      unfollow(otherId).catch(() => {
+        setFollowStatus(prev)
+        if (prev === 'accepted') setCounts(c => ({ ...c, followers: c.followers + 1 }))
+      })
+    }
   }
 
   return (
@@ -122,9 +147,16 @@ export default function AthleteScreen() {
           gymCount={gymCount}
           counts={counts}
           unit={unit}
-          following={following}
+          followStatus={followStatus}
+          statsUnlocked={statsUnlocked}
           onToggleFollow={toggleFollow}
-          onOpenActivities={() => router.push('/(app)/activities' as never)}
+          // Tomma params när det är egna — skriver över kvarliggande
+          onOpenActivities={() => router.push({
+            pathname: '/(app)/activities',
+            params: isOwn
+              ? { userId: '', name: '', avatar: '' }
+              : { userId: otherId!, name, avatar: avatarUrl ?? '' },
+          } as never)}
           // Listorna visar egna relationer — bara egna räknare är tryckbara
           onPressFollows={isOwn
             ? tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)

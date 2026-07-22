@@ -68,8 +68,9 @@ describe('Följare/Följer', () => {
 
     fireEvent.press(screen.getByText('1 Följare'))               // Sara följer mig
     expect(screen.getByText('Sara')).toBeOnTheScreen()
-    fireEvent.press(screen.getByTestId('follow-u3'))             // följ tillbaka
+    fireEvent.press(screen.getByTestId('follow-u3'))             // följ tillbaka = förfrågan
     expect(follow).toHaveBeenCalledWith('u3')
+    expect(screen.getByText('Förfrågad')).toBeOnTheScreen()      // pending tills godkänd
   })
 
   it('tab-parametern öppnar rätt flik', async () => {

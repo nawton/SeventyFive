@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, FlatList, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router, useFocusEffect } from 'expo-router'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
@@ -21,13 +21,19 @@ import { TAB_CONTENT_PAD } from '@/lib/glass'
 // =============================================================================
 // AKTIVITETER — atletprofilens fullständiga passhistorik i samma
 // kortlayout som community-flödet (karta och allt). Tryck på ett kort
-// öppnar samma passdetaljvy som statistiken. Visar egna pass tills
-// delnings-backenden finns; sedan visas vald atlets historik.
+// öppnar samma passdetaljvy som statistiken. Med userId-param visas en
+// annan persons historik — kräver godkänd vänförfrågan (annars släpper
+// RLS inte igenom några pass och listan blir tom).
 // =============================================================================
 
 type Filter = 'all' | 'cardio' | 'strength'
 
 export default function ActivitiesScreen() {
+  // Samma navigator-fälla som atletsidan: synka från params vid varje fokus
+  const params = useLocalSearchParams<{ userId?: string; name?: string; avatar?: string }>()
+  const otherId = typeof params.userId === 'string' && params.userId.length > 0 ? params.userId : null
+  const paramName = typeof params.name === 'string' ? params.name : ''
+  const paramAvatar = typeof params.avatar === 'string' && params.avatar.length > 0 ? params.avatar : null
   const [filter, setFilter] = useState<Filter>('all')
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -41,14 +47,18 @@ export default function ActivitiesScreen() {
     getUnitSystem().then(u => { if (alive) setUnit(u) })
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user || !alive) return
+      const own = otherId === null || otherId === session.user.id
+      const targetId = own ? session.user.id : otherId!
       const [profile, cardio, strength] = await Promise.all([
-        getProfile(session.user.id).catch(() => null),
-        getCardioWorkouts(session.user.id, 200).catch(() => [] as CardioWorkout[]),
-        getStrengthWorkouts(session.user.id, 500).catch(() => [] as StrengthWorkout[]),
+        own ? getProfile(session.user.id).catch(() => null) : Promise.resolve(null),
+        getCardioWorkouts(targetId, 200).catch(() => [] as CardioWorkout[]),
+        getStrengthWorkouts(targetId, 500).catch(() => [] as StrengthWorkout[]),
       ])
       if (!alive) return
-      const authorName = profile?.name || session.user.email?.split('@')[0] || 'Jag'
-      const avatar = profile?.avatar_url ?? null
+      const authorName = own
+        ? profile?.name || session.user.email?.split('@')[0] || 'Jag'
+        : paramName || 'Atlet'
+      const avatar = own ? profile?.avatar_url ?? null : paramAvatar
       setAvatarUrl(avatar)
       setAllStrength(strength)
       setPosts(mergePosts([
@@ -58,7 +68,7 @@ export default function ActivitiesScreen() {
       setLoaded(true)
     })
     return () => { alive = false }
-  }, []))
+  }, [otherId, paramName, paramAvatar]))
 
   return (
     <SafeAreaView style={s.screen}>

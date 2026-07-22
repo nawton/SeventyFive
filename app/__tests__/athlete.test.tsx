@@ -22,7 +22,7 @@ jest.mock('@/services/strengthWorkouts', () => ({
 }))
 jest.mock('@/services/follows', () => ({
   getFollowCounts: jest.fn().mockResolvedValue({ followers: 0, following: 0 }),
-  isFollowing: jest.fn().mockResolvedValue(false),
+  getFollowStatus: jest.fn().mockResolvedValue('none'),
   follow: jest.fn().mockResolvedValue(undefined),
   unfollow: jest.fn().mockResolvedValue(undefined),
   subscribeToFollows: jest.fn(() => () => {}),
@@ -71,6 +71,11 @@ beforeEach(() => {
     makeRun(new Date().toISOString(), 5.5),
     makeRun('2026-07-10T08:00:00.000Z', 10, 'cycling'),
   ])
+  // clearAllMocks rensar inte implementationer — återställ statusen explicit
+  const follows = require('@/services/follows')
+  ;(follows.getFollowStatus as jest.Mock).mockResolvedValue('none')
+  ;(follows.getFollowCounts as jest.Mock).mockResolvedValue({ followers: 0, following: 0 })
+  ;(follows.subscribeToFollows as jest.Mock).mockReturnValue(() => {})
 })
 
 describe('Atletprofil', () => {
@@ -110,7 +115,10 @@ describe('Atletprofil', () => {
     await screen.findByText('Anton Wretenberg')
     expect(screen.getByText('2 pass')).toBeOnTheScreen()
     fireEvent.press(screen.getByTestId('athleteActivities'))
-    expect(router.push).toHaveBeenCalledWith('/(app)/activities')
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/(app)/activities',
+      params: { userId: '', name: '', avatar: '' },
+    })
   })
 
   it('egna räknarna öppnar Följare/Följer-listorna på rätt flik', async () => {
@@ -142,28 +150,38 @@ describe('Atletprofil', () => {
     expect(screen.queryByTestId('athleteFollow')).not.toBeOnTheScreen()
   })
 
-  it('följ på annans profil sparar på riktigt och uppdaterar räknaren direkt', async () => {
+  it('följ skickar en vänförfrågan — pending tills godkännande', async () => {
     const { follow, unfollow } = require('@/services/follows')
     mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
     render(<AthleteScreen />)
     await screen.findByText('Nawid')
     fireEvent.press(screen.getByTestId('athleteFollow'))
     expect(follow).toHaveBeenCalledWith('u2')
-    expect(within(screen.getByTestId('athleteFollow')).getByText('Följer')).toBeOnTheScreen()
-    expect(screen.getByText('1')).toBeOnTheScreen()          // följare 0 → 1 optimistiskt
-    fireEvent.press(screen.getByTestId('athleteFollow'))
+    expect(within(screen.getByTestId('athleteFollow')).getByText('Förfrågan skickad')).toBeOnTheScreen()
+    expect(screen.getByText('Väntar på godkännande — när Nawid godkänner din förfrågan ser du statistiken här.')).toBeOnTheScreen()
+    fireEvent.press(screen.getByTestId('athleteFollow'))     // ångra förfrågan
     expect(unfollow).toHaveBeenCalledWith('u2')
     expect(within(screen.getByTestId('athleteFollow')).getByText('Följ')).toBeOnTheScreen()
   })
 
-  it('annan användares profil: namn från sökningen och ärligt tomläge', async () => {
+  it('annan användares profil utan godkännande: privat och låst', async () => {
     mockParams = { userId: 'u2', name: 'Nawid', avatar: '🔥' }
     render(<AthleteScreen />)
     expect(await screen.findByText('Nawid')).toBeOnTheScreen()
-    expect(screen.getByText('Delar inga pass ännu')).toBeOnTheScreen()
-    expect(screen.getByText('Inga delade pass ännu')).toBeOnTheScreen()
+    expect(screen.getByText('Privat profil')).toBeOnTheScreen()
+    expect(screen.getByText('Statistiken är privat')).toBeOnTheScreen()
     expect(screen.queryByText('Den här veckan')).not.toBeOnTheScreen()
     expect(screen.queryByText('Aktiviteter')).not.toBeOnTheScreen()
+  })
+
+  it('godkänd vänförfrågan låser upp statistiken', async () => {
+    const { getFollowStatus } = require('@/services/follows')
+    ;(getFollowStatus as jest.Mock).mockResolvedValue('accepted')
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '🔥' }
+    render(<AthleteScreen />)
+    expect(await screen.findByText('Den här veckan')).toBeOnTheScreen()
+    expect(screen.queryByText('Statistiken är privat')).not.toBeOnTheScreen()
+    expect(within(screen.getByTestId('athleteFollow')).getByText('Följer')).toBeOnTheScreen()
   })
 
   it('profilbyte: nästa persons namn visas — inte första besökta', async () => {

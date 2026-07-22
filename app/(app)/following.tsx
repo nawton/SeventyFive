@@ -22,11 +22,13 @@ import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
 type Tab = 'followers' | 'following'
 
-function PersonRow({ person, followedByMe, ownId, onToggle }: {
+type PillState = 'following' | 'requested' | 'none'
+
+function PersonRow({ person, pillState, ownId, onToggle }: {
   person: FollowProfile
-  followedByMe: boolean
+  pillState: PillState
   ownId: string | null
-  onToggle: (id: string, next: boolean) => void
+  onToggle: (id: string, state: PillState) => void
 }) {
   const isSelf = person.id === ownId
   return (
@@ -49,13 +51,13 @@ function PersonRow({ person, followedByMe, ownId, onToggle }: {
       {/* Man kan inte följa sig själv — egna raden får ingen pill */}
       {!isSelf && (
         <TouchableOpacity
-          style={[s.followPill, !followedByMe && s.followPillInvite]}
-          onPress={() => onToggle(person.id, !followedByMe)}
+          style={[s.followPill, pillState === 'none' && s.followPillInvite]}
+          onPress={() => onToggle(person.id, pillState)}
           activeOpacity={0.8}
           testID={`follow-${person.id}`}
         >
-          <Text style={[s.followPillText, !followedByMe && s.followPillTextInvite]}>
-            {followedByMe ? 'Följer' : 'Följ'}
+          <Text style={[s.followPillText, pillState === 'none' && s.followPillTextInvite]}>
+            {pillState === 'following' ? 'Följer' : pillState === 'requested' ? 'Förfrågad' : 'Följ'}
           </Text>
         </TouchableOpacity>
       )}
@@ -76,8 +78,10 @@ export default function FollowingScreen() {
   const [ownId, setOwnId] = useState<string | null>(null)
   const [followers, setFollowers] = useState<FollowProfile[]>([])
   const [followingList, setFollowingList] = useState<FollowProfile[]>([])
-  // Vilka jag följer — styr pillarna i BÅDA flikarna
+  // Vilka jag följer (godkända) respektive väntande förfrågningar jag
+  // skickat härifrån — styr pillarna i BÅDA flikarna
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set())
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set())
 
   useFocusEffect(useCallback(() => {
     let alive = true
@@ -106,22 +110,27 @@ export default function FollowingScreen() {
     return () => { alive = false; unsubscribe?.() }
   }, []))
 
-  function toggleFollow(id: string, next: boolean) {
+  const setOf = (prev: Set<string>, id: string, add: boolean) => {
+    const copy = new Set(prev)
+    if (add) copy.add(id); else copy.delete(id)
+    return copy
+  }
+
+  function toggleFollow(id: string, state: PillState) {
     Haptics.selectionAsync()
     // Optimistiskt: pillen vänder direkt, backa vid fel. Raderna ligger
     // kvar tills nästa laddning så ett avfölj går att ångra på plats.
-    setFollowedIds(prev => {
-      const copy = new Set(prev)
-      if (next) copy.add(id); else copy.delete(id)
-      return copy
-    })
-    ;(next ? follow(id) : unfollow(id)).catch(() => {
-      setFollowedIds(prev => {
-        const copy = new Set(prev)
-        if (next) copy.delete(id); else copy.add(id)
-        return copy
-      })
-    })
+    if (state === 'none') {
+      // Skicka vänförfrågan → "Förfrågad" tills den godkänns
+      setRequestedIds(prev => setOf(prev, id, true))
+      follow(id).catch(() => setRequestedIds(prev => setOf(prev, id, false)))
+    } else if (state === 'requested') {
+      setRequestedIds(prev => setOf(prev, id, false))
+      unfollow(id).catch(() => setRequestedIds(prev => setOf(prev, id, true)))
+    } else {
+      setFollowedIds(prev => setOf(prev, id, false))
+      unfollow(id).catch(() => setFollowedIds(prev => setOf(prev, id, true)))
+    }
   }
 
   const people = tab === 'followers' ? followers : followingList
@@ -173,7 +182,8 @@ export default function FollowingScreen() {
         renderItem={({ item }) => (
           <PersonRow
             person={item}
-            followedByMe={followedIds.has(item.id)}
+            pillState={followedIds.has(item.id) ? 'following'
+              : requestedIds.has(item.id) ? 'requested' : 'none'}
             ownId={ownId}
             onToggle={toggleFollow}
           />

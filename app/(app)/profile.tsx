@@ -299,9 +299,14 @@ export default function ProfileScreen() {
           gymCount={gymCount}
           counts={counts}
           unit={unit}
-          following={false}
+          followStatus="none"
+          statsUnlocked
           onToggleFollow={() => {}}
-          onOpenActivities={() => router.push('/(app)/activities' as never)}
+          // Tomma params skriver över ev. kvarliggande annan-persons-params
+          onOpenActivities={() => router.push({
+            pathname: '/(app)/activities',
+            params: { userId: '', name: '', avatar: '' },
+          } as never)}
           onPressHero={() => router.push('/(app)/edit-profile')}
           onPressFollows={tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)}
         />
