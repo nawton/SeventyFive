@@ -76,7 +76,9 @@ export function DistanceAreaChart({
   // Linjen och ytan går i turkos medan punkterna behåller accentfärgen.
   // SVG + ljust läge kräver strängfärger — vit-alfa syns inte på vitt.
   const light = useColorScheme() === 'light'
-  const lineColor = light ? '#2CA6AB' : '#40D6DB'
+  // Ljust: turkos linje mot marinblå punkter. Mörkt: djupare orange
+  // linje mot accentens gulorange punkter.
+  const lineColor = light ? '#2CA6AB' : '#FF7A1A' 
   const gridStroke = light ? 'rgba(0,0,0,0.07)'  : 'rgba(255,255,255,0.07)'
   const yLabel     = light ? 'rgba(0,0,0,0.45)'  : 'rgba(255,255,255,0.45)'
   const yMaxLabel  = light ? 'rgba(0,0,0,0.65)'  : 'rgba(255,255,255,0.7)'
