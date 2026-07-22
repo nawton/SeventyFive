@@ -73,7 +73,7 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
           light && { borderWidth: 0 },
           task.completed && {
             borderColor: color + '45',
-            backgroundColor: color + '0E',
+            backgroundColor: color + (light ? '0A' : '0E'),
           },
           task.completed && light && { borderWidth: 0 },
         ]}
@@ -87,13 +87,18 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
           <View style={[s.taskIconBox, { backgroundColor: color + '1C' }]}>
             <Ionicons name={icon} size={17} color={color} />
           </View>
-          <View style={[s.taskCheck, task.completed && { backgroundColor: color, borderColor: color }]}>
+          <View style={[s.taskCheck, light && { borderColor: 'rgba(0,0,0,0.22)' }, task.completed && { backgroundColor: color, borderColor: color }]}>
             {task.completed && <Ionicons name="checkmark" size={10} color="#000" />}
           </View>
         </View>
         <View style={s.taskBody}>
           <Text
-            style={[s.taskName, task.completed && s.taskNameDone]}
+            style={[
+              s.taskName,
+              light && { color: '#26272B' },
+              task.completed && s.taskNameDone,
+              task.completed && light && { color: '#8A8A90' },
+            ]}
             numberOfLines={metaLabel || counter ? 1 : 2}
           >
             {task.name}
@@ -111,12 +116,12 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
               </View>
               <View style={s.counterRow}>
                 <TouchableOpacity
-                  style={[s.counterBtn, counter.value === 0 && s.counterBtnDim]}
+                  style={[s.counterBtn, light && { borderColor: 'rgba(0,0,0,0.25)' }, counter.value === 0 && s.counterBtnDim]}
                   onPress={counter.onMinus}
                   disabled={counter.value === 0}
                   hitSlop={8}
                 >
-                  <Ionicons name="remove" size={15} color={counter.value === 0 ? '#2A2A2E' : color} />
+                  <Ionicons name="remove" size={15} color={counter.value === 0 ? (light ? 'rgba(0,0,0,0.30)' : '#2A2A2E') : color} />
                 </TouchableOpacity>
                 <Text style={[s.counterLabel, task.completed && { color }]}>
                   {counter.value}/{counter.goal} {counter.unit}

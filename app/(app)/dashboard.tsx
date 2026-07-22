@@ -994,7 +994,7 @@ const s = StyleSheet.create({
   levelBadgeText: { color: ACCENT, fontSize: 9, fontWeight: '800', letterSpacing: 1.8 },
   dayLabel: { color: '#3A3A40', fontSize: 10, fontWeight: '700', letterSpacing: 3 },
   dayRow:   { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
-  dayNum:   { color: '#FFFFFF', fontSize: 70, fontFamily: NUM_FONT, lineHeight: 72, letterSpacing: -3 },
+  dayNum:   { color: TEXT_PRIMARY, fontSize: 70, fontFamily: NUM_FONT, lineHeight: 72, letterSpacing: -3 },
   dayOf:    { color: '#3A3A40', fontSize: 22, fontWeight: '600', paddingBottom: 11 },
   heroPctRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   heroPct:      { color: ACCENT, fontSize: 13, fontWeight: '700' },
