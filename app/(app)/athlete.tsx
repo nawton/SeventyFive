@@ -253,9 +253,6 @@ export default function AthleteScreen() {
           </View>
 
           <View style={s.chartCard}>
-            <Text style={s.chartHint}>
-              km per vecka, senaste {CHART_WEEKS} veckorna — tryck på en punkt
-            </Text>
             <DistanceAreaChart
               buckets={buckets}
               width={screenW - 40 - 32}
@@ -344,9 +341,8 @@ const s = StyleSheet.create({
 
   chartCard: {
     marginTop: 20, backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER, padding: 16, gap: 10,
+    borderWidth: 1, borderColor: BORDER, padding: 16,
   },
-  chartHint: { color: TEXT_SECONDARY, fontSize: 12 },
 
   activitiesBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
