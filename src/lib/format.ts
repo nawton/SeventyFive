@@ -24,3 +24,13 @@ export function fmtTime(secs: number): string {
   if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   return `${m}:${String(s).padStart(2, '0')}`
 }
+
+/** Relativ tid "nu" / "12 min" / "3 h" / "2 d" — för kommentarer och notiser */
+export function timeAgo(iso: string, now = new Date()): string {
+  const mins = Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000))
+  if (mins < 1) return 'nu'
+  if (mins < 60) return `${mins} min`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours} h`
+  return `${Math.floor(hours / 24)} d`
+}

@@ -136,7 +136,7 @@ export function dayPartTitle(iso: string): string {
 }
 
 /** Region som ramar in rutten med luft runt om */
-function regionForRoute(route: Array<[number, number]>) {
+export function regionForRoute(route: Array<[number, number]>) {
   let minLa = 90, maxLa = -90, minLo = 180, maxLo = -180
   for (const [la, lo] of route) {
     if (la < minLa) minLa = la

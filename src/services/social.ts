@@ -68,6 +68,19 @@ export async function getFeedSocial(postKeys: string[]): Promise<Record<string, 
   return result
 }
 
+/** Vilka som gillat ett inlägg, nyast först — till diskussionssidans avatarrad */
+export async function getPostLikers(postKey: string, limit = 12): Promise<FollowProfile[]> {
+  const { data } = await supabase
+    .from('post_likes')
+    .select('liker_id, created_at')
+    .eq('post_key', postKey)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  const ids = (data ?? []).map(r => r.liker_id as string)
+  const profiles = await resolveProfiles(ids)
+  return ids.map(id => profiles.get(id) ?? { id, name: null, avatar_url: null })
+}
+
 export async function likePost(postKey: string, ownerId: string): Promise<void> {
   const uid = await ownId()
   if (!uid) return

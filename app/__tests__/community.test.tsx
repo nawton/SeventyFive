@@ -159,12 +159,24 @@ describe('Community', () => {
     expect(screen.getByText('2')).toBeOnTheScreen()
   })
 
-  it('kommentarsknappen öppnar kommentarsarket', async () => {
+  it('pratbubblan öppnar inläggets diskussionssida', async () => {
+    const { router } = require('expo-router')
     render(<CommunityScreen />)
     await screen.findByText('Anton Wretenberg')
     fireEvent.press(screen.getByTestId('comments-w1'))
-    expect(await screen.findByText('Kommentarer')).toBeOnTheScreen()
-    expect(screen.getByText('Inga kommentarer ännu — bli först!')).toBeOnTheScreen()
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/(app)/post',
+      params: {
+        postKey: 'w1',
+        ownerId: 'u1',
+        ownerName: 'Anton Wretenberg',
+        ownerAvatar: '💪',
+        kind: 'cardio',
+        title: 'Löpning',
+        createdAt: RUN.created_at,
+        meta: '5,01 km',
+      },
+    })
   })
 
   it('gympass visas i flödet: dagens övningar grupperade till ett kort', async () => {

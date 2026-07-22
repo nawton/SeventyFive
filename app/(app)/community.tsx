@@ -20,7 +20,6 @@ import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import {
   FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
 } from '@/components/FeedWorkoutCard'
-import { CommentsSheet } from '@/components/CommentsSheet'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -68,10 +67,28 @@ export default function CommunityScreen() {
   const [ownId, setOwnId] = useState<string | null>(null)
   const [unit, setUnit] = useState<UnitSystem>('metric')
   const [selected, setSelected] = useState<FeedPost | null>(null)
-  // Gillanden/kommentarsantal per inlägg + vilket inläggs kommentarer som är öppna
+  // Gillanden/kommentarsantal per inlägg
   const [social, setSocial] = useState<Record<string, PostSocial>>({})
-  const [commentsFor, setCommentsFor] = useState<FeedPost | null>(null)
   const onScroll = useTabBarShrinkOnScroll()
+
+  // Pratbubblan öppnar inläggets diskussionssida (Strava-stil)
+  function openDiscussion(post: FeedPost) {
+    router.push({
+      pathname: '/(app)/post',
+      params: {
+        postKey: post.id,
+        ownerId: post.authorId,
+        ownerName: post.authorName,
+        ownerAvatar: post.authorAvatar ?? '',
+        kind: post.kind,
+        title: post.kind === 'cardio' ? post.workout.name : 'Gympass',
+        createdAt: post.createdAt,
+        meta: post.kind === 'cardio'
+          ? `${post.distanceKm.toFixed(2).replace('.', ',')} km`
+          : `${post.exercises} övningar`,
+      },
+    } as never)
+  }
 
   useFocusEffect(useCallback(() => {
     let alive = true
@@ -181,7 +198,7 @@ export default function CommunityScreen() {
               onOpen={setSelected}
               social={social[item.id]}
               onToggleLike={() => toggleLike(item)}
-              onOpenComments={() => setCommentsFor(item)}
+              onOpenComments={() => openDiscussion(item)}
               // Egen avatar → egna profilen (tomma params skriver över
               // kvarliggande), väns avatar → deras atletprofil
               onAvatarPress={() => router.push({
@@ -230,20 +247,6 @@ export default function CommunityScreen() {
           ) : null}
         />
       )}
-
-      {/* Kommentarer för valt inlägg — räknaren tickar upp direkt */}
-      <CommentsSheet
-        postKey={commentsFor?.id ?? null}
-        ownerId={commentsFor?.authorId ?? null}
-        onClose={() => setCommentsFor(null)}
-        onCommentAdded={key => setSocial(prev => ({
-          ...prev,
-          [key]: {
-            ...(prev[key] ?? { likes: 0, likedByMe: false, comments: 0 }),
-            comments: (prev[key]?.comments ?? 0) + 1,
-          },
-        }))}
-      />
 
       {/* Samma detaljvyer som statistiken — utan radering härifrån, och
           skrivskyddat betyg på vänners pass */}
