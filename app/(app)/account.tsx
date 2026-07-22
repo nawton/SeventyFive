@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable,
-  TextInput, Keyboard, KeyboardAvoidingView, Platform,
+  TextInput, Keyboard, InputAccessoryView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -11,8 +11,9 @@ import { getProfile, updateProfile } from '@/services/profile'
 import { setBodyWeightKg } from '@/lib/prefs'
 import { splitName, combineName } from '@/lib/profileName'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
-import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { TAB_CONTENT_PAD, LIQUID_GLASS } from '@/lib/glass'
 import { GlassPill } from '@/components/GlassButton'
+import { GlassView } from 'expo-glass-effect'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { Picker } from '@react-native-picker/picker'
 
@@ -69,7 +70,7 @@ function Row({ label, value, onPress, locked, chevron = true }: {
 }
 
 /** Flytande Klar-knapp — liquid glass i iOS-systemblått, dragbar som Apples egen */
-function KlarPill({ onPress }: { onPress: () => void }) {
+function KlarPill({ onPress, testID }: { onPress: () => void; testID?: string }) {
   return (
     <GlassPill
       onPress={onPress}
@@ -78,10 +79,13 @@ function KlarPill({ onPress }: { onPress: () => void }) {
       tint="rgba(10,132,255,0.75)"
       fallbackStyle={styles.klarFallback}
     >
-      <Text style={styles.klarPillText}>Klar</Text>
+      <Text testID={testID} style={styles.klarPillText}>Klar</Text>
     </GlassPill>
   )
 }
+
+// Kopplar namnfälten till Klar-pillen ovanför tangentbordet (InputAccessoryView)
+const NAME_KLAR_ID = 'nameKlarAccessory'
 
 export default function AccountScreen() {
   const [userId, setUserId] = useState<string | null>(null)
@@ -94,7 +98,6 @@ export default function AccountScreen() {
   const [heightCm, setHeightCm]   = useState<number | null>(null)
 
   const [sheet, setSheet] = useState<SheetKind>(null)
-  const [nameFocus, setNameFocus] = useState(false)
 
   // Utkast — committas först på Klar. Apples inbyggda hjul används rakt av.
   const [dDate, setDDate] = useState(new Date(2000, 0, 9))
@@ -123,14 +126,6 @@ export default function AccountScreen() {
     return () => { alive = false }
   }, []))
 
-  // Klar-pillen ovanför tangentbordet försvinner när tangentbordet gör det,
-  // oavsett hur det stängdes (Klar, retur eller tryck utanför)
-  useEffect(() => {
-    const ev = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
-    const sub = Keyboard.addListener(ev, () => setNameFocus(false))
-    return () => sub.remove()
-  }, [])
-
   function save(updates: Parameters<typeof updateProfile>[1]) {
     if (!userId) return
     updateProfile(userId, updates).catch(() => {})
@@ -141,7 +136,6 @@ export default function AccountScreen() {
   }
   function doneEditingNames() {
     Keyboard.dismiss()
-    setNameFocus(false)
     saveNames()
   }
 
@@ -218,7 +212,7 @@ export default function AccountScreen() {
               style={styles.rowInput}
               value={first}
               onChangeText={setFirst}
-              onFocus={() => setNameFocus(true)}
+              inputAccessoryViewID={NAME_KLAR_ID}
               onBlur={saveNames}
               returnKeyType="done"
               onSubmitEditing={doneEditingNames}
@@ -233,7 +227,7 @@ export default function AccountScreen() {
               style={styles.rowInput}
               value={last}
               onChangeText={setLast}
-              onFocus={() => setNameFocus(true)}
+              inputAccessoryViewID={NAME_KLAR_ID}
               onBlur={saveNames}
               returnKeyType="done"
               onSubmitEditing={doneEditingNames}
@@ -266,7 +260,10 @@ export default function AccountScreen() {
       <Modal visible={sheet !== null} transparent animationType="fade" onRequestClose={() => setSheet(null)}>
         <Pressable testID="sheetOverlay" style={styles.overlay} onPress={() => setSheet(null)}>
           <View style={styles.floatWrap} pointerEvents="box-none">
-            <KlarPill onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight} />
+            <KlarPill
+              testID="panelKlar"
+              onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
+            />
             <Pressable style={styles.pickerPanel} onPress={() => {}}>
               {sheet === 'birth' && (
                 <DateTimePicker
@@ -307,7 +304,7 @@ export default function AccountScreen() {
                     testID="weightUnitPicker"
                     selectedValue={wUnit}
                     onValueChange={v => changeWeightUnit(v as 'kg' | 'lb')}
-                    style={styles.pickerNarrow}
+                    style={styles.pickerUnit}
                     itemStyle={styles.pickerItem}
                   >
                     <Picker.Item label="kg" value="kg" />
@@ -335,15 +332,36 @@ export default function AccountScreen() {
         </Pressable>
       </Modal>
 
-      {/* Flytande Klar ovanför Apples tangentbord vid namnredigering */}
-      {nameFocus && (
-        <KeyboardAvoidingView
-          style={styles.klarWrap}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          pointerEvents="box-none"
-        >
-          <KlarPill onPress={doneEditingNames} />
-        </KeyboardAvoidingView>
+      {/* ── Klar ovanför Apples tangentbord vid namnredigering — som cardio-
+          målens Done, fast via InputAccessoryView eftersom texttangentbord
+          (till skillnad från sifferknappsatser) inte får Apples pill gratis.
+          Pressable istället för GlassPill: gesture-handler når inte
+          tangentbordets fönster. ── */}
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID={NAME_KLAR_ID} backgroundColor="transparent">
+          <View style={styles.accessoryBar} pointerEvents="box-none">
+            <Pressable
+              testID="nameKlar"
+              onPress={doneEditingNames}
+              style={({ pressed }) => [
+                styles.klarPill, styles.accessoryPill,
+                !LIQUID_GLASS && styles.klarFallback,
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              {LIQUID_GLASS && (
+                <GlassView
+                  glassEffectStyle="regular"
+                  colorScheme="dark"
+                  tintColor="rgba(10,132,255,0.75)"
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+              )}
+              <Text style={styles.klarPillText}>Klar</Text>
+            </Pressable>
+          </View>
+        </InputAccessoryView>
       )}
     </SafeAreaView>
   )
@@ -383,10 +401,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
     paddingVertical: 10,
   },
-  klarWrap: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    alignItems: 'flex-end', padding: 14,
-  },
+  accessoryBar: { alignItems: 'flex-end', paddingHorizontal: 14, paddingVertical: 10 },
+  accessoryPill: { overflow: 'hidden' },
   klarPill: { borderRadius: 24, paddingHorizontal: 26, paddingVertical: 12 },
   klarFallback: { backgroundColor: '#0A84FF' },
   klarPillText: { color: '#fff', fontSize: 17, fontWeight: '700' },
@@ -395,8 +411,11 @@ const styles = StyleSheet.create({
   },
   datePicker: { alignSelf: 'center' },
   pickerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  // Kolumnerna behöver marginal — för smala hjul klipper etiketten till "…"
+  // (iOS 26:s valkapsel äter kant, Picker.Item har numberOfLines 1)
   picker: { width: 110, height: 216 },
-  pickerNarrow: { width: 80, height: 216 },
+  pickerNarrow: { width: 90, height: 216 },
+  pickerUnit: { width: 100, height: 216 },
   pickerItem: { color: TEXT_PRIMARY, fontSize: 22 },
   wheelUnit: { color: TEXT_SECONDARY, fontSize: 18, fontWeight: '700', marginLeft: 8 },
 })

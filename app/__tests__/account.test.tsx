@@ -69,7 +69,7 @@ describe('Profilinställningar', () => {
   it('viktshjulet: Klar sparar till profilen OCH kaloriberäkningens inställning', async () => {
     render(<AccountScreen />)
     fireEvent.press(await screen.findByText('Vikt'))
-    fireEvent.press(screen.getByText('Klar'))   // sparar förvalda 75,5 (från profilen)
+    fireEvent.press(screen.getByTestId('panelKlar'))   // sparar förvalda 75,5 (från profilen)
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { weight_kg: 75.5 }))
     expect(await getBodyWeightKg()).toBe(76)    // prefs rundar till hela kg
@@ -78,7 +78,7 @@ describe('Profilinställningar', () => {
   it('längdhjulet: Klar sparar valt värde', async () => {
     render(<AccountScreen />)
     fireEvent.press(await screen.findByText('Längd'))
-    fireEvent.press(screen.getByText('Klar'))   // sparar förvalda 182 (från profilen)
+    fireEvent.press(screen.getByTestId('panelKlar'))   // sparar förvalda 182 (från profilen)
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { height_cm: 182 }))
   })
@@ -87,7 +87,7 @@ describe('Profilinställningar', () => {
     render(<AccountScreen />)
     fireEvent.press(await screen.findByText('Vikt'))
     fireEvent.press(screen.getByTestId('sheetOverlay'))
-    await waitFor(() => expect(screen.queryByText('Klar')).not.toBeOnTheScreen())
+    await waitFor(() => expect(screen.queryByTestId('panelKlar')).not.toBeOnTheScreen())
     expect(updateProfile).not.toHaveBeenCalled()
   })
 
@@ -112,9 +112,8 @@ describe('Profilinställningar', () => {
   it('Klar-pillen över tangentbordet sparar namnen', async () => {
     render(<AccountScreen />)
     const input = await screen.findByDisplayValue('Anton')
-    fireEvent(input, 'focus')
     fireEvent.changeText(input, 'Tony')
-    fireEvent.press(screen.getByText('Klar'))
+    fireEvent.press(screen.getByTestId('nameKlar'))
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Wretenberg' }))
   })
@@ -123,7 +122,7 @@ describe('Profilinställningar', () => {
     render(<AccountScreen />)
     fireEvent.press(await screen.findByText('Födelsedatum'))
     fireEvent(screen.getByTestId('birthPicker'), 'change', { type: 'set' }, new Date(2003, 4, 17))
-    fireEvent.press(screen.getByText('Klar'))
+    fireEvent.press(screen.getByTestId('panelKlar'))
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { birth_date: '2003-05-17' }))
   })
