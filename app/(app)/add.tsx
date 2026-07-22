@@ -57,7 +57,7 @@ import { getCardioWorkoutsForDate, getWorkoutsForDate, getStrengthWorkouts, type
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
+import { ORANGE, BG, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { getRaceDate } from '@/lib/prefs'
 import { parseLocalDate } from '@/lib/date'
@@ -433,10 +433,9 @@ export default function SchemaScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.addBtn} onPress={() => openEditor(null)} activeOpacity={0.8}>
-          <Ionicons name="add" size={18} color="#000" />
-          <Text style={styles.addBtnText}>Planera</Text>
-        </TouchableOpacity>
+        {/* Högersidan tom — Nytt pass bor i dagsidans knapprad; bredden
+            balanserar avataren så räknaren står stilla */}
+        <View style={{ width: 36 }} />
       </View>
 
       {/* "Skapa ditt schema" banner — visas bara om man varken har ett schema
@@ -510,27 +509,8 @@ export default function SchemaScreen() {
         raceDate={raceDate}
       />
 
-      {/* Schema toolbar */}
-      <View style={styles.toolbar}>
-        <TouchableOpacity
-          style={[styles.toolbarBtn, styles.toolbarBtnSecondary]}
-          onPress={() => router.push('/(app)/manage-sessions')}
-          activeOpacity={0.75}
-        >
-          <Ionicons name="list-outline" size={15} color={TEXT_PRIMARY} />
-          <Text style={styles.toolbarBtnText}>Schema</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.toolbarBtn, styles.toolbarBtnPrimary]}
-          onPress={() => openEditor(null)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={16} color="#000" />
-          <Text style={styles.toolbarBtnPrimaryText}>Nytt pass</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Horizontal day pager — one page per calendar date */}
+      {/* Horizontal day pager — one page per calendar date.
+          Schema/Nytt pass-knappraden bor i dagsidorna och följer med skrollen. */}
       <FlatList
         ref={pagerRef}
         data={PAGER_DATA}
@@ -789,30 +769,8 @@ const styles = StyleSheet.create({
   },
   dayCounterNum:   { color: TEXT_PRIMARY, fontSize: 26, fontFamily: NUM_FONT },
   dayCounterSlash: { color: TEXT_SECONDARY, fontSize: 16, fontFamily: NUM_FONT_SEMI },
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: ORANGE, borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 8,
-  },
-  addBtnText: { color: '#000', fontSize: 13, fontWeight: '700' },
 
 
-  toolbar: {
-    flexDirection: 'row', gap: 8,
-    marginHorizontal: 16, marginTop: 6, marginBottom: 4,
-  },
-  toolbarBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 10, borderRadius: 12,
-  },
-  toolbarBtnSecondary: {
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
-  },
-  toolbarBtnPrimary: {
-    backgroundColor: ORANGE,
-  },
-  toolbarBtnText:        { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
-  toolbarBtnPrimaryText: { color: '#000',       fontSize: 13, fontWeight: '700' },
 
 
 

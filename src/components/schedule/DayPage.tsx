@@ -20,7 +20,7 @@ import { resolveRunProgression } from '@/lib/runProgression'
 import type { UnitSystem } from '@/lib/units'
 import { weekdayOf, parseLocalDate } from '@/lib/date'
 import { isoDate, todayMidnight, indexToDate, DAY_SHORT } from '@/lib/scheduleDates'
-import { ORANGE, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { sessionActiveOn, type WorkoutSession } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
@@ -127,6 +127,26 @@ export const DayPage = React.memo(function DayPage({
               onScroll={onScrollShrink}
               scrollEventThrottle={16}
             >
+              {/* Schema/Nytt pass — i skrollinnehållet så knapparna följer med sidan */}
+              <View style={styles.toolbar}>
+                <TouchableOpacity
+                  style={[styles.toolbarBtn, styles.toolbarBtnSecondary]}
+                  onPress={() => router.push('/(app)/manage-sessions')}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="list-outline" size={15} color={TEXT_PRIMARY} />
+                  <Text style={styles.toolbarBtnText}>Schema</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toolbarBtn, styles.toolbarBtnPrimary]}
+                  onPress={() => api.openEditor(null)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="add" size={16} color="#000" />
+                  <Text style={styles.toolbarBtnPrimaryText}>Nytt pass</Text>
+                </TouchableOpacity>
+              </View>
+
               {/* Day header */}
               <Animated.View style={[styles.dayHeader, dayAnimStyle]}>
                 <Text style={styles.dayName}>{dayLabel}</Text>
@@ -289,6 +309,23 @@ export const DayPage = React.memo(function DayPage({
 
 const styles = StyleSheet.create({
   scroll: { paddingBottom: 150 + TAB_CONTENT_PAD },
+
+  toolbar: {
+    flexDirection: 'row', gap: 8,
+    marginHorizontal: 16, marginTop: 6, marginBottom: 4,
+  },
+  toolbarBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 10, borderRadius: 12,
+  },
+  toolbarBtnSecondary: {
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
+  toolbarBtnPrimary: {
+    backgroundColor: ORANGE,
+  },
+  toolbarBtnText:        { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
+  toolbarBtnPrimaryText: { color: '#000',       fontSize: 13, fontWeight: '700' },
 
   dayHeader: {
     paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
