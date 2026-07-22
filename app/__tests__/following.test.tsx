@@ -19,12 +19,14 @@ jest.mock('@/services/follows', () => ({
   unfollow: jest.fn().mockResolvedValue(undefined),
   subscribeToFollows: jest.fn(() => () => {}),
 }))
+let mockParams: Record<string, string> = {}
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
   useFocusEffect: (cb: () => void) => {
     const { useEffect } = require('react')
     useEffect(cb, [cb])
   },
+  useLocalSearchParams: () => mockParams,
 }))
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }))
 
@@ -35,6 +37,7 @@ const SARA  = { id: 'u3', name: 'Sara', avatar_url: null }
 
 beforeEach(() => {
   jest.clearAllMocks()
+  mockParams = {}
   ;(getFollowLists as jest.Mock).mockResolvedValue({ followers: [], following: [] })
 })
 
@@ -67,6 +70,14 @@ describe('Följare/Följer', () => {
     expect(screen.getByText('Sara')).toBeOnTheScreen()
     fireEvent.press(screen.getByTestId('follow-u3'))             // följ tillbaka
     expect(follow).toHaveBeenCalledWith('u3')
+  })
+
+  it('tab-parametern öppnar rätt flik', async () => {
+    mockParams = { tab: 'followers' }
+    ;(getFollowLists as jest.Mock).mockResolvedValue({ followers: [SARA], following: [NAWID] })
+    render(<FollowingScreen />)
+    expect(await screen.findByText('Sara')).toBeOnTheScreen()       // följare-fliken direkt
+    expect(screen.queryByText('Nawid')).not.toBeOnTheScreen()
   })
 
   it('tryck på en rad öppnar personens profil', async () => {

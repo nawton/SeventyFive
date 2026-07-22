@@ -303,6 +303,7 @@ export default function ProfileScreen() {
           onToggleFollow={() => {}}
           onOpenActivities={() => router.push('/(app)/activities' as never)}
           onPressHero={() => router.push('/(app)/edit-profile')}
+          onPressFollows={tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)}
         />
 
         <View style={s.sectionHeadRow}>

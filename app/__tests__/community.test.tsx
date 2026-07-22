@@ -148,7 +148,10 @@ describe('Community', () => {
     render(<CommunityScreen />)
     await screen.findByText('Anton Wretenberg')
     fireEvent.press(screen.getByText('glassbtn:people-outline'))
-    expect(router.push).toHaveBeenCalledWith('/(app)/following')
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/(app)/following',
+      params: { tab: 'following' },
+    })
   })
 
   it('Grupper-segmentet visar platshållare', async () => {

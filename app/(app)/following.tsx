@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router, useFocusEffect } from 'expo-router'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
@@ -64,7 +64,14 @@ function PersonRow({ person, followedByMe, ownId, onToggle }: {
 }
 
 export default function FollowingScreen() {
-  const [tab, setTab] = useState<Tab>('following')
+  // Räknarna på profilen skickar med vilken flik som ska öppnas — synkas
+  // vid varje ändring eftersom skärmen ligger kvar monterad i navigatorn
+  const params = useLocalSearchParams<{ tab?: string }>()
+  const paramTab: Tab = params.tab === 'followers' ? 'followers' : 'following'
+  const [tab, setTab] = useState<Tab>(paramTab)
+  // Vid fokus (inte bara paramändring) — annars fastnar fliken från förra
+  // besöket när man kommer in med samma param igen
+  useFocusEffect(useCallback(() => { setTab(paramTab) }, [paramTab]))
   const [name, setName] = useState('')
   const [ownId, setOwnId] = useState<string | null>(null)
   const [followers, setFollowers] = useState<FollowProfile[]>([])

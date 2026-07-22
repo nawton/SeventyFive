@@ -125,6 +125,10 @@ export default function AthleteScreen() {
           following={following}
           onToggleFollow={toggleFollow}
           onOpenActivities={() => router.push('/(app)/activities' as never)}
+          // Listorna visar egna relationer — bara egna räknare är tryckbara
+          onPressFollows={isOwn
+            ? tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)
+            : undefined}
         />
       </ScrollView>
     </SafeAreaView>

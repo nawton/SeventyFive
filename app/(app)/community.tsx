@@ -106,7 +106,10 @@ export default function CommunityScreen() {
           icon="people-outline"
           size={44}
           iconColor={TEXT_PRIMARY}
-          onPress={() => router.push('/(app)/following' as never)}
+          onPress={() => router.push({
+            pathname: '/(app)/following',
+            params: { tab: 'following' },   // skriver över ev. kvarliggande flikparam
+          } as never)}
           fallbackStyle={s.followBtnFallback}
         />
       </View>

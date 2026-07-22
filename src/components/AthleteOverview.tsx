@@ -88,7 +88,7 @@ function Avatar({ url, fallback, size }: { url: string | null; fallback: string;
 
 export function AthleteOverview({
   isOwn, name, avatarUrl, workouts, gymCount, counts, unit,
-  following, onToggleFollow, onOpenActivities, onPressHero,
+  following, onToggleFollow, onOpenActivities, onPressHero, onPressFollows,
 }: {
   isOwn: boolean
   name: string
@@ -103,6 +103,8 @@ export function AthleteOverview({
   onOpenActivities: () => void
   /** Gör toppen tryckbar (profilfliken: gå till Redigera profil) */
   onPressHero?: () => void
+  /** Gör Följare/Följer-räknarna tryckbara (egna profilen: öppna listorna) */
+  onPressFollows?: (tab: 'followers' | 'following') => void
 }) {
   const { width: screenW } = useWindowDimensions()
   const [type, setType] = useState<CardioType>('running')
@@ -172,15 +174,27 @@ export function AthleteOverview({
           <Text style={s.counterLabel}>Totalt km</Text>
         </View>
         <View style={s.counterDivider} />
-        <View style={s.counter}>
+        <TouchableOpacity
+          style={s.counter}
+          onPress={onPressFollows ? () => onPressFollows('followers') : undefined}
+          disabled={!onPressFollows}
+          activeOpacity={0.6}
+          testID="followersCounter"
+        >
           <Text style={s.counterValue}>{counts.followers}</Text>
           <Text style={s.counterLabel}>Följare</Text>
-        </View>
+        </TouchableOpacity>
         <View style={s.counterDivider} />
-        <View style={s.counter}>
+        <TouchableOpacity
+          style={s.counter}
+          onPress={onPressFollows ? () => onPressFollows('following') : undefined}
+          disabled={!onPressFollows}
+          activeOpacity={0.6}
+          testID="followingCounter"
+        >
           <Text style={s.counterValue}>{counts.following}</Text>
           <Text style={s.counterLabel}>Följer</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Följ-knappen finns bara på ANDRAS profiler — man kan inte följa

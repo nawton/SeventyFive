@@ -113,6 +113,29 @@ describe('Atletprofil', () => {
     expect(router.push).toHaveBeenCalledWith('/(app)/activities')
   })
 
+  it('egna räknarna öppnar Följare/Följer-listorna på rätt flik', async () => {
+    const { router } = require('expo-router')
+    render(<AthleteScreen />)
+    await screen.findByText('Anton Wretenberg')
+    fireEvent.press(screen.getByTestId('followersCounter'))
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/(app)/following', params: { tab: 'followers' },
+    })
+    fireEvent.press(screen.getByTestId('followingCounter'))
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/(app)/following', params: { tab: 'following' },
+    })
+  })
+
+  it('andras räknare är inte tryckbara — listorna är ens egna', async () => {
+    const { router } = require('expo-router')
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    render(<AthleteScreen />)
+    await screen.findByText('Nawid')
+    fireEvent.press(screen.getByTestId('followersCounter'))
+    expect(router.push).not.toHaveBeenCalled()
+  })
+
   it('egna profilen har ingen följ-knapp — man kan inte följa sig själv', async () => {
     render(<AthleteScreen />)
     await screen.findByText('Anton Wretenberg')
