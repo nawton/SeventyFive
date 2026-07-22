@@ -15,13 +15,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated'
 import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '@/lib/supabase'
 import { compressImage } from '@/lib/image'
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile'
 import { unregisterPushTokens } from '@/services/pushTokens'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, accentAlpha, useThemeStrings, THEME_DARK } from '@/lib/theme'
 import { SubscriptionCard } from '@/components/SubscriptionCard'
 import { RecordsCard } from '@/components/RecordsCard'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -40,6 +42,23 @@ export default function EditProfileScreen() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
+
+  // Dra ner arket för att stänga — gesten bor på handtag/titel eftersom
+  // emojilistan skrollar själv längre ner
+  const sheetY = useSharedValue(0)
+  useEffect(() => { if (modalVisible) sheetY.value = 0 }, [modalVisible])
+  // Accentring runt avataren bara i mörkt läge — i ljust bär den mjuka
+  // accentplattan looken själv
+  const avatarRing = useThemeStrings().TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.ACCENT : 'transparent'
+  function closeSheet() { setModalVisible(false) }
+  const sheetPan = Gesture.Pan()
+    .activeOffsetY([-12, 12])
+    .onUpdate(e => { sheetY.value = Math.max(0, e.translationY) })
+    .onEnd(e => {
+      if (e.translationY > 110 || e.velocityY > 800) runOnJS(closeSheet)()
+      else sheetY.value = withSpring(0, { damping: 20, stiffness: 260 })
+    })
+  const sheetAnim = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }))
   const [emoji, setEmoji]     = useState<string | null>(null)
   const [photoUri, setPhotoUri] = useState<string | null>(null)
 
@@ -170,7 +189,7 @@ export default function EditProfileScreen() {
           {/* ── Avatar with pencil ── */}
           <View style={styles.previewSection}>
             <View style={styles.avatarWrapper}>
-              <View style={styles.avatarCircle}>
+              <View style={[styles.avatarCircle, { borderColor: avatarRing }]}>
                 <AvatarContent />
               </View>
               <TouchableOpacity
@@ -312,14 +331,22 @@ export default function EditProfileScreen() {
         animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.modalContainer}>
           <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
             <View style={StyleSheet.absoluteFill} />
           </TouchableWithoutFeedback>
 
+          {/* Färgerna ligger på inre vyn — dynamiska färger på animerade
+              noder kraschar reanimated */}
+          <Animated.View style={sheetAnim}>
           <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Välj profilbild</Text>
+            <GestureDetector gesture={sheetPan}>
+              <View>
+                <View style={styles.sheetHandle} />
+                <Text style={styles.sheetTitle}>Välj profilbild</Text>
+              </View>
+            </GestureDetector>
 
             {/* Quick options */}
             <View style={styles.quickRow}>
@@ -378,7 +405,9 @@ export default function EditProfileScreen() {
               <Text style={styles.cancelText}>Avbryt</Text>
             </TouchableOpacity>
           </View>
+          </Animated.View>
         </View>
+        </GestureHandlerRootView>
       </Modal>
 
     </SafeScreen>
@@ -410,7 +439,7 @@ const styles = StyleSheet.create({
   avatarCircle: {
     width: 110, height: 110, borderRadius: 55,
     backgroundColor: accentAlpha('22'),
-    borderWidth: 2.5, borderColor: ACCENT,
+    borderWidth: 2.5,
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
