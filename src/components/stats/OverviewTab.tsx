@@ -68,7 +68,7 @@ function RingChart({ currentDay, completedDays }: { currentDay: number; complete
 export function OverviewTab({
   days, startDate, challengeId, currentDay, streak,
   workouts, strengthWorkouts, completedSessions, unit, avatarUrl,
-  calSwipeRef, onTabScroll, onTabScrollEnd, onOpenWorkout, onRemoveWorkoutLocal,
+  calSwipeRef, onTabScroll, refreshControl, onOpenWorkout, onRemoveWorkoutLocal,
 }: {
   days: DaySummary[]
   startDate: string | null
@@ -83,7 +83,8 @@ export function OverviewTab({
   /** Delas med flik-pagerns waitFor så kalendersvepet vinner över sidbytet */
   calSwipeRef: React.MutableRefObject<GestureType | undefined>
   onTabScroll: (e: { nativeEvent: { contentOffset: { y: number } } }) => void
-  onTabScrollEnd: () => void
+  /** Appens gemensamma dra-för-att-uppdatera — samma i alla tre flikarna */
+  refreshControl: React.ReactElement<import('react-native').RefreshControlProps>
   onOpenWorkout: (w: CardioWorkout) => void
   onRemoveWorkoutLocal: (id: string) => void
 }) {
@@ -126,7 +127,7 @@ export function OverviewTab({
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
           onScroll={onTabScroll}
-          onScrollEndDrag={onTabScrollEnd}
+          refreshControl={refreshControl}
           scrollEventThrottle={16}
         >
           <>

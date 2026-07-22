@@ -9,10 +9,9 @@ import {
   Alert,
   ActivityIndicator,
   useWindowDimensions,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
+import { AppRefreshControl, useAppRefresh, SPINNER_GRAY } from '@/components/AppRefresh'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
@@ -83,32 +82,8 @@ export default function ProfileScreen() {
   const [composerUri, setComposerUri] = useState<string | null>(null)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const [compareOpen, setCompareOpen] = useState(false)
-  const [refreshing, setRefreshing]   = useState(false)
-  const refreshingRef = useRef(false)
-  const pullArmedRef  = useRef(true)
-
-  // Egen pull-to-refresh utan native-snurra: dra ner förbi tröskeln → hämta om,
-  // snurran visas under Lägg till dagens foto istället för högst upp
-  function onListScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    onScrollShrink(e)
-    const y = e.nativeEvent.contentOffset.y
-    if (y >= 0) pullArmedRef.current = true
-    if (y < -70 && pullArmedRef.current && !refreshingRef.current) {
-      pullArmedRef.current = false
-      refreshingRef.current = true
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-      setRefreshing(true)
-      const started = Date.now()
-      load().catch(() => {}).finally(() => {
-        // Låt snurran synas en stund även om hämtningen går blixtsnabbt
-        const wait = Math.max(0, 1000 - (Date.now() - started))
-        setTimeout(() => {
-          setRefreshing(false)
-          refreshingRef.current = false
-        }, wait)
-      })
-    }
-  }
+  // Appens gemensamma dra-för-att-uppdatera — den nativa grå spinnern högst upp
+  const { refreshing, onRefresh } = useAppRefresh(async () => { await load() })
 
   useFocusEffect(useCallback(() => {
     let unsubscribe: (() => void) | null = null
@@ -414,7 +389,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={s.centered}>
-        <ActivityIndicator color={ORANGE} size="large" />
+        <ActivityIndicator color={SPINNER_GRAY} size="large" />
       </View>
     )
   }
@@ -443,7 +418,6 @@ export default function ProfileScreen() {
             )}
           </View>
         </View>
-        {refreshing && <ActivityIndicator color={ORANGE} style={s.refreshSpinner} />}
       </View>
 
       <FlatList
@@ -458,7 +432,8 @@ export default function ProfileScreen() {
         ListHeaderComponent={renderHeader()}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
-        onScroll={onListScroll}
+        refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        onScroll={onScrollShrink}
         scrollEventThrottle={16}
       />
 
@@ -499,7 +474,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   title: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '700' },
-  refreshSpinner: { marginTop: 12, marginBottom: 2 },
   bellButton: { backgroundColor: CARD },
   bellBadge: {
     position: 'absolute', top: -4, right: -4,

@@ -23,6 +23,7 @@ import {
   GRID_PADDING, STATS_SCREEN_W, BLUE, RED, YELLOW, PURPLE, TEAL, LIME,
   getWeekBounds, monthLabel, sessDateLabel, s, type GymSession,
 } from '@/components/stats/statsShared'
+import { AppRefreshControl, useAppRefresh } from '@/components/AppRefresh'
 import { GymTab } from '@/components/stats/GymTab'
 import { CardioTab } from '@/components/stats/CardioTab'
 import { OverviewTab } from '@/components/stats/OverviewTab'
@@ -52,25 +53,14 @@ export default function StatsScreen() {
   // SafeAreaView rapporterar noll-insets inne i RN-modaler — använd explicit padding
   const insets = useSafeAreaInsets()
 
-  // Dra ner för att uppdatera — samma overscroll-mönster som profilen
-  const [statsRefreshing, setStatsRefreshing] = useState(false)
+  // Dra ner för att uppdatera — appens gemensamma spinner, samma i alla flikar
   const [reloadToken, setReloadToken] = useState(0)
-  const pullArmed = useRef(false)
+  const { refreshing: statsRefreshing, onRefresh: refreshStats } = useAppRefresh(async () => {
+    setReloadToken(t => t + 1)
+    await Promise.resolve(loadStats())
+  })
   function onTabScroll(e: { nativeEvent: { contentOffset: { y: number } } }) {
     onScrollShrink(e as never)
-    if (e.nativeEvent.contentOffset.y < -70) pullArmed.current = true
-  }
-  function onTabScrollEnd() {
-    if (!pullArmed.current || statsRefreshing) return
-    pullArmed.current = false
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
-    setStatsRefreshing(true)
-    const started = Date.now()
-    setReloadToken(t => t + 1)
-    Promise.resolve(loadStats()).finally(() => {
-      const wait = Math.max(0, 1000 - (Date.now() - started))
-      setTimeout(() => setStatsRefreshing(false), wait)
-    })
   }
   const [days, setDays]                         = useState<DaySummary[]>([])
   const [currentDay, setCurrentDay]             = useState(1)
@@ -290,8 +280,6 @@ export default function StatsScreen() {
         </View>
       </GestureDetector>
 
-      {statsRefreshing && <ActivityIndicator color={ORANGE} style={{ marginBottom: 8 }} />}
-
       <GHScrollView
         ref={pagerRef as never}
         horizontal
@@ -321,7 +309,7 @@ export default function StatsScreen() {
           avatarUrl={avatarUrl}
           calSwipeRef={calSwipeRef}
           onTabScroll={onTabScroll}
-          onTabScrollEnd={onTabScrollEnd}
+          refreshControl={<AppRefreshControl refreshing={statsRefreshing} onRefresh={refreshStats} />}
           onOpenWorkout={setSelectedWorkout}
           onRemoveWorkoutLocal={id => setWorkouts(prev => prev.filter(w => w.id !== id))}
         />
@@ -333,7 +321,7 @@ export default function StatsScreen() {
           unit={unit}
           pagerRef={pagerRef}
           onTabScroll={onTabScroll}
-          onTabScrollEnd={onTabScrollEnd}
+          refreshControl={<AppRefreshControl refreshing={statsRefreshing} onRefresh={refreshStats} />}
           onOpenWorkout={setSelectedWorkout}
           onDeleteWorkout={handleDeleteWorkout}
           onDeleteCompletion={handleDeleteCompletion}
@@ -347,7 +335,7 @@ export default function StatsScreen() {
           reloadToken={reloadToken}
           bodyFlipRef={bodyFlipRef}
           onTabScroll={onTabScroll}
-          onTabScrollEnd={onTabScrollEnd}
+          refreshControl={<AppRefreshControl refreshing={statsRefreshing} onRefresh={refreshStats} />}
           onDeleteCompletion={handleDeleteCompletion}
         />
       </GHScrollView>

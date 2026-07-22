@@ -28,7 +28,11 @@ jest.mock('expo-router', () => ({
   },
   useLocalSearchParams: () => mockParams,
 }))
-jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }))
+jest.mock('expo-haptics', () => ({
+  selectionAsync: jest.fn(),
+  impactAsync: jest.fn().mockResolvedValue(undefined),
+  ImpactFeedbackStyle: { Light: 'light' },
+}))
 
 const { getFollowLists, follow, unfollow } = require('@/services/follows')
 

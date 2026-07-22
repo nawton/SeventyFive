@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { RefreshControl, type RefreshControlProps } from 'react-native'
+import * as Haptics from 'expo-haptics'
 
 // =============================================================================
 // Enhetlig pull-to-refresh för hela appen: mörkgrå spinner i den nativa
@@ -8,7 +9,7 @@ import { RefreshControl, type RefreshControlProps } from 'react-native'
 // att inte göra någonting.
 // =============================================================================
 
-const SPINNER_GRAY = '#666'
+export const SPINNER_GRAY = '#666'
 const MIN_SPIN_MS = 900
 
 export function useAppRefresh(reload: () => Promise<unknown>) {
@@ -18,6 +19,7 @@ export function useAppRefresh(reload: () => Promise<unknown>) {
     if (busy.current) return
     busy.current = true
     setRefreshing(true)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
     const started = Date.now()
     try { await reload() } catch { /* nästa drag försöker igen */ }
     const left = MIN_SPIN_MS - (Date.now() - started)

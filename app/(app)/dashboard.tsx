@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SafeScreen } from '@/components/SafeScreen'
+import { AppRefreshControl, useAppRefresh, SPINNER_GRAY } from '@/components/AppRefresh'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
@@ -237,6 +238,9 @@ export default function DashboardScreen() {
   }))
 
   useEffect(() => { loadDashboard() }, [])
+
+  // Appens gemensamma dra-för-att-uppdatera
+  const { refreshing, onRefresh } = useAppRefresh(async () => { await loadDashboard() })
 
   // Tyst omhämtning när fliken får fokus — plockar upp ändringar gjorda på
   // andra skärmar (nytt/borttaget foto, redigerad profil) utan laddsnurra
@@ -471,7 +475,7 @@ export default function DashboardScreen() {
   if (loading) {
     return (
       <View style={s.centered}>
-        <ActivityIndicator color={ORANGE} size="large" />
+        <ActivityIndicator color={SPINNER_GRAY} size="large" />
       </View>
     )
   }
@@ -508,6 +512,7 @@ export default function DashboardScreen() {
         ref={scrollRef}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
+        refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         onScroll={onScrollShrink}
         scrollEventThrottle={16}
       >

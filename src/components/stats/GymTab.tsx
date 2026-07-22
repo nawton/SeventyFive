@@ -36,7 +36,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 export function GymTab({
   userId, strengthWorkouts, completedSessions, reloadToken,
-  bodyFlipRef, onTabScroll, onTabScrollEnd, onDeleteCompletion,
+  bodyFlipRef, onTabScroll, refreshControl, onDeleteCompletion,
 }: {
   userId: string | null
   strengthWorkouts: StrengthWorkout[]
@@ -46,7 +46,8 @@ export function GymTab({
   /** Delas med flik-pagerns waitFor så kroppssvepet vinner över sidbytet */
   bodyFlipRef: React.MutableRefObject<GestureType | undefined>
   onTabScroll: (e: { nativeEvent: { contentOffset: { y: number } } }) => void
-  onTabScrollEnd: () => void
+  /** Appens gemensamma dra-för-att-uppdatera — samma i alla tre flikarna */
+  refreshControl: React.ReactElement<import('react-native').RefreshControlProps>
   /** Skalet äger completedSessions + databasraderingen; false = misslyckades */
   onDeleteCompletion: (id: string) => Promise<boolean>
 }) {
@@ -284,7 +285,7 @@ export function GymTab({
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
           onScroll={onTabScroll}
-          onScrollEndDrag={onTabScrollEnd}
+          refreshControl={refreshControl}
           scrollEventThrottle={16}
         >
           {strengthWorkouts.length === 0 && completedSessions.every(c => c.sessionType !== 'gym') ? (

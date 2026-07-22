@@ -82,7 +82,7 @@ function buildWeeklyBars(workouts: CardioWorkout[]): WeekBar[] {
 
 export function CardioTab({
   workouts, completedSessions, unit,
-  pagerRef, onTabScroll, onTabScrollEnd,
+  pagerRef, onTabScroll, refreshControl,
   onOpenWorkout, onDeleteWorkout, onDeleteCompletion,
 }: {
   workouts: CardioWorkout[]
@@ -91,7 +91,8 @@ export function CardioTab({
   /** Radsvepen måste blockera flik-pagern */
   pagerRef: React.RefObject<unknown>
   onTabScroll: (e: { nativeEvent: { contentOffset: { y: number } } }) => void
-  onTabScrollEnd: () => void
+  /** Appens gemensamma dra-för-att-uppdatera — samma i alla tre flikarna */
+  refreshControl: React.ReactElement<import('react-native').RefreshControlProps>
   onOpenWorkout: (w: CardioWorkout) => void
   onDeleteWorkout: (id: string) => void
   onDeleteCompletion: (id: string) => void
@@ -333,7 +334,7 @@ export function CardioTab({
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
           onScroll={onTabScroll}
-          onScrollEndDrag={onTabScrollEnd}
+          refreshControl={refreshControl}
           scrollEventThrottle={16}
         >
           {workouts.length === 0 ? (
