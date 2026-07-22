@@ -123,6 +123,23 @@ describe('Atletprofil', () => {
     expect(screen.queryByText('Aktiviteter')).not.toBeOnTheScreen()
   })
 
+  it('profilbyte: nästa persons namn visas — inte första besökta', async () => {
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    const { rerender } = render(<AthleteScreen />)
+    expect(await screen.findByText('Nawid')).toBeOnTheScreen()
+    mockParams = { userId: 'u3', name: 'Sara', avatar: '' }
+    rerender(<AthleteScreen />)
+    expect(await screen.findByText('Sara')).toBeOnTheScreen()
+    expect(screen.queryByText('Nawid')).not.toBeOnTheScreen()
+  })
+
+  it('annan användares profil börjar som Följ, inte Följer', async () => {
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    render(<AthleteScreen />)
+    await screen.findByText('Nawid')
+    expect(await screen.findByText('Följ')).toBeOnTheScreen()
+  })
+
   it('activeLabel: idag, igår, dagar sedan och tomt', () => {
     const now = new Date('2026-07-22T10:00:00')
     expect(activeLabel(null)).toBe('Inga pass ännu')

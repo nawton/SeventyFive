@@ -101,10 +101,11 @@ export default function AthleteScreen() {
   // ersätts ärligt med ett tomläge istället för falska nollor.
   const params = useLocalSearchParams<{ userId?: string; name?: string; avatar?: string }>()
   const otherId = typeof params.userId === 'string' && params.userId.length > 0 ? params.userId : null
+  const paramName = typeof params.name === 'string' ? params.name : ''
+  const paramAvatar = typeof params.avatar === 'string' && params.avatar.length > 0 ? params.avatar : null
   const [isOwn, setIsOwn] = useState(otherId === null)
-  const [name, setName] = useState(typeof params.name === 'string' ? params.name : '')
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(
-    typeof params.avatar === 'string' && params.avatar.length > 0 ? params.avatar : null)
+  const [name, setName] = useState(paramName)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(paramAvatar)
   const [workouts, setWorkouts] = useState<CardioWorkout[]>([])
   const [gymCount, setGymCount] = useState(0)
   const [unit, setUnit] = useState<UnitSystem>('metric')
@@ -119,7 +120,16 @@ export default function AthleteScreen() {
       if (!session?.user || !alive) return
       const own = otherId === null || otherId === session.user.id
       setIsOwn(own)
-      if (!own) return   // namn/avatar kom med som params från sökningen
+      if (!own) {
+        // Skärmen ligger kvar monterad i tab-navigatorn — utan explicit
+        // synk här visas första besökta profilen för alltid
+        setName(paramName)
+        setAvatarUrl(paramAvatar)
+        setFollowing(false)   // en främlings profil börjar som "Följ"
+        setScrubKey(null)
+        return
+      }
+      setFollowing(true)
       const [profile, all, strength] = await Promise.all([
         getProfile(session.user.id).catch(() => null),
         getCardioWorkouts(session.user.id, 200).catch(() => [] as CardioWorkout[]),
@@ -134,7 +144,7 @@ export default function AthleteScreen() {
       setGymCount(strengthToPosts(strength, '', null).length)
     })
     return () => { alive = false }
-  }, [otherId]))
+  }, [otherId, paramName, paramAvatar]))
 
   const totalKm = useMemo(
     () => Math.round(workouts.reduce((sum, w) => sum + w.data.distance_km, 0)),
