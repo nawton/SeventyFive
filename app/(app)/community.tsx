@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react'
-import { View, Text, StyleSheet, FlatList, Modal } from 'react-native'
+import { View, Text, StyleSheet, FlatList, Modal, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
@@ -16,7 +17,7 @@ import {
   FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
 } from '@/components/FeedWorkoutCard'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
-import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 // =============================================================================
@@ -32,6 +33,13 @@ import { TAB_CONTENT_PAD } from '@/lib/glass'
 export { relativeDayLabel, dayPartTitle } from '@/components/FeedWorkoutCard'
 
 type Segment = 'feed' | 'groups'
+type Filter = 'all' | 'cardio' | 'strength'
+
+const FILTERS: Array<{ key: Filter; label: string; icon?: React.ComponentProps<typeof Ionicons>['name'] }> = [
+  { key: 'all', label: 'Alla' },
+  { key: 'cardio', label: 'Cardio', icon: 'fitness-outline' },
+  { key: 'strength', label: 'Gym', icon: 'barbell-outline' },
+]
 
 function EmptyState({ icon, title, body }: {
   icon: React.ComponentProps<typeof Ionicons>['name']; title: string; body: string
@@ -47,6 +55,7 @@ function EmptyState({ icon, title, body }: {
 
 export default function CommunityScreen() {
   const [segment, setSegment] = useState<Segment>('feed')
+  const [filter, setFilter] = useState<Filter>('all')
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -110,7 +119,7 @@ export default function CommunityScreen() {
         />
       ) : (
         <FlatList
-          data={posts}
+          data={filter === 'all' ? posts : posts.filter(p => p.kind === filter)}
           keyExtractor={p => p.id}
           renderItem={({ item }) => (
             <FeedWorkoutCard
@@ -123,11 +132,36 @@ export default function CommunityScreen() {
           showsVerticalScrollIndicator={false}
           onScroll={onScroll}
           scrollEventThrottle={16}
+          // Chipsen scrollar med flödet — headern förblir ren
+          ListHeaderComponent={
+            <View style={s.chipsRow}>
+              {FILTERS.map(f => {
+                const on = f.key === filter
+                return (
+                  <TouchableOpacity
+                    key={f.key}
+                    style={[s.chip, on && s.chipActive]}
+                    onPress={() => {
+                      if (f.key === filter) return
+                      Haptics.selectionAsync()
+                      setFilter(f.key)
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    {f.icon && <Ionicons name={f.icon} size={14} color={on ? ORANGE : TEXT_PRIMARY} />}
+                    <Text style={[s.chipText, on && s.chipTextActive]}>{f.label}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          }
           ListEmptyComponent={loaded ? (
             <EmptyState
               icon="megaphone-outline"
-              title="Inget i flödet ännu"
-              body="Dina cardio-pass dyker upp här. Snart kan du dela dem så att andra kan se, gilla och kommentera."
+              title={filter === 'strength' ? 'Inga gympass i flödet'
+                : filter === 'cardio' ? 'Inga cardio-pass i flödet'
+                : 'Inget i flödet ännu'}
+              body="Dina pass dyker upp här. Snart kan du dela dem så att andra kan se, gilla och kommentera."
             />
           ) : null}
         />
@@ -168,6 +202,18 @@ const s = StyleSheet.create({
   },
   followBtnFallback: { backgroundColor: CARD },
   listContent: { paddingHorizontal: 16, paddingBottom: 24 + TAB_CONTENT_PAD, gap: 16 },
+
+  // Samma chipstil som atletprofilens typväljare
+  chipsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 4 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderWidth: 1, borderColor: BORDER, borderRadius: 17,
+    paddingHorizontal: 11, paddingVertical: 7,
+    backgroundColor: CARD,
+  },
+  chipActive: { borderColor: ORANGE },
+  chipText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
+  chipTextActive: { color: ORANGE, fontWeight: '700' },
 
   empty: { alignItems: 'center', gap: 8, paddingTop: 90, paddingHorizontal: 40 },
   emptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },

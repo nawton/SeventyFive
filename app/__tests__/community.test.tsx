@@ -110,6 +110,21 @@ describe('Community', () => {
     expect(screen.getByText('gym:Gympass')).toBeOnTheScreen()
   })
 
+  it('filterchipsen växlar flödet mellan alla, cardio och gym', async () => {
+    ;(getStrengthWorkouts as jest.Mock).mockResolvedValue(GYM_DAY)
+    render(<CommunityScreen />)
+    await screen.findAllByText('Anton Wretenberg')
+    fireEvent.press(screen.getByText('Gym'))
+    expect(screen.queryByText('5,01')).not.toBeOnTheScreen()
+    expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
+    fireEvent.press(screen.getByText('Cardio'))
+    expect(screen.getByText('5,01')).toBeOnTheScreen()
+    expect(screen.queryByText(/Gympass — /)).not.toBeOnTheScreen()
+    fireEvent.press(screen.getByText('Alla'))
+    expect(screen.getByText('5,01')).toBeOnTheScreen()
+    expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
+  })
+
   it('tryck på kortet öppnar samma passdetaljvy som statistiken', async () => {
     render(<CommunityScreen />)
     await screen.findByText('Anton Wretenberg')
