@@ -209,7 +209,7 @@ const s = StyleSheet.create({
   },
   handleWrap: { alignSelf: 'stretch', alignItems: 'center', paddingVertical: 6, marginTop: -6 },
   handle: {
-    width: 40, height: 4, backgroundColor: CARD_BORDER, borderRadius: 2,
+    width: 40, height: 5, backgroundColor: 'rgba(128,128,128,0.45)', borderRadius: 3,
     alignSelf: 'center', marginBottom: 18,
   },
   header: {

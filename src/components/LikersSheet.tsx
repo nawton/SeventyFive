@@ -134,7 +134,7 @@ const s = StyleSheet.create({
   },
   handle: {
     alignSelf: 'center', width: 44, height: 5, borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.25)', marginTop: 10,
+    backgroundColor: 'rgba(128,128,128,0.45)', marginTop: 10,
   },
   headerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

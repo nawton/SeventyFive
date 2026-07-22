@@ -489,7 +489,7 @@ const s = StyleSheet.create({
   },
   styleSheetGlass: { backgroundColor: 'transparent', overflow: 'hidden' },
   styleGrip: { paddingTop: 10, paddingBottom: 4 },
-  sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: '#3A3A3C' },
+  sheetHandle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(128,128,128,0.45)' },
   sheetTitle: { color: '#fff', fontSize: 18, fontWeight: '800', textAlign: 'center', marginTop: 14, marginBottom: 6 },
   mapGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingTop: 6 },
   mapCard: {

@@ -471,8 +471,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   sheetHandle: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: BORDER, alignSelf: 'center', marginBottom: 4,
+    width: 40, height: 5, borderRadius: 3,
+    backgroundColor: 'rgba(128,128,128,0.45)', alignSelf: 'center', marginBottom: 4,
   },
   sheetTitle: {
     color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', textAlign: 'center',

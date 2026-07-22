@@ -224,8 +224,8 @@ const s = StyleSheet.create({
     paddingTop: 12, paddingHorizontal: 20, paddingBottom: 36,
   },
   sheetHandle: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: BORDER, alignSelf: 'center', marginBottom: 20,
+    width: 40, height: 5, borderRadius: 3,
+    backgroundColor: 'rgba(128,128,128,0.45)', alignSelf: 'center', marginBottom: 20,
   },
   sheetTitle: { color: '#FFF', fontSize: 20, fontWeight: '700', textAlign: 'center' },
   sheetSub:   { color: '#666', fontSize: 13, textAlign: 'center', marginTop: 4, marginBottom: 16 },

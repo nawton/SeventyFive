@@ -2728,8 +2728,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: 40,
     height: 4,
-    borderRadius: 2,
-    backgroundColor: '#3A3A3C',
+    borderRadius: 3,
+    backgroundColor: 'rgba(128,128,128,0.45)',
   },
   sheetTitle: {
     color: TEXT_PRIMARY,
