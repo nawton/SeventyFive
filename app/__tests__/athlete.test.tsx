@@ -25,12 +25,20 @@ jest.mock('expo-router', () => ({
   },
 }))
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }))
-// Grafen har egen logik — här räcker att den får hinkarna
+// Grafen har egen logik — mocken exponerar bara första punkten som knapp
 jest.mock('@/components/stats/DistanceAreaChart', () => {
   const React = require('react')
-  const { Text } = require('react-native')
-  return { DistanceAreaChart: ({ buckets }: { buckets: Array<{ total: number }> }) =>
-    React.createElement(Text, null, `chart:${buckets.length}`) }
+  const { Text, Pressable } = require('react-native')
+  return { DistanceAreaChart: ({ buckets, onSelect }: {
+    buckets: Array<{ key: string; total: number }>
+    onSelect?: (key: string) => void
+  }) =>
+    React.createElement(React.Fragment, null,
+      React.createElement(Text, null, `chart:${buckets.length}`),
+      React.createElement(Pressable, {
+        testID: 'chartFirstPoint',
+        onPress: () => onSelect?.(buckets[0].key),
+      })) }
 })
 
 const { getCardioWorkouts } = require('@/services/cardioWorkouts')
@@ -62,6 +70,18 @@ describe('Atletprofil', () => {
     expect(screen.getByText('Den här veckan')).toBeOnTheScreen()
     expect(screen.getByText('5,50 km')).toBeOnTheScreen()   // veckans löpning
     expect(screen.getByText('chart:12')).toBeOnTheScreen()
+  })
+
+  it('vald punkt i grafen styr veckosektionen — rubrik och statistik', async () => {
+    render(<AthleteScreen />)
+    await screen.findByText('Anton Wretenberg')
+    expect(screen.getByText('5,50 km')).toBeOnTheScreen()        // innevarande vecka
+    fireEvent.press(screen.getByTestId('chartFirstPoint'))        // äldsta veckan, 11 veckor bakåt
+    expect(screen.queryByText('Den här veckan')).not.toBeOnTheScreen()
+    expect(screen.getByText('0,00 km')).toBeOnTheScreen()        // inga pass den veckan
+    fireEvent.press(screen.getByTestId('chartFirstPoint'))        // samma punkt igen → rensar
+    expect(screen.getByText('Den här veckan')).toBeOnTheScreen()
+    expect(screen.getByText('5,50 km')).toBeOnTheScreen()
   })
 
   it('typ-chips byter statistiken', async () => {

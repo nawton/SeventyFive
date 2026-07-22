@@ -124,39 +124,33 @@ export default function AthleteScreen() {
 
   const latestIso = workouts.length > 0 ? workouts[0].created_at : null
 
-  // Den här veckan, för vald aktivitetstyp
+  const buckets = useMemo(() => buildWeekBuckets(workouts, type), [workouts, type])
+
+  // Vald punkt i grafen styr hela veckosektionen — utan val visas
+  // innevarande vecka
+  const [scrubKey, setScrubKey] = useState<string | null>(null)
+  const weekKey = scrubKey ?? toLocalDateString(startOfWeek())
+
   const week = useMemo(() => {
-    const monKey = toLocalDateString(startOfWeek())
     let km = 0, secs = 0, passes = 0
     for (const w of workouts) {
       if (w.data.type !== type) continue
-      if (toLocalDateString(startOfWeek(new Date(w.created_at))) !== monKey) continue
+      if (toLocalDateString(startOfWeek(new Date(w.created_at))) !== weekKey) continue
       km += w.data.distance_km
       secs += w.data.duration_seconds
       passes += 1
     }
     return { km, secs, passes }
-  }, [workouts, type])
+  }, [workouts, type, weekKey])
 
-  const buckets = useMemo(() => buildWeekBuckets(workouts, type), [workouts, type])
-
-  // Scrub: håll fingret på grafen → vald veckas detaljer visas ovanför
-  const [scrubKey, setScrubKey] = useState<string | null>(null)
-  const scrubInfo = useMemo(() => {
-    if (!scrubKey) return null
+  // "12 maj – 18 maj" för en vald vecka, annars "Den här veckan"
+  const weekTitle = useMemo(() => {
+    if (!scrubKey) return 'Den här veckan'
     const mon = new Date(scrubKey + 'T12:00:00')
     const sun = new Date(mon); sun.setDate(sun.getDate() + 6)
-    let km = 0, secs = 0, passes = 0
-    for (const w of workouts) {
-      if (w.data.type !== type) continue
-      if (toLocalDateString(startOfWeek(new Date(w.created_at))) !== scrubKey) continue
-      km += w.data.distance_km
-      secs += w.data.duration_seconds
-      passes += 1
-    }
     const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
-    return `${fmt(mon)} – ${fmt(sun)} · ${km.toFixed(1).replace('.', ',')} km · ${passes} pass · ${fmtDuration(secs)}`
-  }, [scrubKey, workouts, type])
+    return `${fmt(mon)} – ${fmt(sun)}`
+  }, [scrubKey])
 
   function toggleFollow() {
     Haptics.selectionAsync()
@@ -239,7 +233,7 @@ export default function AthleteScreen() {
           })}
         </View>
 
-        <Text style={s.sectionTitle}>Den här veckan</Text>
+        <Text style={s.sectionTitle}>{weekTitle}</Text>
         {/* key={type} monterar om blocket vid typbyte — in/ut-tona ger en
             mjuk växling av både veckosiffrorna och grafen */}
         <Animated.View key={type} entering={FadeIn.duration(250)} exiting={FadeOut.duration(120)}>
@@ -259,9 +253,8 @@ export default function AthleteScreen() {
           </View>
 
           <View style={s.chartCard}>
-            {/* Under scrub visas den valda veckans detaljer i stället för hinten */}
-            <Text style={[s.chartHint, scrubInfo != null && s.chartHintActive]}>
-              {scrubInfo ?? `km per vecka, senaste ${CHART_WEEKS} veckorna — tryck på en punkt`}
+            <Text style={s.chartHint}>
+              km per vecka, senaste {CHART_WEEKS} veckorna — tryck på en punkt
             </Text>
             <DistanceAreaChart
               buckets={buckets}
@@ -354,7 +347,6 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER, padding: 16, gap: 10,
   },
   chartHint: { color: TEXT_SECONDARY, fontSize: 12 },
-  chartHintActive: { color: TEXT_PRIMARY, fontWeight: '700' },
 
   activitiesBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
