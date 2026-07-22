@@ -43,8 +43,8 @@ describe('Profilinställningar', () => {
     expect(screen.getByDisplayValue('Wretenberg')).toBeOnTheScreen()
     expect(screen.getByText('2004-01-09')).toBeOnTheScreen()
     expect(screen.getByText('Man')).toBeOnTheScreen()
-    expect(screen.getByDisplayValue('75,5')).toBeOnTheScreen()
-    expect(screen.getByDisplayValue('182')).toBeOnTheScreen()
+    expect(screen.getByText('75,5 kg')).toBeOnTheScreen()
+    expect(screen.getByText('182 cm')).toBeOnTheScreen()
     expect(screen.getByText('anton@example.com')).toBeOnTheScreen()
   })
 
@@ -54,10 +54,9 @@ describe('Profilinställningar', () => {
     })
     render(<AccountScreen />)
     expect(await screen.findAllByPlaceholderText('Lägg till')).toHaveLength(2)
-    expect(screen.getAllByText('kg')).toHaveLength(1)
-    expect(screen.getAllByPlaceholderText('Ej specificerad')).toHaveLength(2)
-    expect(screen.getAllByText('Ej angivet')).toHaveLength(2)  // födelsedatum + kön
-    expect(screen.getByText('Svenska')).toBeOnTheScreen()      // låst rad utan chevron
+    expect(screen.getAllByText('Ej specificerad')).toHaveLength(2)  // vikt + längd
+    expect(screen.getAllByText('Ej angivet')).toHaveLength(2)       // födelsedatum + kön
+    expect(screen.getByText('Svenska')).toBeOnTheScreen()           // låst rad utan chevron
   })
 
   it('könsraden leder till den egna könssidan', async () => {
@@ -67,32 +66,29 @@ describe('Profilinställningar', () => {
     expect(router.push).toHaveBeenCalledWith('/gender')
   })
 
-  it('vikten skrivs direkt i raden — sparar profil OCH kaloriinställningen', async () => {
+  it('viktshjulet: Klar sparar till profilen OCH kaloriberäkningens inställning', async () => {
     render(<AccountScreen />)
-    const input = await screen.findByDisplayValue('75,5')
-    fireEvent.changeText(input, '80,3')
-    fireEvent(input, 'blur')
+    fireEvent.press(await screen.findByText('Vikt'))
+    fireEvent.press(screen.getByText('Klar'))   // sparar förvalda 75,5 (från profilen)
     await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { weight_kg: 80.3 }))
-    expect(await getBodyWeightKg()).toBe(80)    // prefs rundar till hela kg
+      expect(updateProfile).toHaveBeenCalledWith('u1', { weight_kg: 75.5 }))
+    expect(await getBodyWeightKg()).toBe(76)    // prefs rundar till hela kg
   })
 
-  it('orimlig vikt återställs till senaste sparade', async () => {
+  it('längdhjulet: Klar sparar valt värde', async () => {
     render(<AccountScreen />)
-    const input = await screen.findByDisplayValue('75,5')
-    fireEvent.changeText(input, '7')
-    fireEvent(input, 'blur')
-    expect(input.props.value).toBe('75,5')
-    expect(updateProfile).not.toHaveBeenCalledWith('u1', expect.objectContaining({ weight_kg: 7 }))
+    fireEvent.press(await screen.findByText('Längd'))
+    fireEvent.press(screen.getByText('Klar'))   // sparar förvalda 182 (från profilen)
+    await waitFor(() =>
+      expect(updateProfile).toHaveBeenCalledWith('u1', { height_cm: 182 }))
   })
 
-  it('längden skrivs direkt i raden', async () => {
+  it('tryck utanför panelen stänger utan att spara', async () => {
     render(<AccountScreen />)
-    const input = await screen.findByDisplayValue('182')
-    fireEvent.changeText(input, '183')
-    fireEvent(input, 'blur')
-    await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { height_cm: 183 }))
+    fireEvent.press(await screen.findByText('Vikt'))
+    fireEvent.press(screen.getByTestId('sheetOverlay'))
+    await waitFor(() => expect(screen.queryByText('Klar')).not.toBeOnTheScreen())
+    expect(updateProfile).not.toHaveBeenCalled()
   })
 
   it('namnen redigeras direkt i raden — returknappen sparar ihop dem', async () => {
@@ -113,10 +109,21 @@ describe('Profilinställningar', () => {
       expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Anton Berg' }))
   })
 
-  it('födelsedatumshjulet sparar direkt när man snurrar', async () => {
+  it('Klar-pillen över tangentbordet sparar namnen', async () => {
+    render(<AccountScreen />)
+    const input = await screen.findByDisplayValue('Anton')
+    fireEvent(input, 'focus')
+    fireEvent.changeText(input, 'Tony')
+    fireEvent.press(screen.getByText('Klar'))
+    await waitFor(() =>
+      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Wretenberg' }))
+  })
+
+  it('födelsedatumshjulet: Klar sparar valt datum', async () => {
     render(<AccountScreen />)
     fireEvent.press(await screen.findByText('Födelsedatum'))
     fireEvent(screen.getByTestId('birthPicker'), 'change', { type: 'set' }, new Date(2003, 4, 17))
+    fireEvent.press(screen.getByText('Klar'))
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { birth_date: '2003-05-17' }))
   })
