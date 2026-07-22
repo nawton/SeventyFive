@@ -12,6 +12,7 @@ import { setBodyWeightKg } from '@/lib/prefs'
 import { splitName, combineName } from '@/lib/profileName'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD, LIQUID_GLASS } from '@/lib/glass'
+import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { Picker } from '@react-native-picker/picker'
@@ -233,12 +234,24 @@ export default function AccountScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      {/* ── Header i liquid glass: pil tillbaka · titel · checkbock som
+          sparar ev. pågående namnredigering och stänger ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
-        </TouchableOpacity>
+        <GlassCircleButton
+          icon="chevron-back"
+          size={40}
+          iconColor={TEXT_PRIMARY}
+          onPress={() => router.back()}
+          fallbackStyle={styles.iconBtnFallback}
+        />
         <Text style={styles.title}>Profilinställningar</Text>
-        <View style={{ width: 40 }} />
+        <GlassCircleButton
+          icon="checkmark"
+          size={40}
+          iconColor={TEXT_PRIMARY}
+          onPress={() => { Keyboard.dismiss(); saveNames(); router.back() }}
+          fallbackStyle={styles.iconBtnFallback}
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -384,10 +397,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 10,
   },
-  iconBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
-  },
+  iconBtnFallback: { backgroundColor: CARD },
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
   scroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24 + TAB_CONTENT_PAD },
 

@@ -59,6 +59,17 @@ describe('Profilinställningar', () => {
     expect(screen.getByText('Svenska')).toBeOnTheScreen()           // låst rad utan chevron
   })
 
+  it('checkbocken i headern sparar namnen och stänger sidan', async () => {
+    const { router } = require('expo-router')
+    render(<AccountScreen />)
+    const input = await screen.findByDisplayValue('Anton')
+    fireEvent.changeText(input, 'Tony')
+    fireEvent.press(screen.getByText('glassbtn:checkmark'))
+    await waitFor(() =>
+      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Wretenberg' }))
+    expect(router.back).toHaveBeenCalled()
+  })
+
   it('könsraden leder till den egna könssidan', async () => {
     const { router } = require('expo-router')
     render(<AccountScreen />)
