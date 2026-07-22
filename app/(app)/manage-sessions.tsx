@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { useFocusEffect, router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'

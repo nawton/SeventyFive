@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ScrollView, Modal, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'

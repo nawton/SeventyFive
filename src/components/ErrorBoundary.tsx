@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT } from '@/lib/theme'
 
 interface Props { children: ReactNode }

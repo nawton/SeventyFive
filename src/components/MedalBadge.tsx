@@ -1,6 +1,6 @@
 import { View, Image, Text, StyleSheet, type ImageSourcePropType } from 'react-native'
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 
 // =============================================================================
 // MEDALJ-BADGE

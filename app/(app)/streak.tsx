@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import Svg, {
   Path, Circle, Defs, LinearGradient as SvgLinearGradient, RadialGradient, Stop,
 } from 'react-native-svg'

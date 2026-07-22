@@ -16,7 +16,7 @@ import Animated, {
   runOnJS,
   Easing,
 } from 'react-native-reanimated'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, CARDIO_BLUE, THEME_DARK, THEME_LIGHT, ACCENT, accentAlpha } from '@/lib/theme'
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'

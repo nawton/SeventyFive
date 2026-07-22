@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, Modal, Pressable, FlatList, TouchableOpacity,
   useWindowDimensions,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS,

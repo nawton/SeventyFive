@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { getFeedSocial, likePost, unlikePost } from '@/services/social'
 import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, CARD_BORDER } from '@/lib/theme'

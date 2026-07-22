@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Tabs } from 'expo-router'
 import { View, Pressable, StyleSheet, Keyboard, Platform, useColorScheme } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, runOnJS } from 'react-native-reanimated'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'

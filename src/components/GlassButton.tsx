@@ -4,7 +4,7 @@ import Animated, {
   useAnimatedStyle, useSharedValue, withSpring, runOnJS,
 } from 'react-native-reanimated'
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { ACCENT } from '@/lib/theme'
 

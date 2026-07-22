@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, Modal } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { router } from 'expo-router'
 import Animated, { LinearTransition, FadeOut } from 'react-native-reanimated'
 import Svg, { Line as SvgLine, Polyline, Circle } from 'react-native-svg'

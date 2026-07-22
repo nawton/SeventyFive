@@ -4,7 +4,7 @@ import {
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import * as Notifications from 'expo-notifications'
 import Constants from 'expo-constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'

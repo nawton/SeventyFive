@@ -13,7 +13,7 @@ import {
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useURL } from 'expo-linking'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'

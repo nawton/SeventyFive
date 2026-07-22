@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, Alert } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, {

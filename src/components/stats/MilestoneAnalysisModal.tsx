@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Modal, ScrollView , useColorScheme,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { BG, CARD, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT, useThemeStrings } from '@/lib/theme'
 import { parseLocalDate, toLocalDateString } from '@/lib/date'

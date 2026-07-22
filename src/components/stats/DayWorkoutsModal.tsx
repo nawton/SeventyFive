@@ -5,7 +5,7 @@ import Animated, {
   withSpring, withTiming, runOnJS,
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, DIVIDER, useThemeStrings, ACCENT, accentAlpha } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'

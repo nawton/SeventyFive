@@ -11,7 +11,7 @@ import {
 } from 'react-native'
 import { AppRefreshControl } from '@/components/AppRefresh'
 import Animated, { type AnimatedStyle } from 'react-native-reanimated'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { router } from 'expo-router'
 import { WorkoutSection } from '@/components/WorkoutSection'
 import { WEEKDAYS } from '@/components/SessionEditor'

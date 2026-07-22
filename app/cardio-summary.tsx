@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { getCardioWorkoutByDate, getCardioWorkoutById, deleteCardioWorkout, type CardioWorkout } from '@/services/workouts'
 import { getProfile } from '@/services/profile'

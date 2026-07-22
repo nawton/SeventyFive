@@ -19,7 +19,7 @@ const SNAP_W    = PAGE_W + PAGE_GAP
 const MAX_THRESHOLD = 7500       // Diamant — sliderns högra ände
 import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge } from '@/services/challenge'
 import { countCompletedDays, getStreak } from '@/services/dailyLog'

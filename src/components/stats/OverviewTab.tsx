@@ -2,7 +2,7 @@
 // kalender och deras detaljvyer. Skalet (stats.tsx) äger rådatan.
 import { useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, Modal } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import type { GestureType } from 'react-native-gesture-handler'
 import Svg, { Circle, Text as SvgText } from 'react-native-svg'
 import { GREEN, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT } from '@/lib/theme'

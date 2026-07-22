@@ -4,7 +4,7 @@ import {
   type NativeScrollEvent, type NativeSyntheticEvent,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
 import { GlassCircleButton } from '@/components/GlassButton'
 import type { ProgressPhotoItem } from '@/services/progressPhotos'

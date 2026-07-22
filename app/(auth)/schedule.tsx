@@ -10,7 +10,7 @@ import {
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { saveSchedule, getSchedule } from '@/services/schedule'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'

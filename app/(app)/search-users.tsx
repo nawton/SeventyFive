@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { searchProfiles, type ProfileSearchHit } from '@/services/profile'
 import {

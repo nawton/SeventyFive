@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { View, Text, StyleSheet, Image, TouchableOpacity, useWindowDimensions } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { CardioWorkout } from '@/services/cardioWorkouts'

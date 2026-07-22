@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARD_BORDER } from '@/lib/theme'
 import { MedalBadge } from '@/components/MedalBadge'
 import { getAchievementSummary, type AchievementSummary } from '@/services/achievementSummary'

@@ -6,7 +6,7 @@ import Animated, {
   withSpring, withTiming, interpolate, runOnJS, Easing,
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, useThemeStrings, ACCENT } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'

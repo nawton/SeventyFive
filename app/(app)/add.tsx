@@ -17,7 +17,7 @@ import {
 import { SafeScreen } from '@/components/SafeScreen'
 import { useAppRefresh, SPINNER_GRAY } from '@/components/AppRefresh'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import { useFocusEffect, router, useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import Animated, {

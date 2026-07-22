@@ -3,7 +3,7 @@ import {
   View, Text, Image, Modal, FlatList, TouchableOpacity, StyleSheet, Dimensions,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, ACCENT } from '@/lib/theme'
 import { GlassCircleButton } from '@/components/GlassButton'
