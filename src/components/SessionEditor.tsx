@@ -161,8 +161,6 @@ export function SessionEditor({
       setCardioType('running')
     }
     setShowPicker(false)
-    setPickerFilter('all')
-    setPickerSearch('')
   }, [visible, session])
 
   // ── Sheet animation ──────────────────────────────────────────────────────────
