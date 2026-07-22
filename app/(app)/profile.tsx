@@ -21,6 +21,12 @@ import { supabase } from '@/lib/supabase'
 import { compressImage } from '@/lib/image'
 import { getProfile } from '@/services/profile'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
+import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
+import { getStrengthWorkouts } from '@/services/strengthWorkouts'
+import { getFollowCounts, subscribeToFollows, type FollowCounts } from '@/services/follows'
+import { strengthToPosts } from '@/components/FeedWorkoutCard'
+import { AthleteOverview } from '@/components/AthleteOverview'
+import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import {
   getOrCreateTodayLog,
   getOrCreateTaskCompletions,
@@ -79,6 +85,11 @@ export default function ProfileScreen() {
   const [challenge, setChallenge]   = useState<UserChallengeWithLevel | null>(null)
   const [currentDay, setCurrentDay] = useState(1)
   const [photos, setPhotos]         = useState<ProgressPhotoItem[]>([])
+  // Atletvyn: samma data som atletsidan visar (cardio, gymdagar, följen)
+  const [workouts, setWorkouts]     = useState<CardioWorkout[]>([])
+  const [gymCount, setGymCount]     = useState(0)
+  const [counts, setCounts]         = useState<FollowCounts>({ followers: 0, following: 0 })
+  const [unit, setUnit]             = useState<UnitSystem>('metric')
   const [loading, setLoading]       = useState(true)
   const [composerUri, setComposerUri] = useState<string | null>(null)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
@@ -110,7 +121,19 @@ export default function ProfileScreen() {
     }
   }
 
-  useFocusEffect(useCallback(() => { load() }, []))
+  useFocusEffect(useCallback(() => {
+    let unsubscribe: (() => void) | null = null
+    load()
+    // Följer någon dig medan fliken är öppen tickar räknaren upp direkt
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return
+      const uid = session.user.id
+      unsubscribe = subscribeToFollows(uid, () => {
+        getFollowCounts(uid).then(setCounts).catch(() => {})
+      })
+    })
+    return () => { unsubscribe?.() }
+  }, []))
 
   // Guidat flöde från engångsmålen: landa i fotoflödet, öppna sedan fotovalet
   const { action } = useLocalSearchParams<{ action?: string }>()
@@ -133,12 +156,17 @@ export default function ProfileScreen() {
       const uid = session.user.id
       setUserId(uid)
 
+      getUnitSystem().then(setUnit).catch(() => {})
+
       // allSettled — ett fel i en del (t.ex. foto-hämtningen innan
       // caption-migrationen körts) får inte blanka profil och knappar
-      const [profile, active, photoItems] = await Promise.allSettled([
+      const [profile, active, photoItems, cardio, strength, followCounts] = await Promise.allSettled([
         getProfile(uid),
         getActiveChallenge(uid),
         getProgressPhotos(uid),
+        getCardioWorkouts(uid, 200),
+        getStrengthWorkouts(uid, 500),
+        getFollowCounts(uid),
       ])
 
       if (profile.status === 'fulfilled') {
@@ -158,6 +186,14 @@ export default function ProfileScreen() {
       } else {
         console.warn('[profile] kunde inte hämta foton:', photoItems.reason?.message)
       }
+
+      if (cardio.status === 'fulfilled') setWorkouts(cardio.value)
+      if (strength.status === 'fulfilled') {
+        // Gymdagar räknas som pass i aktivitetsknappen — samma gruppering
+        // som flödet använder
+        setGymCount(strengthToPosts(strength.value, '', null).length)
+      }
+      if (followCounts.status === 'fulfilled') setCounts(followCounts.value)
 
     } finally {
       setLoading(false)
@@ -273,30 +309,21 @@ export default function ProfileScreen() {
   function renderHeader() {
     return (
       <View style={s.headerWrap}>
-        {/* Hero: avatar + namn + utmaning */}
-        <TouchableOpacity
-          style={s.hero}
-          onPress={() => router.push('/(app)/edit-profile')}
-          activeOpacity={0.8}
-        >
-          <Avatar url={avatarUrl} fallback={initial} size={72} />
-          <View style={s.heroInfo}>
-            <Text style={s.heroName}>{name}</Text>
-            {challenge && (
-              <View style={s.heroBadgeRow}>
-                <View style={s.levelBadge}>
-                  <Text style={s.levelBadgeText}>
-                    {challenge.challenge_levels?.display_name?.toUpperCase() ?? 'SEVENTYFIVE'}
-                  </Text>
-                </View>
-                <Text style={s.heroDay}>
-                  Dag <Text style={s.heroDayNum}>{currentDay}</Text> av <Text style={s.heroDayNum}>75</Text>
-                </Text>
-              </View>
-            )}
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
-        </TouchableOpacity>
+        {/* Samma atletvy som communityns profilsidor — toppen leder till
+            Redigera profil */}
+        <AthleteOverview
+          isOwn
+          name={name}
+          avatarUrl={avatarUrl}
+          workouts={workouts}
+          gymCount={gymCount}
+          counts={counts}
+          unit={unit}
+          following={false}
+          onToggleFollow={() => {}}
+          onOpenActivities={() => router.push('/(app)/activities' as never)}
+          onPressHero={() => router.push('/(app)/edit-profile')}
+        />
 
         {/* Lägg till foto — grönt kvittoläge när dagens redan är taget */}
         {challenge && (hasTodayPhoto ? (
@@ -453,30 +480,6 @@ const s = StyleSheet.create({
     backgroundColor: CARD,
     alignItems: 'center', justifyContent: 'center',
   },
-
-  // Hero
-  hero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: CARD,
-    borderRadius: 18,
-    padding: 16,
-  },
-  heroInfo: { flex: 1, gap: 6 },
-  heroName: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '700' },
-  heroBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  levelBadge: {
-    backgroundColor: ORANGE + '1F',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: ORANGE + '3C',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  levelBadgeText: { color: ORANGE, fontSize: 9, fontWeight: '800', letterSpacing: 1.4 },
-  heroDay: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  heroDayNum: { fontFamily: NUM_FONT_SEMI, fontSize: 13 },
 
   avatar: {
     backgroundColor: ORANGE,

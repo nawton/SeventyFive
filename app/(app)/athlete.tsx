@@ -1,9 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, useWindowDimensions } from 'react-native'
+import { useCallback, useState } from 'react'
+import { View, StyleSheet, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
@@ -14,95 +12,23 @@ import {
   type FollowCounts,
 } from '@/services/follows'
 import { strengthToPosts } from '@/components/FeedWorkoutCard'
+import { AthleteOverview } from '@/components/AthleteOverview'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { DistanceAreaChart, type AreaBucket } from '@/components/stats/DistanceAreaChart'
-import { fmtDuration } from '@/lib/format'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
-import { toLocalDateString, startOfWeek } from '@/lib/date'
-import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 // =============================================================================
-// ATLETPROFIL — öppnas från flödeskortens avatar. Toppen följer Runkeeper
-// (avatar, namn, senast aktiv, Totalt km/Följare/Följer och en bred
-// Följer-pill), statistiken under följer Strava (aktivitetstyp-chips,
-// "Den här veckan" och veckodistansgraf — samma DistanceAreaChart som
-// statistikfliken). Följ-backenden finns inte än: sidan visar den egna
-// profilen (flödet är egna pass) och följ/räknare är platshållare.
+// ATLETPROFIL — öppnas från flödeskortens avatar och sökningen. Själva vyn
+// bor i AthleteOverview (delad med profilfliken); den här skärmen sköter
+// laddning, params och följ-logiken. Utan userId-param visas den egna
+// profilen; med userId någon annans (namn/avatar följer med som params).
 // =============================================================================
 
-const TYPES = [
-  { key: 'running', label: 'Löpning',  icon: 'fitness-outline' },
-  { key: 'cycling', label: 'Cykling',  icon: 'bicycle-outline' },
-  { key: 'walking', label: 'Promenad', icon: 'walk-outline' },
-] as const
-
-type CardioType = typeof TYPES[number]['key']
-
-const CHART_WEEKS = 12
-
-/** "Aktiv: idag" / "Aktiv: igår" / "Aktiv: 5 dagar sedan" */
-export function activeLabel(latestIso: string | null, now = new Date()): string {
-  if (!latestIso) return 'Inga pass ännu'
-  const then = new Date(latestIso)
-  const days = Math.floor(
-    (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
-     new Date(then.getFullYear(), then.getMonth(), then.getDate()).getTime()) / 86_400_000)
-  if (days <= 0) return 'Aktiv: idag'
-  if (days === 1) return 'Aktiv: igår'
-  return `Aktiv: ${days} dagar sedan`
-}
-
-/** 12 veckovisa hinkar, etikett = månadsnamn där månaden byter (Strava-stil) */
-export function buildWeekBuckets(
-  workouts: CardioWorkout[], type: CardioType, now = new Date(),
-): AreaBucket[] {
-  const thisMon = startOfWeek(now)
-  const buckets: AreaBucket[] = Array.from({ length: CHART_WEEKS }, (_, i) => {
-    const mon = new Date(thisMon); mon.setDate(mon.getDate() - (CHART_WEEKS - 1 - i) * 7)
-    return {
-      key: toLocalDateString(mon),
-      label: mon.toLocaleDateString('sv-SE', { month: 'short' }).replace('.', '').toUpperCase(),
-      total: 0,
-      isCurrent: i === CHART_WEEKS - 1,
-    }
-  })
-  // Bara första veckan i varje månad behåller sin etikett — resten blir tysta
-  let prev = ''
-  for (const b of buckets) {
-    if (b.label === prev) b.label = ''
-    else prev = b.label
-  }
-  for (const w of workouts) {
-    if (w.data.type !== type) continue
-    const key = toLocalDateString(startOfWeek(new Date(w.created_at)))
-    const bucket = buckets.find(b => b.key === key)
-    if (bucket) bucket.total += w.data.distance_km
-  }
-  return buckets
-}
-
-function Avatar({ url, fallback, size }: { url: string | null; fallback: string; size: number }) {
-  const radius = size / 2
-  return (
-    <View style={[s.avatar, { width: size, height: size, borderRadius: radius }]}>
-      {url?.startsWith('http') ? (
-        <Image source={{ uri: url }} style={{ width: size, height: size, borderRadius: radius }} />
-      ) : url ? (
-        <Text style={{ fontSize: size * 0.5 }}>{url}</Text>
-      ) : (
-        <Text style={[s.avatarInitial, { fontSize: size * 0.4 }]}>{fallback}</Text>
-      )}
-    </View>
-  )
-}
+// Testerna (och ev. andra skärmar) når hjälparna via den delade modulen
+export { activeLabel, buildWeekBuckets } from '@/components/AthleteOverview'
 
 export default function AthleteScreen() {
-  const { width: screenW } = useWindowDimensions()
-  // Utan userId-param visas den egna profilen (flödet är egna pass än så
-  // länge). Med userId från sökningen visas den personen — men andras pass
-  // går inte att läsa förrän delnings-backenden finns, så statistiken
-  // ersätts ärligt med ett tomläge istället för falska nollor.
   const params = useLocalSearchParams<{ userId?: string; name?: string; avatar?: string }>()
   const otherId = typeof params.userId === 'string' && params.userId.length > 0 ? params.userId : null
   const paramName = typeof params.name === 'string' ? params.name : ''
@@ -113,7 +39,6 @@ export default function AthleteScreen() {
   const [workouts, setWorkouts] = useState<CardioWorkout[]>([])
   const [gymCount, setGymCount] = useState(0)
   const [unit, setUnit] = useState<UnitSystem>('metric')
-  const [type, setType] = useState<CardioType>('running')
   // Riktiga följen: status mot follows-tabellen, räknare för den visade
   // profilen. Uppdateras optimistiskt vid tryck och live via realtime.
   const [following, setFollowing] = useState(false)
@@ -142,7 +67,6 @@ export default function AthleteScreen() {
         // synk här visas första besökta profilen för alltid
         setName(paramName)
         setAvatarUrl(paramAvatar)
-        setScrubKey(null)
         setFollowing(false)
         isFollowing(otherId!).then(v => { if (alive) setFollowing(v) }).catch(() => {})
         return
@@ -163,40 +87,6 @@ export default function AthleteScreen() {
     return () => { alive = false; unsubscribe?.() }
   }, [otherId, paramName, paramAvatar]))
 
-  const totalKm = useMemo(
-    () => Math.round(workouts.reduce((sum, w) => sum + w.data.distance_km, 0)),
-    [workouts])
-
-  const latestIso = workouts.length > 0 ? workouts[0].created_at : null
-
-  const buckets = useMemo(() => buildWeekBuckets(workouts, type), [workouts, type])
-
-  // Vald punkt i grafen styr hela veckosektionen — utan val visas
-  // innevarande vecka
-  const [scrubKey, setScrubKey] = useState<string | null>(null)
-  const weekKey = scrubKey ?? toLocalDateString(startOfWeek())
-
-  const week = useMemo(() => {
-    let km = 0, secs = 0, passes = 0
-    for (const w of workouts) {
-      if (w.data.type !== type) continue
-      if (toLocalDateString(startOfWeek(new Date(w.created_at))) !== weekKey) continue
-      km += w.data.distance_km
-      secs += w.data.duration_seconds
-      passes += 1
-    }
-    return { km, secs, passes }
-  }, [workouts, type, weekKey])
-
-  // "12 maj – 18 maj" för en vald vecka, annars "Den här veckan"
-  const weekTitle = useMemo(() => {
-    if (!scrubKey) return 'Den här veckan'
-    const mon = new Date(scrubKey + 'T12:00:00')
-    const sun = new Date(mon); sun.setDate(sun.getDate() + 6)
-    const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
-    return `${fmt(mon)} – ${fmt(sun)}`
-  }, [scrubKey])
-
   function toggleFollow() {
     if (isOwn || !otherId) return   // man kan inte följa sig själv
     Haptics.selectionAsync()
@@ -208,12 +98,6 @@ export default function AthleteScreen() {
       setFollowing(!next)
       setCounts(c => ({ ...c, followers: Math.max(0, c.followers + (next ? -1 : 1)) }))
     })
-  }
-
-  function switchType(next: CardioType) {
-    if (next === type) return
-    Haptics.selectionAsync()
-    setType(next)
   }
 
   return (
@@ -230,130 +114,18 @@ export default function AthleteScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        {/* ── Runkeeper-delen: profil, räknare och Följer-pill ── */}
-        <View style={s.profileRow}>
-          <Avatar url={avatarUrl} fallback={name.charAt(0).toUpperCase() || '?'} size={72} />
-          <View style={{ flex: 1 }}>
-            <Text style={s.name}>{name}</Text>
-            <Text style={s.activeMeta}>
-              {isOwn ? activeLabel(latestIso) : 'Delar inga pass ännu'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={s.countersRow}>
-          <View style={s.counter}>
-            <Text style={s.counterValue}>{isOwn ? totalKm : '–'}</Text>
-            <Text style={s.counterLabel}>Totalt km</Text>
-          </View>
-          <View style={s.counterDivider} />
-          <View style={s.counter}>
-            <Text style={s.counterValue}>{counts.followers}</Text>
-            <Text style={s.counterLabel}>Följare</Text>
-          </View>
-          <View style={s.counterDivider} />
-          <View style={s.counter}>
-            <Text style={s.counterValue}>{counts.following}</Text>
-            <Text style={s.counterLabel}>Följer</Text>
-          </View>
-        </View>
-
-        {/* Följ-knappen finns bara på ANDRAS profiler — man kan inte följa
-            sig själv. Bara kantlinje; orange ram + text när man inte
-            följer ännu. */}
-        {!isOwn && (
-          <TouchableOpacity
-            style={[s.followBtn, !following && s.followBtnInvite]}
-            onPress={toggleFollow}
-            activeOpacity={0.8}
-            testID="athleteFollow"
-          >
-            <Text style={[s.followBtnText, !following && s.followBtnTextInvite]}>
-              {following ? 'Följer' : 'Följ'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* ── Strava-delen: typ-chips, veckan och distansgraf — bara för den
-            egna profilen tills delnings-backenden gör andras pass läsbara ── */}
-        {!isOwn ? (
-          <View style={s.otherEmpty}>
-            <Ionicons name="lock-closed-outline" size={38} color={TEXT_SECONDARY} />
-            <Text style={s.otherEmptyTitle}>Inga delade pass ännu</Text>
-            <Text style={s.otherEmptyBody}>
-              När delning finns på plats ser du {name.split(' ')[0] || 'personens'} statistik
-              och aktiviteter här.
-            </Text>
-          </View>
-        ) : (<>
-        <View style={s.chipsRow}>
-          {TYPES.map(t => {
-            const on = t.key === type
-            return (
-              <TouchableOpacity
-                key={t.key}
-                style={[s.chip, on && s.chipActive]}
-                onPress={() => switchType(t.key)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name={t.icon} size={14} color={on ? ORANGE : TEXT_PRIMARY} />
-                <Text style={[s.chipText, on && s.chipTextActive]}>{t.label}</Text>
-              </TouchableOpacity>
-            )
-          })}
-        </View>
-
-        <Text style={s.sectionTitle}>{weekTitle}</Text>
-        {/* key={type} monterar om blocket vid typbyte — in/ut-tona ger en
-            mjuk växling av både veckosiffrorna och grafen */}
-        <Animated.View key={type} entering={FadeIn.duration(250)} exiting={FadeOut.duration(120)}>
-          <View style={s.weekRow}>
-            <View style={s.weekStat}>
-              <Text style={s.weekLabel}>Distans</Text>
-              <Text style={s.weekValue}>{week.km.toFixed(2).replace('.', ',')} km</Text>
-            </View>
-            <View style={s.weekStat}>
-              <Text style={s.weekLabel}>Tid</Text>
-              <Text style={s.weekValue}>{fmtDuration(week.secs)}</Text>
-            </View>
-            <View style={s.weekStat}>
-              <Text style={s.weekLabel}>Pass</Text>
-              <Text style={s.weekValue}>{week.passes}</Text>
-            </View>
-          </View>
-
-          <View style={s.chartCard}>
-            <DistanceAreaChart
-              buckets={buckets}
-              width={screenW - 40 - 32}
-              height={170}
-              unit={unit}
-              selectedKey={scrubKey}
-              onSelect={key => setScrubKey(k => k === key ? null : key)}
-              onScrub={setScrubKey}
-            />
-          </View>
-        </Animated.View>
-
-        {/* Alla aktiviteter — hela historiken på egen sida */}
-        <TouchableOpacity
-          style={s.activitiesBtn}
-          onPress={() => router.push('/(app)/activities' as never)}
-          activeOpacity={0.8}
-          testID="athleteActivities"
-        >
-          <View style={s.activitiesIcon}>
-            <Ionicons name="list-outline" size={20} color={TEXT_PRIMARY} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.activitiesTitle}>Aktiviteter</Text>
-            <Text style={s.activitiesMeta}>
-              {workouts.length + gymCount > 0 ? `${workouts.length + gymCount} pass` : 'Inga pass ännu'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
-        </TouchableOpacity>
-        </>)}
+        <AthleteOverview
+          isOwn={isOwn}
+          name={name}
+          avatarUrl={avatarUrl}
+          workouts={workouts}
+          gymCount={gymCount}
+          counts={counts}
+          unit={unit}
+          following={following}
+          onToggleFollow={toggleFollow}
+          onOpenActivities={() => router.push('/(app)/activities' as never)}
+        />
       </ScrollView>
     </SafeAreaView>
   )
@@ -367,68 +139,4 @@ const s = StyleSheet.create({
   },
   iconBtnFallback: { backgroundColor: CARD },
   scroll: { paddingHorizontal: 20, paddingBottom: 24 + TAB_CONTENT_PAD },
-
-  profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 6 },
-  avatar: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-  },
-  avatarInitial: { color: TEXT_PRIMARY, fontWeight: '800' },
-  name: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800' },
-  activeMeta: { color: TEXT_SECONDARY, fontSize: 14, marginTop: 3 },
-
-  countersRow: {
-    flexDirection: 'row', alignItems: 'center',
-    marginTop: 20, paddingVertical: 4,
-  },
-  counter: { flex: 1, alignItems: 'center', gap: 2 },
-  counterValue: { color: TEXT_PRIMARY, fontSize: 24, fontFamily: NUM_FONT },
-  counterLabel: { color: TEXT_SECONDARY, fontSize: 13 },
-  counterDivider: { width: StyleSheet.hairlineWidth, height: 34, backgroundColor: 'rgba(255,255,255,0.15)' },
-
-  followBtn: {
-    marginTop: 18, borderRadius: 26, paddingVertical: 13,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)', alignItems: 'center',
-  },
-  followBtnInvite: { borderColor: ORANGE },
-  followBtnText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  followBtnTextInvite: { color: ORANGE },
-
-  chipsRow: { flexDirection: 'row', gap: 8, marginTop: 26 },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1, borderColor: BORDER, borderRadius: 17,
-    paddingHorizontal: 11, paddingVertical: 7,
-  },
-  chipActive: { borderColor: ORANGE },
-  chipText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
-  chipTextActive: { color: ORANGE, fontWeight: '700' },
-
-  sectionTitle: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800', marginTop: 24 },
-  weekRow: { flexDirection: 'row', marginTop: 14 },
-  weekStat: { flex: 1, gap: 4 },
-  weekLabel: { color: TEXT_SECONDARY, fontSize: 13 },
-  weekValue: { color: TEXT_PRIMARY, fontSize: 18, fontFamily: NUM_FONT },
-
-  chartCard: {
-    marginTop: 20, backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER, padding: 16,
-  },
-
-  activitiesBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    marginTop: 20, backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER, padding: 16,
-  },
-  activitiesIcon: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  activitiesTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  activitiesMeta: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
-
-  otherEmpty: { alignItems: 'center', gap: 8, paddingTop: 60, paddingHorizontal: 30 },
-  otherEmptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },
-  otherEmptyBody: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
 })
