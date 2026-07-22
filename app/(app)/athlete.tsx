@@ -8,6 +8,8 @@ import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
+import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
+import { strengthToPosts } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { DistanceAreaChart, type AreaBucket } from '@/components/stats/DistanceAreaChart'
 import { fmtDuration } from '@/lib/format'
@@ -96,6 +98,7 @@ export default function AthleteScreen() {
   const [name, setName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [workouts, setWorkouts] = useState<CardioWorkout[]>([])
+  const [gymCount, setGymCount] = useState(0)
   const [unit, setUnit] = useState<UnitSystem>('metric')
   const [type, setType] = useState<CardioType>('running')
   // Följ-status är bara lokal tills backenden finns
@@ -106,14 +109,18 @@ export default function AthleteScreen() {
     getUnitSystem().then(u => { if (alive) setUnit(u) })
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user || !alive) return
-      const [profile, all] = await Promise.all([
+      const [profile, all, strength] = await Promise.all([
         getProfile(session.user.id).catch(() => null),
         getCardioWorkouts(session.user.id, 200).catch(() => [] as CardioWorkout[]),
+        getStrengthWorkouts(session.user.id, 500).catch(() => [] as StrengthWorkout[]),
       ])
       if (!alive) return
       setName(profile?.name || session.user.email?.split('@')[0] || '')
       setAvatarUrl(profile?.avatar_url ?? null)
       setWorkouts(all)
+      // Gymdagar räknas som pass i aktivitetsknappen — samma gruppering
+      // som flödet använder
+      setGymCount(strengthToPosts(strength, '', null).length)
     })
     return () => { alive = false }
   }, []))
@@ -278,7 +285,7 @@ export default function AthleteScreen() {
           <View style={{ flex: 1 }}>
             <Text style={s.activitiesTitle}>Aktiviteter</Text>
             <Text style={s.activitiesMeta}>
-              {workouts.length > 0 ? `${workouts.length} pass` : 'Inga pass ännu'}
+              {workouts.length + gymCount > 0 ? `${workouts.length + gymCount} pass` : 'Inga pass ännu'}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />

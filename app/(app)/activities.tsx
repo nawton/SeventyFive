@@ -6,9 +6,13 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
+import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
-import { FeedWorkoutCard, workoutToPost, type FeedPost } from '@/components/FeedWorkoutCard'
+import { GymSummaryView } from '@/components/stats/GymSummaryView'
+import {
+  FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
+} from '@/components/FeedWorkoutCard'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -25,21 +29,28 @@ export default function ActivitiesScreen() {
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [unit, setUnit] = useState<UnitSystem>('metric')
-  const [selected, setSelected] = useState<CardioWorkout | null>(null)
+  const [allStrength, setAllStrength] = useState<StrengthWorkout[]>([])
+  const [selected, setSelected] = useState<FeedPost | null>(null)
 
   useFocusEffect(useCallback(() => {
     let alive = true
     getUnitSystem().then(u => { if (alive) setUnit(u) })
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user || !alive) return
-      const [profile, all] = await Promise.all([
+      const [profile, cardio, strength] = await Promise.all([
         getProfile(session.user.id).catch(() => null),
         getCardioWorkouts(session.user.id, 200).catch(() => [] as CardioWorkout[]),
+        getStrengthWorkouts(session.user.id, 500).catch(() => [] as StrengthWorkout[]),
       ])
       if (!alive) return
       const authorName = profile?.name || session.user.email?.split('@')[0] || 'Jag'
-      setAvatarUrl(profile?.avatar_url ?? null)
-      setPosts(all.map(w => workoutToPost(w, authorName, profile?.avatar_url ?? null)))
+      const avatar = profile?.avatar_url ?? null
+      setAvatarUrl(avatar)
+      setAllStrength(strength)
+      setPosts(mergePosts([
+        ...cardio.map(w => workoutToPost(w, authorName, avatar)),
+        ...strengthToPosts(strength, authorName, avatar),
+      ]))
       setLoaded(true)
     })
     return () => { alive = false }
@@ -77,15 +88,25 @@ export default function ActivitiesScreen() {
         ) : null}
       />
 
-      {/* Samma passdetaljvy som statistiken — utan radering härifrån */}
+      {/* Samma detaljvyer som statistiken — utan radering härifrån */}
       <Modal visible={!!selected} animationType="slide" onRequestClose={() => setSelected(null)}>
-        {selected && (
+        {selected?.kind === 'cardio' && (
           <CardioSummaryView
-            workout={selected}
-            title={selected.name}
-            dateLabel={new Date(selected.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            workout={selected.workout}
+            title={selected.workout.name}
+            dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
             avatarUrl={avatarUrl}
             unit={unit}
+            onClose={() => setSelected(null)}
+          />
+        )}
+        {selected?.kind === 'strength' && (
+          <GymSummaryView
+            name="Gympass"
+            dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            logged={selected.workouts}
+            plannedNames={[]}
+            allWorkouts={allStrength}
             onClose={() => setSelected(null)}
           />
         )}

@@ -17,6 +17,15 @@ jest.mock('@/services/profile', () => ({
 jest.mock('@/services/cardioWorkouts', () => ({
   getCardioWorkouts: jest.fn().mockResolvedValue([]),
 }))
+jest.mock('@/services/strengthWorkouts', () => ({
+  getStrengthWorkouts: jest.fn().mockResolvedValue([]),
+}))
+jest.mock('@/components/stats/GymSummaryView', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  return { GymSummaryView: ({ name }: { name: string }) =>
+    React.createElement(Text, null, `gym:${name}`) }
+})
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
   useFocusEffect: (cb: () => void) => {

@@ -4,14 +4,17 @@ import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline, Marker } from 'react-native-maps'
 import * as Haptics from 'expo-haptics'
 import type { CardioWorkout } from '@/services/cardioWorkouts'
+import type { StrengthWorkout } from '@/services/strengthWorkouts'
 import { formatPace } from '@/lib/cardioUtils'
 import { fmtTime } from '@/lib/format'
 import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 
 // =============================================================================
 // FLÖDESKORT — delat mellan community-flödet och atletprofilens
-// aktivitetslista: avatar + namn, "Torsdag morgon", km/tid/tempo-rad,
-// inramad ruttkarta och gilla/kommentera. Gilla är bara lokal state tills
+// aktivitetslista: avatar + namn, "Torsdag morgon", statistikrad,
+// ruttkarta (cardio) och gilla/kommentera. Gympass är dagens loggade
+// övningar grupperade till ETT inlägg (en user_workouts-rad per övning)
+// med övningar/set/volym som rad. Gilla är bara lokal state tills
 // delnings-backenden finns.
 // =============================================================================
 
@@ -19,23 +22,38 @@ export const TYPE_LABELS: Record<string, string> = {
   running: 'Löpning', cycling: 'Cykling', walking: 'Promenad', interval: 'Intervaller',
 }
 
-export interface FeedPost {
+interface BasePost {
   id: string
   authorName: string
   authorAvatar: string | null   // http-URL, emoji eller null (initialer)
   typeLabel: string
   createdAt: string
+}
+
+export interface CardioPost extends BasePost {
+  kind: 'cardio'
   distanceKm: number
   durationS: number
   route?: Array<[number, number]>
   workout: CardioWorkout        // hela passet — detaljvyn öppnas härifrån
 }
 
-/** Gör om ett sparat pass till ett flödesinlägg */
+export interface StrengthPost extends BasePost {
+  kind: 'strength'
+  exercises: number
+  sets: number
+  volumeKg: number
+  workouts: StrengthWorkout[]   // dagens övningsrader — detaljvyn öppnas härifrån
+}
+
+export type FeedPost = CardioPost | StrengthPost
+
+/** Gör om ett sparat cardio-pass till ett flödesinlägg */
 export function workoutToPost(
   w: CardioWorkout, authorName: string, authorAvatar: string | null,
-): FeedPost {
+): CardioPost {
   return {
+    kind: 'cardio',
     id: w.id,
     authorName,
     authorAvatar,
@@ -46,6 +64,47 @@ export function workoutToPost(
     route: w.data.route,
     workout: w,
   }
+}
+
+/** Grupperar styrkeloggar per träningsdag till gympass-inlägg */
+export function strengthToPosts(
+  workouts: StrengthWorkout[], authorName: string, authorAvatar: string | null,
+): StrengthPost[] {
+  const byDay = new Map<string, StrengthWorkout[]>()
+  for (const w of workouts) {
+    const day = w.data.workout_date ?? w.created_at.split('T')[0]
+    const list = byDay.get(day)
+    if (list) list.push(w)
+    else byDay.set(day, [w])
+  }
+  return Array.from(byDay.entries()).map(([day, dayWorkouts]) => {
+    let sets = 0, volumeKg = 0
+    for (const w of dayWorkouts) {
+      sets += w.data.sets.length
+      for (const set of w.data.sets) volumeKg += set.reps * set.weight_kg
+    }
+    // Senast loggade övningen får representera passets tidpunkt
+    const createdAt = dayWorkouts
+      .map(w => w.created_at)
+      .sort()[dayWorkouts.length - 1]
+    return {
+      kind: 'strength' as const,
+      id: `gym-${day}`,
+      authorName,
+      authorAvatar,
+      typeLabel: 'Gympass',
+      createdAt,
+      exercises: dayWorkouts.length,
+      sets,
+      volumeKg: Math.round(volumeKg),
+      workouts: dayWorkouts,
+    }
+  })
+}
+
+/** Cardio + gympass blandat, nyast först */
+export function mergePosts(posts: FeedPost[]): FeedPost[] {
+  return [...posts].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
 /** "idag" / "igår" / "5 dagar sedan" */
@@ -116,13 +175,13 @@ function Stat({ value, label }: { value: string; label: string }) {
 
 export function FeedWorkoutCard({ post, onOpen, onAvatarPress }: {
   post: FeedPost
-  onOpen: (w: CardioWorkout) => void
+  onOpen: (post: FeedPost) => void
   /** Utelämnas när avataren inte ska leda någonstans (t.ex. på atletens egen sida) */
   onAvatarPress?: () => void
 }) {
   // Gilla är än så länge bara lokal — sparas när delnings-backenden byggs
   const [liked, setLiked] = useState(false)
-  const route = post.route ?? []
+  const route = post.kind === 'cardio' ? post.route ?? [] : []
   const hasRoute = route.length > 1
 
   function toggleLike() {
@@ -138,7 +197,7 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress }: {
     <TouchableOpacity
       style={s.card}
       activeOpacity={0.92}
-      onPress={() => onOpen(post.workout)}
+      onPress={() => onOpen(post)}
       testID={`post-${post.id}`}
     >
       <View style={s.cardHeader}>
@@ -160,11 +219,19 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress }: {
       <View style={s.cardDivider} />
 
       <Text style={s.cardTitle}>{dayPartTitle(post.createdAt)}</Text>
-      <View style={s.statsRow}>
-        <Stat value={post.distanceKm.toFixed(2).replace('.', ',')} label="km" />
-        <Stat value={fmtTime(post.durationS)} label="tid" />
-        <Stat value={formatPace(post.distanceKm, post.durationS)} label="min/km" />
-      </View>
+      {post.kind === 'cardio' ? (
+        <View style={s.statsRow}>
+          <Stat value={post.distanceKm.toFixed(2).replace('.', ',')} label="km" />
+          <Stat value={fmtTime(post.durationS)} label="tid" />
+          <Stat value={formatPace(post.distanceKm, post.durationS)} label="min/km" />
+        </View>
+      ) : (
+        <View style={s.statsRow}>
+          <Stat value={String(post.exercises)} label="övningar" />
+          <Stat value={String(post.sets)} label="set" />
+          <Stat value={post.volumeKg.toLocaleString('sv-SE')} label="kg volym" />
+        </View>
+      )}
 
       {hasRoute && (
         <View style={s.mapWrap} pointerEvents="none">

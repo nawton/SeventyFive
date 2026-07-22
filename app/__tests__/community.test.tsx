@@ -17,6 +17,9 @@ jest.mock('@/services/profile', () => ({
 jest.mock('@/services/cardioWorkouts', () => ({
   getCardioWorkouts: jest.fn().mockResolvedValue([]),
 }))
+jest.mock('@/services/strengthWorkouts', () => ({
+  getStrengthWorkouts: jest.fn().mockResolvedValue([]),
+}))
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
   useFocusEffect: (cb: () => void) => {
@@ -29,12 +32,18 @@ jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   ImpactFeedbackStyle: { Light: 'light' },
 }))
-// Detaljvyn har ett eget testpaket — här räcker det att se att den öppnas
+// Detaljvyerna har egna testpaket — här räcker det att se att de öppnas
 jest.mock('@/components/CardioSummaryView', () => {
   const React = require('react')
   const { Text } = require('react-native')
   return { CardioSummaryView: ({ title }: { title: string }) =>
     React.createElement(Text, null, `summary:${title}`) }
+})
+jest.mock('@/components/stats/GymSummaryView', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  return { GymSummaryView: ({ name }: { name: string }) =>
+    React.createElement(Text, null, `gym:${name}`) }
 })
 
 const RUN = {
@@ -48,9 +57,31 @@ const RUN = {
   },
 }
 
+const GYM_DAY = [
+  {
+    id: 's1', name: 'Bänkpress', created_at: '2026-07-15T17:00:00.000Z',
+    data: {
+      category: 'strength', exercise_id: 'e1', exercise_name: 'Bänkpress',
+      sets: [{ reps: 8, weight_kg: 60 }, { reps: 8, weight_kg: 60 }],
+      workout_date: '2026-07-15',
+    },
+  },
+  {
+    id: 's2', name: 'Marklyft', created_at: '2026-07-15T17:20:00.000Z',
+    data: {
+      category: 'strength', exercise_id: 'e2', exercise_name: 'Marklyft',
+      sets: [{ reps: 5, weight_kg: 100 }],
+      workout_date: '2026-07-15',
+    },
+  },
+]
+
+const { getStrengthWorkouts } = require('@/services/strengthWorkouts')
+
 beforeEach(() => {
   jest.clearAllMocks()
   ;(getCardioWorkouts as jest.Mock).mockResolvedValue([RUN])
+  ;(getStrengthWorkouts as jest.Mock).mockResolvedValue([])
 })
 
 describe('Community', () => {
@@ -65,6 +96,18 @@ describe('Community', () => {
     // Gilla växlar hjärtat lokalt
     fireEvent.press(screen.getByTestId('like-w1'))
     expect(screen.getByText('icon:heart')).toBeOnTheScreen()
+  })
+
+  it('gympass visas i flödet: dagens övningar grupperade till ett kort', async () => {
+    ;(getStrengthWorkouts as jest.Mock).mockResolvedValue(GYM_DAY)
+    render(<CommunityScreen />)
+    await screen.findAllByText('Anton Wretenberg')   // löprundan + gympasset
+    expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
+    expect(screen.getByText('övningar')).toBeOnTheScreen()
+    expect(screen.getByText('3')).toBeOnTheScreen()            // 2 + 1 set
+    expect(screen.getByText((2 * 8 * 60 + 5 * 100).toLocaleString('sv-SE'))).toBeOnTheScreen()
+    fireEvent.press(screen.getByTestId('post-gym-2026-07-15'))
+    expect(screen.getByText('gym:Gympass')).toBeOnTheScreen()
   })
 
   it('tryck på kortet öppnar samma passdetaljvy som statistiken', async () => {

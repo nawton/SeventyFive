@@ -6,11 +6,15 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
+import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
-import { FeedWorkoutCard, workoutToPost, type FeedPost } from '@/components/FeedWorkoutCard'
+import { GymSummaryView } from '@/components/stats/GymSummaryView'
+import {
+  FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
+} from '@/components/FeedWorkoutCard'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -47,7 +51,8 @@ export default function CommunityScreen() {
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [unit, setUnit] = useState<UnitSystem>('metric')
-  const [selectedWorkout, setSelectedWorkout] = useState<CardioWorkout | null>(null)
+  const [allStrength, setAllStrength] = useState<StrengthWorkout[]>([])
+  const [selected, setSelected] = useState<FeedPost | null>(null)
   const onScroll = useTabBarShrinkOnScroll()
 
   useFocusEffect(useCallback(() => {
@@ -56,14 +61,20 @@ export default function CommunityScreen() {
     async function loadFeed() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user || !alive) return
-      const [profile, workouts] = await Promise.all([
+      const [profile, cardio, strength] = await Promise.all([
         getProfile(session.user.id).catch(() => null),
         getCardioWorkouts(session.user.id, 20).catch(() => [] as CardioWorkout[]),
+        getStrengthWorkouts(session.user.id, 200).catch(() => [] as StrengthWorkout[]),
       ])
       if (!alive) return
       const authorName = profile?.name || session.user.email?.split('@')[0] || 'Jag'
-      setAvatarUrl(profile?.avatar_url ?? null)
-      setPosts(workouts.map(w => workoutToPost(w, authorName, profile?.avatar_url ?? null)))
+      const avatar = profile?.avatar_url ?? null
+      setAvatarUrl(avatar)
+      setAllStrength(strength)
+      setPosts(mergePosts([
+        ...cardio.map(w => workoutToPost(w, authorName, avatar)),
+        ...strengthToPosts(strength, authorName, avatar),
+      ]).slice(0, 30))
       setLoaded(true)
     }
     loadFeed()
@@ -104,7 +115,7 @@ export default function CommunityScreen() {
           renderItem={({ item }) => (
             <FeedWorkoutCard
               post={item}
-              onOpen={setSelectedWorkout}
+              onOpen={setSelected}
               onAvatarPress={() => router.push('/(app)/athlete' as never)}
             />
           )}
@@ -122,16 +133,26 @@ export default function CommunityScreen() {
         />
       )}
 
-      {/* Samma passdetaljvy som statistiken — utan radering härifrån */}
-      <Modal visible={!!selectedWorkout} animationType="slide" onRequestClose={() => setSelectedWorkout(null)}>
-        {selectedWorkout && (
+      {/* Samma detaljvyer som statistiken — utan radering härifrån */}
+      <Modal visible={!!selected} animationType="slide" onRequestClose={() => setSelected(null)}>
+        {selected?.kind === 'cardio' && (
           <CardioSummaryView
-            workout={selectedWorkout}
-            title={selectedWorkout.name}
-            dateLabel={new Date(selectedWorkout.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            workout={selected.workout}
+            title={selected.workout.name}
+            dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
             avatarUrl={avatarUrl}
             unit={unit}
-            onClose={() => setSelectedWorkout(null)}
+            onClose={() => setSelected(null)}
+          />
+        )}
+        {selected?.kind === 'strength' && (
+          <GymSummaryView
+            name="Gympass"
+            dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            logged={selected.workouts}
+            plannedNames={[]}
+            allWorkouts={allStrength}
+            onClose={() => setSelected(null)}
           />
         )}
       </Modal>
