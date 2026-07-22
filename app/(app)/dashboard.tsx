@@ -52,6 +52,14 @@ import {
   type TaskDetails,
 } from '@/services/dailyLog'
 import { hasPhotoForDay } from '@/services/progressPhotos'
+import { getWorkoutSessions, getCompletedSessionIds, sessionActiveOn, type WorkoutSession } from '@/services/workoutSchedule'
+import { getStreak } from '@/services/dailyLog'
+import { getSocialNotificationCount } from '@/services/social'
+import { getIncomingRequestCount } from '@/services/follows'
+import { getNotifSeenAt, getRaceDate } from '@/lib/prefs'
+import { isoDate, todayMidnight } from '@/lib/scheduleDates'
+import { weekdayOf } from '@/lib/date'
+import { ORANGE, TEXT_SECONDARY, CARDIO_BLUE, useCardChrome } from '@/lib/theme'
 import { createCustomRule, deleteCustomRule } from '@/services/rules'
 import { FailModal } from '@/components/FailModal'
 import { ReadingLogModal } from '@/components/ReadingLogModal'
@@ -195,6 +203,14 @@ export default function DashboardScreen() {
   const [readingTask, setReadingTask] = useState<TaskItem | null>(null)
   const [loadError, setLoadError]   = useState(false)
   const [userId, setUserId]         = useState<string | null>(null)
+  // Dagens pass, streak och social puls — knyter hemskärmen till resten av appen
+  const [todaySessions, setTodaySessions] = useState<WorkoutSession[]>([])
+  const [todayDoneIds, setTodayDoneIds]   = useState<string[]>([])
+  const [hasAnySchedule, setHasAnySchedule] = useState(false)
+  const [streak, setStreak]               = useState(0)
+  const [pulseCount, setPulseCount]       = useState(0)
+  const [pulseRequests, setPulseRequests] = useState(0)
+  const chrome = useCardChrome()
 
   // Add-rule sheet (UI, animation och gest bor i AddRuleSheet-komponenten)
   const [addRuleOpen, setAddRuleOpen]   = useState(false)
@@ -283,6 +299,39 @@ export default function DashboardScreen() {
 
       const day = calculateCurrentDay(active.start_date)
       setCurrentDay(day)
+
+      // Dagens pass + streak + social puls — fel här får inte fälla hemskärmen
+      Promise.allSettled([
+        getWorkoutSessions(user.id),
+        getCompletedSessionIds(user.id, isoDate(todayMidnight())),
+        getRaceDate(),
+        getStreak(active.id),
+        getNotifSeenAt().then(seen => getSocialNotificationCount(seen)),
+        getIncomingRequestCount(),
+      ]).then(([sess, done, race, st, social, reqs]) => {
+        if (st.status === 'fulfilled') setStreak(st.value)
+        if (social.status === 'fulfilled') setPulseCount(social.value)
+        if (reqs.status === 'fulfilled') setPulseRequests(reqs.value)
+        if (sess.status !== 'fulfilled') return
+        const all = sess.value
+        setHasAnySchedule(all.some(x => x.weekdays.length > 0 && !x.name.startsWith('SKIP:')))
+        const today = todayMidnight()
+        const dateStr = isoDate(today)
+        const wd = weekdayOf(today)
+        const raceDate = race.status === 'fulfilled' ? race.value : null
+        const skipPrefix = `SKIP:${dateStr}:`
+        const skips = all.filter(x => x.name.startsWith(skipPrefix)).map(x => x.name.slice(skipPrefix.length))
+        // Samma dagfilter som schemats dagsidor
+        setTodaySessions(all.filter(x => {
+          if (x.name.startsWith('SKIP:')) return false
+          if (skips.includes(x.id)) return false
+          return (
+            (x.weekdays.includes(wd) && sessionActiveOn(x, dateStr, raceDate)) ||
+            (x.weekdays.length === 0 && x.name.startsWith(`ONCE:${dateStr}:`))
+          )
+        }))
+        setTodayDoneIds(done.status === 'fulfilled' ? done.value : [])
+      })
 
       const log = await getOrCreateTodayLog(active.id, user.id, day)
       setDailyLogId(log.id)
@@ -533,6 +582,14 @@ export default function DashboardScreen() {
             <Text style={s.subtitle}>{getGreetingSubtitle(new Date().getHours(), completedCount, tasks.length, currentDay)}</Text>
           </View>
           <TouchableOpacity
+            style={s.streakChip}
+            onPress={() => router.push('/(app)/streak')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="flame" size={15} color={ORANGE} />
+            <Text style={s.streakChipText}>{streak}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={s.avatar}
             onPress={() => router.push('/(app)/profile')}
             activeOpacity={0.8}
@@ -573,6 +630,12 @@ export default function DashboardScreen() {
               <View style={s.heroBar}>
                 <View style={[s.heroBarFill, { width: `${challengePct}%` as any }]} />
               </View>
+              <TouchableOpacity style={s.heroPointsRow} onPress={() => router.push('/records')} activeOpacity={0.7} hitSlop={6}>
+                <Ionicons name="ribbon-outline" size={13} color={heroShadow} />
+                <Text style={[s.heroPoints, { color: heroShadow }]}>
+                  {allDone ? '+50 p idag · Medaljer' : 'Klara dagen → +50 p'}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             <View style={s.heroRight}>
@@ -580,6 +643,66 @@ export default function DashboardScreen() {
             </View>
           </LinearGradient>
         </Animated.View>
+
+        {/* ── Social puls — visas bara när något faktiskt hänt ── */}
+        {(pulseCount > 0 || pulseRequests > 0) && (
+          <TouchableOpacity style={s.pulseRow} onPress={() => router.push('/(app)/notifications')} activeOpacity={0.8}>
+            <Ionicons name="notifications" size={16} color={ACCENT} />
+            <Text style={s.pulseText} numberOfLines={1}>
+              {pulseCount > 0 ? `${pulseCount} ${pulseCount === 1 ? 'ny händelse' : 'nya händelser'}` : ''}
+              {pulseCount > 0 && pulseRequests > 0 ? ' · ' : ''}
+              {pulseRequests > 0 ? `${pulseRequests} ${pulseRequests === 1 ? 'vänförfrågan' : 'vänförfrågningar'}` : ''}
+            </Text>
+            <Ionicons name="chevron-forward" size={15} color={TEXT_SECONDARY} />
+          </TouchableOpacity>
+        )}
+
+        {/* ── Dagens pass — schemats innehåll rakt på hemskärmen ── */}
+        {hasAnySchedule && (
+          <>
+            <View style={s.sectionRow}>
+              <Text style={s.sectionTitle}>DAGENS PASS</Text>
+            </View>
+            <View style={[s.todayCard, chrome]}>
+              {todaySessions.length === 0 ? (
+                <View style={s.todayRow}>
+                  <View style={s.todayIcon}>
+                    <Ionicons name="moon-outline" size={19} color={TEXT_SECONDARY} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.todayName}>Vilodag</Text>
+                    <Text style={s.todaySub}>Inga pass planerade idag</Text>
+                  </View>
+                </View>
+              ) : todaySessions.map((sess, i) => {
+                const done = todayDoneIds.includes(sess.id)
+                const isCardio = sess.session_type === 'cardio'
+                const name = sess.name.startsWith('ONCE:') ? sess.name.split(':').slice(2).join(':') : sess.name
+                return (
+                  <TouchableOpacity
+                    key={sess.id}
+                    style={[s.todayRow, i > 0 && s.todayRowBorder]}
+                    onPress={() => router.push('/(app)/add')}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[s.todayIcon, isCardio && { backgroundColor: 'rgba(63,167,255,0.14)' }]}>
+                      <Ionicons name={isCardio ? 'fitness-outline' : 'barbell-outline'} size={19} color={isCardio ? CARDIO_BLUE : ACCENT} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.todayName, done && s.todayNameDone]} numberOfLines={1}>{name}</Text>
+                      <Text style={s.todaySub}>
+                        {isCardio ? 'Cardiopass' : `${sess.exercises.length} övningar`}
+                      </Text>
+                    </View>
+                    {done
+                      ? <Ionicons name="checkmark-circle" size={22} color={GREEN_DONE} />
+                      : <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />}
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          </>
+        )}
 
         {/* ── Tasks section header ── */}
         <View style={s.sectionRow}>
@@ -771,7 +894,43 @@ export default function DashboardScreen() {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
+const GREEN_DONE = '#2EAF62'
+
 const s = StyleSheet.create({
+  streakChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: accentAlpha('12'),
+    borderRadius: 15, paddingHorizontal: 10, paddingVertical: 6,
+    marginRight: 10,
+  },
+  streakChipText: { color: TEXT_PRIMARY, fontSize: 14, fontFamily: NUM_FONT },
+
+  heroPointsRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
+  heroPoints: { fontSize: 12, fontWeight: '700' },
+
+  pulseRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: accentAlpha('12'),
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11,
+    marginTop: 14,
+  },
+  pulseText: { flex: 1, color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
+
+  todayCard: {
+    backgroundColor: CARD_BG, borderRadius: 18,
+    paddingHorizontal: 14,
+  },
+  todayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
+  todayRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.25)' },
+  todayIcon: {
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: accentAlpha('14'),
+    alignItems: 'center', justifyContent: 'center',
+  },
+  todayName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
+  todayNameDone: { color: TEXT_SECONDARY, textDecorationLine: 'line-through' },
+  todaySub: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+
   screen:   { flex: 1, backgroundColor: SCENE_BG },
   centered: { flex: 1, backgroundColor: SCENE_BG, alignItems: 'center', justifyContent: 'center', gap: 12 },
   errorText: { color: '#4A4A50', fontSize: 14 },
