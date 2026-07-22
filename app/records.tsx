@@ -823,7 +823,7 @@ const s = StyleSheet.create({
     marginHorizontal: 12, marginTop: 4,
   },
   tierTrack: {
-    height: 6, backgroundColor: 'rgba(255,255,255,0.08)',
+    height: 6, backgroundColor: 'rgba(128,128,128,0.22)',
     borderRadius: 3, overflow: 'hidden',
   },
   tierFill: { height: '100%', backgroundColor: GOLD, borderRadius: 3 },
@@ -873,7 +873,7 @@ const s = StyleSheet.create({
   earnCardSub: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   earnTrack: {
     height: 3, borderRadius: 2, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 12,
+    backgroundColor: 'rgba(128,128,128,0.22)', marginBottom: 12,
   },
   earnIndicator: { width: '50%', height: '100%', borderRadius: 2 },
 

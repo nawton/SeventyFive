@@ -1,4 +1,4 @@
-import { View, Image, Text, StyleSheet, type ImageSourcePropType } from 'react-native'
+import { View, Image, Text, StyleSheet, type ImageSourcePropType , useColorScheme } from 'react-native'
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { Ionicons } from '@/components/Icon'
 
@@ -20,6 +20,8 @@ const TIERS: Record<MedalTier, { rimFrom: string; rimTo: string; panelFrom: stri
 }
 
 const LOCKED = { rimFrom: '#3A3A41', rimTo: '#222226', panelFrom: '#2C2C31', panelTo: '#1B1B1F', icon: 'rgba(255,255,255,0.16)', glow: 'transparent' }
+// Ljust läge: mörka låsta hexar blir svarta plumpar på vit botten
+const LOCKED_LIGHT = { rimFrom: '#E8E9EE', rimTo: '#C9CBD4', panelFrom: '#DCDEE5', panelTo: '#C2C5CF', icon: 'rgba(0,0,0,0.22)', glow: 'transparent' }
 
 /** Path för en spetsig hexagon med rundade hörn, centrerad i size×size. */
 function roundedHexPath(size: number, inset: number, corner: number): string {
@@ -63,7 +65,8 @@ export function MedalBadge({
   /** Egen medaljbild (PNG) — ersätter SVG-hexagonen när den finns */
   imageSource?: ImageSourcePropType
 }) {
-  const c = unlocked ? TIERS[tier] : LOCKED
+  const light = useColorScheme() === 'light'
+  const c = unlocked ? TIERS[tier] : (light ? LOCKED_LIGHT : LOCKED)
   const gid = `medal-${tier}-${unlocked ? 'on' : 'off'}-${size}`
   const corner = size * 0.12
 
@@ -71,7 +74,7 @@ export function MedalBadge({
     return (
       <Image
         source={imageSource}
-        style={{ width: size, height: size, opacity: unlocked ? 1 : 0.3 }}
+        style={{ width: size, height: size, opacity: unlocked ? 1 : (light ? 0.85 : 0.3) }}
         resizeMode="contain"
       />
     )
