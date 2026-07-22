@@ -89,7 +89,7 @@ function Avatar({ url, fallback, size }: { url: string | null; fallback: string;
 export function AthleteOverview({
   isOwn, name, avatarUrl, workouts, gymCount, counts, unit,
   followStatus, statsUnlocked, onToggleFollow, onOpenActivities, onPressHero, onPressFollows,
-  streak, onPressStreak,
+  streak, onPressStreak, blocked,
 }: {
   isOwn: boolean
   name: string
@@ -112,6 +112,8 @@ export function AthleteOverview({
   /** Egna profilen: dagars streak ersätter Totalt km (statistiken har egen flik) */
   streak?: number
   onPressStreak?: () => void
+  /** Jag har blockerat personen — knappen blir Avblockera, allt är låst */
+  blocked?: boolean
 }) {
   const { width: screenW } = useWindowDimensions()
   const [type, setType] = useState<CardioType>('running')
@@ -225,13 +227,20 @@ export function AthleteOverview({
           skickats ännu. */}
       {!isOwn && (
         <TouchableOpacity
-          style={[s.followBtn, followStatus === 'none' && s.followBtnInvite]}
+          style={[
+            s.followBtn,
+            blocked ? s.followBtnBlocked : followStatus === 'none' && s.followBtnInvite,
+          ]}
           onPress={onToggleFollow}
           activeOpacity={0.8}
           testID="athleteFollow"
         >
-          <Text style={[s.followBtnText, followStatus === 'none' && s.followBtnTextInvite]}>
-            {followStatus === 'accepted' ? 'Följer'
+          <Text style={[
+            s.followBtnText,
+            blocked ? s.followBtnTextBlocked : followStatus === 'none' && s.followBtnTextInvite,
+          ]}>
+            {blocked ? 'Avblockera'
+              : followStatus === 'accepted' ? 'Följer'
               : followStatus === 'pending' ? 'Förfrågan skickad' : 'Följ'}
           </Text>
         </TouchableOpacity>
@@ -243,10 +252,18 @@ export function AthleteOverview({
           ALDRIG för andra, oavsett godkännande. ── */}
       {!isOwn && !statsUnlocked && (
         <View style={s.otherEmpty}>
-          <Ionicons name="lock-closed-outline" size={38} color={TEXT_SECONDARY} />
-          <Text style={s.otherEmptyTitle}>Statistiken är privat</Text>
+          <Ionicons
+            name={blocked ? 'ban-outline' : 'lock-closed-outline'}
+            size={38}
+            color={TEXT_SECONDARY}
+          />
+          <Text style={s.otherEmptyTitle}>
+            {blocked ? 'Blockerad' : 'Statistiken är privat'}
+          </Text>
           <Text style={s.otherEmptyBody}>
-            {followStatus === 'pending'
+            {blocked
+              ? `Du har blockerat ${name.split(' ')[0] || 'personen'}. Ni kan inte följa eller se varandra förrän du avblockerar.`
+              : followStatus === 'pending'
               ? `Väntar på godkännande — när ${name.split(' ')[0] || 'personen'} godkänner din förfrågan ser du statistiken här.`
               : `Skicka en vänförfrågan för att se ${name.split(' ')[0] || 'personens'} statistik och aktiviteter.`}
           </Text>
@@ -355,8 +372,10 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)', alignItems: 'center',
   },
   followBtnInvite: { borderColor: ORANGE },
+  followBtnBlocked: { borderColor: '#FF3B4A88' },
   followBtnText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   followBtnTextInvite: { color: ORANGE },
+  followBtnTextBlocked: { color: '#FF3B4A' },
 
   chipsRow: { flexDirection: 'row', gap: 8, marginTop: 26 },
   chip: {

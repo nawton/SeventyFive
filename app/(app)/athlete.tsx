@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { View, StyleSheet, ScrollView } from 'react-native'
+import { View, StyleSheet, ScrollView, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
@@ -13,6 +13,7 @@ import {
   getFollowCounts, getFollowStatus, follow, unfollow, subscribeToFollows,
   type FollowCounts, type FollowStatus,
 } from '@/services/follows'
+import { blockUser, unblockUser, isBlocked } from '@/services/blocks'
 import { strengthToPosts } from '@/components/FeedWorkoutCard'
 import { AthleteOverview } from '@/components/AthleteOverview'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -46,8 +47,9 @@ export default function AthleteScreen() {
   // räknare. Uppdateras optimistiskt vid tryck och live via realtime.
   const [followStatus, setFollowStatus] = useState<FollowStatus>('none')
   const [counts, setCounts] = useState<FollowCounts>({ followers: 0, following: 0 })
+  const [blocked, setBlocked] = useState(false)
 
-  const statsUnlocked = isOwn || followStatus === 'accepted'
+  const statsUnlocked = !blocked && (isOwn || followStatus === 'accepted')
 
   useFocusEffect(useCallback(() => {
     let alive = true
@@ -75,6 +77,8 @@ export default function AthleteScreen() {
         setWorkouts([])
         setGymCount(0)
         setFollowStatus('none')
+        setBlocked(false)
+        isBlocked(otherId!).then(v => { if (alive) setBlocked(v) }).catch(() => {})
         const status = await getFollowStatus(otherId!).catch(() => 'none' as FollowStatus)
         if (!alive) return
         setFollowStatus(status)
@@ -110,8 +114,38 @@ export default function AthleteScreen() {
     return () => { alive = false; unsubscribe?.() }
   }, [otherId, paramName, paramAvatar]))
 
+  // Avblockera direkt från knappen; blockera via ⋯-menyn med bekräftelse
+  function handleBlockToggle() {
+    if (!otherId) return
+    if (blocked) {
+      Haptics.selectionAsync()
+      setBlocked(false)
+      unblockUser(otherId).catch(() => setBlocked(true))
+      return
+    }
+    Alert.alert(
+      `Blockera ${name.split(' ')[0] || 'användaren'}?`,
+      'Ni slutar följa varandra, kan inte skicka nya förfrågningar och hittar inte varandra i sökningen. Personen meddelas inte.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Blockera',
+          style: 'destructive',
+          onPress: () => {
+            setBlocked(true)
+            setFollowStatus('none')
+            setWorkouts([])
+            setGymCount(0)
+            blockUser(otherId).catch(() => setBlocked(false))
+          },
+        },
+      ]
+    )
+  }
+
   function toggleFollow() {
     if (isOwn || !otherId) return   // man kan inte följa sig själv
+    if (blocked) { handleBlockToggle(); return }   // knappen är Avblockera
     Haptics.selectionAsync()
     const prev = followStatus
     if (prev === 'none') {
@@ -158,7 +192,18 @@ export default function AthleteScreen() {
           onPress={() => router.back()}
           fallbackStyle={s.iconBtnFallback}
         />
-        <View style={{ width: 40 }} />
+        {/* ⋯-menyn: blockera/avblockera — bara på andras profiler */}
+        {!isOwn ? (
+          <GlassCircleButton
+            icon="ellipsis-horizontal"
+            size={40}
+            iconColor={TEXT_PRIMARY}
+            onPress={handleBlockToggle}
+            fallbackStyle={s.iconBtnFallback}
+          />
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -172,6 +217,7 @@ export default function AthleteScreen() {
           unit={unit}
           followStatus={followStatus}
           statsUnlocked={statsUnlocked}
+          blocked={blocked}
           onToggleFollow={toggleFollow}
           // Tomma params när det är egna — skriver över kvarliggande
           onOpenActivities={() => router.push({

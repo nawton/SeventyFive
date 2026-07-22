@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react-native'
+import { render, screen, fireEvent, within, act } from '@testing-library/react-native'
 import AthleteScreen, { activeLabel, buildWeekBuckets } from '../(app)/athlete'
 import type { CardioWorkout } from '@/services/cardioWorkouts'
 
@@ -25,6 +25,11 @@ jest.mock('@/services/challenge', () => ({
 }))
 jest.mock('@/services/dailyLog', () => ({
   getStreak: jest.fn().mockResolvedValue(4),
+}))
+jest.mock('@/services/blocks', () => ({
+  blockUser: jest.fn().mockResolvedValue(undefined),
+  unblockUser: jest.fn().mockResolvedValue(undefined),
+  isBlocked: jest.fn().mockResolvedValue(false),
 }))
 jest.mock('@/services/follows', () => ({
   getFollowCounts: jest.fn().mockResolvedValue({ followers: 0, following: 0 }),
@@ -82,6 +87,8 @@ beforeEach(() => {
   ;(follows.getFollowStatus as jest.Mock).mockResolvedValue('none')
   ;(follows.getFollowCounts as jest.Mock).mockResolvedValue({ followers: 0, following: 0 })
   ;(follows.subscribeToFollows as jest.Mock).mockReturnValue(() => {})
+  const blocks = require('@/services/blocks')
+  ;(blocks.isBlocked as jest.Mock).mockResolvedValue(false)
 })
 
 describe('Atletprofil', () => {
@@ -233,6 +240,33 @@ describe('Atletprofil', () => {
     render(<AthleteScreen />)
     await screen.findByText('Nawid')
     expect(await screen.findByText('Följ')).toBeOnTheScreen()
+  })
+
+  it('⋯-menyn blockerar efter bekräftelse — knappen blir Avblockera', async () => {
+    const { Alert } = require('react-native')
+    const { blockUser } = require('@/services/blocks')
+    const alertSpy = jest.spyOn(Alert, 'alert')
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    render(<AthleteScreen />)
+    await screen.findByText('Nawid')
+    fireEvent.press(screen.getByText('glassbtn:ellipsis-horizontal'))
+    expect(alertSpy).toHaveBeenCalled()
+    const buttons = alertSpy.mock.calls[0][2] as Array<{ text: string; onPress?: () => void }>
+    act(() => { buttons.find(b => b.text === 'Blockera')?.onPress?.() })
+    expect(blockUser).toHaveBeenCalledWith('u2')
+    expect(within(screen.getByTestId('athleteFollow')).getByText('Avblockera')).toBeOnTheScreen()
+    expect(screen.getByText('Blockerad')).toBeOnTheScreen()
+  })
+
+  it('blockerad profil: knappen avblockerar direkt', async () => {
+    const { isBlocked, unblockUser } = require('@/services/blocks')
+    ;(isBlocked as jest.Mock).mockResolvedValue(true)
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    render(<AthleteScreen />)
+    expect(await screen.findByText('Blockerad')).toBeOnTheScreen()
+    fireEvent.press(screen.getByTestId('athleteFollow'))
+    expect(unblockUser).toHaveBeenCalledWith('u2')
+    expect(within(screen.getByTestId('athleteFollow')).getByText('Följ')).toBeOnTheScreen()
   })
 
   it('activeLabel: idag, igår, dagar sedan och tomt', () => {

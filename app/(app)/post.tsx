@@ -225,32 +225,41 @@ export default function PostScreen() {
               {meta ? `  ·  ${meta}` : ''}
             </Text>
 
-            {/* Gilla-raden: hjärta + antal + de som gillat */}
+            {/* Gilla-raden: hjärtat togglar, räknaren och avatarerna öppnar
+                gillarlistan */}
             <View style={s.likeRow}>
               <TouchableOpacity
                 onPress={toggleLike}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 testID="postLike"
-                style={s.likeBtn}
               >
                 <Ionicons
                   name={likedByMe ? 'heart' : 'heart-outline'}
                   size={26}
                   color={likedByMe ? '#FF3B4A' : TEXT_PRIMARY}
                 />
-                {likes > 0 && <Text style={s.likeCount}>{likes}</Text>}
               </TouchableOpacity>
-              <View style={s.likerAvatars}>
-                {likers.slice(0, 5).map((p, i) => (
-                  <View key={p.id} style={[s.likerAvatar, i > 0 && { marginLeft: -10 }]}>
-                    <FeedAvatar
-                      url={p.avatar_url}
-                      fallback={(p.name ?? '?').charAt(0).toUpperCase()}
-                      size={28}
-                    />
+              {likes > 0 && (
+                <TouchableOpacity
+                  style={s.likeBtn}
+                  onPress={() => setLikersFor({ count: likes, list: likers })}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  testID="postLikers"
+                >
+                  <Text style={s.likeCount}>{likes}</Text>
+                  <View style={s.likerAvatars}>
+                    {likers.slice(0, 5).map((p, i) => (
+                      <View key={p.id} style={[s.likerAvatar, i > 0 && { marginLeft: -10 }]}>
+                        <FeedAvatar
+                          url={p.avatar_url}
+                          fallback={(p.name ?? '?').charAt(0).toUpperCase()}
+                          size={28}
+                        />
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </View>
+                </TouchableOpacity>
+              )}
             </View>
 
             <View style={s.divider} />
@@ -410,8 +419,8 @@ const s = StyleSheet.create({
   title: { color: TEXT_PRIMARY, fontSize: 21, fontWeight: '800' },
   metaRow: { color: TEXT_SECONDARY, fontSize: 14, marginTop: 6 },
 
-  likeRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 16 },
-  likeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  likeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
+  likeBtn: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   likeCount: { color: TEXT_PRIMARY, fontSize: 16, fontFamily: NUM_FONT },
   likerAvatars: { flexDirection: 'row', alignItems: 'center' },
   likerAvatar: {

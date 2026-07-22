@@ -133,6 +133,14 @@ describe('Diskussion', () => {
     expect(screen.getByText('1 gillamarkering')).toBeOnTheScreen()
   })
 
+  it('passets gillarrad öppnar gillarlistan', async () => {
+    render(<PostScreen />)
+    await screen.findByText('2')                       // gillaräknaren laddad
+    fireEvent.press(screen.getByTestId('postLikers'))
+    expect(await screen.findByTestId('likersClose')).toBeOnTheScreen()
+    expect(screen.getByText('Malin')).toBeOnTheScreen()   // ur likers-mocken
+  })
+
   it('gillamarkeringstexten öppnar gillarlistan', async () => {
     const { getCommentLikers } = require('@/services/social')
     ;(getCommentLikers as jest.Mock).mockResolvedValue([
