@@ -12,7 +12,6 @@ import { setBodyWeightKg } from '@/lib/prefs'
 import { splitName, combineName } from '@/lib/profileName'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD, LIQUID_GLASS } from '@/lib/glass'
-import { GlassPill } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { Picker } from '@react-native-picker/picker'
@@ -69,51 +68,45 @@ function Row({ label, value, onPress, locked, chevron = true }: {
   )
 }
 
-/** Flytande Done-knapp som Apples inbyggda: rent otonat liquid glass,
-    engelsk etikett, dragbar (håll och dra — fjädrar tillbaka) */
-function DonePill({ onPress, testID }: { onPress: () => void; testID?: string }) {
+/** Flytande Done-knapp som Apples inbyggda: rent liquid glass (ingen
+    tintColor — "transparent" släcker glasmaterialet helt), engelsk etikett,
+    vanligt tryck utan drag. Pressable istället för GlassPill: gesture-
+    handler når inte tangentbordets fönster, och draggesten hörde aldrig
+    hemma här. */
+function DoneButton({ onPress, testID }: { onPress: () => void; testID?: string }) {
   return (
-    <GlassPill
+    <Pressable
+      testID={testID}
       onPress={onPress}
-      draggable
-      style={styles.klarPill}
-      tint="transparent"
-      fallbackStyle={styles.klarFallback}
+      style={({ pressed }) => [
+        styles.klarPill,
+        !LIQUID_GLASS && styles.klarFallback,
+        pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] },
+      ]}
     >
-      <Text testID={testID} style={styles.klarPillText}>Done</Text>
-    </GlassPill>
+      {LIQUID_GLASS && (
+        <GlassView
+          glassEffectStyle="regular"
+          colorScheme="dark"
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+      )}
+      <Text style={styles.klarPillText}>Done</Text>
+    </Pressable>
   )
 }
 
 /** Done ovanför tangentbordet. Varje namnfält får en EGEN accessory —
     delar två fält samma nativeID tappar iOS pillen när fokus flyttas
-    till det andra fältet. Pressable istället för GlassPill eftersom
-    gesture-handler inte når tangentbordets fönster. */
+    till det andra fältet. */
 function DoneAccessory({ nativeID, testID, onPress }: {
   nativeID: string; testID: string; onPress: () => void
 }) {
   return (
     <InputAccessoryView nativeID={nativeID} backgroundColor="transparent">
       <View style={styles.accessoryBar} pointerEvents="box-none">
-        <Pressable
-          testID={testID}
-          onPress={onPress}
-          style={({ pressed }) => [
-            styles.klarPill, styles.accessoryPill,
-            !LIQUID_GLASS && styles.klarFallback,
-            pressed && { opacity: 0.7 },
-          ]}
-        >
-          {LIQUID_GLASS && (
-            <GlassView
-              glassEffectStyle="regular"
-              colorScheme="dark"
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
-          )}
-          <Text style={styles.klarPillText}>Done</Text>
-        </Pressable>
+        <DoneButton testID={testID} onPress={onPress} />
       </View>
     </InputAccessoryView>
   )
@@ -225,6 +218,15 @@ export default function AccountScreen() {
     setSheet(null)
   }
 
+  /** Panelen committar ALLTID — Done, tryck utanför och Android-back gör
+      samma sak. Att snurra ett hjul och råka trycka utanför ska aldrig
+      kasta bort valet. */
+  function commitSheet() {
+    if (sheet === 'birth') saveBirth()
+    else if (sheet === 'weight') saveWeight()
+    else if (sheet === 'height') saveHeight()
+  }
+
   const birthLabel  = birthDate ?? 'Ej angivet'
   const weightLabel = weightKg != null ? `${String(weightKg).replace('.', ',')} kg` : 'Ej specificerad'
   const heightLabel = heightCm != null ? `${heightCm} cm` : 'Ej specificerad'
@@ -290,15 +292,11 @@ export default function AccountScreen() {
         </View>
       </ScrollView>
 
-      {/* ── Flytande hjulpanel med Klar-pill (som referensen) — Klar committar,
-          tryck utanför stänger utan att spara ── */}
-      <Modal visible={sheet !== null} transparent animationType="fade" onRequestClose={() => setSheet(null)}>
-        <Pressable testID="sheetOverlay" style={styles.overlay} onPress={() => setSheet(null)}>
+      {/* ── Flytande hjulpanel med Done-pill — allt committar valet ── */}
+      <Modal visible={sheet !== null} transparent animationType="fade" onRequestClose={commitSheet}>
+        <Pressable testID="sheetOverlay" style={styles.overlay} onPress={commitSheet}>
           <View style={styles.floatWrap} pointerEvents="box-none">
-            <DonePill
-              testID="panelKlar"
-              onPress={sheet === 'birth' ? saveBirth : sheet === 'weight' ? saveWeight : saveHeight}
-            />
+            <DoneButton testID="panelKlar" onPress={commitSheet} />
             <Pressable style={styles.pickerPanel} onPress={() => {}}>
               {sheet === 'birth' && (
                 <DateTimePicker
@@ -415,8 +413,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   accessoryBar: { alignItems: 'flex-end', paddingHorizontal: 14, paddingVertical: 10 },
-  accessoryPill: { overflow: 'hidden' },
-  klarPill: { borderRadius: 24, paddingHorizontal: 26, paddingVertical: 12 },
+  klarPill: {
+    borderRadius: 24, paddingHorizontal: 26, paddingVertical: 12,
+    overflow: 'hidden',   // klipper glasvyn till pillformen
+  },
   klarFallback: {
     backgroundColor: 'rgba(40,40,44,0.96)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',

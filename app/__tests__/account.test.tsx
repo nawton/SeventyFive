@@ -83,12 +83,13 @@ describe('Profilinställningar', () => {
       expect(updateProfile).toHaveBeenCalledWith('u1', { height_cm: 182 }))
   })
 
-  it('tryck utanför panelen stänger utan att spara', async () => {
+  it('tryck utanför panelen committar också — ett snurrat hjul får inte tappas', async () => {
     render(<AccountScreen />)
     fireEvent.press(await screen.findByText('Vikt'))
     fireEvent.press(screen.getByTestId('sheetOverlay'))
-    await waitFor(() => expect(screen.queryByTestId('panelKlar')).not.toBeOnTheScreen())
-    expect(updateProfile).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(updateProfile).toHaveBeenCalledWith('u1', { weight_kg: 75.5 }))
+    expect(screen.queryByTestId('panelKlar')).not.toBeOnTheScreen()
   })
 
   it('namnen redigeras direkt i raden — returknappen sparar ihop dem', async () => {
