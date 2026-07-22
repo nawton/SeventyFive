@@ -257,15 +257,6 @@ export default function GeneralScreen() {
           />
         </Section>
 
-        <Section title="Anpassning">
-          <SettingRow
-            icon="color-palette-outline"
-            label="Anpassning"
-            onPress={() => router.push('/(app)/anpassning' as any)}
-            last
-          />
-        </Section>
-
         <Section title="Notiser">
           <SettingRow
             icon="notifications-outline"

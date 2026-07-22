@@ -257,7 +257,7 @@ export default function EditProfileScreen() {
                   <Ionicons name="options-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
                 <Text style={styles.rowLabel}>Anpassning</Text>
-                <Text style={styles.rowValue} numberOfLines={1}>Karta, röst, enheter</Text>
+                <View style={{ flex: 1 }} />
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
 
@@ -273,7 +273,7 @@ export default function EditProfileScreen() {
                   <Ionicons name="settings-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
                 <Text style={styles.rowLabel}>Allmänt</Text>
-                <Text style={styles.rowValue} numberOfLines={1}>Schema, notiser, konto</Text>
+                <View style={{ flex: 1 }} />
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
 
