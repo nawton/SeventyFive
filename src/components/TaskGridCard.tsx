@@ -92,8 +92,10 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
         onPress={handlePress}
         activeOpacity={0.85}
       >
+        {/* Klar-stapeln: enhetligt blå i ljust läge — uppgiftsfärgen bor
+            kvar i ikonchip och bock */}
         {task.completed && (
-          <View style={[s.taskSidebar, { backgroundColor: color }]} />
+          <View style={[s.taskSidebar, { backgroundColor: light ? T.ACCENT : color }]} />
         )}
         <View style={s.taskCardTop}>
           <View style={[s.taskIconBox, { backgroundColor: color + '1C' }]}>

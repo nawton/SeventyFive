@@ -220,6 +220,18 @@ export default function DashboardScreen() {
 
   // Add-rule sheet (UI, animation och gest bor i AddRuleSheet-komponenten)
   const [addRuleOpen, setAddRuleOpen]   = useState(false)
+  // Regellistan hopfälld som standard — man kan sina regler efter dag 2
+  const [rulesOpen, setRulesOpen] = useState(false)
+  useEffect(() => {
+    AsyncStorage.getItem('rulesOpen').then(v => setRulesOpen(v === '1')).catch(() => {})
+  }, [])
+  function toggleRules() {
+    Haptics.selectionAsync()
+    setRulesOpen(v => {
+      AsyncStorage.setItem('rulesOpen', v ? '0' : '1').catch(() => {})
+      return !v
+    })
+  }
 
   // Guidat flöde från engångsmålen: scrolla till regelsektionen, öppna sedan sheeten
   const { action } = useLocalSearchParams<{ action?: string }>()
@@ -799,14 +811,17 @@ export default function DashboardScreen() {
 
         {/* ── Regler ── */}
         <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>REGLER</Text>
+          <TouchableOpacity style={s.rulesToggle} onPress={toggleRules} activeOpacity={0.7} hitSlop={8}>
+            <Text style={s.sectionTitle}>REGLER</Text>
+            <Ionicons name={rulesOpen ? 'chevron-up' : 'chevron-down'} size={15} color={TEXT_SECONDARY} />
+          </TouchableOpacity>
           <TouchableOpacity style={s.addRuleChip} onPress={openAddRule} activeOpacity={0.8}>
             <Ionicons name="add" size={13} color={ACCENT} />
             <Text style={s.addRuleChipText}>Lägg till</Text>
           </TouchableOpacity>
         </View>
 
-        {(levelRules.length > 0 || customTasks.length > 0) && (
+        {rulesOpen && (levelRules.length > 0 || customTasks.length > 0) && (
           <View style={[s.rulesCard, lightMode ? [{ borderWidth: 0 }, chrome] : null]}>
             {levelRules.map((r: any, i: number) => {
               const ruleText: string = typeof r === 'string' ? r : (r.rule ?? '')
@@ -923,6 +938,8 @@ export default function DashboardScreen() {
 const GREEN_DONE = '#2EAF62'
 
 const s = StyleSheet.create({
+  rulesToggle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+
   streakChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: accentAlpha('12'),
