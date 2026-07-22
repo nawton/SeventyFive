@@ -71,6 +71,15 @@ describe('Atletprofil', () => {
     expect(screen.getByText('0,00 km')).toBeOnTheScreen()   // cyklingen var inte denna vecka
   })
 
+  it('Aktiviteter-knappen visar antal pass och leder till aktivitetslistan', async () => {
+    const { router } = require('expo-router')
+    render(<AthleteScreen />)
+    await screen.findByText('Anton Wretenberg')
+    expect(screen.getByText('2 pass')).toBeOnTheScreen()
+    fireEvent.press(screen.getByTestId('athleteActivities'))
+    expect(router.push).toHaveBeenCalledWith('/(app)/activities')
+  })
+
   it('följ-pillen växlar lokalt', async () => {
     render(<AthleteScreen />)
     await screen.findByText('Anton Wretenberg')

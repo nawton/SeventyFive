@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, useWindowD
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
@@ -190,15 +191,14 @@ export default function AthleteScreen() {
           </View>
         </View>
 
+        {/* Alltid bara kantlinje — ingen fylld orange variant */}
         <TouchableOpacity
-          style={[s.followBtn, !following && s.followBtnActive]}
+          style={s.followBtn}
           onPress={toggleFollow}
           activeOpacity={0.8}
           testID="athleteFollow"
         >
-          <Text style={[s.followBtnText, !following && s.followBtnTextActive]}>
-            {following ? 'Följer' : 'Följ'}
-          </Text>
+          <Text style={s.followBtnText}>{following ? 'Följer' : 'Följ'}</Text>
         </TouchableOpacity>
 
         {/* ── Strava-delen: typ-chips, veckan och distansgraf ── */}
@@ -212,7 +212,7 @@ export default function AthleteScreen() {
                 onPress={() => switchType(t.key)}
                 activeOpacity={0.8}
               >
-                <Ionicons name={t.icon} size={16} color={on ? ORANGE : TEXT_PRIMARY} />
+                <Ionicons name={t.icon} size={14} color={on ? ORANGE : TEXT_PRIMARY} />
                 <Text style={[s.chipText, on && s.chipTextActive]}>{t.label}</Text>
               </TouchableOpacity>
             )
@@ -220,30 +220,53 @@ export default function AthleteScreen() {
         </View>
 
         <Text style={s.sectionTitle}>Den här veckan</Text>
-        <View style={s.weekRow}>
-          <View style={s.weekStat}>
-            <Text style={s.weekLabel}>Distans</Text>
-            <Text style={s.weekValue}>{week.km.toFixed(2).replace('.', ',')} km</Text>
+        {/* key={type} monterar om blocket vid typbyte — in/ut-tona ger en
+            mjuk växling av både veckosiffrorna och grafen */}
+        <Animated.View key={type} entering={FadeIn.duration(250)} exiting={FadeOut.duration(120)}>
+          <View style={s.weekRow}>
+            <View style={s.weekStat}>
+              <Text style={s.weekLabel}>Distans</Text>
+              <Text style={s.weekValue}>{week.km.toFixed(2).replace('.', ',')} km</Text>
+            </View>
+            <View style={s.weekStat}>
+              <Text style={s.weekLabel}>Tid</Text>
+              <Text style={s.weekValue}>{fmtDuration(week.secs)}</Text>
+            </View>
+            <View style={s.weekStat}>
+              <Text style={s.weekLabel}>Pass</Text>
+              <Text style={s.weekValue}>{week.passes}</Text>
+            </View>
           </View>
-          <View style={s.weekStat}>
-            <Text style={s.weekLabel}>Tid</Text>
-            <Text style={s.weekValue}>{fmtDuration(week.secs)}</Text>
-          </View>
-          <View style={s.weekStat}>
-            <Text style={s.weekLabel}>Pass</Text>
-            <Text style={s.weekValue}>{week.passes}</Text>
-          </View>
-        </View>
 
-        <View style={s.chartCard}>
-          <Text style={s.chartHint}>km per vecka, senaste {CHART_WEEKS} veckorna</Text>
-          <DistanceAreaChart
-            buckets={buckets}
-            width={screenW - 40 - 32}
-            height={170}
-            unit={unit}
-          />
-        </View>
+          <View style={s.chartCard}>
+            <Text style={s.chartHint}>km per vecka, senaste {CHART_WEEKS} veckorna</Text>
+            <DistanceAreaChart
+              buckets={buckets}
+              width={screenW - 40 - 32}
+              height={170}
+              unit={unit}
+            />
+          </View>
+        </Animated.View>
+
+        {/* Alla aktiviteter — hela historiken på egen sida */}
+        <TouchableOpacity
+          style={s.activitiesBtn}
+          onPress={() => router.push('/(app)/activities' as never)}
+          activeOpacity={0.8}
+          testID="athleteActivities"
+        >
+          <View style={s.activitiesIcon}>
+            <Ionicons name="list-outline" size={20} color={TEXT_PRIMARY} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.activitiesTitle}>Aktiviteter</Text>
+            <Text style={s.activitiesMeta}>
+              {workouts.length > 0 ? `${workouts.length} pass` : 'Inga pass ännu'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   )
@@ -280,18 +303,16 @@ const s = StyleSheet.create({
     marginTop: 18, borderRadius: 26, paddingVertical: 13,
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)', alignItems: 'center',
   },
-  followBtnActive: { backgroundColor: ORANGE, borderColor: ORANGE },
   followBtnText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  followBtnTextActive: { color: '#000' },
 
-  chipsRow: { flexDirection: 'row', gap: 10, marginTop: 26 },
+  chipsRow: { flexDirection: 'row', gap: 8, marginTop: 26 },
   chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1, borderColor: BORDER, borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 9,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderWidth: 1, borderColor: BORDER, borderRadius: 17,
+    paddingHorizontal: 11, paddingVertical: 7,
   },
   chipActive: { borderColor: ORANGE },
-  chipText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+  chipText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
   chipTextActive: { color: ORANGE, fontWeight: '700' },
 
   sectionTitle: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800', marginTop: 24 },
@@ -305,4 +326,17 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER, padding: 16, gap: 10,
   },
   chartHint: { color: TEXT_SECONDARY, fontSize: 12 },
+
+  activitiesBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    marginTop: 20, backgroundColor: CARD, borderRadius: 16,
+    borderWidth: 1, borderColor: BORDER, padding: 16,
+  },
+  activitiesIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  activitiesTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+  activitiesMeta: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
 })
