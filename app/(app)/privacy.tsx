@@ -14,7 +14,7 @@ import { getBlockedUsers, unblockUser } from '@/services/blocks'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useCardChrome } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useCardChrome, useThemeStrings } from '@/lib/theme'
 
 // =============================================================================
 // INTEGRITETSINSTÄLLNINGAR — Strava-mönstret: lista med nuvarande värde,
@@ -156,6 +156,9 @@ const SETTINGS: Record<SettingKey, {
 
 export default function PrivacyScreen() {
   const chrome = useCardChrome()
+  // Radioringar som strängar — dynamiska ramfärger fryser i modaler
+  const T = useThemeStrings()
+  const radioEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.28)'
   const [userId, setUserId] = useState<string | null>(null)
   const [searchable, setSearchable] = useState(true)
   const [isPublic, setIsPublic] = useState(false)
@@ -493,8 +496,8 @@ export default function PrivacyScreen() {
                       <Text style={s.optionTitle}>{option.title}</Text>
                       <Text style={s.optionBody}>{option.description}</Text>
                     </View>
-                    <View style={[s.radio, selected && s.radioSelected]}>
-                      {selected && <View style={s.radioDot} />}
+                    <View style={[s.radio, { borderColor: selected ? T.ACCENT : radioEdge }]}>
+                      {selected && <View style={[s.radioDot, { backgroundColor: T.ACCENT }]} />}
                     </View>
                   </TouchableOpacity>
                 )
@@ -545,11 +548,10 @@ const s = StyleSheet.create({
   optionBody: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 20, marginTop: 5 },
   radio: {
     width: 26, height: 26, borderRadius: 13,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
+    borderWidth: 2,
     alignItems: 'center', justifyContent: 'center',
   },
-  radioSelected: { borderColor: ACCENT },
-  radioDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: ACCENT },
+  radioDot: { width: 13, height: 13, borderRadius: 7 },
 
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', gap: 16,

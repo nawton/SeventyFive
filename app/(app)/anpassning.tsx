@@ -8,7 +8,7 @@ import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import MapView from 'react-native-maps'
 import { supabase } from '@/lib/supabase'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, NUM_FONT, ACCENT } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, NUM_FONT, ACCENT, useThemeStrings } from '@/lib/theme'
 import { GlassSegment } from '@/components/GlassSegment'
 import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
 import { getTabBarShrinkEnabled, setTabBarShrinkEnabled } from '@/lib/tabBar'
@@ -76,6 +76,7 @@ function SwitchRow({ icon, label, hint, value, onChange, last }: {
 }
 
 export default function AnpassningScreen() {
+  const T = useThemeStrings()
   // Ljust/mörkt läge — mörkt är standard, växlingen slår igenom direkt
   const [themeMode, setThemeModeState] = useState<ThemeMode>('dark')
   const [themeOpen, setThemeOpen] = useState(false)
@@ -319,8 +320,8 @@ export default function AnpassningScreen() {
                   <Text style={s.themeOptionTitle}>{opt.title}</Text>
                   <Text style={s.themeOptionBody}>{opt.body}</Text>
                 </View>
-                <View style={[s.themeRadio, themeMode === opt.mode && s.themeRadioSelected]}>
-                  {themeMode === opt.mode && <View style={s.themeRadioDot} />}
+                <View style={[s.themeRadio, themeMode === opt.mode && { borderColor: T.ACCENT }]}>
+                  {themeMode === opt.mode && <View style={[s.themeRadioDot, { backgroundColor: T.ACCENT }]} />}
                 </View>
               </TouchableOpacity>
             ))}
@@ -342,8 +343,7 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: 'rgba(128,128,128,0.5)',
     alignItems: 'center', justifyContent: 'center',
   },
-  themeRadioSelected: { borderColor: ACCENT },
-  themeRadioDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: ACCENT },
+  themeRadioDot: { width: 13, height: 13, borderRadius: 7 },
 
   screen: { flex: 1, backgroundColor: BG },
   scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40, gap: 24 },
