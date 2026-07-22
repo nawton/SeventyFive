@@ -181,7 +181,7 @@ export const s = StyleSheet.create({
   sessMonth: { color: TEXT_PRIMARY, fontSize: 20, fontFamily: 'Nunito_800ExtraBold', marginTop: 8 },
   sessRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: CARD, borderRadius: 18,
     paddingVertical: 13, paddingHorizontal: 14,
   },
   sessIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
@@ -198,7 +198,7 @@ export const s = StyleSheet.create({
   },
   swipeBtnLabel: { color: '#fff', fontSize: 14, fontWeight: '700', marginLeft: 4 },
   sessName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  sessValue: { color: LIME, fontSize: 23, fontFamily: 'Nunito_700Bold', marginTop: 1 },
+  sessValue: { color: ACCENT, fontSize: 23, fontFamily: 'Nunito_700Bold', marginTop: 1 },
   sessDate: { color: TEXT_SECONDARY, fontSize: 13, alignSelf: 'flex-end', marginBottom: 4 },
 
   // Cardiorekord

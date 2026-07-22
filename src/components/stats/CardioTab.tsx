@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import Animated, { LinearTransition, FadeOut } from 'react-native-reanimated'
 import Svg, { Line as SvgLine, Polyline, Circle } from 'react-native-svg'
-import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings } from '@/lib/theme'
+import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings, useCardChrome } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek, weekdayOf, isoWeekNum } from '@/lib/date'
 import { fmtPace, fmtDuration } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
@@ -99,6 +99,7 @@ export function CardioTab({
   onDeleteCompletion: (id: string) => void
 }) {
   const P = useStatsColors()
+  const chrome = useCardChrome()
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const unitLabel = distanceUnitLabel(unit)
@@ -655,7 +656,7 @@ export function CardioTab({
                         pagerRef={pagerRef}
                       >
                         <TouchableOpacity
-                          style={s.sessRow}
+                          style={[s.sessRow, chrome]}
                           activeOpacity={0.7}
                           onPress={r.workout ? () => onOpenWorkout(r.workout!) : undefined}
                           disabled={!r.workout}
