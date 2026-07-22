@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TextInput, ActivityIndicator, Keyboard,
+  TouchableOpacity,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -88,14 +89,27 @@ export default function SearchUsersScreen() {
         keyExtractor={h => h.id}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
-          <View style={s.row}>
+          <TouchableOpacity
+            style={s.row}
+            activeOpacity={0.7}
+            testID={`hit-${item.id}`}
+            onPress={() => router.push({
+              pathname: '/(app)/athlete',
+              params: {
+                userId: item.id,
+                name: item.name ?? 'Namnlös',
+                avatar: item.avatar_url ?? '',
+              },
+            } as never)}
+          >
             <FeedAvatar
               url={item.avatar_url}
               fallback={(item.name ?? '?').charAt(0).toUpperCase()}
               size={52}
             />
             <Text style={s.rowName} numberOfLines={1}>{item.name ?? 'Namnlös'}</Text>
-          </View>
+            <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+          </TouchableOpacity>
         )}
         ItemSeparatorComponent={() => <View style={s.rowDivider} />}
         contentContainerStyle={s.listContent}

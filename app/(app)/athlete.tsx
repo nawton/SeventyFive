@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, useWindowDimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router, useFocusEffect } from 'expo-router'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
@@ -95,8 +95,16 @@ function Avatar({ url, fallback, size }: { url: string | null; fallback: string;
 
 export default function AthleteScreen() {
   const { width: screenW } = useWindowDimensions()
-  const [name, setName] = useState('')
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  // Utan userId-param visas den egna profilen (flödet är egna pass än så
+  // länge). Med userId från sökningen visas den personen — men andras pass
+  // går inte att läsa förrän delnings-backenden finns, så statistiken
+  // ersätts ärligt med ett tomläge istället för falska nollor.
+  const params = useLocalSearchParams<{ userId?: string; name?: string; avatar?: string }>()
+  const otherId = typeof params.userId === 'string' && params.userId.length > 0 ? params.userId : null
+  const [isOwn, setIsOwn] = useState(otherId === null)
+  const [name, setName] = useState(typeof params.name === 'string' ? params.name : '')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(
+    typeof params.avatar === 'string' && params.avatar.length > 0 ? params.avatar : null)
   const [workouts, setWorkouts] = useState<CardioWorkout[]>([])
   const [gymCount, setGymCount] = useState(0)
   const [unit, setUnit] = useState<UnitSystem>('metric')
@@ -109,6 +117,9 @@ export default function AthleteScreen() {
     getUnitSystem().then(u => { if (alive) setUnit(u) })
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user || !alive) return
+      const own = otherId === null || otherId === session.user.id
+      setIsOwn(own)
+      if (!own) return   // namn/avatar kom med som params från sökningen
       const [profile, all, strength] = await Promise.all([
         getProfile(session.user.id).catch(() => null),
         getCardioWorkouts(session.user.id, 200).catch(() => [] as CardioWorkout[]),
@@ -123,7 +134,7 @@ export default function AthleteScreen() {
       setGymCount(strengthToPosts(strength, '', null).length)
     })
     return () => { alive = false }
-  }, []))
+  }, [otherId]))
 
   const totalKm = useMemo(
     () => Math.round(workouts.reduce((sum, w) => sum + w.data.distance_km, 0)),
@@ -189,13 +200,15 @@ export default function AthleteScreen() {
           <Avatar url={avatarUrl} fallback={name.charAt(0).toUpperCase() || '?'} size={72} />
           <View style={{ flex: 1 }}>
             <Text style={s.name}>{name}</Text>
-            <Text style={s.activeMeta}>{activeLabel(latestIso)}</Text>
+            <Text style={s.activeMeta}>
+              {isOwn ? activeLabel(latestIso) : 'Delar inga pass ännu'}
+            </Text>
           </View>
         </View>
 
         <View style={s.countersRow}>
           <View style={s.counter}>
-            <Text style={s.counterValue}>{totalKm}</Text>
+            <Text style={s.counterValue}>{isOwn ? totalKm : '–'}</Text>
             <Text style={s.counterLabel}>Totalt km</Text>
           </View>
           <View style={s.counterDivider} />
@@ -222,7 +235,18 @@ export default function AthleteScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* ── Strava-delen: typ-chips, veckan och distansgraf ── */}
+        {/* ── Strava-delen: typ-chips, veckan och distansgraf — bara för den
+            egna profilen tills delnings-backenden gör andras pass läsbara ── */}
+        {!isOwn ? (
+          <View style={s.otherEmpty}>
+            <Ionicons name="lock-closed-outline" size={38} color={TEXT_SECONDARY} />
+            <Text style={s.otherEmptyTitle}>Inga delade pass ännu</Text>
+            <Text style={s.otherEmptyBody}>
+              När delning finns på plats ser du {name.split(' ')[0] || 'personens'} statistik
+              och aktiviteter här.
+            </Text>
+          </View>
+        ) : (<>
         <View style={s.chipsRow}>
           {TYPES.map(t => {
             const on = t.key === type
@@ -290,6 +314,7 @@ export default function AthleteScreen() {
           </View>
           <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
         </TouchableOpacity>
+        </>)}
       </ScrollView>
     </SafeAreaView>
   )
@@ -363,4 +388,8 @@ const s = StyleSheet.create({
   },
   activitiesTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   activitiesMeta: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
+
+  otherEmpty: { alignItems: 'center', gap: 8, paddingTop: 60, paddingHorizontal: 30 },
+  otherEmptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },
+  otherEmptyBody: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
 })

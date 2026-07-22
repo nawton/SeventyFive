@@ -20,12 +20,14 @@ jest.mock('@/services/cardioWorkouts', () => ({
 jest.mock('@/services/strengthWorkouts', () => ({
   getStrengthWorkouts: jest.fn().mockResolvedValue([]),
 }))
+let mockParams: Record<string, string> = {}
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
   useFocusEffect: (cb: () => void) => {
     const { useEffect } = require('react')
     useEffect(cb, [cb])
   },
+  useLocalSearchParams: () => mockParams,
 }))
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }))
 // Grafen har egen logik — mocken exponerar bara första punkten som knapp
@@ -57,6 +59,7 @@ function makeRun(iso: string, km: number, type = 'running'): CardioWorkout {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  mockParams = {}
   ;(getCardioWorkouts as jest.Mock).mockResolvedValue([
     makeRun(new Date().toISOString(), 5.5),
     makeRun('2026-07-10T08:00:00.000Z', 10, 'cycling'),
@@ -108,6 +111,16 @@ describe('Atletprofil', () => {
     await screen.findByText('Anton Wretenberg')
     fireEvent.press(screen.getByTestId('athleteFollow'))
     expect(screen.getByText('Följ')).toBeOnTheScreen()
+  })
+
+  it('annan användares profil: namn från sökningen och ärligt tomläge', async () => {
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '🔥' }
+    render(<AthleteScreen />)
+    expect(await screen.findByText('Nawid')).toBeOnTheScreen()
+    expect(screen.getByText('Delar inga pass ännu')).toBeOnTheScreen()
+    expect(screen.getByText('Inga delade pass ännu')).toBeOnTheScreen()
+    expect(screen.queryByText('Den här veckan')).not.toBeOnTheScreen()
+    expect(screen.queryByText('Aktiviteter')).not.toBeOnTheScreen()
   })
 
   it('activeLabel: idag, igår, dagar sedan och tomt', () => {

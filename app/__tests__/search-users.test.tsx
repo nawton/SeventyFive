@@ -39,6 +39,21 @@ describe('Sök användare', () => {
     expect(searchProfiles).toHaveBeenCalledWith('Na')
   })
 
+  it('tryck på en träff öppnar personens profil', async () => {
+    const { router } = require('expo-router')
+    ;(searchProfiles as jest.Mock).mockResolvedValue([
+      { id: 'u2', name: 'Nawid', avatar_url: '🔥' },
+    ])
+    render(<SearchUsersScreen />)
+    fireEvent.changeText(screen.getByTestId('searchInput'), 'Na')
+    await screen.findByText('Nawid')
+    fireEvent.press(screen.getByTestId('hit-u2'))
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/(app)/athlete',
+      params: { userId: 'u2', name: 'Nawid', avatar: '🔥' },
+    })
+  })
+
   it('inga träffar visar tomläget', async () => {
     render(<SearchUsersScreen />)
     fireEvent.changeText(screen.getByTestId('searchInput'), 'Zzz')
