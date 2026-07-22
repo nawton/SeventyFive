@@ -425,7 +425,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   dragArea: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12 },
-  handle:   { width: 36, height: 4, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
+  handle:   { width: 40, height: 5, backgroundColor: 'rgba(128,128,128,0.45)', borderRadius: 3, alignSelf: 'center', marginBottom: 14 },
   title:    { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', textTransform: 'capitalize' },
   sub:      { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
   scroll:   { paddingHorizontal: 20, paddingBottom: 40 },
