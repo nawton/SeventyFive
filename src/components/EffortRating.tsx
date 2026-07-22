@@ -76,12 +76,13 @@ export function EffortRating({ visible, initial, onDone }: Props) {
     .onBegin(e => { runOnJS(slideTo)(e.x) })
     .onUpdate(e => { runOnJS(slideTo)(e.x) })
 
-  if (!visible) return null
-
+  // Hooks måste ligga FÖRE den tidiga returnen — annars "fewer hooks than expected"
   const T = useThemeStrings()
   const accent = sel ? effortColor(sel) : T.ACCENT
   // Gradienten kräver riktiga strängfärger — dynamiska färgobjekt går inte
   const bgStr = T.BG
+
+  if (!visible) return null
 
   return (
     <Animated.View entering={FadeIn.duration(200)} style={[s.root, { backgroundColor: bgStr }]}>
