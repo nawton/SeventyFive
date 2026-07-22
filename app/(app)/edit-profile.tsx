@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '@/lib/supabase'
 import { compressImage } from '@/lib/image'
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile'
+import { GlassCircleButton } from '@/components/GlassButton'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { SubscriptionCard } from '@/components/SubscriptionCard'
 import { RecordsCard } from '@/components/RecordsCard'
@@ -98,24 +99,26 @@ export default function EditProfileScreen() {
     if (!result.canceled && result.assets[0]) {
       const a = result.assets[0]
       // Avatarer visas max ~110 px — 512 px räcker gott även för retina
-      setPhotoUri(await compressImage(a.uri, a.width, 512))
+      const uri = await compressImage(a.uri, a.width, 512)
+      setPhotoUri(uri)
       setEmoji(null)
       setModalVisible(false)
+      persistAvatar(uri, null)
     }
   }
 
-  async function handleSave() {
+  // Avatarvalet sparas direkt när man väljer — ingen bock-knapp behövs
+  async function persistAvatar(nextPhotoUri: string | null, nextEmoji: string | null) {
     if (!userId) return
     setSaving(true)
     try {
       let avatarUrl = ''
-      if (photoUri) {
-        avatarUrl = photoUri.startsWith('http') ? photoUri : await uploadAvatar(userId, photoUri)
-      } else if (emoji) {
-        avatarUrl = emoji
+      if (nextPhotoUri) {
+        avatarUrl = nextPhotoUri.startsWith('http') ? nextPhotoUri : await uploadAvatar(userId, nextPhotoUri)
+      } else if (nextEmoji) {
+        avatarUrl = nextEmoji
       }
       await updateProfile(userId, { avatar_url: avatarUrl })
-      router.back()
     } catch (e: any) {
       Alert.alert('Något gick fel', e.message)
     } finally {
@@ -142,17 +145,20 @@ export default function EditProfileScreen() {
   return (
     <SafeAreaView style={styles.screen}>
 
-      {/* ── Fixed header ── */}
+      {/* ── Fixed header: glas-pil tillbaka; avataren sparas direkt vid val
+          så ingen bock behövs — snurran syns kort medan uppladdningen går ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
-        </TouchableOpacity>
+        <GlassCircleButton
+          icon="chevron-back"
+          size={40}
+          iconColor={TEXT_PRIMARY}
+          onPress={() => router.back()}
+          fallbackStyle={styles.iconBtnFallback}
+        />
         <Text style={styles.title}>Profil</Text>
-        <TouchableOpacity style={styles.checkBtn} onPress={handleSave} disabled={saving} activeOpacity={0.7}>
-          {saving
-            ? <ActivityIndicator color={ORANGE} size="small" />
-            : <Ionicons name="checkmark" size={22} color={ORANGE} />}
-        </TouchableOpacity>
+        <View style={styles.headerSpacer}>
+          {saving && <ActivityIndicator color={ORANGE} size="small" />}
+        </View>
       </View>
 
       <ScrollView
@@ -353,7 +359,7 @@ export default function EditProfileScreen() {
               {/* Initials */}
               <TouchableOpacity
                 style={[styles.quickBtn, !photoUri && !emoji && styles.quickBtnActive]}
-                onPress={() => { setPhotoUri(null); setEmoji(null); setModalVisible(false) }}
+                onPress={() => { setPhotoUri(null); setEmoji(null); setModalVisible(false); persistAvatar(null, null) }}
                 activeOpacity={0.8}
               >
                 <View style={[styles.quickIcon, !photoUri && !emoji && styles.quickIconActive]}>
@@ -381,7 +387,7 @@ export default function EditProfileScreen() {
                       <TouchableOpacity
                         key={e}
                         style={[styles.emojiBtn, emoji === e && styles.emojiBtnActive]}
-                        onPress={() => { setEmoji(e); setPhotoUri(null); setModalVisible(false) }}
+                        onPress={() => { setEmoji(e); setPhotoUri(null); setModalVisible(false); persistAvatar(null, e) }}
                         activeOpacity={0.7}
                       >
                         <Text style={styles.emojiText}>{e}</Text>
@@ -419,14 +425,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)',
     backgroundColor: BG,
   },
-  iconBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
-  },
-  checkBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: ORANGE + '22', alignItems: 'center', justifyContent: 'center',
-  },
+  iconBtnFallback: { backgroundColor: CARD },
+  headerSpacer: { width: 40, alignItems: 'center', justifyContent: 'center' },
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
 
   // Avatar preview
