@@ -22,6 +22,7 @@ import { CardioSummaryView } from '@/components/CardioSummaryView'
 import {
   GRID_PADDING, STATS_SCREEN_W, BLUE, RED, YELLOW, PURPLE, TEAL, LIME,
   getWeekBounds, monthLabel, sessDateLabel, s, type GymSession,
+  useStatsColors,
 } from '@/components/stats/statsShared'
 import { AppRefreshControl, useAppRefresh } from '@/components/AppRefresh'
 import { GymTab } from '@/components/stats/GymTab'
@@ -30,7 +31,7 @@ import { OverviewTab } from '@/components/stats/OverviewTab'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
-import { BG, ACCENT } from '@/lib/theme'
+import { BG, ACCENT, useThemeStrings } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 
@@ -49,6 +50,8 @@ const TABS: Array<{ key: StatsTab; label: string; icon: React.ComponentProps<typ
 ]
 
 export default function StatsScreen() {
+  const P = useStatsColors()
+  const T = useThemeStrings()
   const onScrollShrink = useTabBarShrinkOnScroll()
   // SafeAreaView rapporterar noll-insets inne i RN-modaler — använd explicit padding
   const insets = useSafeAreaInsets()
@@ -275,7 +278,7 @@ export default function StatsScreen() {
             ))}
           </View>
           <View style={s.compactTrack}>
-            <Animated.View style={[s.compactIndicator, indicatorStyle]} />
+            <Animated.View style={[s.compactIndicator, { backgroundColor: T.ACCENT }, indicatorStyle]} />
           </View>
         </View>
       </GestureDetector>

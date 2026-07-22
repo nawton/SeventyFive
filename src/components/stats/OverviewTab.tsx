@@ -11,13 +11,14 @@ import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/uni
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
-import { STATS_SCREEN_W, BLUE, RED, YELLOW, nextMilestone, s } from './statsShared'
+import { STATS_SCREEN_W, BLUE, RED, YELLOW, nextMilestone, s , useStatsColors} from './statsShared'
 import { CalendarView } from './CalendarView'
 import { DayWorkoutsModal } from './DayWorkoutsModal'
 import { MilestoneAnalysisModal } from './MilestoneAnalysisModal'
 
 
 function RingChart({ currentDay, completedDays }: { currentDay: number; completedDays: number }) {
+  const P = useStatsColors()
   const R = 48
   const C = 2 * Math.PI * R
   const completedArc = (completedDays / 75) * C
@@ -39,7 +40,7 @@ function RingChart({ currentDay, completedDays }: { currentDay: number; complete
       {missedArc > 0 && (
         <Circle
           cx={60} cy={60} r={R}
-          fill="none" stroke={RED} strokeWidth={11}
+          fill="none" stroke={P.RED} strokeWidth={11}
           strokeDasharray={`${missedArc} ${C}`}
           strokeDashoffset={-completedArc}
           strokeLinecap="round"
@@ -88,6 +89,7 @@ export function OverviewTab({
   onOpenWorkout: (w: CardioWorkout) => void
   onRemoveWorkoutLocal: (id: string) => void
 }) {
+  const P = useStatsColors()
   const unitLabel = distanceUnitLabel(unit)
   const [selectedDay, setSelectedDay]           = useState<DaySummary | null>(null)
   const [milestoneOpen, setMilestoneOpen]       = useState(false)
@@ -152,7 +154,7 @@ export function OverviewTab({
                       <>
                         <View style={s.ringRow}>
                           <Text style={s.ringRowLabel}>Missade dagar</Text>
-                          <Text style={[s.ringRowVal, { color: RED }]}>{missedDays}</Text>
+                          <Text style={[s.ringRowVal, { color: P.RED }]}>{missedDays}</Text>
                         </View>
                         <View style={s.ringRow}>
                           <Text style={s.ringRowLabel}>Framgång</Text>
@@ -192,7 +194,7 @@ export function OverviewTab({
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Distans</Text>
-                  <Text style={[s.dtlVal, { color: BLUE }]}>
+                  <Text style={[s.dtlVal, { color: P.BLUE }]}>
                     {toDisplayDistance(weekReport.km, unit).toFixed(1).replace('.', ',')}
                     <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
                   </Text>
@@ -202,7 +204,7 @@ export function OverviewTab({
               <View style={[s.dtlRow, { paddingBottom: 0 }]}>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Volym</Text>
-                  <Text style={[s.dtlVal, { color: YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
+                  <Text style={[s.dtlVal, { color: P.YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
                     {Math.round(weekReport.volume).toLocaleString('sv-SE')}
                     <Text style={s.dtlUnit}> KG</Text>
                   </Text>

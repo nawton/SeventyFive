@@ -8,6 +8,7 @@ import { PostSocialBar } from '@/components/PostSocialBar'
 import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
+import { useStatsColors } from '@/components/stats/statsShared'
 
 const SCREEN_W = Dimensions.get('window').width
 
@@ -35,8 +36,6 @@ function progressionFor(all: StrengthWorkout[], exerciseName: string) {
 // färgkodat statsrutnät, sektionsrubriker och övningslista med alla set.
 // =============================================================================
 
-const PURPLE = '#D65CFF'
-const BLUE   = '#3FBBFF'
 
 export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorkouts, onClose, social }: {
   name: string
@@ -51,6 +50,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
   /** Community: gilla/kommentera/dela-raden under övningarna */
   social?: { postKey: string; ownerId: string; onOpenComments?: () => void }
 }) {
+  const P = useStatsColors()
   const insets = useSafeAreaInsets()
   const [progressEx, setProgressEx] = useState<string | null>(null)
   const progression = progressEx && allWorkouts ? progressionFor(allWorkouts, progressEx) : []
@@ -103,7 +103,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
             </View>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>Set</Text>
-              <Text style={[s.dtlVal, { color: PURPLE }]}>{totalSets}</Text>
+              <Text style={[s.dtlVal, { color: P.PURPLE }]}>{totalSets}</Text>
             </View>
           </View>
           <View style={s.dtlSep} />
@@ -114,7 +114,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
             </View>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>Volym</Text>
-              <Text style={[s.dtlVal, { color: BLUE }]}>
+              <Text style={[s.dtlVal, { color: P.BLUE }]}>
                 {Math.round(totalKg).toLocaleString('sv-SE')}
                 <Text style={s.dtlUnit}> KG</Text>
               </Text>

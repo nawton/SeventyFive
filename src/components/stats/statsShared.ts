@@ -2,7 +2,8 @@
 // skalet (stats.tsx) och flikkomponenterna importerar härifrån så att
 // designen har en enda källa.
 import { StyleSheet, Dimensions } from 'react-native'
-import { BG, CARD, BORDER, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { useColorScheme } from 'react-native'
+import { BG, CARD, BORDER, ORANGE, ACCENT, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 
@@ -17,6 +18,18 @@ export const YELLOW = '#FFE60A'
 export const PURPLE = '#D65CFF'
 export const TEAL   = '#40F5E9'
 export const LIME   = '#BDFF3B'
+
+// Neonfärgerna skriker på vit botten — ljust läge får dämpade, mörkare
+// varianter. Som strängar via hook: funkar i SVG, konkatenering och
+// reanimated, till skillnad från dynamiska färgobjekt.
+const NEON_DARK  = { BLUE, RED, YELLOW, PURPLE, TEAL, LIME }
+const NEON_LIGHT = {
+  BLUE: '#2E86C9', RED: '#CE4568', YELLOW: '#C79A06',
+  PURPLE: '#9A4CC4', TEAL: '#1FA89C', LIME: '#7CA92F',
+}
+export function useStatsColors() {
+  return useColorScheme() === 'light' ? NEON_LIGHT : NEON_DARK
+}
 
 export function getWeekBounds(offset: number): { start: string; end: string; label: string } {
   const mon = startOfWeek()
@@ -90,7 +103,7 @@ export const s = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   errorText: { color: '#4A4A50', fontSize: 14 },
   retryBtn: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -109,14 +122,14 @@ export const s = StyleSheet.create({
   compactLabel: {
     color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600',
   },
-  compactLabelActive: { color: ORANGE, fontWeight: '700' },
+  compactLabelActive: { color: ACCENT, fontWeight: '700' },
   compactTrack: {
     height: 3, borderRadius: 2, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(128,128,128,0.18)',
   },
   compactIndicator: {
     width: SEG_W, height: '100%',
-    backgroundColor: ORANGE, borderRadius: 2,
+    borderRadius: 2,
   },
 
   statsGrid: { gap: 10 },

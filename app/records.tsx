@@ -98,9 +98,9 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { useStatsColors } from '@/components/stats/statsShared'
 
 const GOLD = '#FFD54F'
-const LIME = '#BDFF3B'
 
 type CardioRecs = {
   longestKm: number
@@ -119,6 +119,7 @@ function fmtPaceStr(secs: number): string {
 }
 
 export default function RecordsScreen() {
+  const P = useStatsColors()
   const T = useThemeStrings()
   const [loading, setLoading]           = useState(true)
   const [achievements, setAchievements] = useState<Achievement[]>([])
@@ -590,7 +591,7 @@ export default function RecordsScreen() {
                     : '0',
                 },
                 {
-                  icon: 'flash-outline' as const, color: LIME, label: 'Snabbaste km',
+                  icon: 'flash-outline' as const, color: P.LIME, label: 'Snabbaste km',
                   id: cardioRecs.fastestSplitId ?? cardioRecs.bestPaceId,
                   value: cardioRecs.fastestSplitSec !== Infinity
                     ? fmtPaceStr(cardioRecs.fastestSplitSec)

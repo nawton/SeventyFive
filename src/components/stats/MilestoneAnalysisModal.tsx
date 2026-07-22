@@ -8,14 +8,13 @@ import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/uni
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
+import { useStatsColors } from '@/components/stats/statsShared'
 
 // =============================================================================
 // MILSTOLPEANALYS — öppnas från milstolpe-bannern på Framsteg.
 // Sammanfattar hur det gått hittills och ger konkreta, databaserade tips.
 // =============================================================================
 
-const BLUE = '#3FBBFF'
-const TEAL = '#40F5E9'
 
 const WEEKDAYS = ['måndagar', 'tisdagar', 'onsdagar', 'torsdagar', 'fredagar', 'lördagar', 'söndagar']
 
@@ -39,6 +38,7 @@ export function MilestoneAnalysisModal({
   completedSessions: CompletedSessionItem[]
   unit: UnitSystem
 }) {
+  const P = useStatsColors()
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const unitLabel = distanceUnitLabel(unit)
@@ -136,7 +136,7 @@ export function MilestoneAnalysisModal({
   }
   if (daysSinceCardio !== null && daysSinceCardio >= 3) {
     tips.push({
-      icon: 'walk-outline', color: BLUE,
+      icon: 'walk-outline', color: P.BLUE,
       text: `${daysSinceCardio} dagar sedan senaste cardiopasset. Ett kort pass idag räcker för att hålla vanan vid liv.`,
     })
   }
@@ -153,7 +153,7 @@ export function MilestoneAnalysisModal({
   }
   if (milestone) {
     tips.push({
-      icon: 'flag-outline', color: TEAL,
+      icon: 'flag-outline', color: P.TEAL,
       text: `${milestone.daysLeft === 1 ? 'Bara 1 dag' : `${milestone.daysLeft} dagar`} kvar till "${milestone.label.replace(/!$/, '')}". Sikta bara på den, inte på dag 75.`,
     })
   }
@@ -202,7 +202,7 @@ export function MilestoneAnalysisModal({
             <View style={[s.dtlRow, { paddingBottom: 14 }]}>
               <View style={s.dtlCell}>
                 <Text style={s.dtlLbl}>Framgång</Text>
-                <Text style={[s.dtlVal, { color: TEAL }]}>
+                <Text style={[s.dtlVal, { color: P.TEAL }]}>
                   {successRate}
                   <Text style={s.dtlUnit}> %</Text>
                 </Text>

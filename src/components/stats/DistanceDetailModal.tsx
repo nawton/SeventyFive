@@ -10,6 +10,7 @@ import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/li
 import { fmtPace, fmtDuration } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
+import { useStatsColors } from '@/components/stats/statsShared'
 
 // =============================================================================
 // DISTANS I DETALJ — öppnas när man trycker på distansgrafen på Framsteg.
@@ -17,7 +18,6 @@ import type { CardioWorkout } from '@/services/workouts'
 // för att inspektera en period, med fördelning och nyckeltal under grafen.
 // =============================================================================
 
-const BLUE = '#3FBBFF'
 const SCREEN_W = Dimensions.get('window').width
 
 type Res = 'day' | 'week' | 'month'
@@ -136,6 +136,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
   workouts: CardioWorkout[]
   unit: UnitSystem
 }) {
+  const P = useStatsColors()
   const insets = useSafeAreaInsets()
   const [res, setRes] = useState<Res>('day')
   const [offset, setOffset] = useState(0)
@@ -245,7 +246,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
           <View style={s.card}>
             {([
               { color: ACCENT, label: 'Löpning',  v: shown.run },
-              { color: BLUE,   label: 'Cykling',  v: shown.cycle },
+              { color: P.BLUE,   label: 'Cykling',  v: shown.cycle },
               { color: GREEN,  label: 'Promenad', v: shown.walk },
             ] as const).map((r, i) => {
               const pct = shown.total > 0 ? (r.v / shown.total) * 100 : 0

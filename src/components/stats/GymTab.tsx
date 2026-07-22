@@ -26,6 +26,7 @@ import type { StrengthWorkout } from '@/services/workouts'
 import {
   GRID_PADDING, STATS_SCREEN_W, BLUE, YELLOW, PURPLE, TEAL,
   getWeekBounds, s, type GymSession,
+  useStatsColors,
 } from './statsShared'
 import { SwipeRow } from './SwipeRow'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -51,6 +52,7 @@ export function GymTab({
   /** Skalet äger completedSessions + databasraderingen; false = misslyckades */
   onDeleteCompletion: (id: string) => Promise<boolean>
 }) {
+  const P = useStatsColors()
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
 
@@ -377,7 +379,7 @@ export function GymTab({
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl} numberOfLines={1} adjustsFontSizeToFit>Muskelgrupper</Text>
-                  <Text style={[s.dtlVal, { color: PURPLE }]}>
+                  <Text style={[s.dtlVal, { color: P.PURPLE }]}>
                     {scopedGroupCount}
                     <Text style={s.dtlUnit}> AV 6</Text>
                   </Text>
@@ -393,17 +395,17 @@ export function GymTab({
               <View style={[s.dtlRow, { paddingBottom: 0 }]}>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Set</Text>
-                  <Text style={[s.dtlVal, { color: BLUE }]}>{weekSums.sets}</Text>
+                  <Text style={[s.dtlVal, { color: P.BLUE }]}>{weekSums.sets}</Text>
                   {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevSums.sets}</Text>}
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Reps</Text>
-                  <Text style={[s.dtlVal, { color: TEAL }]}>{weekSums.reps}</Text>
+                  <Text style={[s.dtlVal, { color: P.TEAL }]}>{weekSums.reps}</Text>
                   {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevSums.reps}</Text>}
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Volym</Text>
-                  <Text style={[s.dtlVal, { color: YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
+                  <Text style={[s.dtlVal, { color: P.YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
                     {Math.round(weekSums.volume).toLocaleString('sv-SE')}
                     <Text style={s.dtlUnit}> KG</Text>
                   </Text>
@@ -524,7 +526,7 @@ export function GymTab({
                           side={bodyView}
                           gender="male"
                           scale={1.6}
-                          colors={[BLUE, YELLOW, T.ACCENT]}
+                          colors={[P.BLUE, P.YELLOW, T.ACCENT]}
                           defaultFill="#2A2A2C"
                           border="rgba(255,255,255,0.10)"
                         />
@@ -534,8 +536,8 @@ export function GymTab({
                   {weekMuscleData.length > 0 && (
                     <View style={s.legend}>
                       {([
-                        { color: BLUE,   label: '1 övning' },
-                        { color: YELLOW, label: '2–3 övningar' },
+                        { color: P.BLUE,   label: '1 övning' },
+                        { color: P.YELLOW, label: '2–3 övningar' },
                         { color: ACCENT, label: '4+ övningar' },
                       ] as const).map(({ color, label }) => (
                         <View key={label} style={s.legendItem}>
@@ -594,19 +596,19 @@ export function GymTab({
                     onPress: () => openGymDay(recTopLift!.date, recTopLift!.name),
                   },
                   recOneRm && {
-                    icon: 'speedometer-outline' as const, color: PURPLE,
+                    icon: 'speedometer-outline' as const, color: P.PURPLE,
                     label: `Bästa 1RM · ${recOneRm.name}`,
                     value: `${Math.round(recOneRm.kg)} kg`,
                     onPress: () => openGymDay(recOneRm!.date, recOneRm!.name),
                   },
                   recBigDay && {
-                    icon: 'trophy-outline' as const, color: YELLOW,
+                    icon: 'trophy-outline' as const, color: P.YELLOW,
                     label: 'Största passet (volym)',
                     value: `${Math.round(recBigDay.vol).toLocaleString('sv-SE')} kg`,
                     onPress: () => openGymDay(recBigDay!.date, 'Största passet'),
                   },
                   recWeekSets > 0 && {
-                    icon: 'layers-outline' as const, color: BLUE,
+                    icon: 'layers-outline' as const, color: P.BLUE,
                     label: 'Flest set en vecka',
                     value: `${recWeekSets} set`,
                     onPress: undefined,

@@ -21,6 +21,7 @@ import type { CompletedSessionItem } from '@/services/workoutSchedule'
 import {
   GRID_PADDING, STATS_SCREEN_W, BLUE, RED, YELLOW, PURPLE, TEAL, LIME,
   monthLabel, sessDateLabel, s,
+  useStatsColors,
 } from './statsShared'
 import { SwipeRow } from './SwipeRow'
 import { DistanceDetailModal } from './DistanceDetailModal'
@@ -97,6 +98,7 @@ export function CardioTab({
   onDeleteWorkout: (id: string) => void
   onDeleteCompletion: (id: string) => void
 }) {
+  const P = useStatsColors()
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const unitLabel = distanceUnitLabel(unit)
@@ -277,9 +279,9 @@ export function CardioTab({
   // ── Sessioner: blandad lista av cardio-pass + avklarade schemapass ──
   const CARDIO_META: Record<string, { icon: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
     running:  { icon: 'fitness',  color: T.ACCENT },
-    cycling:  { icon: 'bicycle',  color: BLUE },
+    cycling:  { icon: 'bicycle',  color: P.BLUE },
     walking:  { icon: 'walk',     color: GREEN },
-    interval: { icon: 'flash',    color: YELLOW },
+    interval: { icon: 'flash',    color: P.YELLOW },
   }
   type SessRow = {
     key: string
@@ -314,7 +316,7 @@ export function CardioTab({
         (cardioBounds.start === null || c.completedDate >= cardioBounds.start) &&
         (cardioBounds.end === null || c.completedDate < cardioBounds.end))
       .map((c): SessRow => {
-        const meta = CARDIO_META[c.cardioType ?? ''] ?? { icon: 'fitness' as const, color: BLUE }
+        const meta = CARDIO_META[c.cardioType ?? ''] ?? { icon: 'fitness' as const, color: P.BLUE }
         return {
           key: `g:${c.id}`,
           name: c.name,
@@ -393,11 +395,11 @@ export function CardioTab({
               <View style={[s.dtlRow, { paddingTop: 0 }]}>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Träningstid</Text>
-                  <Text style={[s.dtlVal, { color: YELLOW }]}>{fmtDuration(totalSecs)}</Text>
+                  <Text style={[s.dtlVal, { color: P.YELLOW }]}>{fmtDuration(totalSecs)}</Text>
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Distans</Text>
-                  <Text style={[s.dtlVal, { color: BLUE }]}>
+                  <Text style={[s.dtlVal, { color: P.BLUE }]}>
                     {toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')}
                     <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
                   </Text>
@@ -411,7 +413,7 @@ export function CardioTab({
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Snittempo</Text>
-                  <Text style={[s.dtlVal, { color: TEAL }]}>
+                  <Text style={[s.dtlVal, { color: P.TEAL }]}>
                     {avgPace}
                     <Text style={s.dtlUnit}> /{unitLabel}</Text>
                   </Text>
@@ -457,15 +459,15 @@ export function CardioTab({
                           stroke="rgba(255,255,255,0.06)" strokeWidth={1}
                         />
                       ))}
-                      <Polyline points={pts} fill="none" stroke={BLUE} strokeWidth={2.5} strokeLinejoin="round" />
+                      <Polyline points={pts} fill="none" stroke={P.BLUE} strokeWidth={2.5} strokeLinejoin="round" />
                       {paceVals.map((v, i) => (
-                        <Circle key={i} cx={px(i)} cy={py(v)} r={4} fill={BLUE} stroke={CARD} strokeWidth={2} />
+                        <Circle key={i} cx={px(i)} cy={py(v)} r={4} fill={P.BLUE} stroke={CARD} strokeWidth={2} />
                       ))}
                     </Svg>
                   </View>
                   <View style={s.paceWeekRow}>
                     {paceWeeks.map((b, i) => (
-                      <Text key={i} style={[s.paceWeekLbl, b.isCurrent && { color: BLUE }]}>{b.label}</Text>
+                      <Text key={i} style={[s.paceWeekLbl, b.isCurrent && { color: P.BLUE }]}>{b.label}</Text>
                     ))}
                   </View>
                 </TouchableOpacity>
@@ -529,9 +531,9 @@ export function CardioTab({
                           stroke="rgba(255,255,255,0.06)" strokeWidth={1}
                         />
                       ))}
-                      <Polyline points={pts} fill="none" stroke={BLUE} strokeWidth={2.5} strokeLinejoin="round" />
+                      <Polyline points={pts} fill="none" stroke={P.BLUE} strokeWidth={2.5} strokeLinejoin="round" />
                       {vals.map((v, i) => (
-                        <Circle key={i} cx={px(i)} cy={py(v)} r={4} fill={BLUE} stroke={CARD} strokeWidth={2} />
+                        <Circle key={i} cx={px(i)} cy={py(v)} r={4} fill={P.BLUE} stroke={CARD} strokeWidth={2} />
                       ))}
                     </Svg>
                   </View>
@@ -594,12 +596,12 @@ export function CardioTab({
                     workout: recLongestW,
                   },
                   {
-                    icon: 'flash-outline' as const, color: YELLOW, label: 'Snabbaste km',
+                    icon: 'flash-outline' as const, color: P.YELLOW, label: 'Snabbaste km',
                     value: recFastestSplitSec === Infinity ? '–' : fmtPace(recFastestSplitSec),
                     workout: recFastestSplitW,
                   },
                   {
-                    icon: 'stopwatch-outline' as const, color: RED, label: `Bästa tempo /${unitLabel}`,
+                    icon: 'stopwatch-outline' as const, color: P.RED, label: `Bästa tempo /${unitLabel}`,
                     value: recBestPaceSec === Infinity ? '–' : fmtPace(paceForUnit(recBestPaceSec, unit)),
                     workout: recBestPaceW,
                   },
@@ -702,14 +704,14 @@ export function CardioTab({
             <Text style={s.sessionsWeekLabel}>{cardioBounds.label}</Text>
             <View style={[s.card, s.cardPlain, { marginTop: 12, paddingVertical: 4 }]}>
               {([
-                { label: 'Träningstid', value: fmtDuration(totalSecs), color: YELLOW },
-                { label: 'Distans', value: `${toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: BLUE },
-                { label: 'Kilokalorier', value: `${totalCals.toLocaleString('sv-SE')} kcal`, color: RED },
+                { label: 'Träningstid', value: fmtDuration(totalSecs), color: P.YELLOW },
+                { label: 'Distans', value: `${toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: P.BLUE },
+                { label: 'Kilokalorier', value: `${totalCals.toLocaleString('sv-SE')} kcal`, color: P.RED },
                 { label: 'Antal pass', value: String(cardioW.length), color: GREEN },
                 { label: 'Aktiva dagar', value: String(activeCardioDays), color: TEXT_PRIMARY },
-                { label: 'Snittempo', value: `${avgPace} /${unitLabel}`, color: TEAL },
-                { label: 'Bästa tempo', value: `${bestPace} /${unitLabel}`, color: PURPLE },
-                { label: 'Snittdistans', value: `${toDisplayDistance(avgDistKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: LIME },
+                { label: 'Snittempo', value: `${avgPace} /${unitLabel}`, color: P.TEAL },
+                { label: 'Bästa tempo', value: `${bestPace} /${unitLabel}`, color: P.PURPLE },
+                { label: 'Snittdistans', value: `${toDisplayDistance(avgDistKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: P.LIME },
                 { label: 'Längsta pass', value: `${toDisplayDistance(longestPassKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: ACCENT },
                 {
                   label: 'Snittansträngning',
