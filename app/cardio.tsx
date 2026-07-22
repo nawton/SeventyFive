@@ -1172,7 +1172,7 @@ export default function CardioScreen() {
 
       {/* ── Splits-sidan (tredje sliden) — kilometrar i block ── */}
       <Animated.View
-        style={[styles.expandedStats, splitsStyle]}
+        style={[styles.expandedStats, lightCard && { backgroundColor: '#F5F5F7' }, splitsStyle]}
         pointerEvents={splitsOpen ? 'auto' : 'none'}
       >
         <GestureDetector gesture={splitsCollapseGesture}>
@@ -1220,7 +1220,7 @@ export default function CardioScreen() {
       {/* ── Fullskärms-stats (kartan dold) — går att öppna även innan start ── */}
       {(
         <Animated.View
-          style={[styles.expandedStats, expandedStyle]}
+          style={[styles.expandedStats, lightCard && { backgroundColor: '#F5F5F7' }, expandedStyle]}
           pointerEvents={statsExpanded ? 'auto' : 'none'}
         >
           <GestureDetector gesture={collapseGesture}>
@@ -1662,7 +1662,7 @@ export default function CardioScreen() {
                 onPress={() => (voicePage === 'main' ? setVoiceModalOpen(false) : setVoicePage('main'))}
                 hitSlop={12}
               >
-                <Ionicons name={voicePage === 'main' ? 'close' : 'chevron-back'} size={26} color="#fff" />
+                <Ionicons name={voicePage === 'main' ? 'close' : 'chevron-back'} size={26} color={T.TEXT_PRIMARY} />
               </TouchableOpacity>
             </View>
             <View style={styles.voiceIconWrap}>
@@ -1747,7 +1747,7 @@ export default function CardioScreen() {
                       disabled={voiceSet.distEvery <= 1}
                       onPress={() => updateVoiceSet({ distEvery: Math.max(1, voiceSet.distEvery - 1) })}
                     >
-                      <Ionicons name="remove" size={24} color="#fff" />
+                      <Ionicons name="remove" size={24} color={T.TEXT_PRIMARY} />
                     </TouchableOpacity>
                     <View style={{ alignItems: 'center' }}>
                       <Text style={styles.voiceStepValue}>{voiceSet.distEvery || 1}</Text>
@@ -1758,7 +1758,7 @@ export default function CardioScreen() {
                       disabled={voiceSet.distEvery === 0 || voiceSet.distEvery >= 10}
                       onPress={() => updateVoiceSet({ distEvery: Math.min(10, voiceSet.distEvery + 1) })}
                     >
-                      <Ionicons name="add" size={24} color="#fff" />
+                      <Ionicons name="add" size={24} color={T.TEXT_PRIMARY} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1778,7 +1778,7 @@ export default function CardioScreen() {
                       disabled={voiceSet.timeEvery <= 1}
                       onPress={() => updateVoiceSet({ timeEvery: Math.max(1, voiceSet.timeEvery - 1) })}
                     >
-                      <Ionicons name="remove" size={24} color="#fff" />
+                      <Ionicons name="remove" size={24} color={T.TEXT_PRIMARY} />
                     </TouchableOpacity>
                     <View style={{ alignItems: 'center' }}>
                       <Text style={styles.voiceStepValue}>{voiceSet.timeEvery || 5}</Text>
@@ -1789,7 +1789,7 @@ export default function CardioScreen() {
                       disabled={voiceSet.timeEvery === 0 || voiceSet.timeEvery >= 60}
                       onPress={() => updateVoiceSet({ timeEvery: Math.min(60, voiceSet.timeEvery + 1) })}
                     >
-                      <Ionicons name="add" size={24} color="#fff" />
+                      <Ionicons name="add" size={24} color={T.TEXT_PRIMARY} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1849,7 +1849,7 @@ export default function CardioScreen() {
                   disabled={goalKmDraft <= 0.5}
                   onPress={() => setGoalKmDraft(v => Math.max(0.5, Math.round((v - 0.5) * 2) / 2))}
                 >
-                  <Ionicons name="remove" size={24} color="#fff" />
+                  <Ionicons name="remove" size={24} color={T.TEXT_PRIMARY} />
                 </TouchableOpacity>
                 <View style={{ alignItems: 'center' }}>
                   <Text style={styles.voiceStepValue}>
@@ -1862,7 +1862,7 @@ export default function CardioScreen() {
                   disabled={goalKmDraft === 0 || goalKmDraft >= 100}
                   onPress={() => setGoalKmDraft(v => Math.min(100, Math.round((v + 0.5) * 2) / 2))}
                 >
-                  <Ionicons name="add" size={24} color="#fff" />
+                  <Ionicons name="add" size={24} color={T.TEXT_PRIMARY} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -1883,7 +1883,7 @@ export default function CardioScreen() {
                   disabled={goalMinDraft <= 5}
                   onPress={() => setGoalMinDraft(v => Math.max(5, v - 5))}
                 >
-                  <Ionicons name="remove" size={24} color="#fff" />
+                  <Ionicons name="remove" size={24} color={T.TEXT_PRIMARY} />
                 </TouchableOpacity>
                 <View style={{ alignItems: 'center' }}>
                   <Text style={styles.voiceStepValue}>{goalMinDraft || 30}</Text>
@@ -1894,7 +1894,7 @@ export default function CardioScreen() {
                   disabled={goalMinDraft === 0 || goalMinDraft >= 300}
                   onPress={() => setGoalMinDraft(v => Math.min(300, v + 5))}
                 >
-                  <Ionicons name="add" size={24} color="#fff" />
+                  <Ionicons name="add" size={24} color={T.TEXT_PRIMARY} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -2173,8 +2173,8 @@ const styles = StyleSheet.create({
 
   // Punktindikator för de tre sidorna
   pageDots: { flexDirection: 'row', justifyContent: 'center', gap: 7, paddingTop: 8, marginBottom: -2 },
-  pageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)' },
-  pageDotOn: { backgroundColor: '#fff' },
+  pageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(128,128,128,0.4)' },
+  pageDotOn: { backgroundColor: TEXT_PRIMARY },
 
   // Röstguidning — fullskärm
   voiceRoot: { flex: 1, backgroundColor: BG },
@@ -2201,7 +2201,7 @@ const styles = StyleSheet.create({
   },
   voiceStepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
   voiceStepBtn: {
-    width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(255,255,255,0.07)',
+    width: 54, height: 54, borderRadius: 27, backgroundColor: DIVIDER,
     alignItems: 'center', justifyContent: 'center',
   },
   voiceStepValue: { color: CARDIO_ACCENT, fontSize: 46, fontFamily: NUM_FONT, lineHeight: 52 },
