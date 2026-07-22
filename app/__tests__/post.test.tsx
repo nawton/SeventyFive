@@ -23,6 +23,7 @@ jest.mock('@/services/social', () => ({
   unlikePost: jest.fn().mockResolvedValue(undefined),
   likeComment: jest.fn().mockResolvedValue(undefined),
   unlikeComment: jest.fn().mockResolvedValue(undefined),
+  getCommentLikers: jest.fn().mockResolvedValue([]),
 }))
 let mockParams: Record<string, string> = {}
 jest.mock('expo-router', () => ({
@@ -129,7 +130,26 @@ describe('Diskussion', () => {
     await screen.findByText('Johan Wretenberg')
     fireEvent.press(screen.getByTestId('commentLike-c1'))
     expect(likeComment).toHaveBeenCalledWith('c1')
-    expect(screen.getByText('1')).toBeOnTheScreen()   // kommentarens gillaräknare
+    expect(screen.getByText('1 gillamarkering')).toBeOnTheScreen()
+  })
+
+  it('gillamarkeringstexten öppnar gillarlistan', async () => {
+    const { getCommentLikers } = require('@/services/social')
+    ;(getCommentLikers as jest.Mock).mockResolvedValue([
+      { id: 'u3', name: 'Johan Wretenberg', avatar_url: null },
+    ])
+    ;(getComments as jest.Mock).mockResolvedValue([
+      {
+        id: 'c1', authorId: 'u3', authorName: 'Johan Wretenberg', authorAvatar: null,
+        body: 'Du är bra igång Alva!', createdAt: '2026-07-21T18:00:00.000Z',
+        likes: 1, likedByMe: false,
+      },
+    ])
+    render(<PostScreen />)
+    await screen.findByText('Johan Wretenberg')
+    fireEvent.press(screen.getByTestId('commentLikers-c1'))
+    expect(getCommentLikers).toHaveBeenCalledWith('c1')
+    expect(await screen.findByTestId('likersClose')).toBeOnTheScreen()   // sheeten är öppen
   })
 
   it('tryck på en kommentar öppnar personens profil', async () => {

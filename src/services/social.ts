@@ -143,6 +143,19 @@ export async function getComments(postKey: string): Promise<PostComment[]> {
   })
 }
 
+/** Vilka som gillat en kommentar, nyast först — till gillarlistan */
+export async function getCommentLikers(commentId: string, limit = 100): Promise<FollowProfile[]> {
+  const { data } = await supabase
+    .from('comment_likes')
+    .select('liker_id, created_at')
+    .eq('comment_id', commentId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  const ids = (data ?? []).map(r => r.liker_id as string)
+  const profiles = await resolveProfiles(ids)
+  return ids.map(id => profiles.get(id) ?? { id, name: null, avatar_url: null })
+}
+
 export async function likeComment(commentId: string): Promise<void> {
   const uid = await ownId()
   if (!uid) return

@@ -12,8 +12,10 @@ import { supabase } from '@/lib/supabase'
 import { getCardioWorkoutById, type CardioWorkout } from '@/services/cardioWorkouts'
 import {
   getFeedSocial, getPostLikers, getComments, addComment, deleteComment,
-  likePost, unlikePost, likeComment, unlikeComment, type PostComment,
+  likePost, unlikePost, likeComment, unlikeComment, getCommentLikers,
+  type PostComment,
 } from '@/services/social'
+import { LikersSheet } from '@/components/LikersSheet'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar, relativeDayLabel, regionForRoute } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -53,6 +55,8 @@ export default function PostScreen() {
   const [sending, setSending] = useState(false)
   const [unit, setUnit] = useState<UnitSystem>('metric')
   const [detailOpen, setDetailOpen] = useState(false)
+  // Gillarlistan för en kommentar — null = stängd
+  const [likersFor, setLikersFor] = useState<{ count: number; list: FollowProfile[] } | null>(null)
 
   useFocusEffect(useCallback(() => {
     if (!postKey) return
@@ -96,6 +100,13 @@ export default function PostScreen() {
         setLikedByMe(!next)
         setLikes(n => Math.max(0, n + (next ? -1 : 1)))
       })
+  }
+
+  // Gillamarkeringstexten öppnar den dragbara gillarlistan
+  function openCommentLikers(c: PostComment) {
+    getCommentLikers(c.id)
+      .then(list => setLikersFor({ count: list.length, list }))
+      .catch(() => {})
   }
 
   // Hjärtat under en kommentar — optimistiskt, backas vid fel
@@ -279,20 +290,31 @@ export default function PostScreen() {
                     <Text style={s.commentTime}>· {timeAgo(c.createdAt)}</Text>
                   </View>
                   <Text style={s.commentBody}>{c.body}</Text>
-                  {/* Litet hjärta under kommentaren, som förlagan */}
-                  <TouchableOpacity
-                    style={s.commentLike}
-                    onPress={() => toggleCommentLike(c)}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    testID={`commentLike-${c.id}`}
-                  >
-                    <Ionicons
-                      name={c.likedByMe ? 'heart' : 'heart-outline'}
-                      size={16}
-                      color={c.likedByMe ? '#FF3B4A' : TEXT_SECONDARY}
-                    />
-                    {c.likes > 0 && <Text style={s.commentLikeCount}>{c.likes}</Text>}
-                  </TouchableOpacity>
+                  {/* Hjärtat togglar; gillamarkeringstexten öppnar listan */}
+                  <View style={s.commentLike}>
+                    <TouchableOpacity
+                      onPress={() => toggleCommentLike(c)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      testID={`commentLike-${c.id}`}
+                    >
+                      <Ionicons
+                        name={c.likedByMe ? 'heart' : 'heart-outline'}
+                        size={16}
+                        color={c.likedByMe ? '#FF3B4A' : TEXT_SECONDARY}
+                      />
+                    </TouchableOpacity>
+                    {c.likes > 0 && (
+                      <TouchableOpacity
+                        onPress={() => openCommentLikers(c)}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        testID={`commentLikers-${c.id}`}
+                      >
+                        <Text style={s.commentLikeCount}>
+                          {c.likes === 1 ? '1 gillamarkering' : `${c.likes} gillamarkeringar`}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
               </TouchableOpacity>
             ))}
@@ -330,6 +352,25 @@ export default function PostScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Dragbar gillarlista: halvvägs upp, dra upp för helskärm eller
+          ner för att stänga */}
+      <LikersSheet
+        likers={likersFor?.list ?? null}
+        count={likersFor?.count ?? 0}
+        onClose={() => setLikersFor(null)}
+        onPressPerson={p => {
+          setLikersFor(null)
+          if (p.id === ownId) {
+            router.push('/(app)/profile' as never)
+          } else {
+            router.push({
+              pathname: '/(app)/athlete',
+              params: { userId: p.id, name: p.name ?? 'Namnlös', avatar: p.avatar_url ?? '' },
+            } as never)
+          }
+        }}
+      />
 
       {/* Hela passdetaljvyn — samma som statistiken, skrivskyddat betyg
           på andras pass */}
