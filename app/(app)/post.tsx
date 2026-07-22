@@ -9,7 +9,8 @@ import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline, Marker } from 'react-native-maps'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
-import { getCardioWorkoutById, type CardioWorkout } from '@/services/cardioWorkouts'
+import type { CardioWorkout } from '@/services/cardioWorkouts'
+import { getSharedWorkout } from '@/services/feed'
 import {
   getFeedSocial, getPostLikers, getComments, addComment, deleteComment,
   likePost, unlikePost, likeComment, unlikeComment, getCommentLikers,
@@ -74,7 +75,8 @@ export default function PostScreen() {
     getUnitSystem().then(u => { if (alive) setUnit(u) })
     setDetailOpen(false)
     if (kind === 'cardio' && ownerId) {
-      getCardioWorkoutById(ownerId, postKey)
+      // Serverstrippad läsväg — rutten följer med bara om ägaren delar kartor
+      getSharedWorkout(postKey)
         .then(w => { if (alive) setWorkout(w) })
         .catch(() => {})
     }

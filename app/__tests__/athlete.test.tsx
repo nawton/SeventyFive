@@ -20,6 +20,9 @@ jest.mock('@/services/cardioWorkouts', () => ({
 jest.mock('@/services/strengthWorkouts', () => ({
   getStrengthWorkouts: jest.fn().mockResolvedValue([]),
 }))
+jest.mock('@/services/feed', () => ({
+  fetchUserWorkouts: jest.fn().mockResolvedValue({ cardio: [], strength: [] }),
+}))
 jest.mock('@/services/challenge', () => ({
   getActiveChallenge: jest.fn().mockResolvedValue({ id: 'c1' }),
 }))
@@ -85,6 +88,15 @@ beforeEach(() => {
     makeRun(new Date().toISOString(), 5.5),
     makeRun('2026-07-10T08:00:00.000Z', 10, 'cycling'),
   ])
+  // Andras profiler läses via den serverstrippade RPC:n
+  const { fetchUserWorkouts } = require('@/services/feed')
+  ;(fetchUserWorkouts as jest.Mock).mockResolvedValue({
+    cardio: [
+      { userId: 'u2', workout: makeRun(new Date().toISOString(), 5.5) },
+      { userId: 'u2', workout: makeRun('2026-07-10T08:00:00.000Z', 10, 'cycling') },
+    ],
+    strength: [],
+  })
   // clearAllMocks rensar inte implementationer — återställ statusen explicit
   const follows = require('@/services/follows')
   ;(follows.getFollowStatus as jest.Mock).mockResolvedValue('none')

@@ -57,3 +57,32 @@ export function haversineDistance(a: Coord, b: Coord): number {
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))
 }
+
+/** Kartintegritet: klipper bort punkter inom skyddszonen (i meter) från
+    ruttens början och slut — körs INNAN passet sparas, så start- och
+    slutpunkterna lagras aldrig. Returnerar tom rutt om allt låg i zonen. */
+export function trimRouteEnds(
+  route: Array<[number, number]>, meters = 200,
+): Array<[number, number]> {
+  if (route.length < 2) return route
+  const km = meters / 1000
+  const dist = (a: [number, number], b: [number, number]) =>
+    haversineDistance(
+      { latitude: a[0], longitude: a[1] },
+      { latitude: b[0], longitude: b[1] },
+    )
+  let start = 0
+  let acc = 0
+  while (start < route.length - 1 && acc < km) {
+    acc += dist(route[start], route[start + 1])
+    start++
+  }
+  let end = route.length - 1
+  acc = 0
+  while (end > 0 && acc < km) {
+    acc += dist(route[end - 1], route[end])
+    end--
+  }
+  if (start >= end) return []
+  return route.slice(start, end + 1)
+}

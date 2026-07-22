@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
+import { trimRouteEnds } from '@/lib/cardioUtils'
 import { deleteWorkout } from './strengthWorkouts'
 
 export interface CardioSplit {
@@ -51,13 +52,25 @@ export async function saveCardioWorkout(params: {
   intervalsPlanned?: number
   effort?: number
 }): Promise<void> {
+  // Kartintegritet: klipp start/slut ur rutten INNAN den sparas om
+  // användaren valt det — punkterna lagras då aldrig någonstans
+  let route = params.route
+  if (route && route.length > 1) {
+    const { data: prefs } = await supabase
+      .from('profiles')
+      .select('trim_route_ends')
+      .eq('id', params.userId)
+      .maybeSingle()
+    if (prefs?.trim_route_ends) route = trimRouteEnds(route)
+  }
+
   const entry: CardioData = {
     category: 'cardio',
     type: params.type,
     distance_km: params.distanceKm,
     duration_seconds: params.durationSeconds,
     calories: params.calories,
-    route: params.route,
+    route,
     splits: params.splits,
     intervals: params.intervals,
     intervals_planned: params.intervalsPlanned,

@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
 import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
+import { fetchUserWorkouts } from '@/services/feed'
 import { getActiveChallenge } from '@/services/challenge'
 import { getStreak } from '@/services/dailyLog'
 import {
@@ -84,14 +85,13 @@ export default function AthleteScreen() {
         if (!alive) return
         setFollowStatus(status)
         if (status !== 'accepted') return
-        // Godkänd förfrågan — RLS släpper igenom personens pass
-        const [all, strength] = await Promise.all([
-          getCardioWorkouts(otherId!, 200).catch(() => [] as CardioWorkout[]),
-          getStrengthWorkouts(otherId!, 500).catch(() => [] as StrengthWorkout[]),
-        ])
+        // Godkänd förfrågan — serverstrippad läsväg (rutter döljs om
+        // ägaren valt det; RLS avgör åtkomsten)
+        const shared = await fetchUserWorkouts(otherId!)
+          .catch(() => ({ cardio: [], strength: [] }))
         if (!alive) return
-        setWorkouts(all)
-        setGymCount(strengthToPosts(strength, '', '', null).length)
+        setWorkouts(shared.cardio.map(r => r.workout))
+        setGymCount(strengthToPosts(shared.strength.map(r => r.workout), '', '', null).length)
         return
       }
       const [profile, all, strength] = await Promise.all([
@@ -179,12 +179,10 @@ export default function AthleteScreen() {
           setFollowStatus(status)
           if (status !== 'accepted') return
           setCounts(c => ({ ...c, followers: c.followers + 1 }))
-          const [all, strength] = await Promise.all([
-            getCardioWorkouts(otherId, 200).catch(() => [] as CardioWorkout[]),
-            getStrengthWorkouts(otherId, 500).catch(() => [] as StrengthWorkout[]),
-          ])
-          setWorkouts(all)
-          setGymCount(strengthToPosts(strength, '', '', null).length)
+          const shared = await fetchUserWorkouts(otherId)
+            .catch(() => ({ cardio: [], strength: [] }))
+          setWorkouts(shared.cardio.map(r => r.workout))
+          setGymCount(strengthToPosts(shared.strength.map(r => r.workout), '', '', null).length)
         })
         .catch(() => setFollowStatus('none'))
     } else {

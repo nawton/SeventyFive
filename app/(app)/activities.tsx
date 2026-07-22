@@ -5,8 +5,8 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
-import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
-import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
+import type { StrengthWorkout } from '@/services/strengthWorkouts'
+import { fetchUserWorkouts } from '@/services/feed'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassSegment } from '@/components/GlassSegment'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
@@ -51,20 +51,21 @@ export default function ActivitiesScreen() {
       const own = otherId === null || otherId === session.user.id
       setIsOther(!own)
       const targetId = own ? session.user.id : otherId!
-      const [profile, cardio, strength] = await Promise.all([
+      // Serverstrippad läsväg: rutter följer bara med om ägaren delar kartor
+      const [profile, shared] = await Promise.all([
         own ? getProfile(session.user.id).catch(() => null) : Promise.resolve(null),
-        getCardioWorkouts(targetId, 200).catch(() => [] as CardioWorkout[]),
-        getStrengthWorkouts(targetId, 500).catch(() => [] as StrengthWorkout[]),
+        fetchUserWorkouts(targetId).catch(() => ({ cardio: [], strength: [] })),
       ])
       if (!alive) return
       const authorName = own
         ? profile?.name || session.user.email?.split('@')[0] || 'Jag'
         : paramName || 'Atlet'
       const avatar = own ? profile?.avatar_url ?? null : paramAvatar
+      const strength = shared.strength.map(r => r.workout)
       setAvatarUrl(avatar)
       setAllStrength(strength)
       setPosts(mergePosts([
-        ...cardio.map(w => workoutToPost(w, targetId, authorName, avatar)),
+        ...shared.cardio.map(r => workoutToPost(r.workout, targetId, authorName, avatar)),
         ...strengthToPosts(strength, targetId, authorName, avatar),
       ]))
       setLoaded(true)

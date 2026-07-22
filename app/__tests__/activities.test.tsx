@@ -1,6 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react-native'
 import ActivitiesScreen from '../(app)/activities'
-import { getCardioWorkouts } from '@/services/cardioWorkouts'
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
@@ -14,11 +13,8 @@ jest.mock('@/lib/supabase', () => ({
 jest.mock('@/services/profile', () => ({
   getProfile: jest.fn().mockResolvedValue({ name: 'Anton Wretenberg', avatar_url: null }),
 }))
-jest.mock('@/services/cardioWorkouts', () => ({
-  getCardioWorkouts: jest.fn().mockResolvedValue([]),
-}))
-jest.mock('@/services/strengthWorkouts', () => ({
-  getStrengthWorkouts: jest.fn().mockResolvedValue([]),
+jest.mock('@/services/feed', () => ({
+  fetchUserWorkouts: jest.fn().mockResolvedValue({ cardio: [], strength: [] }),
 }))
 jest.mock('@/components/stats/GymSummaryView', () => {
   const React = require('react')
@@ -56,13 +52,15 @@ const RUN = {
   data: { category: 'cardio', type: 'running', distance_km: 5.01, duration_seconds: 2709, calories: 400 },
 }
 
-const { getStrengthWorkouts } = require('@/services/strengthWorkouts')
+const { fetchUserWorkouts } = require('@/services/feed')
 
 beforeEach(() => {
   jest.clearAllMocks()
   mockParams = {}
-  ;(getCardioWorkouts as jest.Mock).mockResolvedValue([RUN])
-  ;(getStrengthWorkouts as jest.Mock).mockResolvedValue([])
+  ;(fetchUserWorkouts as jest.Mock).mockResolvedValue({
+    cardio: [{ userId: 'u1', workout: RUN }],
+    strength: [],
+  })
 })
 
 describe('Aktiviteter', () => {
@@ -83,13 +81,19 @@ describe('Aktiviteter', () => {
   })
 
   it('filtret växlar mellan alla, cardio och gym', async () => {
-    ;(getStrengthWorkouts as jest.Mock).mockResolvedValue([{
-      id: 's1', name: 'Bänkpress', created_at: '2026-07-15T17:00:00.000Z',
-      data: {
-        category: 'strength', exercise_id: 'e1', exercise_name: 'Bänkpress',
-        sets: [{ reps: 8, weight_kg: 60 }], workout_date: '2026-07-15',
-      },
-    }])
+    ;(fetchUserWorkouts as jest.Mock).mockResolvedValue({
+      cardio: [{ userId: 'u1', workout: RUN }],
+      strength: [{
+        userId: 'u1',
+        workout: {
+          id: 's1', name: 'Bänkpress', created_at: '2026-07-15T17:00:00.000Z',
+          data: {
+            category: 'strength', exercise_id: 'e1', exercise_name: 'Bänkpress',
+            sets: [{ reps: 8, weight_kg: 60 }], workout_date: '2026-07-15',
+          },
+        },
+      }],
+    })
     render(<ActivitiesScreen />)
     await screen.findAllByText('Anton Wretenberg')     // löprunda + gympass
     expect(screen.getByText('5,01')).toBeOnTheScreen()
@@ -113,7 +117,7 @@ describe('Aktiviteter', () => {
   })
 
   it('tom historik visar tomläge', async () => {
-    ;(getCardioWorkouts as jest.Mock).mockResolvedValue([])
+    ;(fetchUserWorkouts as jest.Mock).mockResolvedValue({ cardio: [], strength: [] })
     render(<ActivitiesScreen />)
     expect(await screen.findByText('Inga aktiviteter ännu')).toBeOnTheScreen()
   })

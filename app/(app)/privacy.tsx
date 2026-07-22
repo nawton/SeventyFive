@@ -1,11 +1,16 @@
 import { useCallback, useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native'
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Switch, FlatList,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
+import { getBlockedUsers, unblockUser } from '@/services/blocks'
+import type { FollowProfile } from '@/services/follows'
+import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 
@@ -87,6 +92,12 @@ export default function PrivacyScreen() {
   const [isPublic, setIsPublic] = useState(false)
   const [activityVisibility, setActivityVisibility] = useState<'followers' | 'private'>('followers')
   const [picker, setPicker] = useState<SettingKey | null>(null)
+  // Ytterligare inställningar
+  const [trimRouteEnds, setTrimRouteEnds] = useState(false)
+  const [hideRouteMaps, setHideRouteMaps] = useState(false)
+  const [mapsOpen, setMapsOpen] = useState(false)
+  const [blockedOpen, setBlockedOpen] = useState(false)
+  const [blocked, setBlocked] = useState<FollowProfile[]>([])
 
   useFocusEffect(useCallback(() => {
     let alive = true
@@ -98,10 +109,21 @@ export default function PrivacyScreen() {
         setSearchable(p.searchable ?? true)
         setIsPublic(p.is_public ?? false)
         setActivityVisibility(p.activity_visibility ?? 'followers')
+        setTrimRouteEnds(p.trim_route_ends ?? false)
+        setHideRouteMaps(p.hide_route_maps ?? false)
       }).catch(() => {})
+      getBlockedUsers().then(list => { if (alive) setBlocked(list) }).catch(() => {})
     })
     return () => { alive = false }
   }, []))
+
+  function handleUnblock(id: string) {
+    Haptics.selectionAsync()
+    setBlocked(prev => prev.filter(p => p.id !== id))
+    unblockUser(id).catch(() => {
+      getBlockedUsers().then(setBlocked).catch(() => {})
+    })
+  }
 
   function save(updates: Parameters<typeof updateProfile>[1]) {
     if (!userId) return
@@ -176,7 +198,140 @@ export default function PrivacyScreen() {
         <Text style={s.footnote}>
           Framstegsfoton är alltid privata och delas aldrig med någon.
         </Text>
+
+        <Text style={[s.sectionLabel, { marginTop: 26 }]}>YTTERLIGARE INSTÄLLNINGAR</Text>
+        <View style={s.rowsCard}>
+          <TouchableOpacity
+            style={s.row}
+            onPress={() => setMapsOpen(true)}
+            activeOpacity={0.7}
+            testID="privacy-maps"
+          >
+            <Text style={s.rowLabel}>Kartsynlighet</Text>
+            <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+          </TouchableOpacity>
+          <View style={s.rowDivider} />
+          <TouchableOpacity
+            style={s.row}
+            onPress={() => setBlockedOpen(true)}
+            activeOpacity={0.7}
+            testID="privacy-blocked"
+          >
+            <Text style={s.rowLabel}>Blockerade konton</Text>
+            {blocked.length > 0 && <Text style={s.rowValue}>{blocked.length}</Text>}
+            <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      {/* Kartsynlighet: två riktiga val — klipp ruttändar vid sparning och
+          dölj kartor helt för andra */}
+      <Modal visible={mapsOpen} animationType="slide" onRequestClose={() => setMapsOpen(false)}>
+        <SafeAreaView style={s.screen}>
+          <View style={s.header}>
+            <GlassCircleButton
+              icon="chevron-back"
+              size={40}
+              iconColor={TEXT_PRIMARY}
+              onPress={() => setMapsOpen(false)}
+              fallbackStyle={s.iconBtnFallback}
+            />
+            <Text style={s.title}>Kartsynlighet</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+            <View style={s.toggleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.optionTitle}>Dölj start- och slutpunkter</Text>
+                <Text style={s.optionBody}>
+                  Cirka 200 meter i början och slutet av nya rutter klipps bort
+                  innan de sparas — punkterna lagras aldrig. Tidigare pass
+                  påverkas inte.
+                </Text>
+              </View>
+              <Switch
+                value={trimRouteEnds}
+                onValueChange={v => {
+                  Haptics.selectionAsync()
+                  setTrimRouteEnds(v)
+                  save({ trim_route_ends: v })
+                }}
+                trackColor={{ false: BORDER, true: ORANGE }}
+                thumbColor="#fff"
+                testID="trimSwitch"
+              />
+            </View>
+            <View style={s.toggleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.optionTitle}>Dölj kartor helt för andra</Text>
+                <Text style={s.optionBody}>
+                  Dina rutter visas aldrig för följare — varken i flödet, på
+                  din profil eller i passdetaljerna. Du ser dem alltid själv.
+                </Text>
+              </View>
+              <Switch
+                value={hideRouteMaps}
+                onValueChange={v => {
+                  Haptics.selectionAsync()
+                  setHideRouteMaps(v)
+                  save({ hide_route_maps: v })
+                }}
+                trackColor={{ false: BORDER, true: ORANGE }}
+                thumbColor="#fff"
+                testID="hideMapsSwitch"
+              />
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Blockerade konton — lista med avblockering */}
+      <Modal visible={blockedOpen} animationType="slide" onRequestClose={() => setBlockedOpen(false)}>
+        <SafeAreaView style={s.screen}>
+          <View style={s.header}>
+            <GlassCircleButton
+              icon="chevron-back"
+              size={40}
+              iconColor={TEXT_PRIMARY}
+              onPress={() => setBlockedOpen(false)}
+              fallbackStyle={s.iconBtnFallback}
+            />
+            <Text style={s.title}>Blockerade konton</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          <FlatList
+            data={blocked}
+            keyExtractor={p => p.id}
+            renderItem={({ item }) => (
+              <View style={s.blockedRow}>
+                <FeedAvatar
+                  url={item.avatar_url}
+                  fallback={(item.name ?? '?').charAt(0).toUpperCase()}
+                  size={46}
+                />
+                <Text style={s.blockedName} numberOfLines={1}>{item.name ?? 'Namnlös'}</Text>
+                <TouchableOpacity
+                  style={s.unblockPill}
+                  onPress={() => handleUnblock(item.id)}
+                  activeOpacity={0.8}
+                  testID={`unblock-${item.id}`}
+                >
+                  <Text style={s.unblockText}>Avblockera</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            ItemSeparatorComponent={() => <View style={s.rowDivider} />}
+            contentContainerStyle={s.scroll}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={s.empty}>
+                <Ionicons name="ban-outline" size={40} color={TEXT_SECONDARY} />
+                <Text style={s.emptyTitle}>Inga blockerade konton</Text>
+              </View>
+            }
+          />
+        </SafeAreaView>
+      </Modal>
 
       {/* Undersidan: förklaring + radioval, som förlagan */}
       <Modal visible={picker !== null} animationType="slide" onRequestClose={() => setPicker(null)}>
@@ -268,4 +423,18 @@ const s = StyleSheet.create({
   },
   radioSelected: { borderColor: ORANGE },
   radioDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: ORANGE },
+
+  toggleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    paddingVertical: 16,
+  },
+  blockedRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
+  blockedName: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+  unblockPill: {
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 18, paddingHorizontal: 14, paddingVertical: 7,
+  },
+  unblockText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
+  empty: { alignItems: 'center', gap: 8, paddingTop: 70 },
+  emptyTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginTop: 4 },
 })

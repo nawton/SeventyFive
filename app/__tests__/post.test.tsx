@@ -10,8 +10,8 @@ jest.mock('@/lib/supabase', () => ({
     },
   },
 }))
-jest.mock('@/services/cardioWorkouts', () => ({
-  getCardioWorkoutById: jest.fn().mockResolvedValue(null),
+jest.mock('@/services/feed', () => ({
+  getSharedWorkout: jest.fn().mockResolvedValue(null),
 }))
 jest.mock('@/services/social', () => ({
   getFeedSocial: jest.fn().mockResolvedValue({}),
@@ -180,8 +180,8 @@ describe('Diskussion', () => {
   })
 
   it('tryck på kartan öppnar passdetaljvyn — skrivskyddad på annans pass', async () => {
-    const { getCardioWorkoutById } = require('@/services/cardioWorkouts')
-    ;(getCardioWorkoutById as jest.Mock).mockResolvedValue({
+    const { getSharedWorkout } = require('@/services/feed')
+    ;(getSharedWorkout as jest.Mock).mockResolvedValue({
       id: 'w1', name: 'Löpning på eftermiddagen', created_at: '2026-07-21T16:00:00.000Z',
       data: {
         category: 'cardio', type: 'running',

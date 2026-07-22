@@ -102,3 +102,25 @@ describe('haversineDistance', () => {
     expect(haversineDistance(a, b) * 1000).toBeCloseTo(11.1, 0)
   })
 })
+
+describe('trimRouteEnds', () => {
+  // ~0,001° latitud ≈ 111 m — punkterna ligger ~111 m isär
+  const route: Array<[number, number]> = Array.from({ length: 10 }, (_, i) =>
+    [58.0 + i * 0.001, 13.0] as [number, number])
+  const { trimRouteEnds } = require('../cardioUtils')
+
+  it('klipper ~200 m från båda ändarna', () => {
+    const trimmed = trimRouteEnds(route, 200)
+    expect(trimmed.length).toBeLessThan(route.length)
+    expect(trimmed[0][0]).toBeGreaterThan(route[0][0])                       // starten borta
+    expect(trimmed[trimmed.length - 1][0]).toBeLessThan(route[9][0])         // slutet borta
+  })
+
+  it('kort rutt inom skyddszonen blir tom', () => {
+    expect(trimRouteEnds(route.slice(0, 3), 500)).toEqual([])
+  })
+
+  it('rör inte rutter med färre än två punkter', () => {
+    expect(trimRouteEnds([[58, 13]], 200)).toEqual([[58, 13]])
+  })
+})

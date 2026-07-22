@@ -23,13 +23,21 @@ jest.mock('expo-router', () => ({
   },
 }))
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }))
+jest.mock('@/services/blocks', () => ({
+  getBlockedUsers: jest.fn().mockResolvedValue([]),
+  unblockUser: jest.fn().mockResolvedValue(undefined),
+}))
+
+const { getBlockedUsers, unblockUser } = require('@/services/blocks')
 
 beforeEach(() => {
   jest.clearAllMocks()
   ;(getProfile as jest.Mock).mockResolvedValue({
     name: 'Anton', avatar_url: null,
     is_public: false, searchable: true, activity_visibility: 'followers',
+    trim_route_ends: false, hide_route_maps: false,
   })
+  ;(getBlockedUsers as jest.Mock).mockResolvedValue([])
 })
 
 describe('Integritetsinställningar', () => {
@@ -63,5 +71,28 @@ describe('Integritetsinställningar', () => {
     fireEvent.press(await screen.findByTestId('option-private'))
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { activity_visibility: 'private' }))
+  })
+
+  it('kartsynlighet: båda valen sparas till profilen', async () => {
+    render(<PrivacyScreen />)
+    fireEvent.press(await screen.findByTestId('privacy-maps'))
+    fireEvent(await screen.findByTestId('trimSwitch'), 'valueChange', true)
+    await waitFor(() =>
+      expect(updateProfile).toHaveBeenCalledWith('u1', { trim_route_ends: true }))
+    fireEvent(screen.getByTestId('hideMapsSwitch'), 'valueChange', true)
+    await waitFor(() =>
+      expect(updateProfile).toHaveBeenCalledWith('u1', { hide_route_maps: true }))
+  })
+
+  it('blockerade konton listas och kan avblockeras', async () => {
+    ;(getBlockedUsers as jest.Mock).mockResolvedValue([
+      { id: 'u2', name: 'Nawid', avatar_url: '🔥' },
+    ])
+    render(<PrivacyScreen />)
+    fireEvent.press(await screen.findByTestId('privacy-blocked'))
+    expect(await screen.findByText('Nawid')).toBeOnTheScreen()
+    fireEvent.press(screen.getByTestId('unblock-u2'))
+    expect(unblockUser).toHaveBeenCalledWith('u2')
+    expect(screen.queryByText('Nawid')).not.toBeOnTheScreen()
   })
 })
