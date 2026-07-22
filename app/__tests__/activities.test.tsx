@@ -26,13 +26,14 @@ jest.mock('@/components/stats/GymSummaryView', () => {
   return { GymSummaryView: ({ name }: { name: string }) =>
     React.createElement(Text, null, `gym:${name}`) }
 })
+let mockParams: Record<string, string> = {}
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
   useFocusEffect: (cb: () => void) => {
     const { useEffect } = require('react')
     useEffect(cb, [cb])
   },
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockParams,
 }))
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),
@@ -40,11 +41,12 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'light' },
 }))
 // Detaljvyn har ett eget testpaket — här räcker det att se att den öppnas
+// och om betyget är skrivskyddat
 jest.mock('@/components/CardioSummaryView', () => {
   const React = require('react')
   const { Text } = require('react-native')
-  return { CardioSummaryView: ({ title }: { title: string }) =>
-    React.createElement(Text, null, `summary:${title}`) }
+  return { CardioSummaryView: ({ title, effortReadOnly }: { title: string; effortReadOnly?: boolean }) =>
+    React.createElement(Text, null, `summary:${title}${effortReadOnly ? ':readonly' : ''}`) }
 })
 
 const RUN = {
@@ -58,6 +60,7 @@ const { getStrengthWorkouts } = require('@/services/strengthWorkouts')
 
 beforeEach(() => {
   jest.clearAllMocks()
+  mockParams = {}
   ;(getCardioWorkouts as jest.Mock).mockResolvedValue([RUN])
   ;(getStrengthWorkouts as jest.Mock).mockResolvedValue([])
 })
@@ -99,6 +102,14 @@ describe('Aktiviteter', () => {
     fireEvent.press(screen.getByText('Cardio'))
     expect(screen.getByText('5,01')).toBeOnTheScreen()
     expect(screen.queryByText(/Gympass — /)).not.toBeOnTheScreen()
+  })
+
+  it('annans pass: betyget är skrivskyddat i detaljvyn', async () => {
+    mockParams = { userId: 'u9', name: 'Nawid', avatar: '' }
+    render(<ActivitiesScreen />)
+    await screen.findByText('Nawid')
+    fireEvent.press(screen.getByTestId('post-w1'))
+    expect(screen.getByText('summary:Morgonrunda:readonly')).toBeOnTheScreen()
   })
 
   it('tom historik visar tomläge', async () => {

@@ -60,7 +60,7 @@ const APPLE_MAP_TYPES: Record<string, 'standard' | 'satellite' | 'mutedStandard'
   dark: 'mutedStandard',
 }
 
-export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, onClose, onDelete }: {
+export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, onClose, onDelete, effortReadOnly }: {
   workout: CardioWorkout
   title: string
   dateLabel: string | null
@@ -68,6 +68,8 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   unit: UnitSystem
   onClose: () => void
   onDelete?: () => void
+  /** Andras pass: betyget visas men går inte att ändra */
+  effortReadOnly?: boolean
 }) {
   const insets = useSafeAreaInsets()
   const d = workout.data
@@ -314,8 +316,15 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
             </View>
           )}
 
-          {/* Ansträngning — Apple Fitness-stil, tryck för att sätta/ändra betyget */}
-          <TouchableOpacity style={s.effortCard} activeOpacity={0.8} onPress={() => setEffortOpen(true)}>
+          {/* Ansträngning — Apple Fitness-stil, tryck för att sätta/ändra
+              betyget. På andras pass är kortet rent visande. */}
+          <TouchableOpacity
+            style={s.effortCard}
+            activeOpacity={0.8}
+            disabled={effortReadOnly}
+            onPress={() => setEffortOpen(true)}
+            testID="effortCard"
+          >
             <View style={{ flex: 1 }}>
               <Text style={s.effortHeading}>Ansträngning</Text>
               {effort ? (
@@ -326,11 +335,15 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
                   <Text style={[s.effortBigLabel, { color: effortColor(effort) }]}>{effortLabel(effort)}</Text>
                 </View>
               ) : (
-                <Text style={s.effortEmpty}>Tryck för att betygsätta</Text>
+                <Text style={s.effortEmpty}>
+                  {effortReadOnly ? 'Inget betyg satt' : 'Tryck för att betygsätta'}
+                </Text>
               )}
             </View>
             <EffortBars effort={effort ?? 0} color={effort ? effortColor(effort) : TEXT_SECONDARY} />
-            <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} style={{ marginLeft: 10 }} />
+            {!effortReadOnly && (
+              <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} style={{ marginLeft: 10 }} />
+            )}
           </TouchableOpacity>
         </Animated.View>
       </GestureDetector>

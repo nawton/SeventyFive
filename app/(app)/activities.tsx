@@ -35,6 +35,7 @@ export default function ActivitiesScreen() {
   const paramName = typeof params.name === 'string' ? params.name : ''
   const paramAvatar = typeof params.avatar === 'string' && params.avatar.length > 0 ? params.avatar : null
   const [filter, setFilter] = useState<Filter>('all')
+  const [isOther, setIsOther] = useState(false)
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -48,6 +49,7 @@ export default function ActivitiesScreen() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user || !alive) return
       const own = otherId === null || otherId === session.user.id
+      setIsOther(!own)
       const targetId = own ? session.user.id : otherId!
       const [profile, cardio, strength] = await Promise.all([
         own ? getProfile(session.user.id).catch(() => null) : Promise.resolve(null),
@@ -130,6 +132,7 @@ export default function ActivitiesScreen() {
             avatarUrl={avatarUrl}
             unit={unit}
             onClose={() => setSelected(null)}
+            effortReadOnly={isOther}
           />
         )}
         {selected?.kind === 'strength' && (
