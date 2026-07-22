@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -10,8 +10,10 @@ import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
 import { formatPace } from '@/lib/cardioUtils'
 import { fmtTime } from '@/lib/format'
+import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -21,7 +23,8 @@ import { TAB_CONTENT_PAD } from '@/lib/glass'
 // namn, statistikrad, karta och gilla/kommentera). Delnings-backenden är
 // inte byggd än, så flödet visar de egna cardio-passen som förhandsvisning;
 // när delning finns byts datakällan ut i loadFeed. Sök/följ medvetet
-// utelämnat. Grupper är en platshållare.
+// utelämnat. Grupper är en platshållare. Tryck på ett kort öppnar samma
+// passdetaljvy som statistiken använder (CardioSummaryView).
 // =============================================================================
 
 const TYPE_LABELS: Record<string, string> = {
@@ -39,6 +42,7 @@ interface FeedPost {
   distanceKm: number
   durationS: number
   route?: Array<[number, number]>
+  workout: CardioWorkout        // hela passet — detaljvyn öppnas härifrån
 }
 
 /** "idag" / "igår" / "5 dagar sedan" */
@@ -107,7 +111,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   )
 }
 
-function FeedCard({ post }: { post: FeedPost }) {
+function FeedCard({ post, onOpen }: { post: FeedPost; onOpen: (w: CardioWorkout) => void }) {
   // Gilla är än så länge bara lokal — sparas när delnings-backenden byggs
   const [liked, setLiked] = useState(false)
   const route = post.route ?? []
@@ -119,7 +123,12 @@ function FeedCard({ post }: { post: FeedPost }) {
   }
 
   return (
-    <View style={s.card}>
+    <TouchableOpacity
+      style={s.card}
+      activeOpacity={0.92}
+      onPress={() => onOpen(post.workout)}
+      testID={`post-${post.id}`}
+    >
       <View style={s.cardHeader}>
         <Avatar url={post.authorAvatar} fallback={post.authorName.charAt(0).toUpperCase()} size={44} />
         <View style={{ flex: 1 }}>
@@ -171,7 +180,7 @@ function FeedCard({ post }: { post: FeedPost }) {
         </TouchableOpacity>
         <Ionicons name="chatbubble-ellipses-outline" size={24} color={TEXT_SECONDARY} />
       </View>
-    </View>
+    </TouchableOpacity>
   )
 }
 
@@ -191,10 +200,14 @@ export default function CommunityScreen() {
   const [segment, setSegment] = useState<Segment>('feed')
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [unit, setUnit] = useState<UnitSystem>('metric')
+  const [selectedWorkout, setSelectedWorkout] = useState<CardioWorkout | null>(null)
   const onScroll = useTabBarShrinkOnScroll()
 
   useFocusEffect(useCallback(() => {
     let alive = true
+    getUnitSystem().then(u => { if (alive) setUnit(u) })
     async function loadFeed() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user || !alive) return
@@ -204,6 +217,7 @@ export default function CommunityScreen() {
       ])
       if (!alive) return
       const authorName = profile?.name || session.user.email?.split('@')[0] || 'Jag'
+      setAvatarUrl(profile?.avatar_url ?? null)
       setPosts(workouts.map(w => ({
         id: w.id,
         authorName,
@@ -213,6 +227,7 @@ export default function CommunityScreen() {
         distanceKm: w.data.distance_km,
         durationS: w.data.duration_seconds,
         route: w.data.route,
+        workout: w,
       })))
       setLoaded(true)
     }
@@ -251,7 +266,7 @@ export default function CommunityScreen() {
         <FlatList
           data={posts}
           keyExtractor={p => p.id}
-          renderItem={({ item }) => <FeedCard post={item} />}
+          renderItem={({ item }) => <FeedCard post={item} onOpen={setSelectedWorkout} />}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
           onScroll={onScroll}
@@ -265,6 +280,20 @@ export default function CommunityScreen() {
           ) : null}
         />
       )}
+
+      {/* Samma passdetaljvy som statistiken — utan radering härifrån */}
+      <Modal visible={!!selectedWorkout} animationType="slide" onRequestClose={() => setSelectedWorkout(null)}>
+        {selectedWorkout && (
+          <CardioSummaryView
+            workout={selectedWorkout}
+            title={selectedWorkout.name}
+            dateLabel={new Date(selectedWorkout.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            avatarUrl={avatarUrl}
+            unit={unit}
+            onClose={() => setSelectedWorkout(null)}
+          />
+        )}
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -297,16 +326,16 @@ const s = StyleSheet.create({
   cardDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
 
   cardTitle: {
-    color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800',
+    color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800',
     paddingHorizontal: 16, paddingTop: 14,
   },
   statsRow: {
     flexDirection: 'row', justifyContent: 'space-between',
-    paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16,
+    paddingHorizontal: 24, paddingTop: 10, paddingBottom: 14,
   },
-  stat: { alignItems: 'center', minWidth: 84 },
-  statValue: { color: TEXT_PRIMARY, fontSize: 30, fontFamily: NUM_FONT },
-  statLabel: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
+  stat: { alignItems: 'center', minWidth: 72 },
+  statValue: { color: TEXT_PRIMARY, fontSize: 22, fontFamily: NUM_FONT },
+  statLabel: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 1 },
 
   mapWrap: { height: 240 },
   map: { flex: 1 },

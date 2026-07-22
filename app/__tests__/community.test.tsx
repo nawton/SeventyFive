@@ -29,6 +29,13 @@ jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   ImpactFeedbackStyle: { Light: 'light' },
 }))
+// Detaljvyn har ett eget testpaket — här räcker det att se att den öppnas
+jest.mock('@/components/CardioSummaryView', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  return { CardioSummaryView: ({ title }: { title: string }) =>
+    React.createElement(Text, null, `summary:${title}`) }
+})
 
 const RUN = {
   id: 'w1',
@@ -58,6 +65,13 @@ describe('Community', () => {
     // Gilla växlar hjärtat lokalt
     fireEvent.press(screen.getByTestId('like-w1'))
     expect(screen.getByText('icon:heart')).toBeOnTheScreen()
+  })
+
+  it('tryck på kortet öppnar samma passdetaljvy som statistiken', async () => {
+    render(<CommunityScreen />)
+    await screen.findByText('Anton Wretenberg')
+    fireEvent.press(screen.getByTestId('post-w1'))
+    expect(screen.getByText('summary:Löpning')).toBeOnTheScreen()
   })
 
   it('följer-knappen leder till Följer-sidan', async () => {
