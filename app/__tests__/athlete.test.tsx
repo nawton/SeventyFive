@@ -79,21 +79,23 @@ beforeEach(() => {
 })
 
 describe('Atletprofil', () => {
-  it('visar namn, totalsiffra, räknare och veckostatistik', async () => {
+  it('egna profilen: räknare men INGEN statistiksektion (den har egen flik)', async () => {
     render(<AthleteScreen />)
     expect(await screen.findByText('Anton Wretenberg')).toBeOnTheScreen()
     expect(screen.getByText('16')).toBeOnTheScreen()        // 5,5 + 10 avrundat
     expect(screen.getByText('Totalt km')).toBeOnTheScreen()
     expect(screen.getByText('Följare')).toBeOnTheScreen()
-    expect(screen.getByText('Den här veckan')).toBeOnTheScreen()
-    expect(screen.getByText('5,50 km')).toBeOnTheScreen()   // veckans löpning
-    expect(screen.getByText('chart:12')).toBeOnTheScreen()
+    expect(screen.queryByText('Den här veckan')).not.toBeOnTheScreen()
+    expect(screen.queryByText('chart:12')).not.toBeOnTheScreen()
+    expect(screen.getByText('Aktiviteter')).toBeOnTheScreen()   // historiken finns kvar
   })
 
-  it('vald punkt i grafen styr veckosektionen — rubrik och statistik', async () => {
+  it('vald punkt i grafen styr veckosektionen — på en godkänd väns profil', async () => {
+    const { getFollowStatus } = require('@/services/follows')
+    ;(getFollowStatus as jest.Mock).mockResolvedValue('accepted')
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
     render(<AthleteScreen />)
-    await screen.findByText('Anton Wretenberg')
-    expect(screen.getByText('5,50 km')).toBeOnTheScreen()        // innevarande vecka
+    expect(await screen.findByText('5,50 km')).toBeOnTheScreen()  // innevarande vecka
     fireEvent.press(screen.getByTestId('chartFirstPoint'))        // äldsta veckan, 11 veckor bakåt
     expect(screen.queryByText('Den här veckan')).not.toBeOnTheScreen()
     expect(screen.getByText('0,00 km')).toBeOnTheScreen()        // inga pass den veckan
@@ -102,9 +104,12 @@ describe('Atletprofil', () => {
     expect(screen.getByText('5,50 km')).toBeOnTheScreen()
   })
 
-  it('typ-chips byter statistiken', async () => {
+  it('typ-chips byter statistiken — på en godkänd väns profil', async () => {
+    const { getFollowStatus } = require('@/services/follows')
+    ;(getFollowStatus as jest.Mock).mockResolvedValue('accepted')
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
     render(<AthleteScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Den här veckan')
     fireEvent.press(screen.getByText('Cykling'))
     expect(screen.getByText('0,00 km')).toBeOnTheScreen()   // cyklingen var inte denna vecka
   })

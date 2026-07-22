@@ -217,10 +217,11 @@ export function AthleteOverview({
         </TouchableOpacity>
       )}
 
-      {/* ── Strava-delen: typ-chips, veckan och distansgraf — visas för den
-          egna profilen och för profiler som godkänt ens vänförfrågan.
-          Framstegsfoton visas ALDRIG för andra, oavsett godkännande. ── */}
-      {!statsUnlocked ? (
+      {/* ── Strava-delen: typ-chips, veckan och distansgraf — visas BARA på
+          andras upplåsta profiler. Den egna statistiken har en hel flik i
+          navbaren, så här vore den bara dubblerad. Framstegsfoton visas
+          ALDRIG för andra, oavsett godkännande. ── */}
+      {!isOwn && !statsUnlocked && (
         <View style={s.otherEmpty}>
           <Ionicons name="lock-closed-outline" size={38} color={TEXT_SECONDARY} />
           <Text style={s.otherEmptyTitle}>Statistiken är privat</Text>
@@ -230,7 +231,9 @@ export function AthleteOverview({
               : `Skicka en vänförfrågan för att se ${name.split(' ')[0] || 'personens'} statistik och aktiviteter.`}
           </Text>
         </View>
-      ) : (<>
+      )}
+
+      {!isOwn && statsUnlocked && (<>
       <View style={s.chipsRow}>
         {TYPES.map(t => {
           const on = t.key === type
@@ -280,25 +283,29 @@ export function AthleteOverview({
         </View>
       </Animated.View>
 
-      {/* Alla aktiviteter — hela historiken på egen sida */}
-      <TouchableOpacity
-        style={s.activitiesBtn}
-        onPress={onOpenActivities}
-        activeOpacity={0.8}
-        testID="athleteActivities"
-      >
-        <View style={s.activitiesIcon}>
-          <Ionicons name="list-outline" size={20} color={TEXT_PRIMARY} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.activitiesTitle}>Aktiviteter</Text>
-          <Text style={s.activitiesMeta}>
-            {workouts.length + gymCount > 0 ? `${workouts.length + gymCount} pass` : 'Inga pass ännu'}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
-      </TouchableOpacity>
       </>)}
+
+      {/* Alla aktiviteter — hela historiken på egen sida (egen profil eller
+          upplåst väns) */}
+      {statsUnlocked && (
+        <TouchableOpacity
+          style={s.activitiesBtn}
+          onPress={onOpenActivities}
+          activeOpacity={0.8}
+          testID="athleteActivities"
+        >
+          <View style={s.activitiesIcon}>
+            <Ionicons name="list-outline" size={20} color={TEXT_PRIMARY} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.activitiesTitle}>Aktiviteter</Text>
+            <Text style={s.activitiesMeta}>
+              {workouts.length + gymCount > 0 ? `${workouts.length + gymCount} pass` : 'Inga pass ännu'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
+        </TouchableOpacity>
+      )}
     </View>
   )
 }
