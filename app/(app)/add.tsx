@@ -523,16 +523,25 @@ export default function SchemaScreen() {
         raceDate={raceDate}
       />
 
-      {/* Manage sessions link */}
-      <TouchableOpacity
-        style={styles.manageLink}
-        onPress={() => router.push('/(app)/manage-sessions')}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="list-outline" size={14} color={TEXT_SECONDARY} />
-        <Text style={styles.manageLinkText}>Hantera schemalagda pass</Text>
-        <Ionicons name="chevron-forward" size={13} color={TEXT_SECONDARY} />
-      </TouchableOpacity>
+      {/* Schema toolbar */}
+      <View style={styles.toolbar}>
+        <TouchableOpacity
+          style={[styles.toolbarBtn, styles.toolbarBtnSecondary]}
+          onPress={() => router.push('/(app)/manage-sessions')}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="list-outline" size={15} color={TEXT_PRIMARY} />
+          <Text style={styles.toolbarBtnText}>Schema</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.toolbarBtn, styles.toolbarBtnPrimary]}
+          onPress={() => openEditor(null)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={16} color="#000" />
+          <Text style={styles.toolbarBtnPrimaryText}>Nytt pass</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Uppdaterings-snurra: under kalendern, ovanför veckodagen */}
       {refreshing && <ActivityIndicator color={ORANGE} style={styles.refreshSpinner} />}
@@ -803,12 +812,22 @@ const styles = StyleSheet.create({
   addBtnText: { color: '#000', fontSize: 13, fontWeight: '700' },
 
 
-  manageLink: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 20, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+  toolbar: {
+    flexDirection: 'row', gap: 8,
+    marginHorizontal: 16, marginTop: 6, marginBottom: 4,
   },
-  manageLinkText: { flex: 1, color: TEXT_SECONDARY, fontSize: 12 },
+  toolbarBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 10, borderRadius: 12,
+  },
+  toolbarBtnSecondary: {
+    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+  },
+  toolbarBtnPrimary: {
+    backgroundColor: ORANGE,
+  },
+  toolbarBtnText:        { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
+  toolbarBtnPrimaryText: { color: '#000',       fontSize: 13, fontWeight: '700' },
   refreshSpinner: { marginTop: 10, marginBottom: 2 },
 
 
