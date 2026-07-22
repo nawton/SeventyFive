@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, BG_OVERLAY, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER } from '@/lib/theme'
+import { BG, BG_OVERLAY, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, CARD_BORDER } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import { parseRunTarget, buildRunSegments, paceRangeForUnit } from '@/lib/runProgression'
@@ -225,7 +225,7 @@ const s = StyleSheet.create({
   metaChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     paddingHorizontal: 11, paddingVertical: 7,
   },
   metaChipText: { color: TEXT_PRIMARY, fontSize: 13, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },
@@ -244,7 +244,7 @@ const s = StyleSheet.create({
   },
   partsCard: {
     backgroundColor: CARD, borderRadius: 18,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     paddingHorizontal: 16,
   },
   partRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },

@@ -6,7 +6,7 @@ import Animated, {
   runOnJS, useSharedValue, useAnimatedStyle, withTiming, interpolate, Extrapolation, Easing,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
+import { GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
@@ -25,10 +25,10 @@ const CAL_SIZE     = Math.floor((SCREEN_WIDTH - GRID_PADDING * 2 - 40 - CAL_GAP 
 const MONTHS_SV     = ['Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December']
 const WEEKDAY_SHORT = ['MÅN','TIS','ONS','TOR','FRE','LÖR','SÖN']
 
-export const DAY_COLORS: Record<DaySummary['status'], string> = {
+export const DAY_COLORS: Record<DaySummary['status'], import('react-native').ColorValue> = {
   completed: GREEN,
   failed:    RED,
-  pending:   ORANGE,
+  pending:   ACCENT,
   future:    'rgba(255,255,255,0.08)',
 }
 
@@ -63,7 +63,7 @@ function Legend() {
   const items = [
     { color: GREEN,                    label: 'Klar' },
     { color: RED,                      label: 'Missad' },
-    { color: ORANGE,                   label: 'Pågående' },
+    { color: ACCENT,                   label: 'Pågående' },
     { color: 'rgba(255,255,255,0.18)', label: 'Framtid' },
   ]
   return (
@@ -269,7 +269,7 @@ export function CalendarView({
                     const ringColor = sum
                       ? sum.status === 'completed' ? GREEN
                         : sum.status === 'failed'  ? RED
-                        : sum.status === 'pending' ? ORANGE
+                        : sum.status === 'pending' ? ACCENT
                         : DIVIDER
                       : 'transparent'
                     const tappable = !!sum && sum.status !== 'future'
@@ -392,7 +392,7 @@ const s = StyleSheet.create({
     minWidth: 26, height: 22, borderRadius: 6,
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
   },
-  fullDayNumToday: { backgroundColor: ORANGE },
+  fullDayNumToday: { backgroundColor: ACCENT },
   fullDayNumText:  { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   fullRing: {
     width: 34, height: 34, borderRadius: 17, borderWidth: 3,
@@ -406,7 +406,7 @@ const s = StyleSheet.create({
     width: CAL_SIZE, height: CAL_SIZE, borderRadius: CAL_SIZE / 2,
     alignItems: 'center', justifyContent: 'center',
   },
-  calDayPending:     { borderWidth: 2, borderColor: ORANGE },
+  calDayPending:     { borderWidth: 2, borderColor: ACCENT },
   calDayTodayRing:   { borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
   calDayText:        { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '500' },
   calDayTextPending: { color: '#fff', fontWeight: '800' },

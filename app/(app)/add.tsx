@@ -57,7 +57,7 @@ import { getCardioWorkoutsForDate, getWorkoutsForDate, getStrengthWorkouts, type
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
-import { ORANGE, BG, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
+import { BG, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, ACCENT, accentAlpha } from '@/lib/theme'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { getRaceDate } from '@/lib/prefs'
 import { parseLocalDate } from '@/lib/date'
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
   wizardBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     marginHorizontal: 16, marginBottom: 10,
-    backgroundColor: ORANGE, borderRadius: 16, padding: 14,
+    backgroundColor: ACCENT, borderRadius: 16, padding: 14,
   },
   wizardBannerClose: {
     width: 26, height: 26, borderRadius: 13,
@@ -752,13 +752,13 @@ const styles = StyleSheet.create({
   },
   avatar: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: ORANGE + '30',
+    backgroundColor: accentAlpha('30'),
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
   avatarImg:     { width: 40, height: 40, borderRadius: 20 },
   avatarEmoji:   { fontSize: 22 },
-  avatarInitial: { color: ORANGE, fontSize: 18, fontWeight: '700' },
+  avatarInitial: { color: ACCENT, fontSize: 18, fontWeight: '700' },
   dayCounterWrap: {
     position: 'absolute', left: 0, right: 0,
     alignItems: 'center', justifyContent: 'center',

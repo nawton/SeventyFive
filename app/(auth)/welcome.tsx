@@ -12,11 +12,10 @@ import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
-import { BG, BORDER, CARD } from '@/lib/theme'
+import { BG, BORDER, CARD, ACCENT, accentAlpha } from '@/lib/theme'
 
 const { width } = Dimensions.get('window')
 
-const ORANGE = '#FFA817'
 
 const TASK_ICONS = [
   { icon: 'barbell-outline',    color: '#FFA817' },
@@ -161,7 +160,7 @@ const s = StyleSheet.create({
     lineHeight: 44,
   },
   byNawton: {
-    color: ORANGE,
+    color: ACCENT,
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.3,
@@ -193,14 +192,14 @@ const s = StyleSheet.create({
   // CTAs
   ctas: { gap: 12 },
   primaryBtn: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 14,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: ORANGE,
+    shadowColor: ACCENT,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 14,
@@ -238,13 +237,13 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center',
   },
-  dayBtnActive:     { backgroundColor: ORANGE + '26' },
+  dayBtnActive:     { backgroundColor: accentAlpha('26') },
   dayBtnText:       { color: '#888', fontSize: 13, fontWeight: '600' },
-  dayBtnTextActive: { color: ORANGE, fontWeight: '700' },
+  dayBtnTextActive: { color: ACCENT, fontWeight: '700' },
 
   sheetFooter: { gap: 10, marginTop: 16 },
   confirmBtn: {
-    backgroundColor: ORANGE, borderRadius: 14,
+    backgroundColor: ACCENT, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center',
   },
   confirmBtnDisabled: { opacity: 0.35 },

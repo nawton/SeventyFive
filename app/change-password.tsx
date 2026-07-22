@@ -15,7 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { useURL } from 'expo-linking'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 
 /** Plockar ut auth-tokens ur deep link-fragmentet (#access_token=…&refresh_token=…) */
 function parseTokens(url: string): { access_token: string; refresh_token: string } | null {
@@ -85,7 +85,7 @@ export default function ChangePasswordScreen() {
   if (status === 'checking') {
     return (
       <View style={s.centered}>
-        <ActivityIndicator color={ORANGE} size="large" />
+        <ActivityIndicator color={ACCENT} size="large" />
       </View>
     )
   }
@@ -95,7 +95,7 @@ export default function ChangePasswordScreen() {
       <SafeScreen style={s.screen}>
         <View style={[s.body, { justifyContent: 'center' }]}>
           <View style={s.bigIcon}>
-            <Ionicons name="alert-circle-outline" size={40} color={ORANGE} />
+            <Ionicons name="alert-circle-outline" size={40} color={ACCENT} />
           </View>
           <Text style={s.title}>Länken har gått ut</Text>
           <Text style={s.sub}>
@@ -129,8 +129,8 @@ export default function ChangePasswordScreen() {
           activeOpacity={0.7}
         >
           {saving
-            ? <ActivityIndicator color={ORANGE} size="small" />
-            : <Ionicons name="checkmark" size={22} color={password.length >= 6 && password === confirm ? ORANGE : TEXT_SECONDARY} />}
+            ? <ActivityIndicator color={ACCENT} size="small" />
+            : <Ionicons name="checkmark" size={22} color={password.length >= 6 && password === confirm ? ACCENT : TEXT_SECONDARY} />}
         </TouchableOpacity>
       </View>
 
@@ -199,13 +199,13 @@ const s = StyleSheet.create({
   },
   checkBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: ORANGE + '22', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: accentAlpha('22'), alignItems: 'center', justifyContent: 'center',
   },
   checkBtnDisabled: { backgroundColor: CARD },
   body: { paddingHorizontal: 20, paddingTop: 24, gap: 8, flex: 1 },
   bigIcon: {
     width: 84, height: 84, borderRadius: 42, alignSelf: 'center',
-    backgroundColor: ORANGE + '18',
+    backgroundColor: accentAlpha('18'),
     alignItems: 'center', justifyContent: 'center', marginBottom: 6,
   },
   title: { color: TEXT_PRIMARY, fontSize: 24, fontWeight: '800', textAlign: 'center' },
@@ -220,7 +220,7 @@ const s = StyleSheet.create({
   },
   input: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, paddingVertical: 14 },
   primaryBtn: {
-    backgroundColor: ORANGE, borderRadius: 14,
+    backgroundColor: ACCENT, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center', marginTop: 12,
   },
   primaryBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },

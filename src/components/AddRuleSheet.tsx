@@ -12,9 +12,8 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import { TASK_COLORS } from '@/components/TaskGridCard'
-import { BORDER, CARD } from '@/lib/theme'
+import { BORDER, CARD, ACCENT, useThemeStrings } from '@/lib/theme'
 
-const ORANGE      = '#FFA817'
 const CARD_BG     = CARD
 const CARD_BORDER = BORDER
 const CUSTOM      = TASK_COLORS.custom
@@ -50,6 +49,7 @@ export function AddRuleSheet({ visible, onClose, onCreate }: {
   onClose: () => void
   onCreate: (name: string, icon: string) => Promise<void>
 }) {
+  const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const [name, setName]     = useState('')
   const [icon, setIcon]     = useState<IconName>('checkmark-circle-outline')
@@ -130,7 +130,7 @@ export function AddRuleSheet({ visible, onClose, onCreate }: {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           pointerEvents="box-none"
         >
-          <Animated.View style={[s.sheet, sheetStyle]}>
+          <Animated.View style={[s.sheet, { backgroundColor: T.CARD }, sheetStyle]}>
             <GestureDetector gesture={handleGesture}>
               <View style={s.handleWrap}>
                 <View style={s.handle} />
@@ -202,8 +202,7 @@ export function AddRuleSheet({ visible, onClose, onCreate }: {
 const s = StyleSheet.create({
   overlay:  { flex: 1, justifyContent: 'flex-end' },
   backdrop: { backgroundColor: 'rgba(0,0,0,0.65)' },
-  sheet: {
-    backgroundColor: CARD_BG, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+  sheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingHorizontal: 20, paddingBottom: 44, paddingTop: 12,
     // Krymp hellre än att tryckas upp bakom Dynamic Island när tangentbordet öppnas
     flexShrink: 1,
@@ -241,7 +240,7 @@ const s = StyleSheet.create({
   iconLabel:       { color: '#4A4A50', fontSize: 10, fontWeight: '500' },
   iconLabelActive: { color: CUSTOM, fontWeight: '700' },
   saveBtn: {
-    backgroundColor: ORANGE, borderRadius: 16,
+    backgroundColor: ACCENT, borderRadius: 16,
     paddingVertical: 16, alignItems: 'center', marginTop: 24,
   },
   saveBtnDisabled: { opacity: 0.4 },

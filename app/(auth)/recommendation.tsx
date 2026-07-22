@@ -68,7 +68,7 @@ function getRecommendedLevel(pressure: string): Level {
   return 'normal'
 }
 
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT } from '@/lib/theme'
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   stepLabel: {
-    color: ORANGE,
+    color: ACCENT,
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.5,

@@ -14,7 +14,7 @@ import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail]     = useState('')
@@ -54,7 +54,7 @@ export default function ForgotPasswordScreen() {
           {sent ? (
             <>
               <View style={s.bigIcon}>
-                <Ionicons name="mail-open-outline" size={40} color={ORANGE} />
+                <Ionicons name="mail-open-outline" size={40} color={ACCENT} />
               </View>
               <Text style={s.title}>Kolla din mejl</Text>
               <Text style={s.sub}>
@@ -69,7 +69,7 @@ export default function ForgotPasswordScreen() {
           ) : (
             <>
               <View style={s.bigIcon}>
-                <Ionicons name="lock-closed-outline" size={40} color={ORANGE} />
+                <Ionicons name="lock-closed-outline" size={40} color={ACCENT} />
               </View>
               <Text style={s.title}>Glömt lösenordet?</Text>
               <Text style={s.sub}>
@@ -121,7 +121,7 @@ const s = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 24, paddingTop: 32, gap: 14 },
   bigIcon: {
     width: 84, height: 84, borderRadius: 42, alignSelf: 'center',
-    backgroundColor: ORANGE + '18',
+    backgroundColor: accentAlpha('18'),
     alignItems: 'center', justifyContent: 'center', marginBottom: 6,
   },
   title: { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800', textAlign: 'center' },
@@ -132,7 +132,7 @@ const s = StyleSheet.create({
   },
   input: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, paddingVertical: 14 },
   primaryBtn: {
-    backgroundColor: ORANGE, borderRadius: 14,
+    backgroundColor: ACCENT, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center', marginTop: 8,
   },
   primaryBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },

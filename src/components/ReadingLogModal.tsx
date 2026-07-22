@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 
-import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -172,10 +172,10 @@ const styles = StyleSheet.create({
     color: TEXT_PRIMARY,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: CARD_BORDER,
   },
   saveButton: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',

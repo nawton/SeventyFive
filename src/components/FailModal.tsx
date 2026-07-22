@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 
-import { BG, CARD, BORDER, RED, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 
 // Hårdkodade motivationsvar — ersätts med OpenAI av Anton
 const AI_RESPONSES = [
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   responseCard: {
-    backgroundColor: ORANGE + '12',
+    backgroundColor: accentAlpha('12'),
     borderRadius: 16,
     padding: 20,
     marginTop: 8,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   closeButton: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',

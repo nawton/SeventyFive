@@ -25,7 +25,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { timeAgo } from '@/lib/format'
-import { BG, CARD, BORDER, CARDIO_BLUE, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER } from '@/lib/theme'
+import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, ACCENT } from '@/lib/theme'
 
 // =============================================================================
 // DISKUSSION — ett inläggs egen sida (Strava-stil): kartan högst upp,
@@ -369,7 +369,7 @@ export default function PostScreen() {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             {sending
-              ? <ActivityIndicator color={ORANGE} size="small" />
+              ? <ActivityIndicator color={ACCENT} size="small" />
               : (
                 <Text style={[s.sendText, draft.trim().length === 0 && { opacity: 0.4 }]}>
                   Skicka

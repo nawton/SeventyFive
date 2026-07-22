@@ -12,7 +12,7 @@ import {
 } from '@/services/follows'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT } from '@/lib/theme'
 
 // =============================================================================
 // FÖLJARE/FÖLJER — riktiga listor ur follows-tabellen: eget namn i headern,
@@ -231,7 +231,7 @@ const s = StyleSheet.create({
   tabText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
   tabTextActive: { color: TEXT_PRIMARY, fontWeight: '700' },
   tabLine: { alignSelf: 'stretch', height: 3, backgroundColor: 'transparent' },
-  tabLineActive: { backgroundColor: ORANGE, borderRadius: 2 },
+  tabLineActive: { backgroundColor: ACCENT, borderRadius: 2 },
 
   listContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
@@ -244,9 +244,9 @@ const s = StyleSheet.create({
     borderRadius: 20, paddingHorizontal: 22, paddingVertical: 8,
     minWidth: 96, alignItems: 'center',
   },
-  followPillInvite: { borderColor: ORANGE },
+  followPillInvite: { borderColor: ACCENT },
   followPillText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
-  followPillTextInvite: { color: ORANGE },
+  followPillTextInvite: { color: ACCENT },
 
   empty: { alignItems: 'center', gap: 8, paddingTop: 70, paddingHorizontal: 40 },
   emptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },

@@ -5,7 +5,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 import { GlassView } from 'expo-glass-effect'
 import { LIQUID_GLASS } from '@/lib/glass'
-import { ORANGE, TEXT_SECONDARY } from '@/lib/theme'
+import { TEXT_SECONDARY, ACCENT, useThemeStrings } from '@/lib/theme'
 
 // =============================================================================
 // GLASSLIDER — segmenterad kontroll med orange glastumme (fallback: solid).
@@ -19,7 +19,7 @@ const SEG_SPRING = { damping: 17, stiffness: 240, mass: 0.8 } as const
 const AnimatedGlassView = Animated.createAnimatedComponent(GlassView)
 
 export function GlassSegment<T extends string>({
-  value, options, onChange, tint = ORANGE,
+  value, options, onChange, tint,
 }: {
   value: T
   options: Array<{ key: T; label: string }>
@@ -28,6 +28,8 @@ export function GlassSegment<T extends string>({
       OBS: "transparent" släcker glasmaterialet, därför null → utelämnad prop */
   tint?: string | null
 }) {
+  const T = useThemeStrings()
+  const resolvedTint = tint === undefined ? T.ACCENT : tint
   const n = options.length
   const [segW, setSegW] = useState(0)
   const slotW = segW / n
@@ -89,19 +91,19 @@ export function GlassSegment<T extends string>({
         {segW > 0 && (LIQUID_GLASS ? (
           <AnimatedGlassView
             glassEffectStyle="regular"
-            tintColor={tint ?? undefined}
+            tintColor={resolvedTint ?? undefined}
             style={[s.segThumb, s.segThumbGlass, { width: slotW }, thumbStyle]}
           />
         ) : (
           <Animated.View
-            style={[s.segThumb, tint == null && s.segThumbNeutral, { width: slotW }, thumbStyle]}
+            style={[s.segThumb, { backgroundColor: T.ACCENT }, resolvedTint == null && s.segThumbNeutral, { width: slotW }, thumbStyle]}
           />
         ))}
         {options.map(o => (
           <TouchableOpacity key={o.key} style={s.segBtn} onPress={() => choose(o.key)} activeOpacity={0.8}>
             <Text style={[
               s.segText,
-              value === o.key && ((LIQUID_GLASS || tint == null) ? s.segTextActiveGlass : s.segTextActive),
+              value === o.key && ((LIQUID_GLASS || resolvedTint == null) ? s.segTextActiveGlass : s.segTextActive),
             ]}>
               {o.label}
             </Text>
@@ -119,7 +121,7 @@ const s = StyleSheet.create({
   },
   segThumb: {
     position: 'absolute', left: 3, top: 3, bottom: 3,
-    borderRadius: 11, backgroundColor: ORANGE,
+    borderRadius: 11,
     shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },

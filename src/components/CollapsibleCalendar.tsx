@@ -8,7 +8,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, useThemeStrings } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, useThemeStrings, ACCENT } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import { planEndDateStr, type WorkoutSession } from '@/services/workoutSchedule'
 
@@ -116,7 +116,7 @@ const CalDayCell = memo(function CalDayCell({
       {/* Typindikatorer (Runna-stil): orange = gym, blå = kondition */}
       {(hasGym || hasCardio) && (
         <View style={s.dotRow}>
-          {hasGym    && <View style={[s.dot, { backgroundColor: ORANGE }]} />}
+          {hasGym    && <View style={[s.dot, { backgroundColor: ACCENT }]} />}
           {hasCardio && <View style={[s.dot, { backgroundColor: CARDIO_BLUE }]} />}
         </View>
       )}
@@ -456,7 +456,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
       {/* Förklaring — vad prickarna betyder (syns i utfällt läge) */}
       <Animated.View style={[s.legend, legendStyle]}>
         <View style={s.legendItem}>
-          <View style={[s.dot, { backgroundColor: ORANGE }]} />
+          <View style={[s.dot, { backgroundColor: ACCENT }]} />
           <Text style={s.legendText}>Gym</Text>
         </View>
         <View style={s.legendItem}>
@@ -556,10 +556,10 @@ const s = StyleSheet.create({
   },
   circleToday: {
     borderWidth: 1.5,
-    borderColor: ORANGE,
+    borderColor: ACCENT,
   },
   circleSel: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
   },
   dateNum: {
     color: TEXT_PRIMARY,
@@ -578,7 +578,7 @@ const s = StyleSheet.create({
     height: 5,
     borderRadius: 1.5,
   },
-  dateNumToday: { color: ORANGE, fontWeight: '700' },
+  dateNumToday: { color: ACCENT, fontWeight: '700' },
   dateNumSel:   { color: '#000', fontWeight: '700' },
 
   legend: {

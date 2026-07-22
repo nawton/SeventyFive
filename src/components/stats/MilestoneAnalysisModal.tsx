@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, Modal, ScrollView } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, ORANGE, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER } from '@/lib/theme'
+import { BG, CARD, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT, useThemeStrings } from '@/lib/theme'
 import { parseLocalDate, toLocalDateString } from '@/lib/date'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import type { DaySummary } from '@/services/dailyLog'
@@ -39,6 +39,7 @@ export function MilestoneAnalysisModal({
   completedSessions: CompletedSessionItem[]
   unit: UnitSystem
 }) {
+  const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const unitLabel = distanceUnitLabel(unit)
 
@@ -124,7 +125,7 @@ export function MilestoneAnalysisModal({
   }
   if (thisWeekPasses < prevWeekPasses) {
     tips.push({
-      icon: 'trending-down-outline', color: ORANGE,
+      icon: 'trending-down-outline', color: T.ACCENT,
       text: `${thisWeekPasses} pass senaste 7 dagarna mot ${prevWeekPasses} veckan innan. Boka in nästa pass direkt efter att du läst klart det här.`,
     })
   } else if (thisWeekKm > prevWeekKm && prevWeekKm > 0) {
@@ -141,12 +142,12 @@ export function MilestoneAnalysisModal({
   }
   if (streak >= 7) {
     tips.push({
-      icon: 'flame-outline', color: ORANGE,
+      icon: 'flame-outline', color: T.ACCENT,
       text: `Din streak på ${streak} dagar är din största tillgång. Skydda den: gör aldrig morgondagen beroende av motivation, bara av planen.`,
     })
   } else {
     tips.push({
-      icon: 'flame-outline', color: ORANGE,
+      icon: 'flame-outline', color: T.ACCENT,
       text: `Streak: ${streak} ${streak === 1 ? 'dag' : 'dagar'}. Ta den till 7 så börjar rutinen sköta sig själv — en dag i taget.`,
     })
   }
@@ -208,7 +209,7 @@ export function MilestoneAnalysisModal({
               </View>
               <View style={s.dtlCell}>
                 <Text style={s.dtlLbl}>Längsta streak</Text>
-                <Text style={[s.dtlVal, { color: ORANGE }]}>
+                <Text style={[s.dtlVal, { color: ACCENT }]}>
                   {longestStreak}
                   <Text style={s.dtlUnit}> DAGAR</Text>
                 </Text>
@@ -266,7 +267,7 @@ const s = StyleSheet.create({
   readoutLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
   readoutTitle: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', letterSpacing: -0.4 },
   progressTrack: { height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 4 },
-  progressFill: { height: '100%', borderRadius: 5, backgroundColor: ORANGE },
+  progressFill: { height: '100%', borderRadius: 5, backgroundColor: ACCENT },
   readoutSub: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT_SEMI },
 
   sectionHead: {

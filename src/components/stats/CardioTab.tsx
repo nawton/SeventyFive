@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import Animated, { LinearTransition, FadeOut } from 'react-native-reanimated'
 import Svg, { Line as SvgLine, Polyline, Circle } from 'react-native-svg'
-import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek, weekdayOf, isoWeekNum } from '@/lib/date'
 import { fmtPace, fmtDuration } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
@@ -97,6 +97,7 @@ export function CardioTab({
   onDeleteWorkout: (id: string) => void
   onDeleteCompletion: (id: string) => void
 }) {
+  const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const unitLabel = distanceUnitLabel(unit)
 
@@ -275,7 +276,7 @@ export function CardioTab({
 
   // ── Sessioner: blandad lista av cardio-pass + avklarade schemapass ──
   const CARDIO_META: Record<string, { icon: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
-    running:  { icon: 'fitness',  color: ORANGE },
+    running:  { icon: 'fitness',  color: T.ACCENT },
     cycling:  { icon: 'bicycle',  color: BLUE },
     walking:  { icon: 'walk',     color: GREEN },
     interval: { icon: 'flash',    color: YELLOW },
@@ -292,7 +293,7 @@ export function CardioTab({
   }
   const sessionRows: SessRow[] = useMemo(() => [
     ...cardioW.map((w): SessRow => {
-      const meta = CARDIO_META[w.data.type] ?? { icon: 'fitness' as const, color: ORANGE }
+      const meta = CARDIO_META[w.data.type] ?? { icon: 'fitness' as const, color: T.ACCENT }
       return {
         key: `c:${w.id}`,
         name: w.name,
@@ -339,7 +340,7 @@ export function CardioTab({
         >
           {workouts.length === 0 ? (
             <View style={s.tabEmpty}>
-              <View style={s.tabEmptyIcon}><Ionicons name="walk-outline" size={30} color={ORANGE} /></View>
+              <View style={s.tabEmptyIcon}><Ionicons name="walk-outline" size={30} color={ACCENT} /></View>
               <Text style={s.tabEmptyTitle}>Inget cardio ännu</Text>
               <Text style={s.tabEmptyText}>
                 Starta ett GPS-pass från schemat så vaknar statistiken: distans, tempo, grafer och rekord.
@@ -588,7 +589,7 @@ export function CardioTab({
               >
                 {([
                   {
-                    icon: 'map-outline' as const, color: ORANGE, label: 'Längsta pass',
+                    icon: 'map-outline' as const, color: T.ACCENT, label: 'Längsta pass',
                     value: recLongestKm > 0 ? `${toDisplayDistance(recLongestKm, unit).toFixed(2)} ${unitLabel}` : '–',
                     workout: recLongestW,
                   },
@@ -709,7 +710,7 @@ export function CardioTab({
                 { label: 'Snittempo', value: `${avgPace} /${unitLabel}`, color: TEAL },
                 { label: 'Bästa tempo', value: `${bestPace} /${unitLabel}`, color: PURPLE },
                 { label: 'Snittdistans', value: `${toDisplayDistance(avgDistKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: LIME },
-                { label: 'Längsta pass', value: `${toDisplayDistance(longestPassKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: ORANGE },
+                { label: 'Längsta pass', value: `${toDisplayDistance(longestPassKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: ACCENT },
                 {
                   label: 'Snittansträngning',
                   value: avgEffort > 0 ? `${avgEffort.toFixed(1).replace('.', ',')} / 10` : '–',

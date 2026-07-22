@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { ScheduleWizard, type WizardResult } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 
 // Sista onboarding-steget: bygg veckoschemat med samma wizard som i appen.
 // Ersätter den gamla "Bygg din dag"-skärmen vars tider aldrig användes.
@@ -50,7 +50,7 @@ export default function SetupScheduleScreen() {
           {FEATURES.map((f, i) => (
             <View key={i} style={[styles.featureRow, i > 0 && styles.featureRowBorder]}>
               <View style={styles.featureIcon}>
-                <Ionicons name={f.icon} size={17} color={ORANGE} />
+                <Ionicons name={f.icon} size={17} color={ACCENT} />
               </View>
               <Text style={styles.featureText}>{f.text}</Text>
             </View>
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stepLabel: {
-    color: ORANGE,
+    color: ACCENT,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 2,
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: ORANGE + '18',
+    backgroundColor: accentAlpha('18'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryButton: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 14,
     paddingVertical: 16,
     flexDirection: 'row',

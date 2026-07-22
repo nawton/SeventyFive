@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, CARDIO_BLUE, THEME_DARK, THEME_LIGHT } from '@/lib/theme'
+import { RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, CARDIO_BLUE, THEME_DARK, THEME_LIGHT, ACCENT, accentAlpha } from '@/lib/theme'
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
 
 const GREEN    = '#3BE862'
@@ -299,7 +299,7 @@ const r = StyleSheet.create({
   name:     { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   nameDone: { color: TEXT_SECONDARY, textDecorationLine: 'line-through' },
   meta:     { color: TEXT_SECONDARY, fontSize: 12, marginTop: 3 },
-  progressedMark: { color: ORANGE, fontSize: 12, fontWeight: '800' },
+  progressedMark: { color: ACCENT, fontSize: 12, fontWeight: '800' },
   doneIcon: { marginRight: 16 },
 })
 
@@ -418,7 +418,7 @@ export function WorkoutSection({
   }), [cardStr, doneStr])
 
   // Typfärgen genomsyrar kortet: accentlinje, ikon, progress och gradient-wash
-  const typeColor = isCardio ? CARDIO_BLUE : ORANGE
+  const typeColor = isCardio ? CARDIO_BLUE : (light ? THEME_LIGHT.ACCENT : THEME_DARK.ACCENT)
 
   const accentBarStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(completedV.value, [0, 1], [typeColor, GREEN]),
@@ -520,7 +520,7 @@ export function WorkoutSection({
         ) : onOpenFullscreen ? (
           // Gympass: alltid Öppna — även avklarade (info + Spara finns därinne)
           <TouchableOpacity onPress={onOpenFullscreen} style={s.openBtn} activeOpacity={0.8}>
-            <Ionicons name="expand-outline" size={14} color={ORANGE} />
+            <Ionicons name="expand-outline" size={14} color={ACCENT} />
             <Text style={s.openBtnText}>Öppna</Text>
           </TouchableOpacity>
         ) : greenComplete ? (
@@ -624,13 +624,13 @@ export function WorkoutSection({
           </View>
           {onOpenFullscreen && (
             <TouchableOpacity
-              style={[s.cardioSummaryLink, { backgroundColor: ORANGE + '18' }]}
+              style={[s.cardioSummaryLink, { backgroundColor: accentAlpha('18') }]}
               onPress={onOpenFullscreen}
               activeOpacity={0.8}
             >
-              <Ionicons name="barbell-outline" size={15} color={ORANGE} />
-              <Text style={[s.cardioSummaryLinkText, { color: ORANGE }]}>Visa pass</Text>
-              <Ionicons name="chevron-forward" size={15} color={ORANGE} />
+              <Ionicons name="barbell-outline" size={15} color={ACCENT} />
+              <Text style={[s.cardioSummaryLinkText, { color: ACCENT }]}>Visa pass</Text>
+              <Ionicons name="chevron-forward" size={15} color={ACCENT} />
             </TouchableOpacity>
           )}
         </View>
@@ -654,7 +654,7 @@ export function WorkoutSection({
 
       {!isCardio && onAddExercise && (
         <TouchableOpacity style={s.addRow} onPress={onAddExercise} activeOpacity={0.75}>
-          <Ionicons name="add" size={16} color={ORANGE} />
+          <Ionicons name="add" size={16} color={ACCENT} />
           <Text style={s.addRowText}>Lägg till övning</Text>
         </TouchableOpacity>
       )}
@@ -691,7 +691,7 @@ const s = StyleSheet.create({
     width:           38,
     height:          38,
     borderRadius:    11,
-    backgroundColor: ORANGE + '20',
+    backgroundColor: accentAlpha('20'),
     alignItems:      'center',
     justifyContent:  'center',
   },
@@ -719,16 +719,16 @@ const s = StyleSheet.create({
     borderRadius:      10,
     backgroundColor:   'rgba(255,255,255,0.07)',
   },
-  completeBtnHot:     { backgroundColor: ORANGE + '22' },
+  completeBtnHot:     { backgroundColor: accentAlpha('22') },
   completeBtnText:    { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  completeBtnTextHot: { color: ORANGE },
+  completeBtnTextHot: { color: ACCENT },
 
   openBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
-    backgroundColor: ORANGE + '22',
+    backgroundColor: accentAlpha('22'),
   },
-  openBtnText: { color: ORANGE, fontSize: 13, fontWeight: '700' },
+  openBtnText: { color: ACCENT, fontSize: 13, fontWeight: '700' },
 
   progressTrack: {
     height:          3,
@@ -748,7 +748,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical:   14,
   },
-  addRowText: { color: ORANGE, fontSize: 14, fontWeight: '500' },
+  addRowText: { color: ACCENT, fontSize: 14, fontWeight: '500' },
 
   cardioStartRow: {
     flexDirection:     'row',
@@ -762,7 +762,7 @@ const s = StyleSheet.create({
   },
   cardioStartText: {
     flex:        1,
-    color:       ORANGE,
+    color:       ACCENT,
     fontSize:    14,
     fontWeight:  '700',
     letterSpacing: 1,

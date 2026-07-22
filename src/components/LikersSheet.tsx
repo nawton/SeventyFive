@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, BORDER, ORANGE, RED, TEXT_PRIMARY, DIVIDER, useThemeStrings } from '@/lib/theme'
+import { BG, BORDER, RED, TEXT_PRIMARY, DIVIDER, useThemeStrings, ACCENT } from '@/lib/theme'
 
 // =============================================================================
 // GILLARLISTAN — dragbar bottom sheet (Strava-stil): öppnar till halva
@@ -145,7 +145,7 @@ const s = StyleSheet.create({
   headerTabInner: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 6 },
   headerCount: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
   headerUnderline: {
-    alignSelf: 'stretch', height: 3, borderRadius: 2, backgroundColor: ORANGE,
+    alignSelf: 'stretch', height: 3, borderRadius: 2, backgroundColor: ACCENT,
   },
   listContent: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 60 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },

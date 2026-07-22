@@ -17,6 +17,7 @@ export const THEME_DARK = {
   TEXT_PRIMARY: '#FFFFFF',
   TEXT_SECONDARY: '#888888',
   DIVIDER: 'rgba(255,255,255,0.10)',
+  ACCENT: '#FFA817',
 } as const
 
 export const THEME_LIGHT = {
@@ -26,6 +27,7 @@ export const THEME_LIGHT = {
   TEXT_PRIMARY: '#111214',
   TEXT_SECONDARY: '#75777D',
   DIVIDER: 'rgba(0,0,0,0.08)',
+  ACCENT: '#2B4EAE',
 } as const
 
 /** Temats råa strängfärger för AKTUELLT läge. Reanimated (Animated.View
@@ -38,11 +40,32 @@ export function useThemeStrings() {
 const dyn = (dark: string, light: string): ColorValue =>
   Platform.OS === 'ios' ? DynamicColorIOS({ dark, light }) : dark
 
-// Accenter är samma i båda lägena — de alfa-konkateneras (ORANGE + '1A')
-// och måste därför förbli vanliga strängar
+// ORANGE är appens mörka accent som RÅ STRÄNG — behåller namnet för de få
+// ställen som måste ha strängar (reanimated, gradienter). UI:t ska använda
+// ACCENT: orange i mörkt läge, Runkeeper-blå i ljust.
 export const ORANGE = '#FFA817'
 export const GREEN  = '#3BE862'
 export const RED    = '#FF3B4A'
+
+/** Accentfärgen: orange i mörkt, marinblå i ljust läge */
+export const ACCENT = Platform.OS === 'ios'
+  ? DynamicColorIOS({ dark: THEME_DARK.ACCENT, light: THEME_LIGHT.ACCENT })
+  : THEME_DARK.ACCENT
+
+const ACCENT_DARK_RGB  = '255,168,23'   // #FFA817
+const ACCENT_LIGHT_RGB = '43,78,174'    // #2B4EAE
+
+/** Accent med alfa (ersätter ORANGE + '1A'-konkateneringarna — dynamiska
+    färgobjekt går inte att strängkonkatenera) */
+export function accentAlpha(hexAlpha: string): ColorValue {
+  const a = Math.round((parseInt(hexAlpha, 16) / 255) * 1000) / 1000
+  return Platform.OS === 'ios'
+    ? DynamicColorIOS({
+        dark: `rgba(${ACCENT_DARK_RGB},${a})`,
+        light: `rgba(${ACCENT_LIGHT_RGB},${a})`,
+      })
+    : `rgba(${ACCENT_DARK_RGB},${a})`
+}
 
 export const BG             = dyn(THEME_DARK.BG, THEME_LIGHT.BG)
 export const CARD           = dyn(THEME_DARK.CARD, THEME_LIGHT.CARD)
@@ -51,6 +74,9 @@ export const TEXT_PRIMARY   = dyn(THEME_DARK.TEXT_PRIMARY, THEME_LIGHT.TEXT_PRIM
 export const TEXT_SECONDARY = dyn(THEME_DARK.TEXT_SECONDARY, THEME_LIGHT.TEXT_SECONDARY)
 /** Tunna radavdelare — vit-genomskinlig i mörkt, svart-genomskinlig i ljust */
 export const DIVIDER        = dyn(THEME_DARK.DIVIDER, THEME_LIGHT.DIVIDER)
+/** Kortens YTTERRAM: syns i mörkt läge, försvinner helt i ljust — där ska
+    block inte ha ram runt om, bara avdelare under raderna (Runkeeper) */
+export const CARD_BORDER    = dyn(THEME_DARK.BORDER, 'transparent')
 /** Inaktiv tabbikon i glaspillen */
 export const TAB_INACTIVE   = dyn('rgba(255,255,255,0.55)', 'rgba(60,60,67,0.55)')
 /** Dragbubblan i tabbpillen */

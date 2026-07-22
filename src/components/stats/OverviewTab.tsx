@@ -5,7 +5,7 @@ import { View, Text, ScrollView, TouchableOpacity, Modal } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import type { GestureType } from 'react-native-gesture-handler'
 import Svg, { Circle, Text as SvgText } from 'react-native-svg'
-import { ORANGE, GREEN, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { GREEN, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek } from '@/lib/date'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import type { DaySummary } from '@/services/dailyLog'
@@ -30,7 +30,7 @@ function RingChart({ currentDay, completedDays }: { currentDay: number; complete
       {completedArc > 0 && (
         <Circle
           cx={60} cy={60} r={R}
-          fill="none" stroke={ORANGE} strokeWidth={11}
+          fill="none" stroke={ACCENT} strokeWidth={11}
           strokeDasharray={`${completedArc} ${C}`}
           strokeLinecap="round"
           rotation={-90} origin="60,60"
@@ -156,7 +156,7 @@ export function OverviewTab({
                         </View>
                         <View style={s.ringRow}>
                           <Text style={s.ringRowLabel}>Framgång</Text>
-                          <Text style={[s.ringRowVal, { color: ORANGE }]}>
+                          <Text style={[s.ringRowVal, { color: ACCENT }]}>
                             {currentDay > 1 ? Math.round((completedDays / (currentDay - 1)) * 100) : 0}%
                           </Text>
                         </View>
@@ -178,7 +178,7 @@ export function OverviewTab({
                     {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`} · Du är på väg!
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={17} color={ORANGE} />
+                <Ionicons name="chevron-forward" size={17} color={ACCENT} />
               </TouchableOpacity>
             )}
 
@@ -188,7 +188,7 @@ export function OverviewTab({
               <View style={[s.dtlRow, { paddingTop: 0 }]}>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Träningspass</Text>
-                  <Text style={[s.dtlVal, { color: ORANGE }]}>{weekReport.passes}</Text>
+                  <Text style={[s.dtlVal, { color: ACCENT }]}>{weekReport.passes}</Text>
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Distans</Text>
@@ -225,7 +225,7 @@ export function OverviewTab({
                     {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`} · Håll ut
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={17} color={ORANGE} />
+                <Ionicons name="chevron-forward" size={17} color={ACCENT} />
               </TouchableOpacity>
             )}
 

@@ -7,7 +7,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { clamp, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline, Marker } from 'react-native-maps'
-import { BG, CARD, BORDER, ORANGE, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, useThemeStrings } from '@/lib/theme'
+import { BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, useThemeStrings, ACCENT, CARD_BORDER } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import { fmtTime, fmtPace } from '@/lib/format'
 import type { CardioWorkout } from '@/services/workouts'
@@ -389,11 +389,11 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
                       activeOpacity={0.85}
                     >
                       <View style={[s.mapPreview, s.mapPreviewIcon]}>
-                        <Ionicons name={ms.icon} size={26} color={active ? ORANGE : '#9BA0A6'} />
+                        <Ionicons name={ms.icon} size={26} color={active ? ACCENT : '#9BA0A6'} />
                       </View>
                       <View style={s.mapCardLabelRow}>
-                        <Text style={[s.mapCardLabel, active && { color: ORANGE }]}>{ms.label}</Text>
-                        {active && <Ionicons name="checkmark-circle" size={15} color={ORANGE} />}
+                        <Text style={[s.mapCardLabel, active && { color: ACCENT }]}>{ms.label}</Text>
+                        {active && <Ionicons name="checkmark-circle" size={15} color={ACCENT} />}
                       </View>
                     </TouchableOpacity>
                   )
@@ -456,7 +456,7 @@ const s = StyleSheet.create({
   statLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   splitsCard: {
     backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     paddingHorizontal: 18, paddingVertical: 16, gap: 4,
   },
   splitsHead: {
@@ -497,7 +497,7 @@ const s = StyleSheet.create({
     borderRadius: 16, borderWidth: 2, borderColor: 'transparent',
     backgroundColor: '#242426', overflow: 'hidden',
   },
-  mapCardActive: { borderColor: ORANGE },
+  mapCardActive: { borderColor: ACCENT },
   mapPreviewIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
   routeDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: '#fff' },
   mapPreview: { width: '100%', height: 96, backgroundColor: BORDER },

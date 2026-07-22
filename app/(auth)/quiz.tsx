@@ -56,7 +56,7 @@ const QUESTIONS: Question[] = [
   },
 ]
 
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     backgroundColor: BORDER,
   },
   dotActive: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
   },
   body: {
     flex: 1,
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   stepLabel: {
-    color: ORANGE,
+    color: ACCENT,
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   optionSelected: {
-    backgroundColor: ORANGE + '16',
+    backgroundColor: accentAlpha('16'),
   },
   radio: {
     width: 22,
@@ -236,13 +236,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioSelected: {
-    borderColor: ORANGE,
+    borderColor: ACCENT,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
   },
   optionLabel: {
     color: TEXT_SECONDARY,
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   nextButton: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',

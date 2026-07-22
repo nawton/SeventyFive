@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import Svg, { Text as SvgText, Line as SvgLine, Rect, G } from 'react-native-svg'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
 
@@ -221,7 +221,7 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
                       return (
                         <G key={b.key} onPress={() => setSelKey(k => k === b.key ? null : b.key)}>
                           <Rect x={i * slot} y={0} width={slot} height={CH_H} fill="transparent" />
-                          <Rect x={x} y={y} width={barW} height={h} rx={3} fill={ORANGE} opacity={dimmed ? 0.28 : 1} />
+                          <Rect x={x} y={y} width={barW} height={h} rx={3} fill={ACCENT} opacity={dimmed ? 0.28 : 1} />
                           {sel?.key === b.key && (
                             <SvgText x={x + barW / 2} y={y - 8} fontSize={11} fontWeight="700" textAnchor="middle" fill="#fff">
                               {fmtKg(b.volume)}
@@ -233,7 +233,7 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
                   </Svg>
                   <View style={s.lblRow}>
                     {buckets.map(b => (
-                      <Text key={b.key} style={[s.lbl, b.isCurrent && { color: ORANGE }, sel?.key === b.key && { color: TEXT_PRIMARY }]}>
+                      <Text key={b.key} style={[s.lbl, b.isCurrent && { color: ACCENT }, sel?.key === b.key && { color: TEXT_PRIMARY }]}>
                         {b.label}
                       </Text>
                     ))}

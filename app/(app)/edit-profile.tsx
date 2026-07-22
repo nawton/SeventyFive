@@ -21,7 +21,7 @@ import { compressImage } from '@/lib/image'
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile'
 import { unregisterPushTokens } from '@/services/pushTokens'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
 import { SubscriptionCard } from '@/components/SubscriptionCard'
 import { RecordsCard } from '@/components/RecordsCard'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -139,7 +139,7 @@ export default function EditProfileScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color={ORANGE} size="large" />
+        <ActivityIndicator color={ACCENT} size="large" />
       </View>
     )
   }
@@ -159,7 +159,7 @@ export default function EditProfileScreen() {
         />
         <Text style={styles.title}>Profil</Text>
         <View style={styles.headerSpacer}>
-          {saving && <ActivityIndicator color={ORANGE} size="small" />}
+          {saving && <ActivityIndicator color={ACCENT} size="small" />}
         </View>
       </View>
 
@@ -338,11 +338,11 @@ export default function EditProfileScreen() {
                 activeOpacity={0.8}
               >
                 <View style={[styles.quickIcon, !photoUri && !emoji && styles.quickIconActive]}>
-                  <Text style={[styles.quickInitial, !photoUri && !emoji && { color: ORANGE }]}>
+                  <Text style={[styles.quickInitial, !photoUri && !emoji && { color: ACCENT }]}>
                     {initials}
                   </Text>
                 </View>
-                <Text style={[styles.quickLabel, !photoUri && !emoji && { color: ORANGE }]}>
+                <Text style={[styles.quickLabel, !photoUri && !emoji && { color: ACCENT }]}>
                   Bokstav
                 </Text>
               </TouchableOpacity>
@@ -409,18 +409,18 @@ const styles = StyleSheet.create({
   avatarWrapper:  { position: 'relative' },
   avatarCircle: {
     width: 110, height: 110, borderRadius: 55,
-    backgroundColor: ORANGE + '22',
-    borderWidth: 2.5, borderColor: ORANGE,
+    backgroundColor: accentAlpha('22'),
+    borderWidth: 2.5, borderColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
   previewPhoto:   { width: 110, height: 110, borderRadius: 55 },
   avatarEmoji:    { fontSize: 56 },
-  avatarInitials: { color: ORANGE, fontSize: 48, fontWeight: '700' },
+  avatarInitials: { color: ACCENT, fontSize: 48, fontWeight: '700' },
   pencilBtn: {
     position: 'absolute', bottom: 2, right: 2,
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: BG,
   },
@@ -485,12 +485,12 @@ const styles = StyleSheet.create({
     backgroundColor: BG, borderRadius: 14,
     paddingVertical: 16,
   },
-  quickBtnActive: { backgroundColor: ORANGE + '16' },
+  quickBtnActive: { backgroundColor: accentAlpha('16') },
   quickIcon: {
     width: 52, height: 52, borderRadius: 26,
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
   },
-  quickIconActive: { backgroundColor: ORANGE + '20' },
+  quickIconActive: { backgroundColor: accentAlpha('20') },
   quickInitial: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '700' },
   quickLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
 
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     backgroundColor: BG,
     alignItems: 'center', justifyContent: 'center',
   },
-  emojiBtnActive: { backgroundColor: ORANGE + '22' },
+  emojiBtnActive: { backgroundColor: accentAlpha('22') },
   emojiText: { fontSize: 24 },
 
   // Cancel

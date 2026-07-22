@@ -5,7 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, ACCENT, accentAlpha } from '@/lib/theme'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import type { Exercise } from '@/services/exercises'
 
@@ -140,20 +140,20 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
             <Text style={s.chooseSub}>Vad vill du logga?</Text>
             <View style={s.chooseCards}>
               <TouchableOpacity
-                style={[s.chooseCard, { backgroundColor: ORANGE + '14' }]}
+                style={[s.chooseCard, { backgroundColor: accentAlpha('14') }]}
                 onPress={() => setPickerOpen(true)}
                 activeOpacity={0.85}
               >
-                <Ionicons name="barbell" size={110} color={ORANGE} style={s.chooseWatermark} />
-                <View style={[s.chooseIcon, { backgroundColor: ORANGE }]}>
+                <Ionicons name="barbell" size={110} color={ACCENT} style={s.chooseWatermark} />
+                <View style={[s.chooseIcon, { backgroundColor: ACCENT }]}>
                   <Ionicons name="barbell" size={26} color="#000" />
                 </View>
                 <View style={s.chooseTextWrap}>
                   <Text style={s.chooseTitle}>Gym</Text>
                   <Text style={s.chooseHint}>Välj övningar och logga set</Text>
                 </View>
-                <View style={[s.chooseArrow, { backgroundColor: ORANGE + '26' }]}>
-                  <Ionicons name="arrow-forward" size={15} color={ORANGE} />
+                <View style={[s.chooseArrow, { backgroundColor: accentAlpha('26') }]}>
+                  <Ionicons name="arrow-forward" size={15} color={ACCENT} />
                 </View>
               </TouchableOpacity>
 
@@ -215,7 +215,7 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
                 {entries.map((en, i) => (
                   <View key={en.exercise.id} style={[s.exListRow, i < entries.length - 1 && s.exListBorder]}>
                     <View style={s.exListIcon}>
-                      <Ionicons name="barbell-outline" size={17} color={ORANGE} />
+                      <Ionicons name="barbell-outline" size={17} color={ACCENT} />
                     </View>
                     <Text style={s.exListName} numberOfLines={1}>{en.exercise.name}</Text>
                     <TouchableOpacity onPress={() => removeEntry(en.exercise.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -227,7 +227,7 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
 
               {/* Fler övningar via muskelgruppssidan */}
               <TouchableOpacity style={s.addExBtn} onPress={() => setPickerOpen(true)} activeOpacity={0.8}>
-                <Ionicons name="add" size={19} color={ORANGE} />
+                <Ionicons name="add" size={19} color={ACCENT} />
                 <Text style={s.addExText}>Lägg till övning</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -270,7 +270,7 @@ const s = StyleSheet.create({
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
-  closeBtn: { backgroundColor: ORANGE, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
+  closeBtn: { backgroundColor: ACCENT, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
   closeText: { color: '#000', fontWeight: '700', fontSize: 14 },
 
   chooseWrap: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
@@ -311,16 +311,16 @@ const s = StyleSheet.create({
   },
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ORANGE, borderRadius: 16, paddingVertical: 16,
+    backgroundColor: ACCENT, borderRadius: 16, paddingVertical: 16,
   },
   primaryBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
 
   addExBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 14, borderRadius: 14,
-    borderWidth: 1.5, borderColor: ORANGE + '50', borderStyle: 'dashed',
+    borderWidth: 1.5, borderColor: accentAlpha('50'), borderStyle: 'dashed',
   },
-  addExText: { color: ORANGE, fontSize: 15, fontWeight: '700' },
+  addExText: { color: ACCENT, fontSize: 15, fontWeight: '700' },
 
   fieldLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: 8, paddingHorizontal: 4 },
   nameInput: {
@@ -331,7 +331,7 @@ const s = StyleSheet.create({
   exListRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 13 },
   exListBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
   exListIcon: {
-    width: 34, height: 34, borderRadius: 10, backgroundColor: ORANGE + '18',
+    width: 34, height: 34, borderRadius: 10, backgroundColor: accentAlpha('18'),
     alignItems: 'center', justifyContent: 'center',
   },
   exListName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },

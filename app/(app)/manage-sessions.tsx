@@ -29,7 +29,7 @@ import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { SessionEditor } from '@/components/SessionEditor'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -58,9 +58,9 @@ function displayName(s: WorkoutSession): string {
 // Typikon per pass — samma färgspråk som passkorten (orange gym, blå kondition)
 function sessionIcon(sess: WorkoutSession): {
   name: React.ComponentProps<typeof Ionicons>['name']
-  color: string
+  color: import('react-native').ColorValue
 } {
-  if (sess.session_type !== 'cardio') return { name: 'barbell-outline', color: ORANGE }
+  if (sess.session_type !== 'cardio') return { name: 'barbell-outline', color: ACCENT }
   switch (sess.cardio_type) {
     case 'cycling':  return { name: 'bicycle-outline', color: CARDIO_BLUE }
     case 'walking':  return { name: 'walk-outline',    color: CARDIO_BLUE }
@@ -145,7 +145,7 @@ function DayCard({
         <>
           <Text style={s.restLabel}>Vilodag</Text>
           <View style={s.addCircle}>
-            <Ionicons name="add" size={14} color={ORANGE} />
+            <Ionicons name="add" size={14} color={ACCENT} />
           </View>
         </>
       )}
@@ -316,11 +316,11 @@ export default function ManageSessionsScreen() {
         {totalSessions > 0 && (
           <Animated.View entering={FadeInDown.duration(350)} style={s.summaryRow}>
             <View style={s.summaryChip}>
-              <Ionicons name="barbell-outline" size={13} color={ORANGE} />
+              <Ionicons name="barbell-outline" size={13} color={ACCENT} />
               <Text style={s.summaryText}>{totalSessions} pass</Text>
             </View>
             <View style={s.summaryChip}>
-              <Ionicons name="calendar-outline" size={13} color={ORANGE} />
+              <Ionicons name="calendar-outline" size={13} color={ACCENT} />
               <Text style={s.summaryText}>{scheduledDays} dagar/vecka</Text>
             </View>
             {planEndLabel && (
@@ -431,11 +431,11 @@ const s = StyleSheet.create({
   },
   summaryChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: ORANGE + '12',
+    backgroundColor: accentAlpha('12'),
     borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6,
   },
   summaryChipBlue: { backgroundColor: CARDIO_BLUE + '14' },
-  summaryText: { color: ORANGE, fontSize: 12, fontWeight: '600' },
+  summaryText: { color: ACCENT, fontSize: 12, fontWeight: '600' },
 
   // Grid
   grid: {
@@ -452,17 +452,17 @@ const s = StyleSheet.create({
     backgroundColor: CARD,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: CARD_BORDER,
     padding: 14,
     gap: 6,
     justifyContent: 'space-between',
   },
   dayCardActive: {
     backgroundColor: '#1A1510',
-    borderColor: ORANGE + '40',
+    borderColor: accentAlpha('40'),
   },
   dayCardToday: {
-    borderColor: ORANGE,
+    borderColor: ACCENT,
   },
 
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -471,10 +471,10 @@ const s = StyleSheet.create({
     fontSize: 11, fontWeight: '800',
     letterSpacing: 0.8, textTransform: 'uppercase',
   },
-  dayShortToday: { color: ORANGE },
+  dayShortToday: { color: ACCENT },
   todayDot: {
     width: 5, height: 5, borderRadius: 2.5,
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
   },
 
   sessionList: { flex: 1, gap: 5, justifyContent: 'center' },
@@ -490,7 +490,7 @@ const s = StyleSheet.create({
   restLabel: { color: 'rgba(255,255,255,0.28)', fontSize: 13, fontWeight: '500', flex: 1 },
   addCircle: {
     width: 26, height: 26, borderRadius: 13,
-    borderWidth: 1, borderColor: ORANGE + '40',
+    borderWidth: 1, borderColor: accentAlpha('40'),
     borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center',
     alignSelf: 'flex-end',
@@ -503,7 +503,7 @@ const s = StyleSheet.create({
 
   ctaBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: ORANGE, borderRadius: 16, padding: 14,
+    backgroundColor: ACCENT, borderRadius: 16, padding: 14,
     marginBottom: 16,
   },
   ctaIcon: {

@@ -15,7 +15,7 @@ import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 
 const MAX_NAME_LENGTH = 40
 
@@ -62,7 +62,7 @@ export default function EditNameScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color={ORANGE} size="large" />
+        <ActivityIndicator color={ACCENT} size="large" />
       </View>
     )
   }
@@ -83,8 +83,8 @@ export default function EditNameScreen() {
           activeOpacity={0.7}
         >
           {saving
-            ? <ActivityIndicator color={ORANGE} size="small" />
-            : <Ionicons name="checkmark" size={22} color={canSave ? ORANGE : TEXT_SECONDARY} />}
+            ? <ActivityIndicator color={ACCENT} size="small" />
+            : <Ionicons name="checkmark" size={22} color={canSave ? ACCENT : TEXT_SECONDARY} />}
         </TouchableOpacity>
       </View>
 
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   checkBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: ORANGE + '22', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: accentAlpha('22'), alignItems: 'center', justifyContent: 'center',
   },
   checkBtnDisabled: { backgroundColor: CARD },
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },

@@ -63,13 +63,11 @@ import type { UserChallengeWithLevel } from '@/types/database'
 import { getGreetingSubtitle } from '@/lib/getGreetingSubtitle'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
-import { BG, BORDER, CARD } from '@/lib/theme'
+import { BG, BORDER, CARD, useThemeStrings, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
 
-const ORANGE    = '#FFA817'
 const NUM_FONT  = 'Nunito_700Bold'
 const SCENE_BG  = BG
 const CARD_BG   = CARD
-const CARD_BORDER = BORDER
 
 // ── Ring constants ─────────────────────────────────────────────────────────────
 const R_SIZE   = 118
@@ -128,7 +126,8 @@ function getGreeting(): string {
 function ProgressRing({ completed, total }: { completed: number; total: number }) {
   const progress   = useSharedValue(0)
   const isComplete = total > 0 && completed === total
-  const ringColor  = isComplete ? '#3BE862' : ORANGE
+  const T = useThemeStrings()
+  const ringColor  = isComplete ? '#3BE862' : T.ACCENT
 
   useEffect(() => {
     progress.value = withTiming(
@@ -173,6 +172,7 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
 export default function DashboardScreen() {
   const onScrollShrink = useTabBarShrinkOnScroll()
   // Gradienter kräver strängfärger — välj par efter aktuellt tema
+  const heroShadow = useColorScheme() === 'light' ? '#2B4EAE' : '#FFA817'
   const heroGradient: [string, string] = useColorScheme() === 'light'
     ? ['#FFFFFF', '#F1F1F3'] : ['#1C1915', '#0F0F11']
   const insets = useSafeAreaInsets()
@@ -544,7 +544,7 @@ export default function DashboardScreen() {
         </View>
 
         {/* ── Hero Card — 3D floating ── */}
-        <Animated.View style={[s.heroOuter, heroAnimStyle]}>
+        <Animated.View style={[s.heroOuter, { shadowColor: heroShadow }, heroAnimStyle]}>
           <LinearGradient
             colors={heroGradient}
             start={{ x: 0, y: 0 }}
@@ -648,7 +648,7 @@ export default function DashboardScreen() {
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>REGLER</Text>
           <TouchableOpacity style={s.addRuleChip} onPress={openAddRule} activeOpacity={0.8}>
-            <Ionicons name="add" size={13} color={ORANGE} />
+            <Ionicons name="add" size={13} color={ACCENT} />
             <Text style={s.addRuleChipText}>Lägg till</Text>
           </TouchableOpacity>
         </View>
@@ -661,8 +661,8 @@ export default function DashboardScreen() {
               const isLast = i === levelRules.length - 1 && customTasks.length === 0
               return (
                 <View key={i} style={[s.ruleItem, !isLast && s.ruleItemBorder]}>
-                  <View style={[s.ruleIconBox, { backgroundColor: ORANGE + '1C' }]}>
-                    <Ionicons name={icon} size={16} color={ORANGE} />
+                  <View style={[s.ruleIconBox, { backgroundColor: accentAlpha('1C') }]}>
+                    <Ionicons name={icon} size={16} color={ACCENT} />
                   </View>
                   <Text style={s.ruleItemText}>{ruleText}</Text>
                   <Ionicons name="lock-closed-outline" size={12} color="#2A2A30" />
@@ -772,7 +772,7 @@ const s = StyleSheet.create({
   centered: { flex: 1, backgroundColor: SCENE_BG, alignItems: 'center', justifyContent: 'center', gap: 12 },
   errorText: { color: '#4A4A50', fontSize: 14 },
   retryBtn: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -787,7 +787,7 @@ const s = StyleSheet.create({
   subtitle: { color: '#4A4A50', fontSize: 13, marginTop: 3 },
   avatar: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
   avatarImg:   { width: 44, height: 44, borderRadius: 22 },
@@ -797,7 +797,6 @@ const s = StyleSheet.create({
   // Hero outer wrapper (for shadow + tilt)
   heroOuter: {
     borderRadius: 22,
-    shadowColor: ORANGE,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 28,
@@ -817,27 +816,27 @@ const s = StyleSheet.create({
   heroLeft: { flex: 1, gap: 4 },
   levelBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: ORANGE + '1F',
+    backgroundColor: accentAlpha('1F'),
     borderRadius: 7,
     borderWidth: 1,
-    borderColor: ORANGE + '3C',
+    borderColor: accentAlpha('3C'),
     paddingHorizontal: 8,
     paddingVertical: 3,
     marginBottom: 6,
   },
-  levelBadgeText: { color: ORANGE, fontSize: 9, fontWeight: '800', letterSpacing: 1.8 },
+  levelBadgeText: { color: ACCENT, fontSize: 9, fontWeight: '800', letterSpacing: 1.8 },
   dayLabel: { color: '#3A3A40', fontSize: 10, fontWeight: '700', letterSpacing: 3 },
   dayRow:   { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
   dayNum:   { color: '#FFFFFF', fontSize: 70, fontFamily: NUM_FONT, lineHeight: 72, letterSpacing: -3 },
   dayOf:    { color: '#3A3A40', fontSize: 22, fontWeight: '600', paddingBottom: 11 },
   heroPctRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  heroPct:      { color: ORANGE, fontSize: 13, fontWeight: '700' },
+  heroPct:      { color: ACCENT, fontSize: 13, fontWeight: '700' },
   heroPctSuffix: { color: '#3A3A40', fontSize: 12 },
   heroBar: {
     height: 3, backgroundColor: BORDER,
     borderRadius: 2, overflow: 'hidden', marginTop: 6,
   },
-  heroBarFill: { height: '100%', backgroundColor: ORANGE, borderRadius: 2 },
+  heroBarFill: { height: '100%', backgroundColor: ACCENT, borderRadius: 2 },
 
   // Hero right
   heroRight: { paddingLeft: 10 },
@@ -867,7 +866,7 @@ const s = StyleSheet.create({
   countBadge: {
     backgroundColor: CARD,
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
   countBadgeDone: { backgroundColor: '#3BE8621A', borderColor: '#3BE86235' },
   countText:     { color: '#444', fontSize: 12, fontWeight: '700' },
@@ -881,9 +880,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: CARD_BG,
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5,
-    borderWidth: 1, borderColor: ORANGE + '44',
+    borderWidth: 1, borderColor: accentAlpha('44'),
   },
-  addRuleChipText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
+  addRuleChipText: { color: ACCENT, fontSize: 12, fontWeight: '700' },
 
   rulesCard: {
     backgroundColor: CARD_BG,
@@ -896,7 +895,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 13,
   },
   ruleItemBorder: {
-    borderBottomWidth: 1, borderBottomColor: CARD_BORDER,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
   },
   // Samma markering som taskSidebar på uppgiftskorten
   ruleSidebar: {

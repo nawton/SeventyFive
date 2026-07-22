@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { getFeedSocial, likePost, unlikePost } from '@/services/social'
-import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, CARD_BORDER } from '@/lib/theme'
 
 // =============================================================================
 // SOCIAL RAD — Strava-stil under passdetaljerna: "2 gillanden · 1
@@ -95,7 +95,7 @@ export function PostSocialBar({ postKey, ownerId, shareText, onOpenComments }: {
 const s = StyleSheet.create({
   wrap: {
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     marginTop: 12,
   },
   countsRow: {

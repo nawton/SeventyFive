@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
 
 // =============================================================================
 // KÖN — egen sida (nås från Profilinställningar) med de fyra vanliga
@@ -58,8 +58,8 @@ export default function GenderScreen() {
               onPress={() => pick(g)}
               activeOpacity={0.8}
             >
-              <Text style={[s.optionText, selected && { color: ORANGE }]}>{g}</Text>
-              {selected && <Ionicons name="checkmark-circle" size={20} color={ORANGE} />}
+              <Text style={[s.optionText, selected && { color: ACCENT }]}>{g}</Text>
+              {selected && <Ionicons name="checkmark-circle" size={20} color={ACCENT} />}
             </TouchableOpacity>
           )
         })}
@@ -83,8 +83,8 @@ const s = StyleSheet.create({
   optionRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 16,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
-  optionRowActive: { borderColor: ORANGE, backgroundColor: ORANGE + '12' },
+  optionRowActive: { borderColor: ACCENT, backgroundColor: accentAlpha('12') },
   optionText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
 })

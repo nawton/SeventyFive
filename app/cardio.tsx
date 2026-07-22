@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline } from 'react-native-maps'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated'
-import { ORANGE, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, BG, BORDER, CARD, DIVIDER, useThemeStrings } from '@/lib/theme'
+import { NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, BG, BORDER, CARD, DIVIDER, useThemeStrings, ACCENT, CARD_BORDER } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { saveCardioWorkout, type CardioInterval } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
@@ -968,7 +968,7 @@ export default function CardioScreen() {
       {/* ── Nedräkning 3-2-1 innan start ── */}
       {countdown !== null && (
         <Pressable style={styles.countdownOverlay} onPress={() => cancelCountdown()}>
-          <Animated.Text style={[styles.countdownNum, pulseStyle]}>{countdown}</Animated.Text>
+          <Animated.Text style={[styles.countdownNum, { color: T.CARD }, pulseStyle]}>{countdown}</Animated.Text>
           <Text style={styles.countdownHint}>Tryck för att avbryta</Text>
         </Pressable>
       )}
@@ -2512,7 +2512,6 @@ const styles = StyleSheet.create({
     zIndex: 60,
   },
   countdownNum: {
-    color: CARDIO_ACCENT,
     fontSize: 170,
     fontFamily: NUM_FONT,
     fontVariant: ['tabular-nums'],
@@ -2985,7 +2984,7 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: CARD_BORDER,
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

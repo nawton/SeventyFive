@@ -26,7 +26,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import Body from 'react-native-body-highlighter'
 import { getMusclesForName, bestSideForMuscles, SLUG_LABELS, getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
 import { toLocalDateString, weekdayOf } from '@/lib/date'
 import {
   CATEGORY_LABELS,
@@ -516,7 +516,7 @@ export function SessionEditor({
                     <Text style={s.exName} numberOfLines={1}>{d.exercise_name}</Text>
                     {isCardio ? (
                       <View style={s.cardioBadge}>
-                        <Ionicons name="walk-outline" size={13} color={ORANGE} />
+                        <Ionicons name="walk-outline" size={13} color={ACCENT} />
                         <Text style={s.cardioBadgeText}>Cardio</Text>
                       </View>
                     ) : (
@@ -547,7 +547,7 @@ export function SessionEditor({
                 )
               })}
               <TouchableOpacity style={s.pickerToggle} onPress={() => setShowPicker(true)} activeOpacity={0.8}>
-                <Ionicons name="add" size={17} color={ORANGE} />
+                <Ionicons name="add" size={17} color={ACCENT} />
                 <Text style={s.pickerToggleText}>Lägg till övning</Text>
               </TouchableOpacity>
             </View>
@@ -665,14 +665,14 @@ export function SessionEditor({
                   delayLongPress={400}
                   activeOpacity={0.7}
                 >
-                  <View style={[s.pickerIcon, already && { backgroundColor: ORANGE + '20' }]}>
-                    <Ionicons name={CATEGORY_ICONS[ex.category]} size={18} color={already ? ORANGE : TEXT_SECONDARY} />
+                  <View style={[s.pickerIcon, already && { backgroundColor: accentAlpha('20') }]}>
+                    <Ionicons name={CATEGORY_ICONS[ex.category]} size={18} color={already ? ACCENT : TEXT_SECONDARY} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.pickerRowName, already && { color: ORANGE }]}>{ex.name}</Text>
+                    <Text style={[s.pickerRowName, already && { color: ACCENT }]}>{ex.name}</Text>
                     <Text style={s.pickerRowSub}>{CATEGORY_LABELS[ex.category]}</Text>
                   </View>
-                  <View style={[s.pickerAddBtn, already && { backgroundColor: ORANGE, borderColor: ORANGE }]}>
+                  <View style={[s.pickerAddBtn, already && { backgroundColor: ACCENT, borderColor: ACCENT }]}>
                     <Ionicons name={already ? 'checkmark' : 'add'} size={18} color={already ? '#000' : TEXT_SECONDARY} />
                   </View>
                 </TouchableOpacity>
@@ -691,7 +691,7 @@ export function SessionEditor({
       {(() => {
         const muscles    = infoEx ? getMusclesForName(infoEx.name) : []
         const muscleData = muscles.map(slug => ({ slug, intensity: 1 as const }))
-        const diffColor  = infoEx ? (DIFFICULTY_COLORS[infoEx.difficulty] ?? ORANGE) : ORANGE
+        const diffColor  = infoEx ? (DIFFICULTY_COLORS[infoEx.difficulty] ?? T.ACCENT) : T.ACCENT
         return (
           <Modal
             visible={infoEx !== null}
@@ -747,7 +747,7 @@ export function SessionEditor({
                       side={infoBodyView}
                       gender="male"
                       scale={1.6}
-                      colors={[ORANGE]}
+                      colors={[T.ACCENT]}
                       defaultFill="#2A2A2C"
                       border="rgba(255,255,255,0.10)"
                     />
@@ -805,7 +805,7 @@ const s = StyleSheet.create({
   label: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, paddingHorizontal: 4 },
   input: {
     backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     color: TEXT_PRIMARY, fontSize: 16,
     paddingHorizontal: 14, paddingVertical: 14,
   },
@@ -816,25 +816,25 @@ const s = StyleSheet.create({
   repeatRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     padding: 14, marginTop: 4,
   },
-  repeatRowActive: { backgroundColor: ORANGE + '14', borderColor: ORANGE + '40' },
+  repeatRowActive: { backgroundColor: accentAlpha('14'), borderColor: accentAlpha('40') },
   repeatIcon: {
     width: 34, height: 34, borderRadius: 10,
     backgroundColor: BG, alignItems: 'center', justifyContent: 'center',
   },
-  repeatIconActive: { backgroundColor: ORANGE },
+  repeatIconActive: { backgroundColor: ACCENT },
   repeatLabelRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
   repeatLabel:      { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
-  repeatLabelActive:{ color: ORANGE },
+  repeatLabelActive:{ color: ACCENT },
   repeatSub:        { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   swToggle: {
     width: 44, height: 26, borderRadius: 13,
     backgroundColor: BORDER, padding: 2,
     justifyContent: 'center',
   },
-  swToggleActive:  { backgroundColor: ORANGE },
+  swToggleActive:  { backgroundColor: ACCENT },
   swThumb: {
     width: 22, height: 22, borderRadius: 11,
     backgroundColor: TEXT_SECONDARY,
@@ -848,24 +848,24 @@ const s = StyleSheet.create({
   dayBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10,
     backgroundColor: CARD,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
-  dayBtnActive:  { backgroundColor: ORANGE, borderColor: ORANGE },
+  dayBtnActive:  { backgroundColor: ACCENT, borderColor: ACCENT },
   dayText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
   dayTextActive: { color: '#000', fontWeight: '700' },
 
   exRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: CARD, borderRadius: 10, padding: 10,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
   exName: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
   cardioBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
-    backgroundColor: ORANGE + '1E',
+    backgroundColor: accentAlpha('1E'),
   },
-  cardioBadgeText: { color: ORANGE, fontSize: 12, fontWeight: '600' },
+  cardioBadgeText: { color: ACCENT, fontSize: 12, fontWeight: '600' },
   exSmall: {
     width: 50, color: TEXT_PRIMARY, fontSize: 13,
     backgroundColor: BG, borderRadius: 8,
@@ -875,24 +875,24 @@ const s = StyleSheet.create({
   pickerToggle: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingVertical: 10, paddingHorizontal: 14,
-    backgroundColor: ORANGE + '16', borderRadius: 10, marginTop: 4,
-    borderWidth: 1, borderColor: ORANGE + '40',
+    backgroundColor: accentAlpha('16'), borderRadius: 10, marginTop: 4,
+    borderWidth: 1, borderColor: accentAlpha('40'),
   },
-  pickerToggleText: { color: ORANGE, fontSize: 14, fontWeight: '600' },
+  pickerToggleText: { color: ACCENT, fontSize: 14, fontWeight: '600' },
 
   pickerScreen: { flex: 1, backgroundColor: BG },
   pickerHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
   },
-  klarBtn:     { backgroundColor: ORANGE, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9 },
+  klarBtn:     { backgroundColor: ACCENT, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9 },
   klarBtnText: { color: '#000', fontWeight: '700', fontSize: 14 },
   pickerSearchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginVertical: 10,
     paddingHorizontal: 14, height: 46,
     backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
   pickerSearchInput:    { flex: 1, color: TEXT_PRIMARY, fontSize: 15, padding: 0 },
   pickerFilterStrip:    { height: 60, flexGrow: 0, marginBottom: 10 },
@@ -900,9 +900,9 @@ const s = StyleSheet.create({
   pickerPill: {
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20,
     backgroundColor: CARD,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
-  pickerPillActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
+  pickerPillActive:     { backgroundColor: ACCENT, borderColor: ACCENT },
   pickerPillText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
   pickerPillTextActive: { color: '#000', fontWeight: '700' },
   pickerCount: {
@@ -914,7 +914,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)',
   },
-  pickerRowAdded: { backgroundColor: ORANGE + '08' },
+  pickerRowAdded: { backgroundColor: accentAlpha('08') },
   pickerIcon: {
     width: 44, height: 44, borderRadius: 12,
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
@@ -928,7 +928,7 @@ const s = StyleSheet.create({
   },
 
   saveBtn: {
-    backgroundColor: ORANGE, borderRadius: 14,
+    backgroundColor: ACCENT, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center',
   },
   saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
@@ -940,9 +940,9 @@ const s = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 7, paddingVertical: 12, borderRadius: 12,
     backgroundColor: CARD,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
-  typeBtnActive:     { backgroundColor: ORANGE, borderColor: ORANGE },
+  typeBtnActive:     { backgroundColor: ACCENT, borderColor: ACCENT },
   typeBtnText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
   typeBtnTextActive: { color: '#000', fontWeight: '700' },
 
@@ -953,9 +953,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 7,
     paddingVertical: 11, paddingHorizontal: 14,
     borderRadius: 12, backgroundColor: CARD,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
-  cardioTypeBtnActive:  { backgroundColor: ORANGE, borderColor: ORANGE },
+  cardioTypeBtnActive:  { backgroundColor: ACCENT, borderColor: ACCENT },
   cardioTypeTxt:        { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
   cardioTypeTxtActive:  { color: '#000', fontWeight: '700' },
 
@@ -971,22 +971,22 @@ const s = StyleSheet.create({
   badgeRow: { flexDirection: 'row', gap: 8 },
   categoryBadge: {
     paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
-    backgroundColor: ORANGE + '20',
+    backgroundColor: accentAlpha('20'),
   },
-  categoryBadgeText: { color: ORANGE, fontSize: 13, fontWeight: '600' },
+  categoryBadgeText: { color: ACCENT, fontSize: 13, fontWeight: '600' },
   diffBadge:         { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   diffBadgeText:     { fontSize: 13, fontWeight: '600' },
 
   infoCard: {
     backgroundColor: CARD, borderRadius: 16, padding: 16, gap: 12,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
   infoCardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   infoCardTitle:    { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
 
   toggle: { flexDirection: 'row', backgroundColor: BG, borderRadius: 10, padding: 2 },
   toggleBtn:        { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
-  toggleBtnActive:  { backgroundColor: ORANGE },
+  toggleBtnActive:  { backgroundColor: ACCENT },
   toggleText:       { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   toggleTextActive: { color: '#000', fontWeight: '700' },
 
@@ -994,9 +994,9 @@ const s = StyleSheet.create({
   muscleChips:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   muscleChip: {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
-    backgroundColor: ORANGE + '1E',
+    backgroundColor: accentAlpha('1E'),
   },
-  muscleChipText: { color: ORANGE, fontSize: 13, fontWeight: '600' },
+  muscleChipText: { color: ACCENT, fontSize: 13, fontWeight: '600' },
   noMuscles:      { color: TEXT_SECONDARY, fontSize: 13 },
   infoDesc:       { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 22 },
 })

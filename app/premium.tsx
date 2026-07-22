@@ -6,7 +6,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM_FONT, MINT } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, NUM_FONT, MINT, CARD_BORDER } from '@/lib/theme'
 import { PREMIUM_PLANS, PREMIUM_BENEFITS, type PlanKey } from '@/lib/premiumPlans'
 import {
   getSubscription, isPremium, startCheckout, openBillingPortal,
@@ -198,7 +198,7 @@ const s = StyleSheet.create({
   crownWrap: { alignItems: 'center', marginBottom: 20 },
   crownCircle: {
     width: 84, height: 84, borderRadius: 42,
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: CARD, borderWidth: 1, borderColor: CARD_BORDER,
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -222,7 +222,7 @@ const s = StyleSheet.create({
   plans: { marginTop: 26, gap: 12 },
   planCard: {
     backgroundColor: CARD, borderRadius: 16, padding: 18,
-    borderWidth: 1.5, borderColor: BORDER, gap: 8,
+    borderWidth: 1.5, borderColor: CARD_BORDER, gap: 8,
   },
   planCardActive: { borderColor: MINT },
   planHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

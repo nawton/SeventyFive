@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARD_BORDER } from '@/lib/theme'
 import { MedalBadge } from '@/components/MedalBadge'
 import { getAchievementSummary, type AchievementSummary } from '@/services/achievementSummary'
 import { getActiveChallenge } from '@/services/challenge'
@@ -57,7 +57,7 @@ const s = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     backgroundColor: CARD, borderRadius: 18,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     paddingVertical: 18, paddingHorizontal: 16,
   },
   medalStack: { width: 96, height: 56, justifyContent: 'center' },

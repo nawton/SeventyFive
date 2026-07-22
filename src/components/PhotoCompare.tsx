@@ -5,7 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, ACCENT } from '@/lib/theme'
 import { GlassCircleButton } from '@/components/GlassButton'
 import type { ProgressPhotoItem } from '@/services/progressPhotos'
 
@@ -165,7 +165,7 @@ const s = StyleSheet.create({
     width: CELL_W, aspectRatio: 4 / 5, borderRadius: 12, overflow: 'hidden',
     backgroundColor: CARD,
   },
-  cellSelected: { borderWidth: 2.5, borderColor: ORANGE },
+  cellSelected: { borderWidth: 2.5, borderColor: ACCENT },
   cellImage: { width: '100%', height: '100%' },
   cellDay: {
     position: 'absolute', left: 6, bottom: 6,
@@ -175,7 +175,7 @@ const s = StyleSheet.create({
   cellDayText: { color: '#fff', fontSize: 10, fontFamily: NUM_FONT_SEMI },
   cellBadge: {
     position: 'absolute', right: 6, top: 6,
-    width: 22, height: 22, borderRadius: 11, backgroundColor: ORANGE,
+    width: 22, height: 22, borderRadius: 11, backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
   cellBadgeText: { color: '#000', fontSize: 12, fontFamily: NUM_FONT },
@@ -187,7 +187,7 @@ const s = StyleSheet.create({
   },
   compareBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ORANGE, borderRadius: 14, paddingVertical: 15,
+    backgroundColor: ACCENT, borderRadius: 14, paddingVertical: 15,
   },
   compareBtnDisabled: { opacity: 0.35 },
   compareBtnText: { color: '#000', fontSize: 15, fontWeight: '700' },
@@ -197,7 +197,7 @@ const s = StyleSheet.create({
     color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600',
     textAlign: 'center', marginBottom: 14,
   },
-  resultHeadNum: { color: ORANGE, fontFamily: NUM_FONT, fontSize: 16 },
+  resultHeadNum: { color: ACCENT, fontFamily: NUM_FONT, fontSize: 16 },
   resultRow: { flexDirection: 'row', gap: 10 },
   resultCol: { flex: 1 },
   resultImage: {

@@ -7,7 +7,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, DIVIDER, useThemeStrings } from '@/lib/theme'
+import { GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, DIVIDER, useThemeStrings, ACCENT, accentAlpha } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { fmtTime } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
@@ -238,7 +238,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
               <View style={s.tabBar}>
                 {pages.map((p, i) => {
                   const active = page === i
-                  const accent = p.key === 'cardio' ? CARDIO_BLUE : ORANGE
+                  const accent = p.key === 'cardio' ? CARDIO_BLUE : T.ACCENT
                   return (
                     <TouchableOpacity key={p.key} style={s.tabBtn} onPress={() => goToPage(i)} activeOpacity={0.7}>
                       <View style={s.tabLabelRow}>
@@ -342,7 +342,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                                 activeOpacity={0.7}
                                 onPress={() => setGymDetail({ name: c.name, planned: c.exerciseNames, logged: sub })}
                               >
-                                <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ORANGE} /></View>
+                                <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ACCENT} /></View>
                                 <View style={s.itemBody}>
                                   <Text style={s.itemName}>{c.name}</Text>
                                   <View style={s.itemMeta}>
@@ -378,7 +378,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                                 activeOpacity={0.7}
                                 onPress={() => setGymDetail({ name: w.name, planned: [], logged: [w] })}
                               >
-                                <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ORANGE} /></View>
+                                <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ACCENT} /></View>
                                 <View style={s.itemBody}>
                                   <Text style={s.itemName}>{w.name}</Text>
                                   <View style={s.itemMeta}>
@@ -468,7 +468,7 @@ const s = StyleSheet.create({
   emptyText:{ color: TEXT_SECONDARY, fontSize: 14 },
   item:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
   itemBorder:{ borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
-  itemIcon: { width: 38, height: 38, borderRadius: 10, backgroundColor: ORANGE + '22', alignItems: 'center', justifyContent: 'center' },
+  itemIcon: { width: 38, height: 38, borderRadius: 10, backgroundColor: accentAlpha('22'), alignItems: 'center', justifyContent: 'center' },
   itemBody: { flex: 1, gap: 4 },
   itemName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   itemMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -480,7 +480,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingLeft: 50, paddingRight: 4, paddingVertical: 5,
   },
-  subDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: ORANGE + '88' },
+  subDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: accentAlpha('88') },
   subName: { flex: 1, color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
   subStat: { color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },
 })

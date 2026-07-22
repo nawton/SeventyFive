@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Text as SvgText, Polygon, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassSegment } from '@/components/GlassSegment'
-import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { getMusclesForName, MUSCLE_GROUPS_6 } from '@/lib/muscles'
 import { getCompletedExerciseNamesBetween } from '@/services/workoutSchedule'
@@ -152,7 +152,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
           {/* Radar — övningar per muskelgrupp, samma räkning som kroppskartan */}
           <View style={[s.card, { alignItems: 'center', paddingVertical: 12, marginTop: 14 }]}>
             {loading ? (
-              <ActivityIndicator color={ORANGE} style={{ marginVertical: 110 }} />
+              <ActivityIndicator color={ACCENT} style={{ marginVertical: 110 }} />
             ) : (() => {
               const W = SCREEN_W - 72
               const H = 260
@@ -192,7 +192,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
                   {radarCur.some(v => v > 0) && (
                     <Polygon
                       points={radarCur.map((v, i) => pt(i, v)).join(' ')}
-                      fill={ORANGE + '33'} stroke={ORANGE} strokeWidth={2}
+                      fill={accentAlpha('33')} stroke={ACCENT} strokeWidth={2}
                     />
                   )}
                   {MUSCLE_GROUPS_6.map((g, i) => {
@@ -213,7 +213,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
             })()}
             <View style={s.legend}>
               <View style={s.legItem}>
-                <View style={[s.legDot, { backgroundColor: ORANGE }]} />
+                <View style={[s.legDot, { backgroundColor: ACCENT }]} />
                 <Text style={s.legText}>{range.curLegend}</Text>
               </View>
               {radarPrev && !!range.prevLegend && (
@@ -286,7 +286,7 @@ const s = StyleSheet.create({
   grpRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
   grpLbl: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', width: 62 },
   grpTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
-  grpFill: { height: '100%', borderRadius: 5, backgroundColor: ORANGE },
+  grpFill: { height: '100%', borderRadius: 5, backgroundColor: ACCENT },
   grpVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'] },
 
   hint: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 18, marginTop: 12, textAlign: 'center' },

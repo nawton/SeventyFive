@@ -9,7 +9,7 @@ import { DistanceAreaChart, type AreaBucket } from '@/components/stats/DistanceA
 import { fmtDuration } from '@/lib/format'
 import type { UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
-import { CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, CARD_BORDER } from '@/lib/theme'
 
 // =============================================================================
 // ATLETVY — delad mellan atletsidan (öppnas från flödet/sökningen) och
@@ -187,7 +187,7 @@ export function AthleteOverview({
             testID="streakCounter"
           >
             <View style={s.streakValueRow}>
-              <Ionicons name="flame" size={18} color={ORANGE} />
+              <Ionicons name="flame" size={18} color={ACCENT} />
               <Text style={s.counterValue}>{streak}</Text>
             </View>
             <Text style={s.counterLabel}>Streak</Text>
@@ -281,7 +281,7 @@ export function AthleteOverview({
               onPress={() => switchType(t.key)}
               activeOpacity={0.8}
             >
-              <Ionicons name={t.icon} size={14} color={on ? ORANGE : TEXT_PRIMARY} />
+              <Ionicons name={t.icon} size={14} color={on ? ACCENT : TEXT_PRIMARY} />
               <Text style={[s.chipText, on && s.chipTextActive]}>{t.label}</Text>
             </TouchableOpacity>
           )
@@ -371,10 +371,10 @@ const s = StyleSheet.create({
     marginTop: 18, borderRadius: 26, paddingVertical: 13,
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)', alignItems: 'center',
   },
-  followBtnInvite: { borderColor: ORANGE },
+  followBtnInvite: { borderColor: ACCENT },
   followBtnBlocked: { borderColor: '#FF3B4A88' },
   followBtnText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  followBtnTextInvite: { color: ORANGE },
+  followBtnTextInvite: { color: ACCENT },
   followBtnTextBlocked: { color: '#FF3B4A' },
 
   chipsRow: { flexDirection: 'row', gap: 8, marginTop: 26 },
@@ -383,9 +383,9 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER, borderRadius: 17,
     paddingHorizontal: 11, paddingVertical: 7,
   },
-  chipActive: { borderColor: ORANGE },
+  chipActive: { borderColor: ACCENT },
   chipText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
-  chipTextActive: { color: ORANGE, fontWeight: '700' },
+  chipTextActive: { color: ACCENT, fontWeight: '700' },
 
   sectionTitle: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800', marginTop: 24 },
   weekRow: { flexDirection: 'row', marginTop: 14 },
@@ -395,13 +395,13 @@ const s = StyleSheet.create({
 
   chartCard: {
     marginTop: 20, backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER, padding: 16,
+    borderWidth: 1, borderColor: CARD_BORDER, padding: 16,
   },
 
   activitiesBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     marginTop: 20, backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER, padding: 16,
+    borderWidth: 1, borderColor: CARD_BORDER, padding: 16,
   },
   activitiesIcon: {
     width: 40, height: 40, borderRadius: 12,

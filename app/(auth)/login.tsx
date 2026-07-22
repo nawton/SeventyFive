@@ -15,7 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { signInWithGoogle } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
 import { updateProfile } from '@/services/profile'
-import { ORANGE, BG, BORDER, CARD } from '@/lib/theme'
+import { BG, BORDER, CARD, ACCENT } from '@/lib/theme'
 
 type Mode = 'login' | 'register'
 
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logo: {
-    color: ORANGE,
+    color: ACCENT,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 5,
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   primaryButton: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',

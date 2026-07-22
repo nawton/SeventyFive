@@ -6,7 +6,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import type { TaskItem } from '@/services/dailyLog'
 import type { TaskType } from '@/types/database'
-import { ORANGE, BORDER, CARD } from '@/lib/theme'
+import { BORDER, CARD, useThemeStrings, ACCENT } from '@/lib/theme'
 
 const { width: SW } = Dimensions.get('window')
 
@@ -44,7 +44,8 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
   /** Sträcker kortet till full rad-bredd (foto-uppgiften under griden) */
   fullWidth?: boolean
 }) {
-  const color = TASK_COLORS[task.type] ?? ORANGE
+  const T = useThemeStrings()
+  const color = TASK_COLORS[task.type] ?? T.ACCENT
   const icon  = TASK_ICONS[task.type]  ?? 'checkmark-outline'
   const scale = useSharedValue(1)
 

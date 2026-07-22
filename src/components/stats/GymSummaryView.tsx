@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import Svg, { Polyline, Circle, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { PostSocialBar } from '@/components/PostSocialBar'
-import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER } from '@/lib/theme'
+import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
 
@@ -81,7 +81,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
         {/* Hero */}
         <View style={s.hero}>
           <View style={s.heroIcon}>
-            <Ionicons name="barbell-outline" size={24} color={ORANGE} />
+            <Ionicons name="barbell-outline" size={24} color={ACCENT} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{name}</Text>
@@ -99,7 +99,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
           <View style={s.dtlRow}>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>Övningar</Text>
-              <Text style={[s.dtlVal, { color: ORANGE }]}>{exerciseCount}</Text>
+              <Text style={[s.dtlVal, { color: ACCENT }]}>{exerciseCount}</Text>
             </View>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>Set</Text>
@@ -217,10 +217,10 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
                         ))}
                         <Polyline
                           points={pts.map((p, i) => `${px(i)},${py(p.topKg)}`).join(' ')}
-                          fill="none" stroke={ORANGE} strokeWidth={2.5} strokeLinejoin="round"
+                          fill="none" stroke={ACCENT} strokeWidth={2.5} strokeLinejoin="round"
                         />
                         {pts.map((p, i) => (
-                          <Circle key={p.date} cx={px(i)} cy={py(p.topKg)} r={4} fill={ORANGE} stroke={CARD} strokeWidth={2} />
+                          <Circle key={p.date} cx={px(i)} cy={py(p.topKg)} r={4} fill={ACCENT} stroke={CARD} strokeWidth={2} />
                         ))}
                       </Svg>
                       <View style={s.progAxisRow}>
@@ -285,7 +285,7 @@ const s = StyleSheet.create({
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 },
   heroIcon: {
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: ORANGE + '22', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: accentAlpha('22'), alignItems: 'center', justifyContent: 'center',
   },
   heroTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
   heroSub: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500', marginTop: 3 },
@@ -312,7 +312,7 @@ const s = StyleSheet.create({
   exBlock: { paddingVertical: 13, gap: 9 },
   exHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   exName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600', flex: 1 },
-  exTop: { color: ORANGE, fontSize: 12, fontFamily: NUM_FONT_SEMI },
+  exTop: { color: ACCENT, fontSize: 12, fontFamily: NUM_FONT_SEMI },
   exUnlogged: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
   setWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   setChip: {

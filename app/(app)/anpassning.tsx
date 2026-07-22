@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import MapView from 'react-native-maps'
 import { supabase } from '@/lib/supabase'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, NUM_FONT } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, NUM_FONT, ACCENT } from '@/lib/theme'
 import { GlassSegment } from '@/components/GlassSegment'
 import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
 import { getTabBarShrinkEnabled, setTabBarShrinkEnabled } from '@/lib/tabBar'
@@ -67,7 +67,7 @@ function SwitchRow({ icon, label, hint, value, onChange, last }: {
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: BORDER, true: ORANGE }}
+        trackColor={{ false: BORDER, true: ACCENT }}
         thumbColor="#fff"
       />
     </View>

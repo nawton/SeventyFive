@@ -13,7 +13,7 @@ import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { saveSchedule, getSchedule } from '@/services/schedule'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -140,7 +140,7 @@ function TemplateCard({
         {template.tagline}
       </Text>
       <View style={styles.templateFooter}>
-        <Ionicons name="sunny-outline" size={12} color={selected ? ORANGE : TEXT_SECONDARY} />
+        <Ionicons name="sunny-outline" size={12} color={selected ? ACCENT : TEXT_SECONDARY} />
         <Text style={[styles.templateWake, selected && styles.templateWakeSelected]}>
           {template.wakeLabel}
         </Text>
@@ -161,11 +161,11 @@ function TimeDigit({
   return (
     <View style={styles.digit}>
       <TouchableOpacity onPress={onInc} style={styles.digitBtn} activeOpacity={0.6}>
-        <Ionicons name="chevron-up" size={16} color={ORANGE} />
+        <Ionicons name="chevron-up" size={16} color={ACCENT} />
       </TouchableOpacity>
       <Text style={styles.digitValue}>{fmt(value)}</Text>
       <TouchableOpacity onPress={onDec} style={styles.digitBtn} activeOpacity={0.6}>
-        <Ionicons name="chevron-down" size={16} color={ORANGE} />
+        <Ionicons name="chevron-down" size={16} color={ACCENT} />
       </TouchableOpacity>
     </View>
   )
@@ -186,7 +186,7 @@ function TimePicker({
     <View style={styles.pickerRow}>
       <View style={styles.pickerLeft}>
         <View style={styles.pickerIcon}>
-          <Ionicons name={icon} size={17} color={ORANGE} />
+          <Ionicons name={icon} size={17} color={ACCENT} />
         </View>
         <Text style={styles.pickerLabel}>{label}</Text>
       </View>
@@ -305,7 +305,7 @@ export default function ScheduleScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={ORANGE} size="large" />
+        <ActivityIndicator color={ACCENT} size="large" />
       </View>
     )
   }
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stepLabel: {
-    color: ORANGE,
+    color: ACCENT,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 2,
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   templateCardSelected: {
-    backgroundColor: ORANGE + '16',
+    backgroundColor: accentAlpha('16'),
   },
   templateAccent: {
     position: 'absolute',
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
   },
   templateName: {
     color: TEXT_PRIMARY,
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   templateNameSelected: {
-    color: ORANGE,
+    color: ACCENT,
   },
   templateTagline: {
     color: TEXT_SECONDARY,
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   templateWakeSelected: {
-    color: ORANGE,
+    color: ACCENT,
   },
 
   // Time picker
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: ORANGE + '18',
+    backgroundColor: accentAlpha('18'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   // Buttons
   saveButton: {
     marginHorizontal: 20,
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',

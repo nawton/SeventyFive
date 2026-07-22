@@ -14,7 +14,7 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   saveButton: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: CARD_BORDER,
     padding: 14,
     gap: 10,
   },

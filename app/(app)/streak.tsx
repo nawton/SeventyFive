@@ -11,7 +11,7 @@ import { getActiveChallenge } from '@/services/challenge'
 import { getStreak, getWeekStatuses } from '@/services/dailyLog'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
-import { BG, CARD, BORDER, ORANGE, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { BG, CARD, BORDER, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
 
 // =============================================================================
 // STREAK — hur många dagar i rad utmaningen klarats. Glödande låga,
@@ -35,9 +35,9 @@ function Flame({ size = 230 }: { size?: number }) {
     <Svg width={size} height={size} viewBox="0 0 100 100">
       <Defs>
         <RadialGradient id="glow" cx="50%" cy="52%" r="50%">
-          <Stop offset="0%" stopColor={ORANGE} stopOpacity={0.32} />
-          <Stop offset="55%" stopColor={ORANGE} stopOpacity={0.12} />
-          <Stop offset="100%" stopColor={ORANGE} stopOpacity={0} />
+          <Stop offset="0%" stopColor={ACCENT} stopOpacity={0.32} />
+          <Stop offset="55%" stopColor={ACCENT} stopOpacity={0.12} />
+          <Stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
         </RadialGradient>
         <SvgLinearGradient id="outer" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0%" stopColor="#FFC24D" />
@@ -52,7 +52,7 @@ function Flame({ size = 230 }: { size?: number }) {
 
       {/* Glöd + tunn ring som i förlagan */}
       <Circle cx={50} cy={52} r={48} fill="url(#glow)" />
-      <Circle cx={50} cy={52} r={38} fill="none" stroke={ORANGE} strokeOpacity={0.28} strokeWidth={1.4} />
+      <Circle cx={50} cy={52} r={38} fill="none" stroke={ACCENT} strokeOpacity={0.28} strokeWidth={1.4} />
 
       {/* Ytterlågan — droppform med vek topp */}
       <Path
@@ -203,7 +203,7 @@ export default function StreakScreen() {
                   {passed ? (
                     <Ionicons name="checkmark-circle" size={16} color={GREEN} />
                   ) : (
-                    <Ionicons name="flame-outline" size={16} color={isNext ? ORANGE : TEXT_SECONDARY} />
+                    <Ionicons name="flame-outline" size={16} color={isNext ? ACCENT : TEXT_SECONDARY} />
                   )}
                 </View>
               )
@@ -236,7 +236,7 @@ const s = StyleSheet.create({
   weekCard: {
     alignSelf: 'stretch', marginTop: 26,
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     paddingVertical: 16, paddingHorizontal: 10, gap: 12,
   },
   weekRow: { flexDirection: 'row' },
@@ -244,22 +244,22 @@ const s = StyleSheet.create({
     flex: 1, textAlign: 'center',
     color: TEXT_SECONDARY, fontSize: 13, fontWeight: '700',
   },
-  weekLabelToday: { color: ORANGE },
+  weekLabelToday: { color: ACCENT },
   weekSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', height: 30 },
   dayDot: {
     width: 26, height: 26, borderRadius: 13,
     borderWidth: 1.5, borderColor: BORDER,
     alignItems: 'center', justifyContent: 'center',
   },
-  dayDotDone: { backgroundColor: ORANGE, borderColor: ORANGE },
+  dayDotDone: { backgroundColor: ACCENT, borderColor: ACCENT },
   dayDotFailed: { borderColor: RED + '88' },
-  dayDotToday: { borderColor: ORANGE },
+  dayDotToday: { borderColor: ACCENT },
   dayNumber: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT },
 
   milestoneCard: {
     alignSelf: 'stretch', marginTop: 14,
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     padding: 16, gap: 14,
   },
   milestoneHead: {
@@ -272,8 +272,8 @@ const s = StyleSheet.create({
     borderRadius: 12, borderWidth: 1.5, borderColor: 'transparent',
     paddingVertical: 10,
   },
-  milestoneChipNext: { borderColor: ORANGE + '77', borderStyle: 'dashed' },
+  milestoneChipNext: { borderColor: accentAlpha('77'), borderStyle: 'dashed' },
   milestoneDays: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
   milestonePassed: { color: TEXT_SECONDARY, textDecorationLine: 'line-through' },
-  milestoneNextText: { color: ORANGE },
+  milestoneNextText: { color: ACCENT },
 })

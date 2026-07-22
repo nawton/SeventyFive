@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 import { CATEGORY_LABELS, type Exercise } from '@/services/exercises'
 import { getExerciseMuscleGroup, type Slug } from '@/lib/muscles'
 import type { ExerciseCategory } from '@/types/database'
@@ -177,7 +177,7 @@ export function ExercisePickerSheet({
             <View style={s.landingCards}>
               <TouchableOpacity style={s.landingCard} onPress={() => setPage('gym')} activeOpacity={0.8}>
                 <View style={[s.landingIcon, { backgroundColor: 'rgba(255,149,0,0.18)' }]}>
-                  <Ionicons name="barbell" size={44} color={ORANGE} />
+                  <Ionicons name="barbell" size={44} color={ACCENT} />
                 </View>
                 <Text style={s.landingCardTitle}>Gym</Text>
                 <Text style={s.landingCardSub}>Styrketräning</Text>
@@ -245,7 +245,7 @@ export function ExercisePickerSheet({
                       </View>
                       <Text style={[s.rowName, { flex: 1 }]}>{ex.name}</Text>
                       <View style={s.addBtn}>
-                        <Ionicons name="add" size={20} color={ORANGE} />
+                        <Ionicons name="add" size={20} color={ACCENT} />
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -282,17 +282,17 @@ export function ExercisePickerSheet({
                 const on = multiSelect && multiSel.some(e => e.id === ex.id)
                 return (
                   <TouchableOpacity key={ex.id} style={[s.row, on && s.rowOn]} onPress={() => handleTap(ex)} activeOpacity={0.7}>
-                    <View style={[s.exIconBox, on && { backgroundColor: ORANGE + '22' }]}>
-                      <Ionicons name="barbell-outline" size={18} color={on ? ORANGE : TEXT_SECONDARY} />
+                    <View style={[s.exIconBox, on && { backgroundColor: accentAlpha('22') }]}>
+                      <Ionicons name="barbell-outline" size={18} color={on ? ACCENT : TEXT_SECONDARY} />
                     </View>
-                    <Text style={[s.rowName, { flex: 1 }, on && { color: ORANGE }]}>{ex.name}</Text>
+                    <Text style={[s.rowName, { flex: 1 }, on && { color: ACCENT }]}>{ex.name}</Text>
                     {multiSelect ? (
                       <View style={[s.checkBox, on && s.checkBoxOn]}>
                         {on && <Ionicons name="checkmark" size={16} color="#000" />}
                       </View>
                     ) : (
                       <View style={s.addBtn}>
-                        <Ionicons name="add" size={20} color={ORANGE} />
+                        <Ionicons name="add" size={20} color={ACCENT} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -378,10 +378,10 @@ const s = StyleSheet.create({
     width: 26, height: 26, borderRadius: 8, borderWidth: 1.5, borderColor: BORDER,
     alignItems: 'center', justifyContent: 'center',
   },
-  checkBoxOn: { backgroundColor: ORANGE, borderColor: ORANGE },
+  checkBoxOn: { backgroundColor: ACCENT, borderColor: ACCENT },
   groupSelBadge: {
     minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6,
-    backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', marginRight: 8,
+    backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center', marginRight: 8,
   },
   groupSelBadgeText: { color: '#000', fontSize: 12, fontWeight: '800' },
   multiFooter: {
@@ -391,7 +391,7 @@ const s = StyleSheet.create({
   },
   multiBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ORANGE, borderRadius: 16, paddingVertical: 16,
+    backgroundColor: ACCENT, borderRadius: 16, paddingVertical: 16,
   },
   multiBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
 
@@ -404,7 +404,7 @@ const s = StyleSheet.create({
   },
   iconBtn:      { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title:        { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
-  closeBtn:     { backgroundColor: ORANGE, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9 },
+  closeBtn:     { backgroundColor: ACCENT, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9 },
   closeBtnText: { color: '#000', fontWeight: '700', fontSize: 14 },
 
   // Landing
@@ -500,9 +500,9 @@ const s = StyleSheet.create({
     textAlign: 'center', minWidth: 80, padding: 0,
   },
   confirmBtn: {
-    backgroundColor: ORANGE, borderRadius: 14,
+    backgroundColor: ACCENT, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center',
-    shadowColor: ORANGE, shadowOffset: { width: 0, height: 4 },
+    shadowColor: ACCENT, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 10,
   },
   confirmBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },

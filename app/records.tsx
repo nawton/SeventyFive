@@ -91,7 +91,7 @@ interface MedalInfo {
   unlocked: boolean
   progress?: string
 }
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, DIVIDER } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, DIVIDER, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, { runOnJS, useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
@@ -119,6 +119,7 @@ function fmtPaceStr(secs: number): string {
 }
 
 export default function RecordsScreen() {
+  const T = useThemeStrings()
   const [loading, setLoading]           = useState(true)
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [records, setRecords]           = useState<ExerciseRecord[]>([])
@@ -320,7 +321,7 @@ export default function RecordsScreen() {
   if (loading) {
     return (
       <View style={s.centered}>
-        <ActivityIndicator color={ORANGE} size="large" />
+        <ActivityIndicator color={ACCENT} size="large" />
       </View>
     )
   }
@@ -348,7 +349,7 @@ export default function RecordsScreen() {
         <View style={s.tierSlider}>
           <View style={s.tierTrack}>
             <LinearGradient
-              colors={[ORANGE, '#FFE60A']}
+              colors={[ACCENT, '#FFE60A']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={[s.tierFill, { width: `${Math.min(100, (points / MAX_THRESHOLD) * 100)}%` as any }]}
             />
@@ -391,7 +392,7 @@ export default function RecordsScreen() {
             onPress={() => setBreakdownVisible(true)}
             activeOpacity={0.8}
           >
-            <Ionicons name="time-outline" size={14} color={ORANGE} />
+            <Ionicons name="time-outline" size={14} color={ACCENT} />
             <Text style={s.historyBtnText}>Poänghistorik</Text>
           </TouchableOpacity>
         </View>
@@ -412,7 +413,7 @@ export default function RecordsScreen() {
               ))}
             </View>
             <View style={s.earnTrack}>
-              <Animated.View style={[s.earnIndicator, mainIndicatorStyle]} />
+              <Animated.View style={[s.earnIndicator, { backgroundColor: T.ACCENT }, mainIndicatorStyle]} />
             </View>
           </View>
         </GestureDetector>
@@ -435,8 +436,8 @@ export default function RecordsScreen() {
           {/* Sida 1: återkommande */}
           <View style={[s.recordCard, { width: PAGE_W }]}>
             <View style={s.earnCardHead}>
-              <View style={[s.ruleIcon, { backgroundColor: ORANGE + '1A' }]}>
-                <Ionicons name="repeat" size={16} color={ORANGE} />
+              <View style={[s.ruleIcon, { backgroundColor: accentAlpha('1A') }]}>
+                <Ionicons name="repeat" size={16} color={ACCENT} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.earnCardTitle}>Återkommande</Text>
@@ -446,7 +447,7 @@ export default function RecordsScreen() {
             {POINT_RULES.map((rule, i) => (
               <View key={rule.label} style={[s.recordRow, i < POINT_RULES.length - 1 && s.recordBorder]}>
                 <View style={s.ruleIcon}>
-                  <Ionicons name={rule.icon} size={16} color={ORANGE} />
+                  <Ionicons name={rule.icon} size={16} color={ACCENT} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.ruleLabel}>{rule.label}</Text>
@@ -482,7 +483,7 @@ export default function RecordsScreen() {
                   }}
                 >
                   <View style={s.ruleIcon}>
-                    <Ionicons name={rule.icon} size={16} color={earned ? '#3BE862' : ORANGE} />
+                    <Ionicons name={rule.icon} size={16} color={earned ? '#3BE862' : ACCENT} />
                   </View>
                   <Text style={[s.ruleLabel, { flex: 1 }]}>{rule.label}</Text>
                   <Text style={s.rulePts}>{rule.pts} p</Text>
@@ -598,7 +599,7 @@ export default function RecordsScreen() {
                       : '--:--',
                 },
                 {
-                  icon: 'stopwatch-outline' as const, color: ORANGE, label: 'Bästa tempo',
+                  icon: 'stopwatch-outline' as const, color: T.ACCENT, label: 'Bästa tempo',
                   id: cardioRecs.bestPaceId,
                   value: cardioRecs.bestPaceSec === Infinity
                     ? '--:--'
@@ -681,9 +682,9 @@ export default function RecordsScreen() {
                   <Svg width={CH_W} height={CH_H}>
                     <SvgLine x1={0} y1={py(max)} x2={CH_W} y2={py(max)} stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
                     <SvgLine x1={0} y1={py(min)} x2={CH_W} y2={py(min)} stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
-                    <Polyline points={line} stroke={ORANGE} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+                    <Polyline points={line} stroke={ACCENT} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
                     {historyPts.map((p, i) => (
-                      <SvgCircle key={i} cx={px(i)} cy={py(p.e1rm)} r={3.5} fill={ORANGE} />
+                      <SvgCircle key={i} cx={px(i)} cy={py(p.e1rm)} r={3.5} fill={ACCENT} />
                     ))}
                   </Svg>
                 </View>
@@ -727,7 +728,7 @@ export default function RecordsScreen() {
               {pointSources.map((src, i) => (
                 <View key={src.label} style={[s.recordRow, i < pointSources.length - 1 && s.recordBorder]}>
                   <View style={s.ruleIcon}>
-                    <Ionicons name={src.icon} size={16} color={ORANGE} />
+                    <Ionicons name={src.icon} size={16} color={ACCENT} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={s.ruleLabel}>{src.label}</Text>
@@ -836,31 +837,31 @@ const s = StyleSheet.create({
   levelPtsBig: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT_SEMI, flexShrink: 1 },
   historyBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: ORANGE + '16', borderRadius: 18,
+    backgroundColor: accentAlpha('16'), borderRadius: 18,
     paddingHorizontal: 12, paddingVertical: 7,
   },
-  historyBtnText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
+  historyBtnText: { color: ACCENT, fontSize: 12, fontWeight: '700' },
 
   // Tjäna poäng-flikar (Runna-stil: text + tunn glidande indikatorlinje)
 
   // Poängregler
   ruleIcon: {
     width: 30, height: 30, borderRadius: 9,
-    backgroundColor: ORANGE + '18',
+    backgroundColor: accentAlpha('18'),
     alignItems: 'center', justifyContent: 'center',
   },
   ruleLabel: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500' },
   ruleCap:   { color: TEXT_SECONDARY, fontSize: 11, marginTop: 1 },
-  rulePts:   { color: ORANGE, fontSize: 14, fontFamily: NUM_FONT },
+  rulePts:   { color: ACCENT, fontSize: 14, fontFamily: NUM_FONT },
 
   sectionRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
-  sectionCount: { color: ORANGE, fontSize: 12, fontFamily: NUM_FONT },
+  sectionCount: { color: ACCENT, fontSize: 12, fontFamily: NUM_FONT },
   cardioRecVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
   earnTabsRow: { flexDirection: 'row' },
   earnTabBtn:  { flex: 1, alignItems: 'center', paddingVertical: 8 },
   mainTabText:       { color: TEXT_SECONDARY, fontSize: 16, fontWeight: '700' },
-  earnTabTextActive: { color: ORANGE, fontWeight: '700' },
+  earnTabTextActive: { color: ACCENT, fontWeight: '700' },
   // Samma padding som raderna (kortet självt är opaddat)
   earnCardHead: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -873,7 +874,7 @@ const s = StyleSheet.create({
     height: 3, borderRadius: 2, overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 12,
   },
-  earnIndicator: { width: '50%', height: '100%', backgroundColor: ORANGE, borderRadius: 2 },
+  earnIndicator: { width: '50%', height: '100%', borderRadius: 2 },
 
   medalGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   medal: {
@@ -919,7 +920,7 @@ const s = StyleSheet.create({
   histDate: { color: TEXT_SECONDARY, fontSize: 12, width: 52 },
   histSets: { color: TEXT_SECONDARY, fontSize: 12, width: 40 },
   histTop:  { flex: 1, color: TEXT_PRIMARY, fontSize: 13, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },
-  histE1rm: { color: ORANGE, fontSize: 12, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
+  histE1rm: { color: ACCENT, fontSize: 12, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
 
   // Medaljinfo-modal
   modalBackdrop: {
@@ -946,7 +947,7 @@ const s = StyleSheet.create({
     lineHeight: 20, marginTop: 6,
   },
   modalClose: {
-    backgroundColor: ORANGE, borderRadius: 14,
+    backgroundColor: ACCENT, borderRadius: 14,
     paddingVertical: 13, paddingHorizontal: 40, marginTop: 14,
   },
   modalCloseText: { color: '#000', fontSize: 15, fontWeight: '700' },

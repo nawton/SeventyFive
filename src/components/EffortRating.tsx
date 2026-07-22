@@ -4,7 +4,7 @@ import Animated, { FadeIn, runOnJS } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
-import { BG, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, THEME_DARK, THEME_LIGHT } from '@/lib/theme'
+import { BG, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, THEME_DARK, THEME_LIGHT, useThemeStrings, ACCENT } from '@/lib/theme'
 
 // =============================================================================
 // BETYGSÄTT DIN ANSTRÄNGNING (RPE 1–10)
@@ -78,9 +78,10 @@ export function EffortRating({ visible, initial, onDone }: Props) {
 
   if (!visible) return null
 
-  const accent = sel ? effortColor(sel) : ORANGE
+  const T = useThemeStrings()
+  const accent = sel ? effortColor(sel) : T.ACCENT
   // Gradienten kräver riktiga strängfärger — dynamiska färgobjekt går inte
-  const bgStr = useColorScheme() === 'light' ? THEME_LIGHT.BG : THEME_DARK.BG
+  const bgStr = T.BG
 
   return (
     <Animated.View entering={FadeIn.duration(200)} style={[s.root, { backgroundColor: bgStr }]}>

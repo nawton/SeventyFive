@@ -10,7 +10,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 
-import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
 
 const GREEN = '#3BE862'
 
@@ -100,7 +100,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   bigNumber: {
-    color: ORANGE,
     fontSize: 120,
     fontWeight: '800',
     letterSpacing: -4,
@@ -130,7 +129,7 @@ const styles = StyleSheet.create({
     backgroundColor: CARD,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: CARD_BORDER,
     padding: 20,
     gap: 14,
     marginTop: 8,
@@ -155,7 +154,7 @@ const styles = StyleSheet.create({
   },
   newChallengeButton: {
     alignSelf: 'stretch',
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',

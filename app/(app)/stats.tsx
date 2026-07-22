@@ -30,7 +30,7 @@ import { OverviewTab } from '@/components/stats/OverviewTab'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
-import { ORANGE, BG } from '@/lib/theme'
+import { BG, ACCENT } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 
@@ -227,7 +227,7 @@ export default function StatsScreen() {
   if (loading) {
     return (
       <View style={[s.centered, { backgroundColor: BG }]}>
-        <ActivityIndicator color={ORANGE} size="large" />
+        <ActivityIndicator color={ACCENT} size="large" />
       </View>
     )
   }

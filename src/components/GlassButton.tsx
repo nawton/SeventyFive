@@ -6,6 +6,7 @@ import Animated, {
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
+import { ACCENT } from '@/lib/theme'
 
 // =============================================================================
 // LIQUID GLASS-KNAPPAR
@@ -138,7 +139,7 @@ export function GlassPill({
   style?: StyleProp<ViewStyle>
   /** Bakgrund/skugga på iOS utan liquid glass */
   fallbackStyle?: StyleProp<ViewStyle>
-  /** Färgton i glaset (t.ex. ORANGE för primärknappar) */
+  /** Färgton i glaset (t.ex. ACCENT för primärknappar) */
   tint?: string | null
 }) {
   const { gesture, anim } = useGlassGesture(onPress, draggable)

@@ -7,7 +7,7 @@ import type { CardioWorkout } from '@/services/cardioWorkouts'
 import type { StrengthWorkout } from '@/services/strengthWorkouts'
 import { formatPace } from '@/lib/cardioUtils'
 import { fmtTime } from '@/lib/format'
-import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER } from '@/lib/theme'
+import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, CARD_BORDER } from '@/lib/theme'
 
 // =============================================================================
 // FLÖDESKORT — delat mellan community-flödet och atletprofilens
@@ -307,7 +307,7 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
 const s = StyleSheet.create({
   card: {
     backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     overflow: 'hidden',
   },
   cardHeader: {

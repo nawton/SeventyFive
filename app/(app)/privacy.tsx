@@ -14,7 +14,7 @@ import { getBlockedUsers, unblockUser } from '@/services/blocks'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, CARD_BORDER } from '@/lib/theme'
 
 // =============================================================================
 // INTEGRITETSINSTÄLLNINGAR — Strava-mönstret: lista med nuvarande värde,
@@ -401,7 +401,7 @@ export default function PrivacyScreen() {
                     setHideRouteMaps(v)
                     save({ hide_route_maps: v })
                   }}
-                  trackColor={{ false: BORDER, true: ORANGE }}
+                  trackColor={{ false: BORDER, true: ACCENT }}
                   thumbColor="#fff"
                   testID="hideMapsSwitch"
                 />
@@ -522,7 +522,7 @@ const s = StyleSheet.create({
   },
   rowsCard: {
     backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: BORDER, overflow: 'hidden',
+    borderWidth: 1, borderColor: CARD_BORDER, overflow: 'hidden',
   },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -548,8 +548,8 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
     alignItems: 'center', justifyContent: 'center',
   },
-  radioSelected: { borderColor: ORANGE },
-  radioDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: ORANGE },
+  radioSelected: { borderColor: ACCENT },
+  radioDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: ACCENT },
 
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
@@ -567,12 +567,12 @@ const s = StyleSheet.create({
     height: 4, borderRadius: 2,
     backgroundColor: DIVIDER, overflow: 'hidden',
   },
-  sliderFill: { height: '100%', backgroundColor: ORANGE, borderRadius: 2 },
+  sliderFill: { height: '100%', backgroundColor: ACCENT, borderRadius: 2 },
   sliderDot: {
     position: 'absolute', width: 4, height: 4, borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.35)',
   },
-  sliderDotDone: { backgroundColor: ORANGE },
+  sliderDotDone: { backgroundColor: ACCENT },
   sliderThumb: {
     position: 'absolute', width: 22, height: 22, borderRadius: 11,
     backgroundColor: '#fff',

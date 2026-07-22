@@ -15,7 +15,7 @@ import Animated, {
 import Svg, { Text as SvgText, Line as SvgLine, Rect, G } from 'react-native-svg'
 import Body from 'react-native-body-highlighter'
 import { supabase } from '@/lib/supabase'
-import { BG, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek } from '@/lib/date'
 import { getMusclesForName, MUSCLE_GROUPS_6, type Slug } from '@/lib/muscles'
 import {
@@ -51,6 +51,7 @@ export function GymTab({
   /** Skalet äger completedSessions + databasraderingen; false = misslyckades */
   onDeleteCompletion: (id: string) => Promise<boolean>
 }) {
+  const T = useThemeStrings()
   const insets = useSafeAreaInsets()
 
   const [bodyView, setBodyView]                 = useState<'front' | 'back'>('front')
@@ -290,7 +291,7 @@ export function GymTab({
         >
           {strengthWorkouts.length === 0 && completedSessions.every(c => c.sessionType !== 'gym') ? (
             <View style={s.tabEmpty}>
-              <View style={s.tabEmptyIcon}><Ionicons name="barbell-outline" size={30} color={ORANGE} /></View>
+              <View style={s.tabEmptyIcon}><Ionicons name="barbell-outline" size={30} color={ACCENT} /></View>
               <Text style={s.tabEmptyTitle}>Inga gympass ännu</Text>
               <Text style={s.tabEmptyText}>
                 Bocka av övningar i schemat och logga reps och vikt i passen — då fylls muskelkartan, volymen och rekorden på här.
@@ -371,7 +372,7 @@ export function GymTab({
               <View style={[s.dtlRow, { paddingTop: 0 }]}>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Pass</Text>
-                  <Text style={[s.dtlVal, { color: ORANGE }]}>{scopedPassCount}</Text>
+                  <Text style={[s.dtlVal, { color: ACCENT }]}>{scopedPassCount}</Text>
                   {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevPassCount}</Text>}
                 </View>
                 <View style={s.dtlCell}>
@@ -458,7 +459,7 @@ export function GymTab({
                           const h = Math.max(3, v * scale)
                           return (
                             <G key={i}>
-                              <Rect x={x} y={CH_H - 4 - h} width={barW} height={h} rx={3} fill={ORANGE} opacity={dayIdx === null || dayIdx === i ? 1 : 0.35} />
+                              <Rect x={x} y={CH_H - 4 - h} width={barW} height={h} rx={3} fill={ACCENT} opacity={dayIdx === null || dayIdx === i ? 1 : 0.35} />
                               <SvgText
                                 x={x + barW / 2} y={CH_H - 8 - h}
                                 fontSize={9} fontWeight="700" textAnchor="middle"
@@ -472,7 +473,7 @@ export function GymTab({
                       </Svg>
                       <View style={s.distLblRow}>
                         {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((l, i) => (
-                          <Text key={i} style={[s.distLbl, dayIdx === i && { color: ORANGE }]}>{l}</Text>
+                          <Text key={i} style={[s.distLbl, dayIdx === i && { color: ACCENT }]}>{l}</Text>
                         ))}
                       </View>
                     </>
@@ -507,7 +508,7 @@ export function GymTab({
               </View>
 
               {weekLoading ? (
-                <View style={s.bodyWrap}><ActivityIndicator color={ORANGE} /></View>
+                <View style={s.bodyWrap}><ActivityIndicator color={ACCENT} /></View>
               ) : (
                 <>
                   <GestureDetector gesture={bodyFlip}>
@@ -523,7 +524,7 @@ export function GymTab({
                           side={bodyView}
                           gender="male"
                           scale={1.6}
-                          colors={[BLUE, YELLOW, ORANGE]}
+                          colors={[BLUE, YELLOW, T.ACCENT]}
                           defaultFill="#2A2A2C"
                           border="rgba(255,255,255,0.10)"
                         />
@@ -535,7 +536,7 @@ export function GymTab({
                       {([
                         { color: BLUE,   label: '1 övning' },
                         { color: YELLOW, label: '2–3 övningar' },
-                        { color: ORANGE, label: '4+ övningar' },
+                        { color: ACCENT, label: '4+ övningar' },
                       ] as const).map(({ color, label }) => (
                         <View key={label} style={s.legendItem}>
                           <View style={[s.legendDot, { backgroundColor: color }]} />
@@ -587,7 +588,7 @@ export function GymTab({
               >
                 {([
                   recTopLift && {
-                    icon: 'barbell-outline' as const, color: ORANGE,
+                    icon: 'barbell-outline' as const, color: ACCENT,
                     label: `Tyngsta lyft · ${recTopLift.name}`,
                     value: `${recTopLift.kg} kg`,
                     onPress: () => openGymDay(recTopLift!.date, recTopLift!.name),

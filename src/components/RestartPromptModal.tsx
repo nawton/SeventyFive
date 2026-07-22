@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 
-import { BG, CARD, BORDER, RED, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ export function RestartPromptModal({ visible, variant, missedDays, onRestart, on
             activeOpacity={0.8}
           >
             {busy === 'continue'
-              ? <ActivityIndicator color={ORANGE} />
+              ? <ActivityIndicator color={ACCENT} />
               : <Text style={styles.continueButtonText}>Fortsätt ändå</Text>
             }
           </TouchableOpacity>
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   card: {
-    backgroundColor: ORANGE + '12',
+    backgroundColor: accentAlpha('12'),
     borderRadius: 16,
     padding: 20,
     marginTop: 8,

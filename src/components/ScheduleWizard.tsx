@@ -7,7 +7,7 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, useThemeStrings, CARD_BORDER } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import { RUN_SESSION_INFO, plannedRunTypes, type RunExperience } from '@/services/scheduleGenerator'
 import type { Slug } from '@/lib/muscles'
@@ -110,6 +110,7 @@ export function ScheduleWizard({
   onClose:  () => void
   onFinish: (result: WizardResult) => void
 }) {
+  const T = useThemeStrings()
   const insets = useSafeAreaInsets()
 
   const [step, setStep]               = useState<Step>('goal')
@@ -288,15 +289,15 @@ export function ScheduleWizard({
                 activeOpacity={0.8}
               >
                 <View style={[s.bigCardIcon, { backgroundColor: 'rgba(255,149,0,0.15)' }]}>
-                  <MaterialCommunityIcons name="run-fast" size={34} color={ORANGE} />
+                  <MaterialCommunityIcons name="run-fast" size={34} color={ACCENT} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.bigCardTitle, goal === 'running' && { color: ORANGE }]}>
+                  <Text style={[s.bigCardTitle, goal === 'running' && { color: ACCENT }]}>
                     Springa ett avstånd
                   </Text>
                   <Text style={s.bigCardSub}>Träna mot ett specifikt löpmål</Text>
                 </View>
-                {goal === 'running' && <Ionicons name="checkmark-circle" size={24} color={ORANGE} />}
+                {goal === 'running' && <Ionicons name="checkmark-circle" size={24} color={ACCENT} />}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -308,12 +309,12 @@ export function ScheduleWizard({
                   <MaterialCommunityIcons name="weight-lifter" size={34} color="#A29BFE" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.bigCardTitle, goal === 'muscle' && { color: ORANGE }]}>
+                  <Text style={[s.bigCardTitle, goal === 'muscle' && { color: ACCENT }]}>
                     Bygga muskler
                   </Text>
                   <Text style={s.bigCardSub}>Styrketräning anpassat efter dig</Text>
                 </View>
-                {goal === 'muscle' && <Ionicons name="checkmark-circle" size={24} color={ORANGE} />}
+                {goal === 'muscle' && <Ionicons name="checkmark-circle" size={24} color={ACCENT} />}
               </TouchableOpacity>
 
             </>
@@ -336,8 +337,8 @@ export function ScheduleWizard({
                       activeOpacity={0.85}
                     >
                       <View style={s.distNumRow}>
-                        <Text style={[s.distNum, selected && { color: ORANGE }]}>{opt.num}</Text>
-                        <Text style={[s.distUnit, selected && { color: ORANGE }]}>K</Text>
+                        <Text style={[s.distNum, selected && { color: ACCENT }]}>{opt.num}</Text>
+                        <Text style={[s.distUnit, selected && { color: ACCENT }]}>K</Text>
                       </View>
                       <Text style={s.distLabel}>{opt.label}</Text>
                       <Text style={s.distSub}>{opt.sub}</Text>
@@ -372,14 +373,14 @@ export function ScheduleWizard({
                       <MaterialCommunityIcons
                         name={opt.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
                         size={26}
-                        color={selected ? ORANGE : TEXT_SECONDARY}
+                        color={selected ? ACCENT : TEXT_SECONDARY}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.optTitle, selected && { color: ORANGE }]}>{opt.label}</Text>
+                      <Text style={[s.optTitle, selected && { color: ACCENT }]}>{opt.label}</Text>
                       <Text style={s.optSub}>{opt.sub}</Text>
                     </View>
-                    {selected && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
+                    {selected && <Ionicons name="checkmark-circle" size={22} color={ACCENT} />}
                   </TouchableOpacity>
                 )
               })}
@@ -395,7 +396,7 @@ export function ScheduleWizard({
               </Text>
 
               <View style={s.testCardBig}>
-                <MaterialCommunityIcons name="timer-outline" size={30} color={ORANGE} />
+                <MaterialCommunityIcons name="timer-outline" size={30} color={ACCENT} />
                 <View style={s.testRow}>
                   <View style={s.testCol}>
                     <TextInput
@@ -441,7 +442,7 @@ export function ScheduleWizard({
               </Text>
 
               <View style={s.testCardBig}>
-                <MaterialCommunityIcons name="flag-checkered" size={30} color={ORANGE} />
+                <MaterialCommunityIcons name="flag-checkered" size={30} color={ACCENT} />
                 <View style={s.raceDayGrid}>
                   {raceWeekDays.map(d => {
                     const iso = toLocalDateString(d)
@@ -453,10 +454,10 @@ export function ScheduleWizard({
                         onPress={() => setRaceDateStr(selected ? '' : iso)}
                         activeOpacity={0.75}
                       >
-                        <Text style={[s.raceDayName, selected && { color: ORANGE }]}>
+                        <Text style={[s.raceDayName, selected && { color: ACCENT }]}>
                           {d.toLocaleDateString('sv-SE', { weekday: 'short' }).replace('.', '').toUpperCase()}
                         </Text>
-                        <Text style={[s.raceDayDate, selected && { color: ORANGE }]}>
+                        <Text style={[s.raceDayDate, selected && { color: ACCENT }]}>
                           {d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')}
                         </Text>
                       </TouchableOpacity>
@@ -504,12 +505,12 @@ export function ScheduleWizard({
               >
                 <View style={{ flex: 1 }}>
                   <Text style={s.planRecommended}>Rekommenderat</Text>
-                  <Text style={[s.planTitle, musclePlan === 'everything' && { color: ORANGE }]}>
+                  <Text style={[s.planTitle, musclePlan === 'everything' && { color: ACCENT }]}>
                     Träna allt
                   </Text>
                   <Text style={s.planSub}>Balanserat program för hela kroppen</Text>
                 </View>
-                {musclePlan === 'everything' && <Ionicons name="checkmark-circle" size={24} color={ORANGE} />}
+                {musclePlan === 'everything' && <Ionicons name="checkmark-circle" size={24} color={ACCENT} />}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -518,12 +519,12 @@ export function ScheduleWizard({
                 activeOpacity={0.8}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.planTitle, musclePlan === 'focus' && { color: ORANGE }]}>
+                  <Text style={[s.planTitle, musclePlan === 'focus' && { color: ACCENT }]}>
                     Fokusera
                   </Text>
                   <Text style={s.planSub}>Välj 1–2 muskelgrupper att prioritera</Text>
                 </View>
-                {musclePlan === 'focus' && <Ionicons name="checkmark-circle" size={24} color={ORANGE} />}
+                {musclePlan === 'focus' && <Ionicons name="checkmark-circle" size={24} color={ACCENT} />}
               </TouchableOpacity>
 
             </>
@@ -543,14 +544,14 @@ export function ScheduleWizard({
                   data={bodyData(focusSlugs.length > 0 ? focusSlugs : [])}
                   side="front" gender="male"
                   scale={BODY_SCALE}
-                  colors={[ORANGE]}
+                  colors={[T.ACCENT]}
                   defaultFill="#3A3A3C"
                 />
                 <Body
                   data={bodyData(focusSlugs.length > 0 ? focusSlugs : [])}
                   side="back" gender="male"
                   scale={BODY_SCALE}
-                  colors={[ORANGE]}
+                  colors={[T.ACCENT]}
                   defaultFill="#3A3A3C"
                 />
               </View>
@@ -601,7 +602,7 @@ export function ScheduleWizard({
                     onPress={() => toggleWeekday(opt.value)}
                     activeOpacity={0.8}
                   >
-                    <Text style={[s.dayRowLabel, selected && { color: ORANGE }]}>{opt.label}</Text>
+                    <Text style={[s.dayRowLabel, selected && { color: ACCENT }]}>{opt.label}</Text>
                     <View style={[s.dayCheck, selected && s.dayCheckActive]}>
                       {selected && <Ionicons name="checkmark" size={13} color="#000" />}
                     </View>
@@ -639,11 +640,11 @@ export function ScheduleWizard({
                       <MaterialCommunityIcons
                         name={opt.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
                         size={24}
-                        color={selected ? ORANGE : TEXT_SECONDARY}
+                        color={selected ? ACCENT : TEXT_SECONDARY}
                       />
                     </View>
-                    <Text style={[s.optTitle, { flex: 1 }, selected && { color: ORANGE }]}>{opt.label}</Text>
-                    {selected && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
+                    <Text style={[s.optTitle, { flex: 1 }, selected && { color: ACCENT }]}>{opt.label}</Text>
+                    {selected && <Ionicons name="checkmark-circle" size={22} color={ACCENT} />}
                   </TouchableOpacity>
                 )
               })}
@@ -654,12 +655,12 @@ export function ScheduleWizard({
                 activeOpacity={0.8}
               >
                 <View style={[s.optIcon, limitations.length === 0 && s.optIconActive]}>
-                  <Ionicons name="checkmark-done-outline" size={24} color={limitations.length === 0 ? ORANGE : TEXT_SECONDARY} />
+                  <Ionicons name="checkmark-done-outline" size={24} color={limitations.length === 0 ? ACCENT : TEXT_SECONDARY} />
                 </View>
-                <Text style={[s.optTitle, { flex: 1 }, limitations.length === 0 && { color: ORANGE }]}>
+                <Text style={[s.optTitle, { flex: 1 }, limitations.length === 0 && { color: ACCENT }]}>
                   Inga besvär
                 </Text>
-                {limitations.length === 0 && <Ionicons name="checkmark-circle" size={22} color={ORANGE} />}
+                {limitations.length === 0 && <Ionicons name="checkmark-circle" size={22} color={ACCENT} />}
               </TouchableOpacity>
 
             </>
@@ -688,12 +689,12 @@ export function ScheduleWizard({
               {/* Preview row */}
               <View style={s.summaryCards}>
                 <View style={s.summaryCard}>
-                  <Ionicons name="calendar-outline" size={24} color={ORANGE} />
+                  <Ionicons name="calendar-outline" size={24} color={ACCENT} />
                   <Text style={s.summaryCardTitle}>Veckoschema</Text>
                   <Text style={s.summaryCardSub}>{Math.max(weekdays.length, 1)} pass per vecka</Text>
                 </View>
                 <View style={s.summaryCard}>
-                  <Ionicons name={goal === 'running' && raceValid ? 'flag-outline' : 'bar-chart-outline'} size={24} color={ORANGE} />
+                  <Ionicons name={goal === 'running' && raceValid ? 'flag-outline' : 'bar-chart-outline'} size={24} color={ACCENT} />
                   <Text style={s.summaryCardTitle}>{goal === 'running' && raceValid ? 'Mot loppet' : 'Progression'}</Text>
                   <Text style={s.summaryCardSub}>
                     {goal === 'running' && raceValid
@@ -754,7 +755,7 @@ const s = StyleSheet.create({
   iconBtn: {
     width: 34, height: 34, borderRadius: 17,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: CARD, borderWidth: 1, borderColor: CARD_BORDER,
   },
   headerTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   headerStep: {
@@ -765,7 +766,7 @@ const s = StyleSheet.create({
 
   progressRow: { flexDirection: 'row', gap: 5, marginHorizontal: 16, marginBottom: 2 },
   progressSeg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: CARD },
-  progressSegDone: { backgroundColor: ORANGE },
+  progressSegDone: { backgroundColor: ACCENT },
 
   content: { paddingHorizontal: 20, paddingTop: 26, gap: 12 },
 
@@ -777,9 +778,9 @@ const s = StyleSheet.create({
   bigCard: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
     backgroundColor: CARD, borderRadius: 20, padding: 20,
-    borderWidth: 1.5, borderColor: BORDER,
+    borderWidth: 1.5, borderColor: CARD_BORDER,
   },
-  bigCardActive: { backgroundColor: ORANGE + '16', borderColor: ORANGE },
+  bigCardActive: { backgroundColor: accentAlpha('16'), borderColor: ACCENT },
   bigCardIcon:   { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   bigCardTitle:  { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginBottom: 3 },
   bigCardSub:    { color: TEXT_SECONDARY, fontSize: 13 },
@@ -788,9 +789,9 @@ const s = StyleSheet.create({
   optCard: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
     backgroundColor: CARD, borderRadius: 16, padding: 16,
-    borderWidth: 1.5, borderColor: BORDER,
+    borderWidth: 1.5, borderColor: CARD_BORDER,
   },
-  optCardActive: { backgroundColor: ORANGE + '16', borderColor: ORANGE },
+  optCardActive: { backgroundColor: accentAlpha('16'), borderColor: ACCENT },
   optIcon:       { width: 52, height: 52, borderRadius: 14, backgroundColor: BORDER, alignItems: 'center', justifyContent: 'center' },
   optIconActive: { backgroundColor: 'rgba(255,149,0,0.15)' },
   optTitle:      { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginBottom: 2 },
@@ -807,9 +808,9 @@ const s = StyleSheet.create({
   distGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   distCard: {
     width: (SCREEN_W - 52) / 2, borderRadius: 20, padding: 18, paddingTop: 20,
-    backgroundColor: CARD, borderWidth: 1.5, borderColor: BORDER, gap: 2,
+    backgroundColor: CARD, borderWidth: 1.5, borderColor: CARD_BORDER, gap: 2,
   },
-  distCardActive: { backgroundColor: ORANGE + '14', borderColor: ORANGE },
+  distCardActive: { backgroundColor: accentAlpha('14'), borderColor: ACCENT },
   distNumRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
   distNum:  { color: TEXT_PRIMARY, fontSize: 44, lineHeight: 46, fontFamily: NUM_FONT, letterSpacing: -1 },
   distUnit: { color: TEXT_SECONDARY, fontSize: 20, fontFamily: NUM_FONT, marginBottom: 4 },
@@ -817,14 +818,14 @@ const s = StyleSheet.create({
   distSub:  { color: TEXT_SECONDARY, fontSize: 12 },
   distCheck: {
     position: 'absolute', top: 12, right: 12,
-    width: 22, height: 22, borderRadius: 11, backgroundColor: ORANGE,
+    width: 22, height: 22, borderRadius: 11, backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
 
   // Stora inmatningskorten (5 km-test + lopp) — ett kort i fokus per skärm
   testCardBig: {
     backgroundColor: CARD, borderRadius: 20, padding: 22, gap: 18,
-    borderWidth: 1, borderColor: BORDER, alignItems: 'center', marginTop: 6,
+    borderWidth: 1, borderColor: CARD_BORDER, alignItems: 'center', marginTop: 6,
   },
   testInputBig: {
     width: 108, paddingVertical: 14,
@@ -842,7 +843,7 @@ const s = StyleSheet.create({
     paddingVertical: 10, borderRadius: 12,
     backgroundColor: BG, borderWidth: 1, borderColor: BORDER,
   },
-  raceDayChipActive: { backgroundColor: ORANGE + '16', borderColor: ORANGE },
+  raceDayChipActive: { backgroundColor: accentAlpha('16'), borderColor: ACCENT },
   raceDayName: { color: TEXT_SECONDARY, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   raceDayDate: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
   testHint:  { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17 },
@@ -853,16 +854,16 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: CARD, borderRadius: 14,
     paddingHorizontal: 18, paddingVertical: 14,
-    borderWidth: 1.5, borderColor: BORDER,
+    borderWidth: 1.5, borderColor: CARD_BORDER,
   },
-  dayRowActive:  { backgroundColor: ORANGE + '16', borderColor: ORANGE },
+  dayRowActive:  { backgroundColor: accentAlpha('16'), borderColor: ACCENT },
   dayRowLabel:   { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
   dayCheck: {
     width: 22, height: 22, borderRadius: 11,
     borderWidth: 1.5, borderColor: BORDER,
     alignItems: 'center', justifyContent: 'center',
   },
-  dayCheckActive: { backgroundColor: ORANGE, borderColor: ORANGE },
+  dayCheckActive: { backgroundColor: ACCENT, borderColor: ACCENT },
   daysHint: { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center' },
 
   // Body SVG row
@@ -872,10 +873,10 @@ const s = StyleSheet.create({
   planCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: CARD, borderRadius: 18, padding: 20,
-    borderWidth: 1.5, borderColor: BORDER,
+    borderWidth: 1.5, borderColor: CARD_BORDER,
   },
-  planCardActive:  { backgroundColor: ORANGE + '16', borderColor: ORANGE },
-  planRecommended: { color: ORANGE, fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 3 },
+  planCardActive:  { backgroundColor: accentAlpha('16'), borderColor: ACCENT },
+  planRecommended: { color: ACCENT, fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 3 },
   planTitle:       { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700', marginBottom: 2 },
   planSub:         { color: TEXT_SECONDARY, fontSize: 13 },
 
@@ -885,7 +886,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 7,
     paddingHorizontal: 16, paddingVertical: 11,
     backgroundColor: CARD, borderRadius: 30,
-    borderWidth: 1.5, borderColor: BORDER,
+    borderWidth: 1.5, borderColor: CARD_BORDER,
   },
   muscleDot:     { width: 9, height: 9, borderRadius: 5 },
   muscleChipText:{ color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
@@ -894,7 +895,7 @@ const s = StyleSheet.create({
   summaryCheckmark: { alignItems: 'center', marginVertical: 12 },
   summaryIconCircle: {
     width: 96, height: 96, borderRadius: 48,
-    backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center',
   },
   summaryTitle: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', textAlign: 'center' },
   summarySub: {
@@ -905,7 +906,7 @@ const s = StyleSheet.create({
   summaryCard: {
     flex: 1, backgroundColor: CARD, borderRadius: 16,
     padding: 18, alignItems: 'center', gap: 6,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
   summaryCardTitle: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   summaryCardSub:   { color: TEXT_SECONDARY, fontSize: 12, textAlign: 'center' },
@@ -913,11 +914,11 @@ const s = StyleSheet.create({
   // Passtypsförklaringar (löpmål)
   typeList: {
     backgroundColor: CARD, borderRadius: 16, padding: 18, gap: 14,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
   },
   typeListTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', marginBottom: 2 },
   typeRow:  { flexDirection: 'row', gap: 10 },
-  typeDot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: ORANGE, marginTop: 5 },
+  typeDot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: ACCENT, marginTop: 5 },
   typeName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   typeDesc: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 17, marginTop: 1 },
 
@@ -928,7 +929,7 @@ const s = StyleSheet.create({
   },
   nextBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ORANGE, borderRadius: 16, paddingVertical: 17,
+    backgroundColor: ACCENT, borderRadius: 16, paddingVertical: 17,
   },
   nextBtnDisabled: { opacity: 0.35 },
   nextBtnText:     { color: '#000', fontSize: 17, fontWeight: '800' },

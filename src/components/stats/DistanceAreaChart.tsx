@@ -4,7 +4,7 @@ import Svg, { Path, Circle, Line as SvgLine, Text as SvgText, Rect, G } from 're
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { runOnJS } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { CARD, ORANGE } from '@/lib/theme'
+import { CARD, ACCENT } from '@/lib/theme'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 
 // =============================================================================
@@ -55,13 +55,13 @@ function smoothLine(pts: Array<{ x: number; y: number }>, minY: number, maxY: nu
 }
 
 export function DistanceAreaChart({
-  buckets, width, height, unit, color = ORANGE, selectedKey, onSelect, onScrub, onScrubEnd, pagerRef,
+  buckets, width, height, unit, color = ACCENT, selectedKey, onSelect, onScrub, onScrubEnd, pagerRef,
 }: {
   buckets: AreaBucket[]
   width:   number
   height:  number
   unit:    UnitSystem
-  color?:  string
+  color?:  import('react-native').ColorValue
   /** Vald punkt markeras med guide-linje och punkt — styrs av föräldern */
   selectedKey?: string | null
   onSelect?:    (key: string) => void

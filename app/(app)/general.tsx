@@ -17,7 +17,7 @@ import { deleteRepeatingSessions } from '@/services/workoutSchedule'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
 import { getThemeMode, setThemeMode, type ThemeMode } from '@/lib/themeMode'
 
 const IS_EXPO_GO = Constants.appOwnership === 'expo'
@@ -301,7 +301,7 @@ export default function GeneralScreen() {
                 <Switch
                   value={notificationsEnabled}
                   onValueChange={handleNotificationToggle}
-                  trackColor={{ false: BORDER, true: ORANGE }}
+                  trackColor={{ false: BORDER, true: ACCENT }}
                   thumbColor="#fff"
                 />
               )
@@ -394,8 +394,8 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: 'rgba(128,128,128,0.5)',
     alignItems: 'center', justifyContent: 'center',
   },
-  themeRadioSelected: { borderColor: ORANGE },
-  themeRadioDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: ORANGE },
+  themeRadioSelected: { borderColor: ACCENT },
+  themeRadioDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: ACCENT },
 
   screen: { flex: 1, backgroundColor: BG },
   header: {
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: BORDER, overflow: 'hidden',
+    borderWidth: 1, borderColor: CARD_BORDER, overflow: 'hidden',
   },
 
   row: {

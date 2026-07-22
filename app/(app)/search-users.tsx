@@ -13,7 +13,7 @@ import {
 } from '@/services/follows'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT } from '@/lib/theme'
 
 // =============================================================================
 // SÖK ANVÄNDARE — riktig sökning mot databasen via search_profiles-RPC:n
@@ -109,7 +109,7 @@ export default function SearchUsersScreen() {
           onSubmitEditing={() => Keyboard.dismiss()}
           testID="searchInput"
         />
-        {searching && <ActivityIndicator size="small" color={ORANGE} />}
+        {searching && <ActivityIndicator size="small" color={ACCENT} />}
       </View>
 
       <FlatList
@@ -204,9 +204,9 @@ const s = StyleSheet.create({
     borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
     minWidth: 92, alignItems: 'center',
   },
-  followPillInvite: { borderColor: ORANGE },
+  followPillInvite: { borderColor: ACCENT },
   followPillText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
-  followPillTextInvite: { color: ORANGE },
+  followPillTextInvite: { color: ACCENT },
 
   empty: { alignItems: 'center', gap: 8, paddingTop: 70, paddingHorizontal: 40 },
   emptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },

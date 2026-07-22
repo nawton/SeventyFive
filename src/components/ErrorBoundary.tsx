@@ -1,7 +1,7 @@
 import { Component, type ReactNode } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT } from '@/lib/theme'
 
 interface Props { children: ReactNode }
 interface State { error: Error | null }
@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <View style={s.screen}>
         <View style={s.iconCircle}>
-          <Ionicons name="alert-circle-outline" size={40} color={ORANGE} />
+          <Ionicons name="alert-circle-outline" size={40} color={ACCENT} />
         </View>
         <Text style={s.title}>Något gick fel</Text>
         <Text style={s.body}>
@@ -60,7 +60,7 @@ const s = StyleSheet.create({
   title: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800' },
   body:  { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
   retryBtn: {
-    backgroundColor: ORANGE, borderRadius: 14,
+    backgroundColor: ACCENT, borderRadius: 14,
     paddingHorizontal: 28, paddingVertical: 14, marginTop: 8,
   },
   retryText: { color: '#000', fontSize: 15, fontWeight: '700' },

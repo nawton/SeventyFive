@@ -4,7 +4,7 @@ import { router, useFocusEffect } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
-import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, MINT } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, GREEN, MINT, CARD_BORDER } from '@/lib/theme'
 import {
   getSubscription, isPremium,
   FREE_SUBSCRIPTION, type Subscription,
@@ -83,7 +83,7 @@ export function SubscriptionCard({ name }: { name?: string }) {
 const s = StyleSheet.create({
   card: {
     backgroundColor: CARD, borderRadius: 18, padding: 16,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     borderLeftWidth: 3,
     flexDirection: 'row', alignItems: 'center', gap: 14,
   },

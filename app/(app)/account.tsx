@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
 import { setBodyWeightKg } from '@/lib/prefs'
 import { splitName, combineName } from '@/lib/profileName'
-import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, CARD_BORDER } from '@/lib/theme'
 import { TAB_CONTENT_PAD, LIQUID_GLASS } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   pickerPanel: {
     alignSelf: 'stretch',
     backgroundColor: CARD, borderRadius: 28,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: CARD_BORDER,
     paddingVertical: 10,
   },
   accessoryBar: { alignItems: 'flex-end', paddingHorizontal: 14, paddingVertical: 10 },

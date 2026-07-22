@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { DistanceAreaChart } from './DistanceAreaChart'
-import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER } from '@/lib/theme'
+import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/lib/date'
 import { fmtPace, fmtDuration } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
@@ -244,7 +244,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
           <Text style={s.sectionHead}>Fördelning</Text>
           <View style={s.card}>
             {([
-              { color: ORANGE, label: 'Löpning',  v: shown.run },
+              { color: ACCENT, label: 'Löpning',  v: shown.run },
               { color: BLUE,   label: 'Cykling',  v: shown.cycle },
               { color: GREEN,  label: 'Promenad', v: shown.walk },
             ] as const).map((r, i) => {

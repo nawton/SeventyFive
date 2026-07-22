@@ -20,7 +20,7 @@ import { resolveRunProgression } from '@/lib/runProgression'
 import type { UnitSystem } from '@/lib/units'
 import { weekdayOf, parseLocalDate } from '@/lib/date'
 import { isoDate, todayMidnight, indexToDate, DAY_SHORT } from '@/lib/scheduleDates'
-import { ORANGE, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
 import { sessionActiveOn, type WorkoutSession } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
@@ -161,7 +161,7 @@ export const DayPage = React.memo(function DayPage({
               {sessions.filter(s => !s.name.startsWith('SKIP:')).length === 0 && cardioLogs.length === 0 ? (
                 <View style={styles.emptyState}>
                   <View style={styles.emptyIcon}>
-                    <Ionicons name="barbell-outline" size={32} color={ORANGE} />
+                    <Ionicons name="barbell-outline" size={32} color={ACCENT} />
                   </View>
                   <Text style={styles.emptyTitle}>Bygg ditt schema</Text>
                   <Text style={styles.emptyText}>Skapa pass och lägg till övningar för varje dag</Text>
@@ -178,7 +178,7 @@ export const DayPage = React.memo(function DayPage({
                       <Text style={styles.restTitle}>Vilodag</Text>
                       <Text style={styles.restText}>Inget pass schemalagt {isToday ? 'idag' : WEEKDAYS[weekday - 1].toLowerCase()}</Text>
                       <TouchableOpacity style={styles.restAddBtn} onPress={() => api.openEditor(null)} activeOpacity={0.8}>
-                        <Ionicons name="add" size={14} color={ORANGE} />
+                        <Ionicons name="add" size={14} color={ACCENT} />
                         <Text style={styles.restAddText}>Lägg till pass</Text>
                       </TouchableOpacity>
                     </View>
@@ -319,10 +319,10 @@ const styles = StyleSheet.create({
     gap: 6, paddingVertical: 10, borderRadius: 12,
   },
   toolbarBtnSecondary: {
-    backgroundColor: CARD, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: CARD, borderWidth: 1, borderColor: CARD_BORDER,
   },
   toolbarBtnPrimary: {
-    backgroundColor: ORANGE,
+    backgroundColor: ACCENT,
   },
   toolbarBtnText:        { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
   toolbarBtnPrimaryText: { color: '#000',       fontSize: 13, fontWeight: '700' },
@@ -338,14 +338,14 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 52, paddingHorizontal: 32, gap: 8 },
   emptyIcon: {
     width: 72, height: 72, borderRadius: 22,
-    backgroundColor: ORANGE + '18',
+    backgroundColor: accentAlpha('18'),
     alignItems: 'center', justifyContent: 'center', marginBottom: 8,
   },
   emptyTitle:   { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '700' },
   emptyText:    { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
   emptyBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: ORANGE, borderRadius: 20,
+    backgroundColor: ACCENT, borderRadius: 20,
     paddingHorizontal: 20, paddingVertical: 11, marginTop: 8,
   },
   emptyBtnText: { color: '#000', fontSize: 14, fontWeight: '700' },
@@ -355,8 +355,8 @@ const styles = StyleSheet.create({
   restText:   { color: TEXT_SECONDARY, fontSize: 14 },
   restAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 12, backgroundColor: ORANGE + '1E',
+    marginTop: 12, backgroundColor: accentAlpha('1E'),
     borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9,
   },
-  restAddText: { color: ORANGE, fontSize: 14, fontWeight: '600' },
+  restAddText: { color: ACCENT, fontSize: 14, fontWeight: '600' },
 })

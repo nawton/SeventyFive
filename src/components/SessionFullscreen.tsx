@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, ACCENT, accentAlpha } from '@/lib/theme'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 import { completeExercise, updateSessionExercise, addSingleExerciseToSession, deleteSessionExercise } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
@@ -502,7 +502,7 @@ export function SessionFullscreen({
         <View style={s.statsRow}>
           <View style={s.stat}>
             <Text style={s.statLabel}>Tid</Text>
-            <Text style={[s.statValue, { color: ORANGE }]}>
+            <Text style={[s.statValue, { color: ACCENT }]}>
               {isCompleted ? (finalDur != null ? fmtClock(finalDur) : '–') : fmtClock(elapsed)}
             </Text>
           </View>
@@ -517,7 +517,7 @@ export function SessionFullscreen({
           <View style={{ flex: 1 }} />
           {/* Vilotid — tryck för att ställa in tiderna mellan set/övningar */}
           <TouchableOpacity style={s.restClockBtn} onPress={() => setRestSheetOpen(true)} activeOpacity={0.75}>
-            <Ionicons name="timer-outline" size={20} color={ORANGE} />
+            <Ionicons name="timer-outline" size={20} color={ACCENT} />
             <Text style={s.restClockText}>{fmtClock(restDefault)}</Text>
           </TouchableOpacity>
         </View>
@@ -610,7 +610,7 @@ export function SessionFullscreen({
 
             {/* Lägg till övning i passet */}
             <TouchableOpacity style={s.addExBtn} onPress={() => setAddExOpen(true)} activeOpacity={0.8}>
-              <Ionicons name="add-circle-outline" size={19} color={ORANGE} />
+              <Ionicons name="add-circle-outline" size={19} color={ACCENT} />
               <Text style={s.addExText}>Lägg till övning</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -712,7 +712,7 @@ const s = StyleSheet.create({
   stopBtn:  { backgroundColor: '#FF3B4A' },
   stopText: { color: '#fff' },
   finishBtn: {
-    backgroundColor: ORANGE, borderRadius: 18,
+    backgroundColor: ACCENT, borderRadius: 18,
     paddingHorizontal: 16, paddingVertical: 9,
     minWidth: 74, alignItems: 'center',
   },
@@ -743,7 +743,7 @@ const s = StyleSheet.create({
 
   exBlock: { paddingTop: 18, paddingHorizontal: 16 },
   exNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  exName: { color: ORANGE, fontSize: 17, fontWeight: '800', flex: 1, marginRight: 10 },
+  exName: { color: ACCENT, fontSize: 17, fontWeight: '800', flex: 1, marginRight: 10 },
 
   tableHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 6 },
   th: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
@@ -783,9 +783,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 22,
     paddingVertical: 13, borderRadius: 14,
-    borderWidth: 1.5, borderColor: ORANGE + '50', borderStyle: 'dashed',
+    borderWidth: 1.5, borderColor: accentAlpha('50'), borderStyle: 'dashed',
   },
-  addExText: { color: ORANGE, fontSize: 15, fontWeight: '700' },
+  addExText: { color: ACCENT, fontSize: 15, fontWeight: '700' },
 
   restSheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
@@ -818,7 +818,7 @@ const s = StyleSheet.create({
     fontVariant: ['tabular-nums'], minWidth: 76, textAlign: 'center',
   },
   restSheetDone: {
-    backgroundColor: ORANGE, borderRadius: 14,
+    backgroundColor: ACCENT, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center',
   },
   restSheetDoneText: { color: '#000', fontSize: 15, fontWeight: '800' },
@@ -827,11 +827,11 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     marginHorizontal: 16, marginTop: 8,
     paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: ORANGE + '16', borderRadius: 14,
+    backgroundColor: accentAlpha('16'), borderRadius: 14,
   },
   restBarTime: { color: TEXT_PRIMARY, fontSize: 18, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'], minWidth: 46 },
   restBarTrack: { flex: 1, height: 5, borderRadius: 3, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.08)' },
-  restBarFill: { height: '100%', borderRadius: 3, backgroundColor: ORANGE },
+  restBarFill: { height: '100%', borderRadius: 3, backgroundColor: ACCENT },
   restBarBtn: { paddingHorizontal: 6, paddingVertical: 4 },
-  restBarBtnText: { color: ORANGE, fontSize: 14, fontWeight: '700' },
+  restBarBtnText: { color: ACCENT, fontSize: 14, fontWeight: '700' },
 })

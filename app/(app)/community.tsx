@@ -24,7 +24,7 @@ import {
   FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
 } from '@/components/FeedWorkoutCard'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
-import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 // =============================================================================
@@ -62,7 +62,7 @@ function EmptyState({ icon, title, body, ctaLabel, onCta }: {
       <Text style={s.emptyBody}>{body}</Text>
       {ctaLabel && onCta && (
         <TouchableOpacity style={s.emptyCta} onPress={onCta} activeOpacity={0.8} testID="emptyCta">
-          <Ionicons name="search" size={15} color={ORANGE} />
+          <Ionicons name="search" size={15} color={ACCENT} />
           <Text style={s.emptyCtaText}>{ctaLabel}</Text>
         </TouchableOpacity>
       )}
@@ -281,7 +281,7 @@ export default function CommunityScreen() {
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
           ListFooterComponent={loadingMore
-            ? <ActivityIndicator color={ORANGE} style={{ paddingVertical: 16 }} />
+            ? <ActivityIndicator color={ACCENT} style={{ paddingVertical: 16 }} />
             : null}
           // Chipsen scrollar med flödet — headern förblir ren
           ListHeaderComponent={
@@ -299,7 +299,7 @@ export default function CommunityScreen() {
                     }}
                     activeOpacity={0.8}
                   >
-                    {f.icon && <Ionicons name={f.icon} size={14} color={on ? ORANGE : TEXT_PRIMARY} />}
+                    {f.icon && <Ionicons name={f.icon} size={14} color={on ? ACCENT : TEXT_PRIMARY} />}
                     <Text style={[s.chipText, on && s.chipTextActive]}>{f.label}</Text>
                   </TouchableOpacity>
                 )
@@ -384,13 +384,13 @@ const s = StyleSheet.create({
   chipsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 4 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1, borderColor: BORDER, borderRadius: 17,
+    borderWidth: 1, borderColor: CARD_BORDER, borderRadius: 17,
     paddingHorizontal: 11, paddingVertical: 7,
     backgroundColor: CARD,
   },
-  chipActive: { borderColor: ORANGE },
+  chipActive: { borderColor: ACCENT },
   chipText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
-  chipTextActive: { color: ORANGE, fontWeight: '700' },
+  chipTextActive: { color: ACCENT, fontWeight: '700' },
 
   empty: { alignItems: 'center', gap: 8, paddingTop: 90, paddingHorizontal: 40 },
   emptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },
@@ -398,7 +398,7 @@ const s = StyleSheet.create({
   emptyCta: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     marginTop: 14, paddingHorizontal: 18, paddingVertical: 11,
-    borderRadius: 20, borderWidth: 1.5, borderColor: ORANGE,
+    borderRadius: 20, borderWidth: 1.5, borderColor: ACCENT,
   },
-  emptyCtaText: { color: ORANGE, fontSize: 14, fontWeight: '700' },
+  emptyCtaText: { color: ACCENT, fontSize: 14, fontWeight: '700' },
 })

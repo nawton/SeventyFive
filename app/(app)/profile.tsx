@@ -47,7 +47,7 @@ import {
 import { PhotoComposer } from '@/components/PhotoComposer'
 import { PhotoViewer } from '@/components/PhotoViewer'
 import { PhotoCompare } from '@/components/PhotoCompare'
-import { ORANGE, GREEN, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
+import { GREEN, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, ACCENT, accentAlpha } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
@@ -322,7 +322,7 @@ export default function ProfileScreen() {
           </View>
           {photos.length >= 2 && (
             <TouchableOpacity style={s.compareChip} activeOpacity={0.8} onPress={() => setCompareOpen(true)}>
-              <Ionicons name="git-compare-outline" size={15} color={ORANGE} />
+              <Ionicons name="git-compare-outline" size={15} color={ACCENT} />
               <Text style={s.compareChipText}>Jämför</Text>
             </TouchableOpacity>
           )}
@@ -352,7 +352,7 @@ export default function ProfileScreen() {
           <Ionicons
             name={hasTodayPhoto ? 'checkmark-circle' : 'camera'}
             size={26}
-            color={hasTodayPhoto ? GREEN : ORANGE}
+            color={hasTodayPhoto ? GREEN : ACCENT}
           />
           <Text style={[s.addTileText, hasTodayPhoto && s.addTileTextDone]}>
             {hasTodayPhoto ? 'Dagens taget' : 'Dagens foto'}
@@ -485,14 +485,14 @@ const s = StyleSheet.create({
 
   // Lägg till-plattan — första rutan i rutnätet
   addTile: {
-    borderRadius: 10, borderWidth: 1.5, borderColor: ORANGE + '66',
-    borderStyle: 'dashed', backgroundColor: ORANGE + '0F',
+    borderRadius: 10, borderWidth: 1.5, borderColor: accentAlpha('66'),
+    borderStyle: 'dashed', backgroundColor: accentAlpha('0F'),
     alignItems: 'center', justifyContent: 'center', gap: 6,
   },
   addTileDone: {
     borderColor: GREEN + '55', backgroundColor: GREEN + '0D', borderStyle: 'solid',
   },
-  addTileText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
+  addTileText: { color: ACCENT, fontSize: 12, fontWeight: '700' },
   addTileTextDone: { color: GREEN },
 
   sectionHead: {
@@ -501,10 +501,10 @@ const s = StyleSheet.create({
   sectionHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   compareChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: ORANGE + '18', borderRadius: 12,
+    backgroundColor: accentAlpha('18'), borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 8,
   },
-  compareChipText: { color: ORANGE, fontSize: 13, fontWeight: '700' },
+  compareChipText: { color: ACCENT, fontSize: 13, fontWeight: '700' },
   sectionSub: {
     color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI, marginTop: 3,
   },
