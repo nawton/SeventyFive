@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  View, Text, StyleSheet, FlatList, Modal, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, FlatList, Modal, TouchableOpacity,
   ActivityIndicator,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
+import { AppRefreshControl, useAppRefresh } from '@/components/AppRefresh'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -168,12 +169,7 @@ export default function CommunityScreen() {
     loadFeed()
   }, [loadFeed]))
 
-  const [refreshing, setRefreshing] = useState(false)
-  async function handleRefresh() {
-    setRefreshing(true)
-    await loadFeed().catch(() => {})
-    setRefreshing(false)
-  }
+  const { refreshing, onRefresh } = useAppRefresh(loadFeed)
 
   // Oändlig scroll: nästa sida börjar där förra slutade (cursor)
   async function loadMore() {
@@ -280,7 +276,7 @@ export default function CommunityScreen() {
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ORANGE} />
+            <AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} testID="feedRefresh" />
           }
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}

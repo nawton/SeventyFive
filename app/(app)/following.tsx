@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
+import { AppRefreshControl, useAppRefresh } from '@/components/AppRefresh'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -83,32 +84,37 @@ export default function FollowingScreen() {
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set())
   const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set())
 
+  const aliveRef = useRef(true)
+  const loadLists = useCallback(async (uid: string) => {
+    const lists = await getFollowLists(uid)
+    if (!aliveRef.current) return
+    setFollowers(lists.followers)
+    setFollowingList(lists.following)
+    setFollowedIds(new Set(lists.following.map(p => p.id)))
+  }, [])
+
   useFocusEffect(useCallback(() => {
-    let alive = true
+    aliveRef.current = true
     let unsubscribe: (() => void) | null = null
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user || !alive) return
+      if (!session?.user || !aliveRef.current) return
       const uid = session.user.id
       setOwnId(uid)
       getProfile(uid).then(p => {
-        if (!alive) return
+        if (!aliveRef.current) return
         setName(p?.name || session.user.email?.split('@')[0] || '')
       }).catch(() => {})
 
-      const loadLists = () => {
-        getFollowLists(uid).then(lists => {
-          if (!alive) return
-          setFollowers(lists.followers)
-          setFollowingList(lists.following)
-          setFollowedIds(new Set(lists.following.map(p => p.id)))
-        }).catch(() => {})
-      }
-      loadLists()
+      loadLists(uid).catch(() => {})
       // Följer någon dig medan sidan är öppen dyker den upp direkt
-      unsubscribe = subscribeToFollows(uid, loadLists)
+      unsubscribe = subscribeToFollows(uid, () => { loadLists(uid).catch(() => {}) })
     })
-    return () => { alive = false; unsubscribe?.() }
-  }, []))
+    return () => { aliveRef.current = false; unsubscribe?.() }
+  }, [loadLists]))
+
+  const { refreshing, onRefresh } = useAppRefresh(
+    useCallback(() => (ownId ? loadLists(ownId) : Promise.resolve()), [ownId, loadLists]),
+  )
 
   const setOf = (prev: Set<string>, id: string, add: boolean) => {
     const copy = new Set(prev)
@@ -177,6 +183,7 @@ export default function FollowingScreen() {
       </View>
 
       <FlatList
+        testID="followsList"
         data={people}
         keyExtractor={p => p.id}
         renderItem={({ item }) => (
@@ -191,6 +198,9 @@ export default function FollowingScreen() {
         ItemSeparatorComponent={() => <View style={s.rowDivider} />}
         contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} testID="followsRefresh" />
+        }
         ListEmptyComponent={
           <View style={s.empty}>
             <Ionicons name="people-outline" size={44} color={TEXT_SECONDARY} />

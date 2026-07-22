@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react-native'
+import { render, screen, fireEvent, act } from '@testing-library/react-native'
 import FollowingScreen from '../(app)/following'
 
 jest.mock('@/lib/supabase', () => ({
@@ -50,6 +50,21 @@ describe('Följare/Följer', () => {
     expect(screen.getByText('Du följer ingen ännu')).toBeOnTheScreen()
     fireEvent.press(screen.getByText('0 Följare'))
     expect(screen.getByText('Inga följare ännu')).toBeOnTheScreen()
+  })
+
+  it('dra-för-att-uppdatera laddar om listorna', async () => {
+    render(<FollowingScreen />)
+    await screen.findByText('Anton Wretenberg')
+    expect(getFollowLists).toHaveBeenCalledTimes(1)
+    // Någon hann följa sedan sidan laddades — draget hämtar in det
+    ;(getFollowLists as jest.Mock).mockResolvedValue({ followers: [SARA], following: [] })
+    const { RefreshControl } = require('react-native')
+    const rc = screen.UNSAFE_getByType(RefreshControl)
+    await act(async () => { rc.props.onRefresh() })
+    expect(await screen.findByText('1 Följare')).toBeOnTheScreen()
+    expect(getFollowLists).toHaveBeenCalledTimes(2)
+    // Spinnern hålls kvar en stund — vänta ut den så testet städar rent
+    await act(() => new Promise(r => setTimeout(r, 1000)))
   })
 
   it('riktiga listor: räknare, rader och avfölj som sparar', async () => {
