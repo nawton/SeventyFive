@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Modal, Switch, FlatList,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Modal, Switch, FlatList, Alert,
 } from 'react-native'
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import { runOnJS } from 'react-native-reanimated'
@@ -168,18 +168,21 @@ export default function PrivacyScreen() {
   const [blockedOpen, setBlockedOpen] = useState(false)
   const [blocked, setBlocked] = useState<FollowProfile[]>([])
 
+  function applyProfile(p: NonNullable<Awaited<ReturnType<typeof getProfile>>>) {
+    setSearchable(p.searchable ?? true)
+    setIsPublic(p.is_public ?? false)
+    setActivityVisibility(p.activity_visibility ?? 'followers')
+    setTrimMeters(p.trim_route_meters ?? 0)
+    setHideRouteMaps(p.hide_route_maps ?? false)
+  }
+
   useFocusEffect(useCallback(() => {
     let alive = true
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user || !alive) return
       setUserId(session.user.id)
       getProfile(session.user.id).then(p => {
-        if (!alive || !p) return
-        setSearchable(p.searchable ?? true)
-        setIsPublic(p.is_public ?? false)
-        setActivityVisibility(p.activity_visibility ?? 'followers')
-        setTrimMeters(p.trim_route_meters ?? 0)
-        setHideRouteMaps(p.hide_route_maps ?? false)
+        if (alive && p) applyProfile(p)
       }).catch(() => {})
       getBlockedUsers().then(list => { if (alive) setBlocked(list) }).catch(() => {})
     })
@@ -194,9 +197,14 @@ export default function PrivacyScreen() {
     })
   }
 
+  // Misslyckad sparning får ALDRIG se lyckad ut på en integritetssida —
+  // säg till och ställ tillbaka reglagen till databasens faktiska läge
   function save(updates: Parameters<typeof updateProfile>[1]) {
     if (!userId) return
-    updateProfile(userId, updates).catch(() => {})
+    updateProfile(userId, updates).catch(() => {
+      Alert.alert('Kunde inte spara', 'Ändringen sparades inte — kontrollera anslutningen och försök igen.')
+      getProfile(userId).then(p => { if (p) applyProfile(p) }).catch(() => {})
+    })
   }
 
   const currentValue: Record<SettingKey, string> = {

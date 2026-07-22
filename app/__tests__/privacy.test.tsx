@@ -96,6 +96,21 @@ describe('Integritetsinställningar', () => {
       expect(updateProfile).toHaveBeenCalledWith('u1', { hide_route_maps: true }))
   })
 
+  it('misslyckad sparning larmar och ställer tillbaka reglaget', async () => {
+    const { Alert } = require('react-native')
+    const alertSpy = jest.spyOn(Alert, 'alert')
+    ;(updateProfile as jest.Mock).mockRejectedValue(new Error('offline'))
+    render(<PrivacyScreen />)
+    fireEvent.press(await screen.findByTestId('privacy-maps'))
+    fireEvent.press(await screen.findByTestId('maps-hide'))
+    fireEvent(await screen.findByTestId('hideMapsSwitch'), 'valueChange', true)
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith(
+      'Kunde inte spara', expect.any(String)))
+    // Reglaget faller tillbaka till databasens läge (av)
+    await waitFor(() =>
+      expect(screen.getByTestId('hideMapsSwitch').props.value).toBe(false))
+  })
+
   it('blockerade konton listas och kan avblockeras', async () => {
     ;(getBlockedUsers as jest.Mock).mockResolvedValue([
       { id: 'u2', name: 'Nawid', avatar_url: '🔥' },
