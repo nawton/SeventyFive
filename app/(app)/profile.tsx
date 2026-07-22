@@ -402,6 +402,9 @@ export default function ProfileScreen() {
       </View>
 
       <FlatList
+        // key tvingar omontering — RN vägrar byta numColumns på en levande
+        // lista (annars kan hot reload fastna på gamla layouten)
+        key={`photo-grid-${GRID_COLS}`}
         data={photos}
         keyExtractor={p => p.id}
         renderItem={renderPhoto}
