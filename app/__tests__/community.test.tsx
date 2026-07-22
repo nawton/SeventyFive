@@ -1,6 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react-native'
 import CommunityScreen, { relativeDayLabel, dayPartTitle } from '../(app)/community'
-import { getCardioWorkouts } from '@/services/cardioWorkouts'
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
@@ -14,11 +13,9 @@ jest.mock('@/lib/supabase', () => ({
 jest.mock('@/services/profile', () => ({
   getProfile: jest.fn().mockResolvedValue({ name: 'Anton Wretenberg', avatar_url: '💪' }),
 }))
-jest.mock('@/services/cardioWorkouts', () => ({
-  getCardioWorkouts: jest.fn().mockResolvedValue([]),
-}))
-jest.mock('@/services/strengthWorkouts', () => ({
-  getStrengthWorkouts: jest.fn().mockResolvedValue([]),
+jest.mock('@/services/feed', () => ({
+  FEED_PAGE_SIZE: 60,
+  fetchFeedPage: jest.fn().mockResolvedValue({ cardio: [], strength: [], count: 0, oldest: null }),
 }))
 jest.mock('@/services/follows', () => ({
   getFollowLists: jest.fn().mockResolvedValue({ followers: [], following: [] }),
@@ -86,7 +83,7 @@ const GYM_DAY = [
   },
 ]
 
-const { getStrengthWorkouts } = require('@/services/strengthWorkouts')
+const { fetchFeedPage } = require('@/services/feed')
 const { getFollowLists } = require('@/services/follows')
 
 const FRIEND_RUN = {
@@ -101,9 +98,15 @@ const FRIEND_RUN = {
 
 beforeEach(() => {
   jest.clearAllMocks()
-  ;(getCardioWorkouts as jest.Mock).mockResolvedValue([RUN])
-  ;(getStrengthWorkouts as jest.Mock).mockResolvedValue([])
+  ;(fetchFeedPage as jest.Mock).mockResolvedValue({
+    cardio: [{ userId: 'u1', workout: RUN }],
+    strength: [],
+    count: 1,
+    oldest: RUN.created_at,
+  })
   ;(getFollowLists as jest.Mock).mockResolvedValue({ followers: [], following: [] })
+  const { getFeedSocial } = require('@/services/social')
+  ;(getFeedSocial as jest.Mock).mockResolvedValue({})
 })
 
 describe('Community', () => {
@@ -126,8 +129,15 @@ describe('Community', () => {
       followers: [],
       following: [{ id: 'u2', name: 'Nawid', avatar_url: '🔥' }],
     })
-    ;(getCardioWorkouts as jest.Mock).mockImplementation(async (uid: string) =>
-      uid === 'u1' ? [RUN] : [FRIEND_RUN])
+    ;(fetchFeedPage as jest.Mock).mockResolvedValue({
+      cardio: [
+        { userId: 'u1', workout: RUN },
+        { userId: 'u2', workout: FRIEND_RUN },
+      ],
+      strength: [],
+      count: 2,
+      oldest: FRIEND_RUN.created_at,
+    })
     render(<CommunityScreen />)
     expect(await screen.findByText('Nawid')).toBeOnTheScreen()
     expect(screen.getByText('Anton Wretenberg')).toBeOnTheScreen()
@@ -180,7 +190,12 @@ describe('Community', () => {
   })
 
   it('gympass visas i flödet: dagens övningar grupperade till ett kort', async () => {
-    ;(getStrengthWorkouts as jest.Mock).mockResolvedValue(GYM_DAY)
+    ;(fetchFeedPage as jest.Mock).mockResolvedValue({
+      cardio: [{ userId: 'u1', workout: RUN }],
+      strength: GYM_DAY.map(w => ({ userId: 'u1', workout: w })),
+      count: 3,
+      oldest: RUN.created_at,
+    })
     render(<CommunityScreen />)
     await screen.findAllByText('Anton Wretenberg')   // löprundan + gympasset
     expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
@@ -192,7 +207,12 @@ describe('Community', () => {
   })
 
   it('filterchipsen växlar flödet mellan alla, cardio och gym', async () => {
-    ;(getStrengthWorkouts as jest.Mock).mockResolvedValue(GYM_DAY)
+    ;(fetchFeedPage as jest.Mock).mockResolvedValue({
+      cardio: [{ userId: 'u1', workout: RUN }],
+      strength: GYM_DAY.map(w => ({ userId: 'u1', workout: w })),
+      count: 3,
+      oldest: RUN.created_at,
+    })
     render(<CommunityScreen />)
     await screen.findAllByText('Anton Wretenberg')
     fireEvent.press(screen.getByText('Gym'))
@@ -241,7 +261,7 @@ describe('Community', () => {
 
   it('tomt flöde visar tom-läge med Hitta vänner-knapp', async () => {
     const { router } = require('expo-router')
-    ;(getCardioWorkouts as jest.Mock).mockResolvedValue([])
+    ;(fetchFeedPage as jest.Mock).mockResolvedValue({ cardio: [], strength: [], count: 0, oldest: null })
     render(<CommunityScreen />)
     expect(await screen.findByText('Inget i flödet ännu')).toBeOnTheScreen()
     fireEvent.press(screen.getByTestId('emptyCta'))

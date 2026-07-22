@@ -21,6 +21,8 @@ jest.mock('@/services/social', () => ({
   deleteComment: jest.fn().mockResolvedValue(undefined),
   likePost: jest.fn().mockResolvedValue(undefined),
   unlikePost: jest.fn().mockResolvedValue(undefined),
+  likeComment: jest.fn().mockResolvedValue(undefined),
+  unlikeComment: jest.fn().mockResolvedValue(undefined),
 }))
 let mockParams: Record<string, string> = {}
 jest.mock('expo-router', () => ({
@@ -66,6 +68,7 @@ beforeEach(() => {
     {
       id: 'c1', authorId: 'u3', authorName: 'Johan Wretenberg', authorAvatar: null,
       body: 'Du är bra igång Alva!', createdAt: '2026-07-21T18:00:00.000Z',
+      likes: 0, likedByMe: false,
     },
   ])
 })
@@ -97,6 +100,7 @@ describe('Diskussion', () => {
       {
         id: 'c2', authorId: 'u1', authorName: 'Anton', authorAvatar: null,
         body: 'Min egen kommentar', createdAt: '2026-07-21T19:00:00.000Z',
+        likes: 0, likedByMe: false,
       },
     ])
     render(<PostScreen />)
@@ -117,6 +121,15 @@ describe('Diskussion', () => {
     await screen.findByText('Johan Wretenberg')
     fireEvent(screen.getByTestId('comment-c1'), 'longPress')
     expect(alertSpy).not.toHaveBeenCalled()
+  })
+
+  it('hjärtat på en kommentar gillar och räknar upp', async () => {
+    const { likeComment } = require('@/services/social')
+    render(<PostScreen />)
+    await screen.findByText('Johan Wretenberg')
+    fireEvent.press(screen.getByTestId('commentLike-c1'))
+    expect(likeComment).toHaveBeenCalledWith('c1')
+    expect(screen.getByText('1')).toBeOnTheScreen()   // kommentarens gillaräknare
   })
 
   it('tryck på en kommentar öppnar personens profil', async () => {

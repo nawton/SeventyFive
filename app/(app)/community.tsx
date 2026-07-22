@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, FlatList, Modal, TouchableOpacity, RefreshControl,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -8,8 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
-import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
-import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
+import { fetchFeedPage, FEED_PAGE_SIZE, type FeedPage } from '@/services/feed'
 import { getFollowLists } from '@/services/follows'
 import {
   getFeedSocial, likePost, unlikePost, type PostSocial,
@@ -28,14 +28,12 @@ import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 // =============================================================================
 // COMMUNITY — flödet visar dina OCH dina godkända vänners pass (löprundor
-// och gympass), blandade kronologiskt. Vänners pass blir läsbara via
-// RLS-policyn först när de godkänt din vänförfrågan. Tryck på ett kort
-// öppnar samma passdetaljvy som statistiken (skrivskyddat betyg på andras
-// pass), avataren öppnar personens atletprofil. Grupper är en
-// platshållare. Gilla är bara lokal state ännu.
+// och gympass), blandade kronologiskt. Hämtas via get_feed-RPC:n — EN
+// fråga oavsett antal vänner — med oändlig scroll (cursor-paginering på
+// tidsstämpeln). Tryck på ett kort öppnar samma passdetaljvy som
+// statistiken, avataren öppnar personens profil, pratbubblan
+// diskussionssidan. Grupper är en platshållare.
 // =============================================================================
-
-const FEED_LIMIT = 50
 
 // Testerna (och ev. andra skärmar) når hjälparna via den delade modulen
 export { relativeDayLabel, dayPartTitle } from '@/components/FeedWorkoutCard'
@@ -74,14 +72,48 @@ function EmptyState({ icon, title, body, ctaLabel, onCta }: {
 export default function CommunityScreen() {
   const [segment, setSegment] = useState<Segment>('feed')
   const [filter, setFilter] = useState<Filter>('all')
-  const [posts, setPosts] = useState<FeedPost[]>([])
   const [loaded, setLoaded] = useState(false)
   const [ownId, setOwnId] = useState<string | null>(null)
   const [unit, setUnit] = useState<UnitSystem>('metric')
   const [selected, setSelected] = useState<FeedPost | null>(null)
   // Gillanden/kommentarsantal per inlägg
   const [social, setSocial] = useState<Record<string, PostSocial>>({})
+  // Råa flödesrader (ackumulerade sidor) + författarnas namn/avatarer.
+  // Inläggen byggs om från helheten så gympass-grupperingen aldrig
+  // klipps mitt i en dag vid sidgränser.
+  const [authors, setAuthors] = useState<Record<string, { name: string; avatar: string | null }>>({})
+  const [cardioRows, setCardioRows] = useState<FeedPage['cardio']>([])
+  const [strengthRows, setStrengthRows] = useState<FeedPage['strength']>([])
+  const [oldest, setOldest] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const loadingMoreRef = useRef(false)
   const onScroll = useTabBarShrinkOnScroll()
+
+  const posts = useMemo(() => {
+    const nameOf = (id: string) => authors[id]?.name ?? 'Namnlös'
+    const avatarOf = (id: string) => authors[id]?.avatar ?? null
+    const cardioPosts = cardioRows.map(r =>
+      workoutToPost(r.workout, r.userId, nameOf(r.userId), avatarOf(r.userId)))
+    const byUser = new Map<string, typeof strengthRows>()
+    for (const r of strengthRows) {
+      const list = byUser.get(r.userId)
+      if (list) list.push(r)
+      else byUser.set(r.userId, [r])
+    }
+    const gymPosts = Array.from(byUser.entries()).flatMap(([userId, rows]) =>
+      strengthToPosts(rows.map(r => r.workout), userId, nameOf(userId), avatarOf(userId)))
+    return mergePosts([...cardioPosts, ...gymPosts])
+  }, [cardioRows, strengthRows, authors])
+
+  // Gillanden/kommentarsantal följer med när inläggen ändras
+  const postIdsKey = posts.map(p => p.id).join(',')
+  useEffect(() => {
+    if (posts.length === 0) return
+    getFeedSocial(posts.map(p => p.id)).then(setSocial).catch(() => {})
+    // postIdsKey fångar ändringar i uppsättningen — posts-referensen byts varje build
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postIdsKey])
 
   // Pratbubblan öppnar inläggets diskussionssida (Strava-stil)
   function openDiscussion(post: FeedPost) {
@@ -102,44 +134,33 @@ export default function CommunityScreen() {
     } as never)
   }
 
-  // Delad mellan fokus-laddningen och pull-to-refresh
+  // Delad mellan fokus-laddningen och pull-to-refresh — hämtar namnen
+  // (en gång) och flödets FÖRSTA sida via RPC:n
   const loadFeed = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return
     const uid = session.user.id
     setOwnId(uid)
-    const [profile, lists] = await Promise.all([
+    const [profile, lists, page] = await Promise.all([
       getProfile(uid).catch(() => null),
       getFollowLists(uid).catch(() => ({ followers: [], following: [] })),
+      fetchFeedPage(),
     ])
-
-    // Jag själv + alla jag följer (godkända) — varje författares pass
-    // hämtas parallellt och blandas till ett flöde
-    const authors = [
-      {
-        id: uid,
+    const map: Record<string, { name: string; avatar: string | null }> = {
+      [uid]: {
         name: profile?.name || session.user.email?.split('@')[0] || 'Jag',
         avatar: profile?.avatar_url ?? null,
       },
-      ...lists.following.map(p => ({
-        id: p.id, name: p.name ?? 'Namnlös', avatar: p.avatar_url,
-      })),
-    ]
-    const perAuthor = await Promise.all(authors.map(async a => {
-      const [cardio, strength] = await Promise.all([
-        getCardioWorkouts(a.id, 20).catch(() => [] as CardioWorkout[]),
-        getStrengthWorkouts(a.id, 200).catch(() => [] as StrengthWorkout[]),
-      ])
-      return [
-        ...cardio.map(w => workoutToPost(w, a.id, a.name, a.avatar)),
-        ...strengthToPosts(strength, a.id, a.name, a.avatar),
-      ]
-    }))
-    const feed = mergePosts(perAuthor.flat()).slice(0, FEED_LIMIT)
-    setPosts(feed)
+    }
+    for (const p of lists.following) {
+      map[p.id] = { name: p.name ?? 'Namnlös', avatar: p.avatar_url }
+    }
+    setAuthors(map)
+    setCardioRows(page.cardio)
+    setStrengthRows(page.strength)
+    setOldest(page.oldest)
+    setHasMore(page.count >= FEED_PAGE_SIZE)
     setLoaded(true)
-    // Gillanden och kommentarsantal för hela flödet i två frågor
-    getFeedSocial(feed.map(p => p.id)).then(setSocial).catch(() => {})
   }, [])
 
   useFocusEffect(useCallback(() => {
@@ -152,6 +173,32 @@ export default function CommunityScreen() {
     setRefreshing(true)
     await loadFeed().catch(() => {})
     setRefreshing(false)
+  }
+
+  // Oändlig scroll: nästa sida börjar där förra slutade (cursor)
+  async function loadMore() {
+    if (!hasMore || loadingMoreRef.current || !oldest) return
+    loadingMoreRef.current = true
+    setLoadingMore(true)
+    try {
+      const page = await fetchFeedPage(oldest)
+      // Dedupe på pass-id — cursorkrockar på exakt samma tidsstämpel
+      setCardioRows(prev => {
+        const seen = new Set(prev.map(r => r.workout.id))
+        return [...prev, ...page.cardio.filter(r => !seen.has(r.workout.id))]
+      })
+      setStrengthRows(prev => {
+        const seen = new Set(prev.map(r => r.workout.id))
+        return [...prev, ...page.strength.filter(r => !seen.has(r.workout.id))]
+      })
+      setOldest(page.oldest ?? oldest)
+      setHasMore(page.count >= FEED_PAGE_SIZE)
+    } catch {
+      // nästa scroll försöker igen
+    } finally {
+      loadingMoreRef.current = false
+      setLoadingMore(false)
+    }
   }
 
   // Optimistiskt gilla/ogilla — backas vid fel. Notisen till passägaren
@@ -235,6 +282,11 @@ export default function CommunityScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ORANGE} />
           }
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={loadingMore
+            ? <ActivityIndicator color={ORANGE} style={{ paddingVertical: 16 }} />
+            : null}
           // Chipsen scrollar med flödet — headern förblir ren
           ListHeaderComponent={
             <View style={s.chipsRow}>

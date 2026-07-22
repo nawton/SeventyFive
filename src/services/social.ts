@@ -22,6 +22,8 @@ export interface PostComment {
   authorAvatar: string | null
   body: string
   createdAt: string
+  likes: number
+  likedByMe: boolean
 }
 
 export interface SocialNotification {
@@ -103,6 +105,7 @@ export async function unlikePost(postKey: string): Promise<void> {
 }
 
 export async function getComments(postKey: string): Promise<PostComment[]> {
+  const uid = await ownId()
   const { data } = await supabase
     .from('post_comments')
     .select('id, author_id, body, created_at')
@@ -110,9 +113,23 @@ export async function getComments(postKey: string): Promise<PostComment[]> {
     .order('created_at', { ascending: true })
     .limit(200)
   const rows = data ?? []
-  const profiles = await resolveProfiles(rows.map(r => r.author_id as string))
+  const commentIds = rows.map(r => r.id as string)
+  const [profiles, likesRes] = await Promise.all([
+    resolveProfiles(rows.map(r => r.author_id as string)),
+    commentIds.length > 0
+      ? supabase.from('comment_likes').select('comment_id, liker_id').in('comment_id', commentIds)
+      : Promise.resolve({ data: [] as Array<{ comment_id: string; liker_id: string }> }),
+  ])
+  const likeCounts = new Map<string, { likes: number; likedByMe: boolean }>()
+  for (const row of likesRes.data ?? []) {
+    const entry = likeCounts.get(row.comment_id) ?? { likes: 0, likedByMe: false }
+    entry.likes += 1
+    if (row.liker_id === uid) entry.likedByMe = true
+    likeCounts.set(row.comment_id, entry)
+  }
   return rows.map(r => {
     const p = profiles.get(r.author_id as string)
+    const l = likeCounts.get(r.id as string)
     return {
       id: r.id as string,
       authorId: r.author_id as string,
@@ -120,8 +137,31 @@ export async function getComments(postKey: string): Promise<PostComment[]> {
       authorAvatar: p?.avatar_url ?? null,
       body: r.body as string,
       createdAt: r.created_at as string,
+      likes: l?.likes ?? 0,
+      likedByMe: l?.likedByMe ?? false,
     }
   })
+}
+
+export async function likeComment(commentId: string): Promise<void> {
+  const uid = await ownId()
+  if (!uid) return
+  const { error } = await supabase
+    .from('comment_likes')
+    .insert({ comment_id: commentId, liker_id: uid })
+  // 23505 = redan gillad (dubbeltryck) — ofarligt
+  if (error && error.code !== '23505') throw error
+}
+
+export async function unlikeComment(commentId: string): Promise<void> {
+  const uid = await ownId()
+  if (!uid) return
+  const { error } = await supabase
+    .from('comment_likes')
+    .delete()
+    .eq('comment_id', commentId)
+    .eq('liker_id', uid)
+  if (error) throw error
 }
 
 export async function addComment(postKey: string, ownerId: string, body: string): Promise<void> {

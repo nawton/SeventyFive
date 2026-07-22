@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { registerPushToken } from '@/services/pushTokens'
 
 interface AuthState {
   session: Session | null
@@ -17,11 +18,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Läs session från SecureStore — inget nätverksanrop
     supabase.auth.getSession().then(({ data: { session } }) => {
       setState({ session, userId: session?.user.id ?? null, ready: true })
+      // Bäst-effort: pushtoken registreras om notisrättigheten redan finns
+      if (session?.user) registerPushToken()
     })
 
     // Uppdatera vid inloggning, utloggning och token-refresh
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setState({ session, userId: session?.user.id ?? null, ready: true })
+      if (event === 'SIGNED_IN' && session?.user) registerPushToken()
     })
 
     return () => subscription.unsubscribe()

@@ -10,6 +10,7 @@ import Constants from 'expo-constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '@/lib/supabase'
 import { scheduleDailyReminders, cancelDailyReminders, areRemindersActive } from '@/services/notifications'
+import { registerPushToken } from '@/services/pushTokens'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { deleteRepeatingSessions } from '@/services/workoutSchedule'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
@@ -110,6 +111,8 @@ export default function GeneralScreen() {
         }
         await scheduleDailyReminders()
         setNotificationsEnabled(true)
+        // Nyss beviljad rättighet → registrera enhetens pushtoken direkt
+        registerPushToken()
       } else {
         await cancelDailyReminders()
         setNotificationsEnabled(false)

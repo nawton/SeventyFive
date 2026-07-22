@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase'
 import { getCardioWorkoutById, type CardioWorkout } from '@/services/cardioWorkouts'
 import {
   getFeedSocial, getPostLikers, getComments, addComment, deleteComment,
-  likePost, unlikePost, type PostComment,
+  likePost, unlikePost, likeComment, unlikeComment, type PostComment,
 } from '@/services/social'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar, relativeDayLabel, regionForRoute } from '@/components/FeedWorkoutCard'
@@ -96,6 +96,19 @@ export default function PostScreen() {
         setLikedByMe(!next)
         setLikes(n => Math.max(0, n + (next ? -1 : 1)))
       })
+  }
+
+  // Hjärtat under en kommentar — optimistiskt, backas vid fel
+  function toggleCommentLike(c: PostComment) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    const next = !c.likedByMe
+    const apply = (likedByMe: boolean, delta: number) =>
+      setComments(prev => prev.map(x => x.id === c.id
+        ? { ...x, likedByMe, likes: Math.max(0, x.likes + delta) }
+        : x))
+    apply(next, next ? 1 : -1)
+    ;(next ? likeComment(c.id) : unlikeComment(c.id))
+      .catch(() => apply(!next, next ? -1 : 1))
   }
 
   // Long-press: egna kommentarer, och alla kommentarer på ens eget pass,
@@ -266,6 +279,20 @@ export default function PostScreen() {
                     <Text style={s.commentTime}>· {timeAgo(c.createdAt)}</Text>
                   </View>
                   <Text style={s.commentBody}>{c.body}</Text>
+                  {/* Litet hjärta under kommentaren, som förlagan */}
+                  <TouchableOpacity
+                    style={s.commentLike}
+                    onPress={() => toggleCommentLike(c)}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    testID={`commentLike-${c.id}`}
+                  >
+                    <Ionicons
+                      name={c.likedByMe ? 'heart' : 'heart-outline'}
+                      size={16}
+                      color={c.likedByMe ? '#FF3B4A' : TEXT_SECONDARY}
+                    />
+                    {c.likes > 0 && <Text style={s.commentLikeCount}>{c.likes}</Text>}
+                  </TouchableOpacity>
                 </View>
               </TouchableOpacity>
             ))}
@@ -360,6 +387,11 @@ const s = StyleSheet.create({
   commentName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   commentTime: { color: TEXT_SECONDARY, fontSize: 12 },
   commentBody: { color: TEXT_PRIMARY, fontSize: 15, lineHeight: 21, marginTop: 3 },
+  commentLike: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-start', marginTop: 7,
+  },
+  commentLikeCount: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
   emptyComments: { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', paddingVertical: 20 },
 
   inputRow: {
