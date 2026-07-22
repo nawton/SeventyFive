@@ -27,7 +27,7 @@ import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import Body from 'react-native-body-highlighter'
 import { getMusclesForName, bestSideForMuscles, SLUG_LABELS, getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings, ACCENT, accentAlpha, THEME_DARK } from '@/lib/theme'
 import { toLocalDateString, weekdayOf } from '@/lib/date'
 import {
   CATEGORY_LABELS,
@@ -115,6 +115,9 @@ export function SessionEditor({
   const bodyLight = useColorScheme() === 'light'
   const bodyFill = bodyLight ? '#DFE0E4' : '#2A2A2C'
   const bodyBorder = bodyLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.10)'
+  // Chippens/fältens ramar: dynamiska färger fryser till mörkt i modaler —
+  // mycket ljus ram i ljust läge, som förut i mörkt
+  const chip = { borderColor: bodyLight ? 'rgba(0,0,0,0.08)' : THEME_DARK.BORDER } as const
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const [name, setName]                 = useState('')
@@ -382,7 +385,7 @@ export function SessionEditor({
                 {(['gym', 'cardio'] as const).map(t => (
                   <TouchableOpacity
                     key={t}
-                    style={[s.typeBtn, sessionType === t && s.typeBtnActive]}
+                    style={[s.typeBtn, chip, sessionType === t && s.typeBtnActive]}
                     onPress={() => setSessionType(t)}
                     activeOpacity={0.8}
                   >
@@ -402,7 +405,7 @@ export function SessionEditor({
             <View style={s.field}>
               <Text style={s.label}>NAMN</Text>
               <AppTextInput
-                style={s.input}
+                style={[s.input, chip, chip]}
                 value={name}
                 onChangeText={setName}
                 placeholder="t.ex. Push-dag, Benen…"
@@ -415,7 +418,7 @@ export function SessionEditor({
             <View style={s.field}>
               <Text style={s.label}>NOTAT</Text>
               <AppTextInput
-                style={[s.input, s.inputMultiline]}
+                style={[s.input, chip, s.inputMultiline]}
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="Lägg till ett meddelande eller notat…"
@@ -437,7 +440,7 @@ export function SessionEditor({
                   return (
                     <TouchableOpacity
                       key={num}
-                      style={[s.dayBtn, active && s.dayBtnActive]}
+                      style={[s.dayBtn, chip, active && s.dayBtnActive]}
                       onPress={() => toggleDay(num)}
                       activeOpacity={0.7}
                     >
@@ -449,7 +452,7 @@ export function SessionEditor({
 
               {/* Upprepa toggle */}
               <TouchableOpacity
-                style={[s.repeatRow, repeat && s.repeatRowActive]}
+                style={[s.repeatRow, chip, repeat && s.repeatRowActive]}
                 onPress={toggleRepeat}
                 activeOpacity={0.75}
               >
@@ -492,7 +495,7 @@ export function SessionEditor({
                   {CARDIO_TYPES.map(ct => (
                     <TouchableOpacity
                       key={ct.key}
-                      style={[s.cardioTypeBtn, cardioType === ct.key && s.cardioTypeBtnActive]}
+                      style={[s.cardioTypeBtn, chip, cardioType === ct.key && s.cardioTypeBtnActive]}
                       onPress={() => setCardioType(ct.key)}
                       activeOpacity={0.8}
                     >
@@ -518,7 +521,7 @@ export function SessionEditor({
                 const exInfo   = exercises.find(e => e.name === d.exercise_name)
                 const isCardio = exInfo?.category === 'cardio'
                 return (
-                  <View key={d.key} style={s.exRow}>
+                  <View key={d.key} style={[s.exRow, chip, chip]}>
                     <Text style={s.exName} numberOfLines={1}>{d.exercise_name}</Text>
                     {isCardio ? (
                       <View style={s.cardioBadge}>
@@ -588,7 +591,7 @@ export function SessionEditor({
             </TouchableOpacity>
           </View>
 
-          <View style={s.pickerSearchBar}>
+          <View style={[s.pickerSearchBar, chip, chip]}>
             <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} />
             <AppTextInput
               style={s.pickerSearchInput}
@@ -617,7 +620,7 @@ export function SessionEditor({
             {PICKER_FILTERS.map(f => (
               <TouchableOpacity
                 key={f.key}
-                style={[s.pickerPill, pickerFilter === f.key && s.pickerPillActive]}
+                style={[s.pickerPill, chip, pickerFilter === f.key && s.pickerPillActive]}
                 onPress={() => setPickerFilter(f.key)}
                 activeOpacity={0.7}
               >
@@ -729,7 +732,7 @@ export function SessionEditor({
                   </View>
                 </View>
 
-                <View style={s.infoCard}>
+                <View style={[s.infoCard, chip, chip]}>
                   <View style={s.infoCardTitleRow}>
                     <Text style={s.infoCardTitle}>Muskelgrupper</Text>
                     <View style={s.toggle}>
@@ -772,7 +775,7 @@ export function SessionEditor({
                 </View>
 
                 {infoEx?.description ? (
-                  <View style={s.infoCard}>
+                  <View style={[s.infoCard, chip, chip]}>
                     <Text style={s.infoCardTitle}>Beskrivning</Text>
                     <Text style={s.infoDesc}>{infoEx.description}</Text>
                   </View>
@@ -811,7 +814,7 @@ const s = StyleSheet.create({
   label: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, paddingHorizontal: 4 },
   input: {
     backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
     color: TEXT_PRIMARY, fontSize: 16,
     paddingHorizontal: 14, paddingVertical: 14,
   },
@@ -822,7 +825,7 @@ const s = StyleSheet.create({
   repeatRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
     padding: 14, marginTop: 4,
   },
   repeatRowActive: { backgroundColor: accentAlpha('14'), borderColor: accentAlpha('40') },
@@ -854,7 +857,7 @@ const s = StyleSheet.create({
   dayBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10,
     backgroundColor: CARD,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
   },
   dayBtnActive:  { backgroundColor: ACCENT, borderColor: ACCENT },
   dayText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
@@ -863,7 +866,7 @@ const s = StyleSheet.create({
   exRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: CARD, borderRadius: 10, padding: 10,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
   },
   exName: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
   cardioBadge: {
@@ -898,7 +901,7 @@ const s = StyleSheet.create({
     marginHorizontal: 16, marginVertical: 10,
     paddingHorizontal: 14, height: 46,
     backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
   },
   pickerSearchInput:    { flex: 1, color: TEXT_PRIMARY, fontSize: 15, padding: 0 },
   pickerFilterStrip:    { height: 60, flexGrow: 0, marginBottom: 10 },
@@ -906,7 +909,7 @@ const s = StyleSheet.create({
   pickerPill: {
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20,
     backgroundColor: CARD,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
   },
   pickerPillActive:     { backgroundColor: ACCENT, borderColor: ACCENT },
   pickerPillText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
@@ -946,7 +949,7 @@ const s = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 7, paddingVertical: 12, borderRadius: 12,
     backgroundColor: CARD,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
   },
   typeBtnActive:     { backgroundColor: ACCENT, borderColor: ACCENT },
   typeBtnText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
@@ -959,7 +962,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 7,
     paddingVertical: 11, paddingHorizontal: 14,
     borderRadius: 12, backgroundColor: CARD,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
   },
   cardioTypeBtnActive:  { backgroundColor: ACCENT, borderColor: ACCENT },
   cardioTypeTxt:        { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
@@ -985,7 +988,7 @@ const s = StyleSheet.create({
 
   infoCard: {
     backgroundColor: CARD, borderRadius: 16, padding: 16, gap: 12,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
   },
   infoCardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   infoCardTitle:    { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
