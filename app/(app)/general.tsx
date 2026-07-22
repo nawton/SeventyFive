@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, Alert, Modal,
+  View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, Alert, useColorScheme,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
@@ -48,9 +48,12 @@ function SettingRow({ icon, label, value, onPress, rightElement, danger, last }:
   danger?: boolean
   last?: boolean
 }) {
+  // Radavdelare som schemasträng: mycket ljus i ljust läge (BORDER var
+  // för stark där), vanlig i mörkt — och kan inte frysa vid temabyte
+  const divider = useColorScheme() === 'light' ? 'rgba(0,0,0,0.05)' : '#2C2C2E'
   return (
     <TouchableOpacity
-      style={[styles.row, !last && styles.rowBorder]}
+      style={[styles.row, !last && [styles.rowBorder, { borderBottomColor: divider }]]}
       onPress={onPress}
       activeOpacity={onPress ? 0.6 : 1}
       disabled={!onPress && !rightElement}
@@ -347,7 +350,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 14, paddingHorizontal: 16,
   },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
+  rowBorder: { borderBottomWidth: 1 },
   rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   rowLabel: { color: TEXT_PRIMARY, fontSize: 15 },
   rowLabelDanger: { color: RED },
