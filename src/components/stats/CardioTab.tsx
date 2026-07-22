@@ -280,7 +280,7 @@ export function CardioTab({
   const CARDIO_META: Record<string, { icon: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
     running:  { icon: 'fitness',  color: T.ACCENT },
     cycling:  { icon: 'bicycle',  color: P.BLUE },
-    walking:  { icon: 'walk',     color: GREEN },
+    walking:  { icon: 'walk',     color: P.GREEN },
     interval: { icon: 'flash',    color: P.YELLOW },
   }
   type SessRow = {
@@ -409,7 +409,7 @@ export function CardioTab({
               <View style={[s.dtlRow, { paddingBottom: 0 }]}>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Antal pass</Text>
-                  <Text style={[s.dtlVal, { color: GREEN }]}>{cardioW.length}</Text>
+                  <Text style={[s.dtlVal, { color: P.GREEN }]}>{cardioW.length}</Text>
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Snittempo</Text>
@@ -504,7 +504,7 @@ export function CardioTab({
                     </Text>
                     <Text style={[
                       s.ivTrendDelta,
-                      ivTrend.improvementSec > 0 && { color: GREEN },
+                      ivTrend.improvementSec > 0 && { color: P.GREEN },
                     ]}>
                       {ivTrend.improvementSec > 0
                         ? `−${ivTrend.improvementSec} s snabbare`
@@ -606,7 +606,7 @@ export function CardioTab({
                     workout: recBestPaceW,
                   },
                   {
-                    icon: 'trending-up-outline' as const, color: GREEN, label: 'Längsta vecka',
+                    icon: 'trending-up-outline' as const, color: P.GREEN, label: 'Längsta vecka',
                     value: recBiggestWeek > 0 ? `${toDisplayDistance(recBiggestWeek, unit).toFixed(1)} ${unitLabel}` : '–',
                     workout: recBiggestWeekW,
                   },
@@ -707,7 +707,7 @@ export function CardioTab({
                 { label: 'Träningstid', value: fmtDuration(totalSecs), color: P.YELLOW },
                 { label: 'Distans', value: `${toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: P.BLUE },
                 { label: 'Kilokalorier', value: `${totalCals.toLocaleString('sv-SE')} kcal`, color: P.RED },
-                { label: 'Antal pass', value: String(cardioW.length), color: GREEN },
+                { label: 'Antal pass', value: String(cardioW.length), color: P.GREEN },
                 { label: 'Aktiva dagar', value: String(activeCardioDays), color: TEXT_PRIMARY },
                 { label: 'Snittempo', value: `${avgPace} /${unitLabel}`, color: P.TEAL },
                 { label: 'Bästa tempo', value: `${bestPace} /${unitLabel}`, color: P.PURPLE },

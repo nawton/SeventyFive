@@ -22,10 +22,11 @@ export const LIME   = '#BDFF3B'
 // Neonfärgerna skriker på vit botten — ljust läge får dämpade, mörkare
 // varianter. Som strängar via hook: funkar i SVG, konkatenering och
 // reanimated, till skillnad från dynamiska färgobjekt.
-const NEON_DARK  = { BLUE, RED, YELLOW, PURPLE, TEAL, LIME }
+const NEON_DARK  = { BLUE, RED, YELLOW, PURPLE, TEAL, LIME, GREEN }
 const NEON_LIGHT = {
-  BLUE: '#2E86C9', RED: '#CE4568', YELLOW: '#C79A06',
+  BLUE: '#2E86C9', RED: '#CE4568', YELLOW: '#D68F00',
   PURPLE: '#9A4CC4', TEAL: '#1FA89C', LIME: '#7CA92F',
+  GREEN: '#2E9E57',
 }
 export function useStatsColors() {
   return useColorScheme() === 'light' ? NEON_LIGHT : NEON_DARK
