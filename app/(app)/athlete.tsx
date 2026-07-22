@@ -209,14 +209,16 @@ export default function AthleteScreen() {
           </View>
         </View>
 
-        {/* Alltid bara kantlinje — ingen fylld orange variant */}
+        {/* Bara kantlinje — orange ram + text när man inte följer ännu */}
         <TouchableOpacity
-          style={s.followBtn}
+          style={[s.followBtn, !following && s.followBtnInvite]}
           onPress={toggleFollow}
           activeOpacity={0.8}
           testID="athleteFollow"
         >
-          <Text style={s.followBtnText}>{following ? 'Följer' : 'Följ'}</Text>
+          <Text style={[s.followBtnText, !following && s.followBtnTextInvite]}>
+            {following ? 'Följer' : 'Följ'}
+          </Text>
         </TouchableOpacity>
 
         {/* ── Strava-delen: typ-chips, veckan och distansgraf ── */}
@@ -327,7 +329,9 @@ const s = StyleSheet.create({
     marginTop: 18, borderRadius: 26, paddingVertical: 13,
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)', alignItems: 'center',
   },
+  followBtnInvite: { borderColor: ORANGE },
   followBtnText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+  followBtnTextInvite: { color: ORANGE },
 
   chipsRow: { flexDirection: 'row', gap: 8, marginTop: 26 },
   chip: {

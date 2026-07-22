@@ -47,12 +47,12 @@ function PersonRow({ person }: { person: Person }) {
         <Text style={s.rowMeta}>{person.totalKm} km totalt</Text>
       </View>
       <TouchableOpacity
-        style={[s.followPill, !following && s.followPillActive]}
+        style={[s.followPill, !following && s.followPillInvite]}
         onPress={toggle}
         activeOpacity={0.8}
         testID={`follow-${person.id}`}
       >
-        <Text style={[s.followPillText, !following && s.followPillTextActive]}>
+        <Text style={[s.followPillText, !following && s.followPillTextInvite]}>
           {following ? 'Följer' : 'Följ'}
         </Text>
       </TouchableOpacity>
@@ -180,9 +180,9 @@ const s = StyleSheet.create({
     borderRadius: 20, paddingHorizontal: 22, paddingVertical: 8,
     minWidth: 96, alignItems: 'center',
   },
-  followPillActive: { backgroundColor: ORANGE, borderColor: ORANGE },
+  followPillInvite: { borderColor: ORANGE },
   followPillText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
-  followPillTextActive: { color: '#000' },
+  followPillTextInvite: { color: ORANGE },
 
   empty: { alignItems: 'center', gap: 8, paddingTop: 70, paddingHorizontal: 40 },
   emptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },
