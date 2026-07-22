@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native'
@@ -48,37 +49,17 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import type { UserChallengeWithLevel } from '@/types/database'
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatFeedDate(createdAt: string): string {
-  return new Date(createdAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
-}
-
-function feedMonth(createdAt: string): string {
-  return new Date(createdAt).toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })
-}
-
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-
-function Avatar({ url, fallback, size }: { url: string | null; fallback: string; size: number }) {
-  const radius = size / 2
-  return (
-    <View style={[s.avatar, { width: size, height: size, borderRadius: radius }]}>
-      {url?.startsWith('http') ? (
-        <Image source={{ uri: url }} style={{ width: size, height: size, borderRadius: radius }} />
-      ) : url ? (
-        <Text style={{ fontSize: size * 0.5 }}>{url}</Text>
-      ) : (
-        <Text style={[s.avatarInitial, { fontSize: size * 0.4 }]}>{fallback}</Text>
-      )}
-    </View>
-  )
-}
-
 // ─── Screen ───────────────────────────────────────────────────────────────────
+
+// Rutnätet: 3 kolumner med tajta mellanrum (Instagram-känsla) — bildtext
+// och datum bor i fullskärmsvisaren som öppnas vid tryck
+const GRID_COLS = 3
+const GRID_GAP = 3
 
 export default function ProfileScreen() {
   const onScrollShrink = useTabBarShrinkOnScroll()
+  const { width: screenW } = useWindowDimensions()
+  const cellSize = Math.floor((screenW - 40 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS)
   const [userId, setUserId]         = useState<string | null>(null)
   const [name, setName]             = useState('')
   const [avatarUrl, setAvatarUrl]   = useState<string | null>(null)
@@ -303,7 +284,6 @@ export default function ProfileScreen() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  const initial = (name || '?')[0].toUpperCase()
   const hasTodayPhoto = photos.some(p => p.dayNumber === currentDay)
 
   function renderHeader() {
@@ -368,34 +348,31 @@ export default function ProfileScreen() {
     )
   }
 
+  // Rutnätscell: bild + dag-badge; pratbubbla i hörnet markerar bildtext.
+  // Datum och text visas i fullskärmsvisaren.
   function renderPhoto({ item, index }: { item: ProgressPhotoItem; index: number }) {
-    const m = feedMonth(item.createdAt)
-    const showMonth = index === 0 || feedMonth(photos[index - 1].createdAt) !== m
     return (
-      <View style={{ gap: 16 }}>
-        {showMonth && <Text style={s.feedMonth}>{m}</Text>}
-      <View style={s.card}>
-        <View style={s.cardHeader}>
-          <Avatar url={avatarUrl} fallback={initial} size={34} />
-          <View style={s.cardHeaderInfo}>
-            <Text style={s.cardName}>{name}</Text>
-            <Text style={s.cardMeta}>Dag {item.dayNumber} · {formatFeedDate(item.createdAt)}</Text>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => setViewerIndex(index)}
+        style={{ width: cellSize, height: cellSize }}
+      >
+        {item.url ? (
+          <Image source={{ uri: item.url }} style={s.gridImage} resizeMode="cover" />
+        ) : (
+          <View style={[s.gridImage, s.gridImageMissing]}>
+            <Ionicons name="image-outline" size={22} color={TEXT_SECONDARY} />
           </View>
+        )}
+        <View style={s.gridBadge}>
+          <Text style={s.gridBadgeText}>Dag {item.dayNumber}</Text>
         </View>
-
-        <TouchableOpacity activeOpacity={0.9} onPress={() => setViewerIndex(index)}>
-          {item.url ? (
-            <Image source={{ uri: item.url }} style={s.cardImage} resizeMode="cover" />
-          ) : (
-            <View style={[s.cardImage, s.cardImageMissing]}>
-              <Ionicons name="image-outline" size={28} color={TEXT_SECONDARY} />
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {item.caption ? <Text style={s.cardCaption}>{item.caption}</Text> : null}
-      </View>
-      </View>
+        {!!item.caption && (
+          <View style={s.gridCaptionDot}>
+            <Ionicons name="chatbox-ellipses" size={10} color="#fff" />
+          </View>
+        )}
+      </TouchableOpacity>
     )
   }
 
@@ -428,6 +405,8 @@ export default function ProfileScreen() {
         data={photos}
         keyExtractor={p => p.id}
         renderItem={renderPhoto}
+        numColumns={GRID_COLS}
+        columnWrapperStyle={{ gap: GRID_GAP }}
         ListHeaderComponent={renderHeader()}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
@@ -464,10 +443,10 @@ export default function ProfileScreen() {
 const s = StyleSheet.create({
   screen:   { flex: 1, backgroundColor: BG },
   centered: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' },
-  scroll:   { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 40 + TAB_CONTENT_PAD, gap: 16 },
+  scroll:   { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 40 + TAB_CONTENT_PAD, gap: GRID_GAP },
   fixedTop: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
 
-  headerWrap: { gap: 16 },
+  headerWrap: { gap: 16, marginBottom: 13 },   // 13 + rutnätets 3 ≈ sektionsluft
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -480,15 +459,6 @@ const s = StyleSheet.create({
     backgroundColor: CARD,
     alignItems: 'center', justifyContent: 'center',
   },
-
-  avatar: {
-    backgroundColor: ORANGE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarInitial: { color: '#000', fontWeight: '700' },
-
 
   addButton: {
     flexDirection: 'row',
@@ -516,10 +486,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 8,
   },
   compareChipText: { color: ORANGE, fontSize: 13, fontWeight: '700' },
-  feedMonth: {
-    color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', letterSpacing: -0.3,
-    textTransform: 'capitalize', marginTop: 4,
-  },
   sectionSub: {
     color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI, marginTop: 3,
   },
@@ -535,32 +501,25 @@ const s = StyleSheet.create({
   emptyTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   emptyText:  { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', lineHeight: 19 },
 
-  // Feed card
-  card: {
+  // Fotorutnätet
+  gridImage: {
+    width: '100%', height: '100%', borderRadius: 10,
     backgroundColor: CARD,
-    borderRadius: 18,
-    overflow: 'hidden',
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
+  gridImageMissing: {
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: BORDER,
   },
-  cardHeaderInfo: { flex: 1, gap: 1 },
-  cardName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
-  cardMeta: { color: TEXT_SECONDARY, fontSize: 12 },
-  cardImage: {
-    width: '100%',
-    aspectRatio: 4 / 5,
-    backgroundColor: BG,
+  gridBadge: {
+    position: 'absolute', bottom: 5, left: 5,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 7,
+    paddingHorizontal: 6, paddingVertical: 2,
   },
-  cardImageMissing: { alignItems: 'center', justifyContent: 'center' },
-  cardCaption: {
-    color: TEXT_PRIMARY,
-    fontSize: 14,
-    lineHeight: 21,
-    padding: 12,
-    paddingTop: 10,
+  gridBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  gridCaptionDot: {
+    position: 'absolute', top: 5, right: 5,
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center', justifyContent: 'center',
   },
 })
