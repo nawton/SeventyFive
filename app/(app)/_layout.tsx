@@ -9,7 +9,7 @@ import { GlassView } from 'expo-glass-effect'
 import * as Haptics from 'expo-haptics'
 import { LIQUID_GLASS } from '@/lib/glass'
 import { tabBarShrink } from '@/lib/tabBar'
-import { ORANGE } from '@/lib/theme'
+import { ORANGE, TAB_INACTIVE, GLASS_KNOB, DIVIDER, BAR_FALLBACK } from '@/lib/theme'
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
 
@@ -158,7 +158,7 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
                   <Ionicons
                     name={on ? t.iconActive : t.icon}
                     size={24}
-                    color={on ? ORANGE : 'rgba(255,255,255,0.55)'}
+                    color={on ? ORANGE : TAB_INACTIVE}
                   />
                 </Pressable>
               )
@@ -220,16 +220,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   barBgFallback: {
-    backgroundColor: 'rgba(22,22,24,0.96)',
+    backgroundColor: BAR_FALLBACK,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: DIVIDER,
   },
   bubble: {
     position: 'absolute',
     height: BUBBLE_H,
     top: (64 - BUBBLE_H) / 2,
     borderRadius: BUBBLE_H / 2,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: GLASS_KNOB,
   },
   row: {
     flexDirection: 'row',

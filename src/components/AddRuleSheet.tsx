@@ -12,10 +12,11 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import { TASK_COLORS } from '@/components/TaskGridCard'
+import { BORDER, CARD } from '@/lib/theme'
 
 const ORANGE      = '#FFA817'
-const CARD_BG     = '#131315'
-const CARD_BORDER = '#1E1E21'
+const CARD_BG     = CARD
+const CARD_BORDER = BORDER
 const CUSTOM      = TASK_COLORS.custom
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
@@ -218,7 +219,7 @@ const s = StyleSheet.create({
   title: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
   closeBtn: {
     width: 32, height: 32, borderRadius: 10,
-    backgroundColor: '#1E1E21', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: BORDER, alignItems: 'center', justifyContent: 'center',
   },
   fieldLabel: {
     color: '#3A3A40', fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginBottom: 8,

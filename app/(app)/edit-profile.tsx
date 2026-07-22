@@ -21,7 +21,7 @@ import { compressImage } from '@/lib/image'
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile'
 import { unregisterPushTokens } from '@/services/pushTokens'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
 import { SubscriptionCard } from '@/components/SubscriptionCard'
 import { RecordsCard } from '@/components/RecordsCard'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 14, paddingVertical: 13,
   },
-  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 60 },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginLeft: 60 },
   // Neutralt grå — inga orange accenter bland raderna, enkelt och stilrent
   rowIconBox: {
     width: 32, height: 32, borderRadius: 9,
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
   quickInitial: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '700' },
   quickLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
 
-  sheetDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
+  sheetDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER },
   emojiHeader: {
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5,
   },

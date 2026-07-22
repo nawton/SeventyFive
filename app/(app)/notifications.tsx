@@ -15,7 +15,7 @@ import {
 import { setNotifSeenAt } from '@/lib/prefs'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
 
 // =============================================================================
 // NOTISER — notiscentret, nås från klockan på profilfliken. Idag:
@@ -237,7 +237,7 @@ const s = StyleSheet.create({
   rowComment: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 3, fontStyle: 'italic' },
   rowRight: { alignItems: 'flex-end', gap: 3 },
   rowTime: { color: TEXT_SECONDARY, fontSize: 11 },
-  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 64 },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginLeft: 64 },
 
   pill: {
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)',

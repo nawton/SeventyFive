@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ActionSheetIOS, Platform, Alert, Dimensions,
+  useColorScheme,
 } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -17,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, CARDIO_BLUE } from '@/lib/theme'
+import { ORANGE, RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, CARDIO_BLUE, THEME_DARK, THEME_LIGHT } from '@/lib/theme'
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
 
 const GREEN    = '#3BE862'
@@ -408,10 +409,14 @@ export function WorkoutSection({
     completedV.value = withSpring(greenComplete ? 1 : 0, { damping: 18, stiffness: 140 })
   }, [greenComplete])
 
-  // Hela kortets ram och bakgrund tonar mot grönt när passet är klart
+  // Hela kortets ram och bakgrund tonar mot grönt när passet är klart.
+  // interpolateColor kräver strängfärger — dynamiska färgobjekt går inte
+  const light = useColorScheme() === 'light'
+  const cardStr = light ? THEME_LIGHT.CARD : THEME_DARK.CARD
+  const doneStr = light ? '#E3F5E8' : '#0A2416'
   const cardOuterStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(completedV.value, [0, 1], [CARD, '#0A2416']),
-  }))
+    backgroundColor: interpolateColor(completedV.value, [0, 1], [cardStr, doneStr]),
+  }), [cardStr, doneStr])
 
   // Typfärgen genomsyrar kortet: accentlinje, ikon, progress och gradient-wash
   const typeColor = isCardio ? CARDIO_BLUE : ORANGE

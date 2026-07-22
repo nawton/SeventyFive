@@ -6,12 +6,12 @@ import Animated, {
 } from 'react-native-reanimated'
 import type { TaskItem } from '@/services/dailyLog'
 import type { TaskType } from '@/types/database'
-import { ORANGE } from '@/lib/theme'
+import { ORANGE, BORDER, CARD } from '@/lib/theme'
 
 const { width: SW } = Dimensions.get('window')
 
-const CARD_BG     = '#131315'
-const CARD_BORDER = '#1E1E21'
+const CARD_BG     = CARD
+const CARD_BORDER = BORDER
 
 export const TASK_GAP = 10
 export const TASK_W   = (SW - 40 - TASK_GAP) / 2
@@ -167,7 +167,7 @@ const s = StyleSheet.create({
   counterBtnDim: { opacity: 0.4 },
   counterLabel: { color: '#8A8A90', fontSize: 12, fontWeight: '700' },
   taskBar: {
-    height: 3, backgroundColor: '#1E1E21',
+    height: 3, backgroundColor: BORDER,
     borderRadius: 2, overflow: 'hidden',
   },
   taskBarFill: { height: '100%', borderRadius: 2 },

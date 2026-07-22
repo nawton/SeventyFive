@@ -14,7 +14,7 @@ import { getBlockedUsers, unblockUser } from '@/services/blocks'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
 
 // =============================================================================
 // INTEGRITETSINSTÄLLNINGAR — Strava-mönstret: lista med nuvarande värde,
@@ -528,7 +528,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingVertical: 15,
   },
-  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 16 },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginLeft: 16 },
   rowLabel: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   rowValue: { color: TEXT_SECONDARY, fontSize: 14 },
   footnote: {
@@ -565,7 +565,7 @@ const s = StyleSheet.create({
   sliderHit: { height: 34, justifyContent: 'center' },
   sliderTrack: {
     height: 4, borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden',
+    backgroundColor: DIVIDER, overflow: 'hidden',
   },
   sliderFill: { height: '100%', backgroundColor: ORANGE, borderRadius: 2 },
   sliderDot: {

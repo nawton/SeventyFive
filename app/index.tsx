@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { View, ActivityIndicator } from 'react-native'
 import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
+import { BG } from '@/lib/theme'
 
 export default function Index() {
   useEffect(() => {
@@ -15,7 +16,7 @@ export default function Index() {
   }, [])
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0A0A0C', alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' }}>
       <ActivityIndicator color="#FFA817" size="large" />
     </View>
   )

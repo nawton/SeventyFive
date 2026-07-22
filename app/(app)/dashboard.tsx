@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  useColorScheme,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SafeScreen } from '@/components/SafeScreen'
@@ -62,12 +63,13 @@ import type { UserChallengeWithLevel } from '@/types/database'
 import { getGreetingSubtitle } from '@/lib/getGreetingSubtitle'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
+import { BG, BORDER, CARD } from '@/lib/theme'
 
 const ORANGE    = '#FFA817'
 const NUM_FONT  = 'Nunito_700Bold'
-const SCENE_BG  = '#0A0A0B'
-const CARD_BG   = '#131315'
-const CARD_BORDER = '#1E1E21'
+const SCENE_BG  = BG
+const CARD_BG   = CARD
+const CARD_BORDER = BORDER
 
 // ── Ring constants ─────────────────────────────────────────────────────────────
 const R_SIZE   = 118
@@ -170,6 +172,9 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
 // ── Dashboard Screen ───────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const onScrollShrink = useTabBarShrinkOnScroll()
+  // Gradienter kräver strängfärger — välj par efter aktuellt tema
+  const heroGradient: [string, string] = useColorScheme() === 'light'
+    ? ['#FFFFFF', '#F1F1F3'] : ['#1C1915', '#0F0F11']
   const insets = useSafeAreaInsets()
   const [userName, setUserName]     = useState('')
   const [userAvatar, setUserAvatar] = useState<string | null>(null)
@@ -541,7 +546,7 @@ export default function DashboardScreen() {
         {/* ── Hero Card — 3D floating ── */}
         <Animated.View style={[s.heroOuter, heroAnimStyle]}>
           <LinearGradient
-            colors={['#1C1915', '#0F0F11']}
+            colors={heroGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={s.heroCard}
@@ -829,7 +834,7 @@ const s = StyleSheet.create({
   heroPct:      { color: ORANGE, fontSize: 13, fontWeight: '700' },
   heroPctSuffix: { color: '#3A3A40', fontSize: 12 },
   heroBar: {
-    height: 3, backgroundColor: '#1E1E21',
+    height: 3, backgroundColor: BORDER,
     borderRadius: 2, overflow: 'hidden', marginTop: 6,
   },
   heroBarFill: { height: '100%', backgroundColor: ORANGE, borderRadius: 2 },
@@ -860,9 +865,9 @@ const s = StyleSheet.create({
   },
   sectionTitle: { color: '#383840', fontSize: 11, fontWeight: '700', letterSpacing: 1.8 },
   countBadge: {
-    backgroundColor: '#131315',
+    backgroundColor: CARD,
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
-    borderWidth: 1, borderColor: '#1E1E21',
+    borderWidth: 1, borderColor: BORDER,
   },
   countBadgeDone: { backgroundColor: '#3BE8621A', borderColor: '#3BE86235' },
   countText:     { color: '#444', fontSize: 12, fontWeight: '700' },

@@ -12,13 +12,11 @@ import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
+import { BG, BORDER, CARD } from '@/lib/theme'
 
 const { width } = Dimensions.get('window')
 
 const ORANGE = '#FFA817'
-const BG     = '#0A0A0C'
-const CARD   = '#1C1C1E'
-const BORDER = '#2C2C2E'
 
 const TASK_ICONS = [
   { icon: 'barbell-outline',    color: '#FFA817' },

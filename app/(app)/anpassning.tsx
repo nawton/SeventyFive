@@ -355,7 +355,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
     height: 96,
-    backgroundColor: '#2C2C2E',
+    backgroundColor: BORDER,
   },
   mapPreviewIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
   mapCardLabelRow: {

@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, Modal, ScrollView } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, ORANGE, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { BG, CARD, ORANGE, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER } from '@/lib/theme'
 import { parseLocalDate, toLocalDateString } from '@/lib/date'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import type { DaySummary } from '@/services/dailyLog'
@@ -280,17 +280,17 @@ const s = StyleSheet.create({
   dtlLbl: { color: TEXT_SECONDARY, fontSize: 14 },
   dtlVal: { fontSize: 26, fontFamily: NUM_FONT },
   dtlUnit: { fontSize: 14, fontFamily: NUM_FONT_SEMI },
-  dtlSep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
+  dtlSep: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER },
 
   kpiRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-    paddingVertical: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)',
+    paddingVertical: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER,
   },
   kpiLbl: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
   kpiVal: { color: TEXT_PRIMARY, fontSize: 16, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
   kpiPrev: { color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI },
 
-  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
+  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
   tipRow: { flexDirection: 'row', gap: 12, paddingVertical: 14, alignItems: 'flex-start' },
   tipIcon: {
     width: 32, height: 32, borderRadius: 10,

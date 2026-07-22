@@ -1,4 +1,4 @@
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native'
+import { StyleSheet, useColorScheme, type StyleProp, type ViewStyle } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, {
   useAnimatedStyle, useSharedValue, withSpring, runOnJS,
@@ -68,15 +68,21 @@ function useGlassGesture(onPress?: () => void, draggable = false) {
   return { gesture, anim }
 }
 
-const DARK_TINT = 'rgba(12,12,14,0.5)'
+const DARK_TINT  = 'rgba(12,12,14,0.5)'
+const LIGHT_TINT = 'rgba(250,250,252,0.55)'
+/** Standardtint efter tema — uttrycklig tint-prop (inkl. null) vinner alltid */
+function useDefaultTint(tint: string | null | undefined): string | null | undefined {
+  const scheme = useColorScheme()
+  return tint === undefined ? (scheme === 'light' ? LIGHT_TINT : DARK_TINT) : tint
+}
 
 export function GlassCircleButton({
-  icon, size = 44, iconColor, onPress, draggable = false, style, fallbackStyle, children, tint = DARK_TINT,
+  icon, size = 44, iconColor, onPress, draggable = false, style, fallbackStyle, children, tint,
 }: {
   icon?: React.ComponentProps<typeof Ionicons>['name']
   size?: number
   /** Default: vit på glas, svart på fallback-cirkeln */
-  iconColor?: string
+  iconColor?: import('react-native').ColorValue
   onPress?: () => void
   /** Håll inne + dra → knappen följer fingret, släpp → fjädrar tillbaka */
   draggable?: boolean
@@ -86,12 +92,14 @@ export function GlassCircleButton({
   /** Eget innehåll istället för ikon (t.ex. kompassnålen) */
   children?: React.ReactNode
   /** Ton i glaset — mörk som standard så vitt innehåll läses över ljusa kartor */
-  tint?: string
+  tint?: string | null
 }) {
   const { gesture, anim } = useGlassGesture(onPress, draggable)
+  const resolvedTint = useDefaultTint(tint)
+  const light = useColorScheme() === 'light'
   const circle = { width: size, height: size, borderRadius: size / 2 }
   const content = children ?? (icon ? (
-    <Ionicons name={icon} size={size * 0.45} color={iconColor ?? (GLASS ? '#fff' : '#000')} />
+    <Ionicons name={icon} size={size * 0.45} color={iconColor ?? (GLASS ? (light ? '#141416' : '#fff') : '#000')} />
   ) : null)
 
   return (
@@ -100,8 +108,8 @@ export function GlassCircleButton({
         <AnimatedGlassView
           isInteractive={!draggable}
           glassEffectStyle="regular"
-          colorScheme="dark"
-          tintColor={tint}
+          colorScheme={light ? 'light' : 'dark'}
+          tintColor={resolvedTint ?? undefined}
           style={[s.center, circle, anim, style]}
         >
           {content}
@@ -117,7 +125,7 @@ export function GlassCircleButton({
 
 /** Glaspill med valfritt innehåll — t.ex. "Visa statistik"-kapseln över kartan */
 export function GlassPill({
-  children, onPress, draggable = false, style, fallbackStyle, tint = DARK_TINT,
+  children, onPress, draggable = false, style, fallbackStyle, tint,
 }: {
   children: React.ReactNode
   onPress?: () => void
@@ -127,9 +135,11 @@ export function GlassPill({
   /** Bakgrund/skugga på iOS utan liquid glass */
   fallbackStyle?: StyleProp<ViewStyle>
   /** Färgton i glaset (t.ex. ORANGE för primärknappar) */
-  tint?: string
+  tint?: string | null
 }) {
   const { gesture, anim } = useGlassGesture(onPress, draggable)
+  const resolvedTint = useDefaultTint(tint)
+  const light = useColorScheme() === 'light'
   // Glaset ligger som bakgrundslager i en vanlig vy — då är HELA pillen
   // träffyta (den nativa glasvyn släpper annars bara igenom tryck på barnen)
   return (
@@ -138,8 +148,8 @@ export function GlassPill({
         {GLASS && (
           <GlassView
             glassEffectStyle="regular"
-          colorScheme="dark"
-            tintColor={tint}
+            colorScheme={light ? 'light' : 'dark'}
+            tintColor={resolvedTint ?? undefined}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />

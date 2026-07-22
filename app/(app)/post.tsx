@@ -25,7 +25,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { timeAgo } from '@/lib/format'
-import { BG, CARD, BORDER, CARDIO_BLUE, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { BG, CARD, BORDER, CARDIO_BLUE, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER } from '@/lib/theme'
 
 // =============================================================================
 // DISKUSSION — ett inläggs egen sida (Strava-stil): kartan högst upp,
@@ -445,7 +445,7 @@ const s = StyleSheet.create({
   },
 
   divider: {
-    height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)',
+    height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER,
     marginVertical: 18,
   },
 
@@ -464,7 +464,7 @@ const s = StyleSheet.create({
   inputRow: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 12,
     paddingHorizontal: 16, paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.12)',
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER,
     backgroundColor: BG,
   },
   input: {

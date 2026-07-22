@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline } from 'react-native-maps'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated'
-import { ORANGE, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
+import { ORANGE, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, BG, BORDER, CARD, DIVIDER } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { saveCardioWorkout, type CardioInterval } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
@@ -2129,8 +2129,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   idleGrid: { flexDirection: 'row', alignItems: 'stretch' },
-  idleGridDivH: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: -4 },
-  idleGridDivV: { width: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)' },
+  idleGridDivH: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginVertical: -4 },
+  idleGridDivV: { width: StyleSheet.hairlineWidth, backgroundColor: DIVIDER },
   idleCell: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingVertical: 10, paddingHorizontal: 12,
@@ -2147,7 +2147,7 @@ const styles = StyleSheet.create({
   // ── Splits-sidan ──
   splitsPageTitle: { color: '#fff', fontSize: 30, fontWeight: '800', letterSpacing: -0.4, marginTop: 4, marginBottom: 14 },
   splitsList: { gap: 10, paddingBottom: 160 },
-  splitBlock: { backgroundColor: '#1C1C1E', borderRadius: 18, padding: 18, gap: 2 },
+  splitBlock: { backgroundColor: CARD, borderRadius: 18, padding: 18, gap: 2 },
   splitBlockActive: { backgroundColor: CARDIO_ACCENT },
   splitBlockLabel: { color: '#9BA0A6', fontSize: 14, fontWeight: '600' },
   splitBlockLabelActive: { color: 'rgba(0,0,0,0.6)', fontSize: 14, fontWeight: '700' },
@@ -2175,7 +2175,7 @@ const styles = StyleSheet.create({
   pageDotOn: { backgroundColor: '#fff' },
 
   // Röstguidning — fullskärm
-  voiceRoot: { flex: 1, backgroundColor: '#0A0A0C' },
+  voiceRoot: { flex: 1, backgroundColor: BG },
   voiceHeader: { paddingHorizontal: 20 },
   voiceIconWrap: { alignItems: 'center', gap: 12, marginTop: 4, marginBottom: 22 },
   voiceIconCircle: {
@@ -2208,8 +2208,8 @@ const styles = StyleSheet.create({
   // Röstguidningsväljare
   voiceOption: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#0A0A0C', borderRadius: 14,
-    borderWidth: 1.5, borderColor: '#2C2C2E',
+    backgroundColor: BG, borderRadius: 14,
+    borderWidth: 1.5, borderColor: BORDER,
     paddingHorizontal: 14, paddingVertical: 12,
   },
   voiceOptionActive: { borderColor: CARDIO_ACCENT, backgroundColor: CARDIO_ACCENT + '10' },
@@ -2219,7 +2219,7 @@ const styles = StyleSheet.create({
   // Målmodal
   goalModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   goalModalSheet: {
-    backgroundColor: '#1C1C1E', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: CARD, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, paddingBottom: 40, gap: 14,
   },
   goalModalTitle: { color: '#fff', fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
@@ -2257,7 +2257,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10,
   },
   infoPlanRowBorder: {
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)',
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER,
   },
   infoPlanIcon: {
     width: 30, height: 30, borderRadius: 15,
@@ -2402,7 +2402,7 @@ const styles = StyleSheet.create({
   goalPct:       { color: CARDIO_BLUE, fontSize: 12, fontWeight: '800' },
   goalTrack: {
     height: 4, borderRadius: 2, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: DIVIDER,
   },
   goalFill: { height: '100%', backgroundColor: CARDIO_BLUE, borderRadius: 2 },
 
@@ -2420,7 +2420,7 @@ const styles = StyleSheet.create({
   },
   ivBannerTrack: {
     height: 3, borderRadius: 2, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: DIVIDER,
   },
   ivBannerFill: { height: '100%', borderRadius: 2 },
 
@@ -2624,7 +2624,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
     height: 96,
-    backgroundColor: '#2C2C2E',
+    backgroundColor: BORDER,
   },
   mapCardLabelRow: {
     flexDirection: 'row',
@@ -2708,7 +2708,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: CARD,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
@@ -2754,7 +2754,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#2C2C2E',
+    backgroundColor: BORDER,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2937,7 +2937,7 @@ const styles = StyleSheet.create({
   // ── Summary modal ──
   summaryOverlay: {
     flex: 1,
-    backgroundColor: '#0A0A0C',
+    backgroundColor: BG,
   },
   summaryContainer: {
     flex: 1,
@@ -2982,10 +2982,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   nameFieldInput: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: CARD,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#2C2C2E',
+    borderColor: BORDER,
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

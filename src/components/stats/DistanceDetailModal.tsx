@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { DistanceAreaChart } from './DistanceAreaChart'
-import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/lib/date'
 import { fmtPace, fmtDuration } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
@@ -330,7 +330,7 @@ const s = StyleSheet.create({
     marginTop: 6, marginBottom: -6,
   },
   card: { backgroundColor: CARD, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 6 },
-  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
+  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
 
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13 },
   dot: { width: 9, height: 9, borderRadius: 3 },

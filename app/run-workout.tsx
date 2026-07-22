@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { BG, BG_OVERLAY, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import { parseRunTarget, buildRunSegments, paceRangeForUnit } from '@/lib/runProgression'
@@ -248,7 +248,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
   },
   partRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
-  partBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
+  partBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
   partNum: {
     width: 30, height: 30, borderRadius: 15,
     backgroundColor: 'rgba(255,255,255,0.07)',
@@ -272,7 +272,7 @@ const s = StyleSheet.create({
   ctaWrap: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     paddingHorizontal: 20, paddingTop: 12, gap: 12, alignItems: 'center',
-    backgroundColor: BG + 'F2',
+    backgroundColor: BG_OVERLAY,
   },
   startBtn: {
     alignSelf: 'stretch',

@@ -33,7 +33,7 @@ const TYPE_META: Record<string, { label: string; icon: React.ComponentProps<type
 }
 
 // Tre stigande staplar som fylls efter betyget — som Apples ansträngningsikon
-function EffortBars({ effort, color }: { effort: number; color: string }) {
+function EffortBars({ effort, color }: { effort: number; color: import('react-native').ColorValue }) {
   return (
     <View style={s.effortBars}>
       {[0.45, 0.7, 1].map((h, i) => {
@@ -483,7 +483,7 @@ const s = StyleSheet.create({
   splitPaceFastest: { color: CARDIO_BLUE },
   styleSheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: CARD,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: 16, paddingBottom: 12, zIndex: 40,
     shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.35, shadowRadius: 16,
@@ -501,7 +501,7 @@ const s = StyleSheet.create({
   mapCardActive: { borderColor: ORANGE },
   mapPreviewIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
   routeDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: '#fff' },
-  mapPreview: { width: '100%', height: 96, backgroundColor: '#2C2C2E' },
+  mapPreview: { width: '100%', height: 96, backgroundColor: BORDER },
   mapCardLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9 },
   mapCardLabel: { color: '#ccc', fontSize: 13, fontWeight: '700' },
 })

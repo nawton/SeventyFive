@@ -7,7 +7,7 @@ import type { CardioWorkout } from '@/services/cardioWorkouts'
 import type { StrengthWorkout } from '@/services/strengthWorkouts'
 import { formatPace } from '@/lib/cardioUtils'
 import { fmtTime } from '@/lib/format'
-import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER } from '@/lib/theme'
 
 // =============================================================================
 // FLÖDESKORT — delat mellan community-flödet och atletprofilens
@@ -321,7 +321,7 @@ const s = StyleSheet.create({
   avatarInitial: { color: TEXT_PRIMARY, fontWeight: '800' },
   cardName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   cardMeta: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
-  cardDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
+  cardDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER },
 
   cardTitle: {
     color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800',

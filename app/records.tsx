@@ -91,7 +91,7 @@ interface MedalInfo {
   unlocked: boolean
   progress?: string
 }
-import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
+import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, DIVIDER } from '@/lib/theme'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, { runOnJS, useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
@@ -894,7 +894,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   recordRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  recordBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.10)' },
+  recordBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: DIVIDER },
   recordIcon: {
     width: 34, height: 34, borderRadius: 10,
     backgroundColor: GOLD + '1E',

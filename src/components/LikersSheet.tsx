@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, BORDER, ORANGE, RED, TEXT_PRIMARY } from '@/lib/theme'
+import { BG, BORDER, ORANGE, RED, TEXT_PRIMARY, DIVIDER } from '@/lib/theme'
 
 // =============================================================================
 // GILLARLISTAN — dragbar bottom sheet (Strava-stil): öppnar till halva
@@ -139,7 +139,7 @@ const s = StyleSheet.create({
   headerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.12)',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: DIVIDER,
   },
   headerTab: { alignItems: 'center', gap: 10 },
   headerTabInner: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 6 },
@@ -150,5 +150,5 @@ const s = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 60 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
   rowName: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 60 },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginLeft: 60 },
 })

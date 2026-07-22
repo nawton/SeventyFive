@@ -5,14 +5,15 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "scheme": "seventyfive",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.nawton.seventyfive",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Vi använder din plats för att spåra din löprutt."
-      }
+      },
+      "userInterfaceStyle": "automatic"
     },
     "android": {
       "package": "com.nawton.seventyfive",

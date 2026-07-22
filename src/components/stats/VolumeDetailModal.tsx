@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import Svg, { Text as SvgText, Line as SvgLine, Rect, G } from 'react-native-svg'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
 
@@ -301,7 +301,7 @@ const s = StyleSheet.create({
     marginTop: 6, marginBottom: -6,
   },
   card: { backgroundColor: CARD, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 6 },
-  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
+  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
   kpiRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 13 },
   kpiLbl: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
   kpiVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, flexShrink: 1, textAlign: 'right', textTransform: 'capitalize' },

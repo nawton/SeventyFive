@@ -6,6 +6,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { useFonts, Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/lib/auth'
+import { applyStoredTheme } from '@/lib/themeMode'
+
+// Mörkt är standard oavsett systemläge — sätts före första renderingen så
+// systemljusa användare aldrig ser en ljus blink; ev. sparat ljust val
+// appliceras strax efter
+applyStoredTheme()
 
 export default function RootLayout() {
   // Rundad siffer-font (SF Rounded-känsla) — appen renderar med systemfont tills den laddats
@@ -17,7 +23,8 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
       <ErrorBoundary>
-        <StatusBar style="light" />
+        {/* auto: vita ikoner i mörkt läge, svarta i ljust */}
+        <StatusBar style="auto" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="edit-name" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="records" options={{ animation: 'slide_from_right', gestureEnabled: true }} />

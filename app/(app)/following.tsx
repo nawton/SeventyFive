@@ -12,7 +12,7 @@ import {
 } from '@/services/follows'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
 
 // =============================================================================
 // FÖLJARE/FÖLJER — riktiga listor ur follows-tabellen: eget namn i headern,
@@ -237,7 +237,7 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
   rowPerson: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 },
   rowName: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 66 },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginLeft: 66 },
 
   followPill: {
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)',

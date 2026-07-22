@@ -20,7 +20,7 @@ import { runOnJS } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/workouts'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, CARDIO_BLUE } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, CARDIO_BLUE, DIVIDER } from '@/lib/theme'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { parseLocalDate } from '@/lib/date'
 import {
@@ -81,7 +81,7 @@ function GoalSlider({ value, max, step, onChange, gestureRef }: {
 
 const sl = StyleSheet.create({
   hit:   { alignSelf: 'stretch', height: 34, justifyContent: 'center', marginHorizontal: 16 },
-  track: { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
+  track: { height: 5, borderRadius: 3, backgroundColor: DIVIDER, overflow: 'hidden' },
   fill:  { height: '100%', backgroundColor: CARDIO_BLUE, borderRadius: 3 },
   thumb: {
     position: 'absolute', width: 22, height: 22, borderRadius: 11,

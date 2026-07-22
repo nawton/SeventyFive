@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Text as SvgText, Polygon, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassSegment } from '@/components/GlassSegment'
-import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { getMusclesForName, MUSCLE_GROUPS_6 } from '@/lib/muscles'
 import { getCompletedExerciseNamesBetween } from '@/services/workoutSchedule'
@@ -283,7 +283,7 @@ const s = StyleSheet.create({
   legText: { color: TEXT_SECONDARY, fontSize: 11 },
 
   grpRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
-  grpRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
+  grpRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
   grpLbl: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', width: 62 },
   grpTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
   grpFill: { height: '100%', borderRadius: 5, backgroundColor: ORANGE },

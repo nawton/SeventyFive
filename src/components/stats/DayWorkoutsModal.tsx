@@ -7,7 +7,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE } from '@/lib/theme'
+import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, DIVIDER } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { fmtTime } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
@@ -458,7 +458,7 @@ const s = StyleSheet.create({
   tasksHead: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 11,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.10)',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: DIVIDER,
   },
   tasksTitle: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   tasksCount: { fontSize: 13, fontFamily: NUM_FONT_SEMI },

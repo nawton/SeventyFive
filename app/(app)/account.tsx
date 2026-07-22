@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
 import { setBodyWeightKg } from '@/lib/prefs'
 import { splitName, combineName } from '@/lib/profileName'
-import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
 import { TAB_CONTENT_PAD, LIQUID_GLASS } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingVertical: 15,
   },
-  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 16 },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginLeft: 16 },
   rowLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   rowValue: { flex: 1, color: TEXT_SECONDARY, fontSize: 14, textAlign: 'right' },
 
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   },
   klarFallback: {
     backgroundColor: 'rgba(40,40,44,0.96)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1, borderColor: DIVIDER,
   },
   klarPillText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   rowInput: {

@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native'
 import Animated, { FadeIn, runOnJS } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
-import { BG, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
+import { BG, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, THEME_DARK, THEME_LIGHT } from '@/lib/theme'
 
 // =============================================================================
 // BETYGSÄTT DIN ANSTRÄNGNING (RPE 1–10)
@@ -79,12 +79,14 @@ export function EffortRating({ visible, initial, onDone }: Props) {
   if (!visible) return null
 
   const accent = sel ? effortColor(sel) : ORANGE
+  // Gradienten kräver riktiga strängfärger — dynamiska färgobjekt går inte
+  const bgStr = useColorScheme() === 'light' ? THEME_LIGHT.BG : THEME_DARK.BG
 
   return (
     <Animated.View entering={FadeIn.duration(200)} style={s.root}>
       {/* Hela bakgrunden tonas i betygets färg */}
       <LinearGradient
-        colors={sel ? [accent + '8C', accent + '26', BG] : [BG, BG]}
+        colors={sel ? [accent + '8C', accent + '26', bgStr] : [bgStr, bgStr]}
         locations={sel ? [0, 0.55, 1] : [0, 1]}
         style={StyleSheet.absoluteFill}
       />
@@ -135,7 +137,7 @@ export function EffortRating({ visible, initial, onDone }: Props) {
           <Text style={s.skipText}>Hoppa över</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[s.doneBtn, { backgroundColor: sel ? accent : 'rgba(255,255,255,0.12)' }]}
+          style={[s.doneBtn, { backgroundColor: sel ? accent : DIVIDER }]}
           onPress={() => { if (sel) onDone(sel) }}
           activeOpacity={0.8}
           disabled={!sel}

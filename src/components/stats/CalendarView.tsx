@@ -6,7 +6,7 @@ import Animated, {
   runOnJS, useSharedValue, useAnimatedStyle, withTiming, interpolate, Extrapolation, Easing,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { ORANGE, GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
@@ -270,7 +270,7 @@ export function CalendarView({
                       ? sum.status === 'completed' ? GREEN
                         : sum.status === 'failed'  ? RED
                         : sum.status === 'pending' ? ORANGE
-                        : 'rgba(255,255,255,0.12)'
+                        : DIVIDER
                       : 'transparent'
                     const tappable = !!sum && sum.status !== 'future'
                     return (

@@ -15,7 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { signInWithGoogle } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
 import { updateProfile } from '@/services/profile'
-import { ORANGE } from '@/lib/theme'
+import { ORANGE, BG, BORDER, CARD } from '@/lib/theme'
 
 type Mode = 'login' | 'register'
 
@@ -246,7 +246,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0A0A0C',
+    backgroundColor: BG,
   },
   container: {
     flex: 1,
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   input: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: CARD,
     borderRadius: 12,
     paddingVertical: 15,
     paddingHorizontal: 18,
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#2C2C2E',
+    backgroundColor: BORDER,
   },
   dividerText: {
     color: '#555555',

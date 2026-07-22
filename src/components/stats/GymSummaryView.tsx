@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import Svg, { Polyline, Circle, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { PostSocialBar } from '@/components/PostSocialBar'
-import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
 
@@ -300,14 +300,14 @@ const s = StyleSheet.create({
     marginTop: 26, marginBottom: 12,
   },
   card: { backgroundColor: CARD, borderRadius: 20, paddingHorizontal: 18 },
-  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
+  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
 
   dtlRow: { flexDirection: 'row', paddingVertical: 14 },
   dtlCell: { flex: 1, gap: 3 },
   dtlLbl: { color: TEXT_SECONDARY, fontSize: 14 },
   dtlVal: { fontSize: 26, fontFamily: NUM_FONT },
   dtlUnit: { fontSize: 14, fontFamily: NUM_FONT_SEMI },
-  dtlSep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)' },
+  dtlSep: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER },
 
   exBlock: { paddingVertical: 13, gap: 9 },
   exHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
