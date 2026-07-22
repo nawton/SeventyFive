@@ -58,10 +58,10 @@ export async function saveCardioWorkout(params: {
   if (route && route.length > 1) {
     const { data: prefs } = await supabase
       .from('profiles')
-      .select('trim_route_ends')
+      .select('trim_route_meters')
       .eq('id', params.userId)
       .maybeSingle()
-    if (prefs?.trim_route_ends) route = trimRouteEnds(route)
+    if (prefs?.trim_route_meters) route = trimRouteEnds(route, prefs.trim_route_meters)
   }
 
   const entry: CardioData = {

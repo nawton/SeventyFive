@@ -1,7 +1,9 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Switch, FlatList,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Modal, Switch, FlatList,
 } from 'react-native'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
+import { runOnJS } from 'react-native-reanimated'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -24,6 +26,72 @@ import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/th
 // =============================================================================
 
 type SettingKey = 'search' | 'profile' | 'activities'
+
+// Kartsynlighetens klippavstånd: snäppsteg om 200 m upp till 1,6 km
+const TRIM_MAX = 1600
+const TRIM_STEP = 200
+const TRIM_LABELS = [0, 400, 800, 1200, 1600]
+
+/** Snäppande slider med punkter på spåret, som förlagan — tick-etiketterna
+ *  under går också att trycka på för att hoppa direkt till ett värde */
+function TrimSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [trackW, setTrackW] = useState(0)
+  const last = useRef(value)
+  useEffect(() => { last.current = value }, [value])
+
+  function commit(v: number) {
+    if (v === last.current) return
+    last.current = v
+    Haptics.selectionAsync()
+    onChange(v)
+  }
+
+  function setFromX(x: number) {
+    if (trackW <= 0) return
+    const raw = (x / trackW) * TRIM_MAX
+    commit(Math.min(TRIM_MAX, Math.max(0, Math.round(raw / TRIM_STEP) * TRIM_STEP)))
+  }
+
+  const pan = Gesture.Pan()
+    .minDistance(0)
+    .onBegin(e => { runOnJS(setFromX)(e.x) })
+    .onUpdate(e => { runOnJS(setFromX)(e.x) })
+
+  const pct = value / TRIM_MAX
+  const steps = Array.from({ length: TRIM_MAX / TRIM_STEP - 1 }, (_, i) => (i + 1) * TRIM_STEP)
+
+  return (
+    <View>
+      <GestureDetector gesture={pan}>
+        <View style={s.sliderHit} onLayout={e => setTrackW(e.nativeEvent.layout.width)}>
+          <View style={s.sliderTrack}>
+            <View style={[s.sliderFill, { width: `${pct * 100}%` as never }]} />
+          </View>
+          {trackW > 0 && steps.map(m => (
+            <View
+              key={m}
+              style={[
+                s.sliderDot,
+                { left: (m / TRIM_MAX) * trackW - 2 },
+                m <= value && s.sliderDotDone,
+              ]}
+            />
+          ))}
+          <View style={[s.sliderThumb, { left: Math.max(0, Math.min(trackW - 22, pct * trackW - 11)) }]} />
+        </View>
+      </GestureDetector>
+      <View style={s.sliderLabels}>
+        {TRIM_LABELS.map(m => (
+          <Pressable key={m} onPress={() => commit(m)} hitSlop={10} testID={`trim-${m}`}>
+            <Text style={[s.sliderLabel, value === m && s.sliderLabelActive]}>
+              {m === 0 ? 'Av' : String(m)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  )
+}
 
 interface Option {
   value: string
@@ -93,9 +161,10 @@ export default function PrivacyScreen() {
   const [activityVisibility, setActivityVisibility] = useState<'followers' | 'private'>('followers')
   const [picker, setPicker] = useState<SettingKey | null>(null)
   // Ytterligare inställningar
-  const [trimRouteEnds, setTrimRouteEnds] = useState(false)
+  const [trimMeters, setTrimMeters] = useState(0)
   const [hideRouteMaps, setHideRouteMaps] = useState(false)
   const [mapsOpen, setMapsOpen] = useState(false)
+  const [mapsView, setMapsView] = useState<'menu' | 'trim' | 'hide'>('menu')
   const [blockedOpen, setBlockedOpen] = useState(false)
   const [blocked, setBlocked] = useState<FollowProfile[]>([])
 
@@ -109,7 +178,7 @@ export default function PrivacyScreen() {
         setSearchable(p.searchable ?? true)
         setIsPublic(p.is_public ?? false)
         setActivityVisibility(p.activity_visibility ?? 'followers')
-        setTrimRouteEnds(p.trim_route_ends ?? false)
+        setTrimMeters(p.trim_route_meters ?? 0)
         setHideRouteMaps(p.hide_route_maps ?? false)
       }).catch(() => {})
       getBlockedUsers().then(list => { if (alive) setBlocked(list) }).catch(() => {})
@@ -203,7 +272,7 @@ export default function PrivacyScreen() {
         <View style={s.rowsCard}>
           <TouchableOpacity
             style={s.row}
-            onPress={() => setMapsOpen(true)}
+            onPress={() => { setMapsView('menu'); setMapsOpen(true) }}
             activeOpacity={0.7}
             testID="privacy-maps"
           >
@@ -224,65 +293,115 @@ export default function PrivacyScreen() {
         </View>
       </ScrollView>
 
-      {/* Kartsynlighet: två riktiga val — klipp ruttändar vid sparning och
-          dölj kartor helt för andra */}
+      {/* Kartsynlighet, som förlagan: en meny med två val — klippavstånd
+          för start/slut (slider) och dölj kartor helt. Undervyerna byter
+          innehåll i samma modal; bakåtpilen går till menyn först. */}
       <Modal visible={mapsOpen} animationType="slide" onRequestClose={() => setMapsOpen(false)}>
+        {/* Gester (sliderns pan) når inte in i en RN-modal utan egen rot */}
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeScreen style={s.screen}>
           <View style={s.header}>
             <GlassCircleButton
               icon="chevron-back"
               size={40}
               iconColor={TEXT_PRIMARY}
-              onPress={() => setMapsOpen(false)}
+              onPress={() => (mapsView === 'menu' ? setMapsOpen(false) : setMapsView('menu'))}
               fallbackStyle={s.iconBtnFallback}
             />
-            <Text style={s.title}>Kartsynlighet</Text>
+            <Text style={s.title}>
+              {mapsView === 'menu' ? 'Kartsynlighet'
+                : mapsView === 'trim' ? 'Dölj start och slut'
+                : 'Dölj alla kartor'}
+            </Text>
             <View style={{ width: 40 }} />
           </View>
-          <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-            <View style={s.toggleRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.optionTitle}>Dölj start- och slutpunkter</Text>
-                <Text style={s.optionBody}>
-                  Cirka 200 meter i början och slutet av nya rutter klipps bort
-                  innan de sparas — punkterna lagras aldrig. Tidigare pass
-                  påverkas inte.
-                </Text>
+
+          {mapsView === 'menu' && (
+            <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+              <View style={s.rowsCard}>
+                <TouchableOpacity
+                  style={s.row}
+                  onPress={() => setMapsView('trim')}
+                  activeOpacity={0.7}
+                  testID="maps-trim"
+                >
+                  <Ionicons name="location-outline" size={20} color={TEXT_SECONDARY} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.menuLabel}>Dölj start- och slutpunkter</Text>
+                    <Text style={s.rowSub}>
+                      {trimMeters === 0 ? 'Av' : `${trimMeters} m döljs i varje ände`}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+                </TouchableOpacity>
+                <View style={s.rowDivider} />
+                <TouchableOpacity
+                  style={s.row}
+                  onPress={() => setMapsView('hide')}
+                  activeOpacity={0.7}
+                  testID="maps-hide"
+                >
+                  <Ionicons name="eye-off-outline" size={20} color={TEXT_SECONDARY} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.menuLabel}>Dölj dina kartor helt för andra</Text>
+                    <Text style={s.rowSub}>{hideRouteMaps ? 'På' : 'Av'}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+                </TouchableOpacity>
               </View>
-              <Switch
-                value={trimRouteEnds}
-                onValueChange={v => {
-                  Haptics.selectionAsync()
-                  setTrimRouteEnds(v)
-                  save({ trim_route_ends: v })
+            </ScrollView>
+          )}
+
+          {mapsView === 'trim' && (
+            <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+              <Text style={s.intro}>
+                Dölj starten och slutet på alla framtida rutter med ett
+                ungefärligt avstånd. Punkterna klipps bort innan passet sparas
+                och lagras aldrig.
+              </Text>
+              <Text style={s.trimValue}>
+                {trimMeters === 0 ? 'Inga dolda meter' : `${trimMeters} dolda meter`}
+              </Text>
+              <TrimSlider
+                value={trimMeters}
+                onChange={v => {
+                  setTrimMeters(v)
+                  save({ trim_route_meters: v })
                 }}
-                trackColor={{ false: BORDER, true: ORANGE }}
-                thumbColor="#fff"
-                testID="trimSwitch"
               />
-            </View>
-            <View style={s.toggleRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.optionTitle}>Dölj kartor helt för andra</Text>
-                <Text style={s.optionBody}>
-                  Dina rutter visas aldrig för följare — varken i flödet, på
-                  din profil eller i passdetaljerna. Du ser dem alltid själv.
-                </Text>
+              <Text style={s.footnote}>
+                Tidigare pass påverkas inte, och distans och kalorier räknas
+                fortfarande på hela rundan.
+              </Text>
+            </ScrollView>
+          )}
+
+          {mapsView === 'hide' && (
+            <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+              <View style={s.toggleRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.optionTitle}>Dölj alla kartor</Text>
+                  <Text style={s.optionBody}>
+                    Dina rutter visas aldrig för följare — varken i flödet, på
+                    din profil eller i passdetaljerna. Du ser dem alltid själv.
+                  </Text>
+                </View>
+                <Switch
+                  value={hideRouteMaps}
+                  onValueChange={v => {
+                    Haptics.selectionAsync()
+                    setHideRouteMaps(v)
+                    save({ hide_route_maps: v })
+                  }}
+                  trackColor={{ false: BORDER, true: ORANGE }}
+                  thumbColor="#fff"
+                  testID="hideMapsSwitch"
+                />
               </View>
-              <Switch
-                value={hideRouteMaps}
-                onValueChange={v => {
-                  Haptics.selectionAsync()
-                  setHideRouteMaps(v)
-                  save({ hide_route_maps: v })
-                }}
-                trackColor={{ false: BORDER, true: ORANGE }}
-                thumbColor="#fff"
-                testID="hideMapsSwitch"
-              />
-            </View>
-          </ScrollView>
+            </ScrollView>
+          )}
         </SafeScreen>
+        </GestureHandlerRootView>
       </Modal>
 
       {/* Blockerade konton — lista med avblockering */}
@@ -428,6 +547,36 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 16,
     paddingVertical: 16,
   },
+
+  menuLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  rowSub: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 3 },
+  trimValue: {
+    color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800',
+    textAlign: 'center', marginBottom: 14,
+  },
+  sliderHit: { height: 34, justifyContent: 'center' },
+  sliderTrack: {
+    height: 4, borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden',
+  },
+  sliderFill: { height: '100%', backgroundColor: ORANGE, borderRadius: 2 },
+  sliderDot: {
+    position: 'absolute', width: 4, height: 4, borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  sliderDotDone: { backgroundColor: ORANGE },
+  sliderThumb: {
+    position: 'absolute', width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#fff',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35, shadowRadius: 4, elevation: 4,
+  },
+  sliderLabels: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  sliderLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  sliderLabelActive: { color: TEXT_PRIMARY },
   blockedRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
   blockedName: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   unblockPill: {

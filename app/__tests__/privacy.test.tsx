@@ -35,7 +35,7 @@ beforeEach(() => {
   ;(getProfile as jest.Mock).mockResolvedValue({
     name: 'Anton', avatar_url: null,
     is_public: false, searchable: true, activity_visibility: 'followers',
-    trim_route_ends: false, hide_route_maps: false,
+    trim_route_meters: 0, hide_route_maps: false,
   })
   ;(getBlockedUsers as jest.Mock).mockResolvedValue([])
 })
@@ -73,13 +73,25 @@ describe('Integritetsinställningar', () => {
       expect(updateProfile).toHaveBeenCalledWith('u1', { activity_visibility: 'private' }))
   })
 
-  it('kartsynlighet: båda valen sparas till profilen', async () => {
+  it('kartsynlighet: dolda meter väljs på slidern och sparas', async () => {
     render(<PrivacyScreen />)
     fireEvent.press(await screen.findByTestId('privacy-maps'))
-    fireEvent(await screen.findByTestId('trimSwitch'), 'valueChange', true)
+    fireEvent.press(await screen.findByTestId('maps-trim'))
+    fireEvent.press(await screen.findByTestId('trim-400'))
     await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { trim_route_ends: true }))
-    fireEvent(screen.getByTestId('hideMapsSwitch'), 'valueChange', true)
+      expect(updateProfile).toHaveBeenCalledWith('u1', { trim_route_meters: 400 }))
+    expect(screen.getByText('400 dolda meter')).toBeOnTheScreen()
+    // Menyraden speglar valet när man går tillbaka (sista pilen = modalens)
+    const backs = screen.getAllByText('glassbtn:chevron-back')
+    fireEvent.press(backs[backs.length - 1])
+    expect(screen.getByText('400 m döljs i varje ände')).toBeOnTheScreen()
+  })
+
+  it('kartsynlighet: dölj alla kartor sparas från undervyn', async () => {
+    render(<PrivacyScreen />)
+    fireEvent.press(await screen.findByTestId('privacy-maps'))
+    fireEvent.press(await screen.findByTestId('maps-hide'))
+    fireEvent(await screen.findByTestId('hideMapsSwitch'), 'valueChange', true)
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith('u1', { hide_route_maps: true }))
   })

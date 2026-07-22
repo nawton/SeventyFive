@@ -16,7 +16,7 @@ export interface ProfileData {
   /** Vem ser pass och statistik: 'followers' (godkända) eller 'private' */
   activity_visibility: 'followers' | 'private' | null
   /** Klipp start/slut ur nya rutter innan de sparas */
-  trim_route_ends: boolean | null
+  trim_route_meters: number | null
   /** Dölj aktivitetskartor helt för andra */
   hide_route_maps: boolean | null
 }
@@ -24,7 +24,7 @@ export interface ProfileData {
 export async function getProfile(userId: string): Promise<ProfileData | null> {
   const { data } = await supabase
     .from('profiles')
-    .select('name, avatar_url, birth_date, gender, weight_kg, height_cm, is_public, searchable, activity_visibility, trim_route_ends, hide_route_maps')
+    .select('name, avatar_url, birth_date, gender, weight_kg, height_cm, is_public, searchable, activity_visibility, trim_route_meters, hide_route_maps')
     .eq('id', userId)
     .maybeSingle()
   return data
