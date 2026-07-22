@@ -567,8 +567,8 @@ export function CardioTab({
                   height={170}
                   unit={unit}
                   selectedKey={distScrubKey}
+                  onSelect={key => setDistScrubKey(k => k === key ? null : key)}
                   onScrub={setDistScrubKey}
-                  onScrubEnd={() => setDistScrubKey(null)}
                   pagerRef={pagerRef}
                 />
               </TouchableOpacity>

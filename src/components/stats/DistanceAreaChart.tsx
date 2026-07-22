@@ -150,6 +150,16 @@ export function DistanceAreaChart({
       <Path d={areaPath} fill={color} fillOpacity={0.18} />
       <Path d={linePath} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
 
+      {/* Punkter på varje mätvärde — alltid synliga (Strava-stil), den valda
+          ritas större ovanpå längre ner */}
+      {pts.map((p, i) => (
+        <Circle
+          key={`dot-${buckets[i].key}`}
+          cx={p.x} cy={p.y} r={3.5}
+          fill={color} stroke={CARD} strokeWidth={1.5}
+        />
+      ))}
+
       {selIdx >= 0 && (
         <G>
           <SvgLine x1={px(selIdx)} x2={px(selIdx)} y1={TOP_PAD} y2={baseY} stroke="rgba(255,255,255,0.18)" strokeWidth={1} />

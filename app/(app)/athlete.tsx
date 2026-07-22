@@ -261,7 +261,7 @@ export default function AthleteScreen() {
           <View style={s.chartCard}>
             {/* Under scrub visas den valda veckans detaljer i stället för hinten */}
             <Text style={[s.chartHint, scrubInfo != null && s.chartHintActive]}>
-              {scrubInfo ?? `km per vecka, senaste ${CHART_WEEKS} veckorna — håll för detaljer`}
+              {scrubInfo ?? `km per vecka, senaste ${CHART_WEEKS} veckorna — tryck på en punkt`}
             </Text>
             <DistanceAreaChart
               buckets={buckets}
@@ -269,8 +269,8 @@ export default function AthleteScreen() {
               height={170}
               unit={unit}
               selectedKey={scrubKey}
+              onSelect={key => setScrubKey(k => k === key ? null : key)}
               onScrub={setScrubKey}
-              onScrubEnd={() => setScrubKey(null)}
             />
           </View>
         </Animated.View>
