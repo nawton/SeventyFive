@@ -422,10 +422,10 @@ export function GymTab({
             {/* Volym per dag i vald vecka — tryck för fullständig historik */}
             {weekStrength.some(w => w.data.sets.some(st => st.weight_kg > 0)) && (
               <>
-              <View style={s.sectionHeadRow}>
+              <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setVolumeOpen(true)}>
                 <Text style={[s.sectionHead, s.sectionHeadInline]}>Volym</Text>
                 <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
-              </View>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[s.card, s.cardPlain]}
                 activeOpacity={0.85}

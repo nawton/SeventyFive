@@ -384,10 +384,10 @@ export function CardioTab({
             )}
 
             {/* Träningsdetaljer — kompakt på fliken, tryck för alla detaljer */}
-            <View style={s.sectionHeadRow}>
+            <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setCardioDetailsOpen(true)}>
               <Text style={[s.sectionHead, s.sectionHeadInline]}>Träningsdetaljer</Text>
               <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity
               style={[s.card, s.cardPlain]}
               activeOpacity={0.85}
@@ -436,10 +436,10 @@ export function CardioTab({
               const pts = paceVals.map((v, i) => `${px(i)},${py(v)}`).join(' ')
               return (
                 <>
-                <View style={s.sectionHeadRow}>
+                <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setCardioDetailsOpen(true)}>
                   <Text style={[s.sectionHead, s.sectionHeadInline]}>Tempoutveckling</Text>
                   <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
-                </View>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[s.card, s.cardPlain]}
                   activeOpacity={0.85}
@@ -554,10 +554,10 @@ export function CardioTab({
                 (fördelningen per aktivitet bor därinne) */}
             {distBuckets.some(b => b.total > 0) && (
               <>
-              <View style={s.sectionHeadRow}>
+              <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setDistDetailOpen(true)}>
                 <Text style={[s.sectionHead, s.sectionHeadInline]}>Distans</Text>
                 <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
-              </View>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[s.card, s.cardPlain]}
                 activeOpacity={0.85}
