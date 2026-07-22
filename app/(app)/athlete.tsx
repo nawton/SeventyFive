@@ -9,6 +9,10 @@ import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
 import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
+import {
+  getFollowCounts, isFollowing, follow, unfollow, subscribeToFollows,
+  type FollowCounts,
+} from '@/services/follows'
 import { strengthToPosts } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { DistanceAreaChart, type AreaBucket } from '@/components/stats/DistanceAreaChart'
@@ -110,26 +114,39 @@ export default function AthleteScreen() {
   const [gymCount, setGymCount] = useState(0)
   const [unit, setUnit] = useState<UnitSystem>('metric')
   const [type, setType] = useState<CardioType>('running')
-  // Följ-status är bara lokal tills backenden finns
-  const [following, setFollowing] = useState(true)
+  // Riktiga följen: status mot follows-tabellen, räknare för den visade
+  // profilen. Uppdateras optimistiskt vid tryck och live via realtime.
+  const [following, setFollowing] = useState(false)
+  const [counts, setCounts] = useState<FollowCounts>({ followers: 0, following: 0 })
 
   useFocusEffect(useCallback(() => {
     let alive = true
+    let unsubscribe: (() => void) | null = null
     getUnitSystem().then(u => { if (alive) setUnit(u) })
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user || !alive) return
       const own = otherId === null || otherId === session.user.id
       setIsOwn(own)
+
+      // Räknarna gäller den VISADE profilen och hålls färska via realtime —
+      // följer någon dig medan sidan är öppen tickar siffran upp direkt
+      const viewedId = own ? session.user.id : otherId!
+      const loadCounts = () => {
+        getFollowCounts(viewedId).then(c => { if (alive) setCounts(c) }).catch(() => {})
+      }
+      loadCounts()
+      unsubscribe = subscribeToFollows(viewedId, loadCounts)
+
       if (!own) {
         // Skärmen ligger kvar monterad i tab-navigatorn — utan explicit
         // synk här visas första besökta profilen för alltid
         setName(paramName)
         setAvatarUrl(paramAvatar)
-        setFollowing(false)   // en främlings profil börjar som "Följ"
         setScrubKey(null)
+        setFollowing(false)
+        isFollowing(otherId!).then(v => { if (alive) setFollowing(v) }).catch(() => {})
         return
       }
-      setFollowing(true)
       const [profile, all, strength] = await Promise.all([
         getProfile(session.user.id).catch(() => null),
         getCardioWorkouts(session.user.id, 200).catch(() => [] as CardioWorkout[]),
@@ -143,7 +160,7 @@ export default function AthleteScreen() {
       // som flödet använder
       setGymCount(strengthToPosts(strength, '', null).length)
     })
-    return () => { alive = false }
+    return () => { alive = false; unsubscribe?.() }
   }, [otherId, paramName, paramAvatar]))
 
   const totalKm = useMemo(
@@ -181,8 +198,16 @@ export default function AthleteScreen() {
   }, [scrubKey])
 
   function toggleFollow() {
+    if (isOwn || !otherId) return   // man kan inte följa sig själv
     Haptics.selectionAsync()
-    setFollowing(v => !v)
+    const next = !following
+    // Optimistiskt: knapp + följarräknare direkt, backa vid fel
+    setFollowing(next)
+    setCounts(c => ({ ...c, followers: Math.max(0, c.followers + (next ? 1 : -1)) }))
+    ;(next ? follow(otherId) : unfollow(otherId)).catch(() => {
+      setFollowing(!next)
+      setCounts(c => ({ ...c, followers: Math.max(0, c.followers + (next ? -1 : 1)) }))
+    })
   }
 
   function switchType(next: CardioType) {
@@ -223,27 +248,31 @@ export default function AthleteScreen() {
           </View>
           <View style={s.counterDivider} />
           <View style={s.counter}>
-            <Text style={s.counterValue}>0</Text>
+            <Text style={s.counterValue}>{counts.followers}</Text>
             <Text style={s.counterLabel}>Följare</Text>
           </View>
           <View style={s.counterDivider} />
           <View style={s.counter}>
-            <Text style={s.counterValue}>0</Text>
+            <Text style={s.counterValue}>{counts.following}</Text>
             <Text style={s.counterLabel}>Följer</Text>
           </View>
         </View>
 
-        {/* Bara kantlinje — orange ram + text när man inte följer ännu */}
-        <TouchableOpacity
-          style={[s.followBtn, !following && s.followBtnInvite]}
-          onPress={toggleFollow}
-          activeOpacity={0.8}
-          testID="athleteFollow"
-        >
-          <Text style={[s.followBtnText, !following && s.followBtnTextInvite]}>
-            {following ? 'Följer' : 'Följ'}
-          </Text>
-        </TouchableOpacity>
+        {/* Följ-knappen finns bara på ANDRAS profiler — man kan inte följa
+            sig själv. Bara kantlinje; orange ram + text när man inte
+            följer ännu. */}
+        {!isOwn && (
+          <TouchableOpacity
+            style={[s.followBtn, !following && s.followBtnInvite]}
+            onPress={toggleFollow}
+            activeOpacity={0.8}
+            testID="athleteFollow"
+          >
+            <Text style={[s.followBtnText, !following && s.followBtnTextInvite]}>
+              {following ? 'Följer' : 'Följ'}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* ── Strava-delen: typ-chips, veckan och distansgraf — bara för den
             egna profilen tills delnings-backenden gör andras pass läsbara ── */}

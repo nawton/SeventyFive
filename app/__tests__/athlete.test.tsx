@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react-native'
+import { render, screen, fireEvent, within } from '@testing-library/react-native'
 import AthleteScreen, { activeLabel, buildWeekBuckets } from '../(app)/athlete'
 import type { CardioWorkout } from '@/services/cardioWorkouts'
 
@@ -19,6 +19,13 @@ jest.mock('@/services/cardioWorkouts', () => ({
 }))
 jest.mock('@/services/strengthWorkouts', () => ({
   getStrengthWorkouts: jest.fn().mockResolvedValue([]),
+}))
+jest.mock('@/services/follows', () => ({
+  getFollowCounts: jest.fn().mockResolvedValue({ followers: 0, following: 0 }),
+  isFollowing: jest.fn().mockResolvedValue(false),
+  follow: jest.fn().mockResolvedValue(undefined),
+  unfollow: jest.fn().mockResolvedValue(undefined),
+  subscribeToFollows: jest.fn(() => () => {}),
 }))
 let mockParams: Record<string, string> = {}
 jest.mock('expo-router', () => ({
@@ -106,11 +113,24 @@ describe('Atletprofil', () => {
     expect(router.push).toHaveBeenCalledWith('/(app)/activities')
   })
 
-  it('följ-pillen växlar lokalt', async () => {
+  it('egna profilen har ingen följ-knapp — man kan inte följa sig själv', async () => {
     render(<AthleteScreen />)
     await screen.findByText('Anton Wretenberg')
+    expect(screen.queryByTestId('athleteFollow')).not.toBeOnTheScreen()
+  })
+
+  it('följ på annans profil sparar på riktigt och uppdaterar räknaren direkt', async () => {
+    const { follow, unfollow } = require('@/services/follows')
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    render(<AthleteScreen />)
+    await screen.findByText('Nawid')
     fireEvent.press(screen.getByTestId('athleteFollow'))
-    expect(screen.getByText('Följ')).toBeOnTheScreen()
+    expect(follow).toHaveBeenCalledWith('u2')
+    expect(within(screen.getByTestId('athleteFollow')).getByText('Följer')).toBeOnTheScreen()
+    expect(screen.getByText('1')).toBeOnTheScreen()          // följare 0 → 1 optimistiskt
+    fireEvent.press(screen.getByTestId('athleteFollow'))
+    expect(unfollow).toHaveBeenCalledWith('u2')
+    expect(within(screen.getByTestId('athleteFollow')).getByText('Följ')).toBeOnTheScreen()
   })
 
   it('annan användares profil: namn från sökningen och ärligt tomläge', async () => {

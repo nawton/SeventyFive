@@ -125,7 +125,12 @@ export default function CommunityScreen() {
             <FeedWorkoutCard
               post={item}
               onOpen={setSelected}
-              onAvatarPress={() => router.push('/(app)/athlete' as never)}
+              // Tomma params skriver över ev. kvarliggande sökparametrar —
+              // annars kan den egna avataren visa senast besökta profil
+              onAvatarPress={() => router.push({
+                pathname: '/(app)/athlete',
+                params: { userId: '', name: '', avatar: '' },
+              } as never)}
             />
           )}
           contentContainerStyle={s.listContent}
