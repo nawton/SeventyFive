@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, BORDER, ORANGE, TEXT_PRIMARY } from '@/lib/theme'
+import { BG, BORDER, ORANGE, RED, TEXT_PRIMARY } from '@/lib/theme'
 
 // =============================================================================
 // GILLARLISTAN — dragbar bottom sheet (Strava-stil): öppnar till halva
@@ -85,7 +85,8 @@ export function LikersSheet({ likers, count, onClose, onPressPerson }: {
               <View style={s.headerTab}>
                 <View style={s.headerTabInner}>
                   <Text style={s.headerCount}>{count}</Text>
-                  <Ionicons name="heart" size={20} color={ORANGE} />
+                  {/* Rött hjärta — samma gillafärg som i flödet och trådarna */}
+                  <Ionicons name="heart" size={20} color={RED} />
                 </View>
                 <View style={s.headerUnderline} />
               </View>
