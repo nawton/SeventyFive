@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React from 'react'
 import {
   View,
   Text,
@@ -8,9 +8,8 @@ import {
   StyleSheet,
   Dimensions,
   type ViewStyle,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native'
+import { AppRefreshControl } from '@/components/AppRefresh'
 import Animated, { type AnimatedStyle } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
@@ -38,7 +37,7 @@ export const EMPTY_CARDIO_LOGS: CardioWorkout[] = []
 export const EMPTY_LOGGED: StrengthWorkout[] = []
 
 export interface DayPageApi {
-  /** Dra-ner på dagsidan → hämta om schemat (spinnern visas ovanför pagern) */
+  /** Dra-ner på dagsidan → hämta om schemat (appens gemensamma spinner) */
   pullRefresh:      () => void
   toggleCheck:      (exId: string, date: string) => void
   deleteExercise:   (sessionId: string, exId: string, date: string) => void
@@ -55,7 +54,7 @@ export interface DayPageApi {
 // vars props faktiskt ändrats — inte alla monterade sidor i pagern.
 
 export const DayPage = React.memo(function DayPage({
-  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, unit, userId, dayAnimStyle, api, raceDate,
+  idx, sessions, exercises, checked, completed, cardioStats, cardioLogs, logged, lastWeights, progress, unit, userId, dayAnimStyle, api, refreshing, raceDate,
 }: {
   idx: number
   sessions: WorkoutSession[]
@@ -72,20 +71,12 @@ export const DayPage = React.memo(function DayPage({
   userId: string | null
   dayAnimStyle: AnimatedStyle<ViewStyle>
   api: DayPageApi
+  /** Delas av alla dagsidor — elementet byggs här inne så memo:n överlever */
+  refreshing: boolean
   /** Tävlingsdatum (YYYY-MM-DD) — styr planens slut och nedtrappningen */
   raceDate: string | null
 }) {
           const onScrollShrink = useTabBarShrinkOnScroll()
-          const pullArmed = useRef(true)
-          function onPageScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-            onScrollShrink(e)
-            const y = e.nativeEvent.contentOffset.y
-            if (y >= 0) pullArmed.current = true
-            if (y < -70 && pullArmed.current) {
-              pullArmed.current = false
-              api.pullRefresh()
-            }
-          }
 
           const date       = indexToDate(idx)
           const weekday    = weekdayOf(date)
@@ -130,7 +121,10 @@ export const DayPage = React.memo(function DayPage({
               style={{ width: SCREEN_W }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scroll}
-              onScroll={onPageScroll}
+              refreshControl={
+                <AppRefreshControl refreshing={refreshing} onRefresh={api.pullRefresh} />
+              }
+              onScroll={onScrollShrink}
               scrollEventThrottle={16}
             >
               {/* Day header */}

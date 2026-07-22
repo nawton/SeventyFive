@@ -15,6 +15,7 @@ import {
   type ViewStyle,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
+import { useAppRefresh, SPINNER_GRAY } from '@/components/AppRefresh'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, router, useLocalSearchParams } from 'expo-router'
@@ -103,8 +104,6 @@ export default function SchemaScreen() {
   // Tävlingsdatum — styr planens slut, nedtrappningen och RACE DAY i schemat
   const [raceDate, setRaceDateState] = useState<string | null>(null)
   const pagerRef    = useRef<FlatList<number>>(null)
-  const [refreshing, setRefreshing] = useState(false)
-  const refreshingRef = useRef(false)
   const isSwiping   = useRef(false)
 
   const selectedDateRef = useRef(selectedDate)
@@ -367,23 +366,11 @@ export default function SchemaScreen() {
   // Ingen animation på dagrubriken — den hoppade till vid varje dagbyte
   const dayAnimStyle = useAnimatedStyle(() => ({}))
 
-  // Dra-ner på en dagsida → hämta om hela schemat; spinnern ligger mellan
-  // kalendern och veckodagen och står kvar minst 1,2 s så den hinner uppfattas
-  function handlePullRefresh() {
+  // Dra-ner på en dagsida → hämta om hela schemat med appens gemensamma spinner
+  const { refreshing, onRefresh: handlePullRefresh } = useAppRefresh(async () => {
     const uid = userIdRef.current
-    if (refreshingRef.current || !uid) return
-    refreshingRef.current = true
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    setRefreshing(true)
-    const started = Date.now()
-    loadData(uid).catch(() => {}).finally(() => {
-      const wait = Math.max(0, 1200 - (Date.now() - started))
-      setTimeout(() => {
-        setRefreshing(false)
-        refreshingRef.current = false
-      }, wait)
-    })
-  }
+    if (uid) await loadData(uid)
+  })
 
   // Stabilt API-objekt till de memoiserade dagsidorna: identiteten ändras aldrig,
   // men anropen delegeras alltid till senaste renderns handlers via ref:en
@@ -414,7 +401,7 @@ export default function SchemaScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color={ORANGE} size="large" />
+        <ActivityIndicator color={SPINNER_GRAY} size="large" />
       </View>
     )
   }
@@ -543,9 +530,6 @@ export default function SchemaScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Uppdaterings-snurra: under kalendern, ovanför veckodagen */}
-      {refreshing && <ActivityIndicator color={ORANGE} style={styles.refreshSpinner} />}
-
       {/* Horizontal day pager — one page per calendar date */}
       <FlatList
         ref={pagerRef}
@@ -589,6 +573,7 @@ export default function SchemaScreen() {
               userId={userId}
               dayAnimStyle={dayAnimStyle}
               api={api}
+              refreshing={refreshing}
               raceDate={raceDate}
             />
           )
@@ -828,7 +813,6 @@ const styles = StyleSheet.create({
   },
   toolbarBtnText:        { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
   toolbarBtnPrimaryText: { color: '#000',       fontSize: 13, fontWeight: '700' },
-  refreshSpinner: { marginTop: 10, marginBottom: 2 },
 
 
 
