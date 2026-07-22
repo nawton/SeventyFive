@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { View } from 'react-native'
+import { useColorScheme } from 'react-native'
 import Svg, { Path, Circle, Line as SvgLine, Text as SvgText, Rect, G } from 'react-native-svg'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { runOnJS } from 'react-native-reanimated'
@@ -72,6 +73,16 @@ export function DistanceAreaChart({
   /** Flik-pagern måste vänta på scrubben — annars byter man sida i stället */
   pagerRef?:    React.RefObject<unknown>
 }) {
+  // Linjen och ytan går i turkos medan punkterna behåller accentfärgen.
+  // SVG + ljust läge kräver strängfärger — vit-alfa syns inte på vitt.
+  const light = useColorScheme() === 'light'
+  const lineColor = light ? '#2CA6AB' : '#40D6DB'
+  const gridStroke = light ? 'rgba(0,0,0,0.07)'  : 'rgba(255,255,255,0.07)'
+  const yLabel     = light ? 'rgba(0,0,0,0.45)'  : 'rgba(255,255,255,0.45)'
+  const yMaxLabel  = light ? 'rgba(0,0,0,0.65)'  : 'rgba(255,255,255,0.7)'
+  const selGuide   = light ? 'rgba(0,0,0,0.18)'  : 'rgba(255,255,255,0.18)'
+  const selText    = light ? '#111214' : '#fff'
+  const axisDim    = light ? 'rgba(0,0,0,0.45)'  : 'rgba(255,255,255,0.45)'
   const unitLabel = distanceUnitLabel(unit)
   const vals    = buckets.map(b => toDisplayDistance(b.total, unit))
   const dataMax = Math.max(...vals, 0)
@@ -134,21 +145,21 @@ export function DistanceAreaChart({
       {/* Baslinje + rutnät med skaletiketter i högerkanten */}
       {[0, ...grids].map(v => (
         <G key={v}>
-          <SvgLine x1={0} x2={plotW} y1={py(v)} y2={py(v)} stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
-          <SvgText x={width - 2} y={py(v) + 3.5} fontSize={10} textAnchor="end" fill="rgba(255,255,255,0.45)">
+          <SvgLine x1={0} x2={plotW} y1={py(v)} y2={py(v)} stroke={gridStroke} strokeWidth={1} />
+          <SvgText x={width - 2} y={py(v) + 3.5} fontSize={10} textAnchor="end" fill={yLabel}>
             {`${fmtV(v)} ${unitLabel}`}
           </SvgText>
         </G>
       ))}
       {/* Toppetikett = periodens max — det är detta som gör skalan adaptiv */}
       {dataMax > 0 && (
-        <SvgText x={width - 2} y={py(yMax) + 3.5} fontSize={10} fontWeight="700" textAnchor="end" fill="rgba(255,255,255,0.7)">
+        <SvgText x={width - 2} y={py(yMax) + 3.5} fontSize={10} fontWeight="700" textAnchor="end" fill={yMaxLabel}>
           {`${fmtV(yMax)} ${unitLabel}`}
         </SvgText>
       )}
 
-      <Path d={areaPath} fill={color} fillOpacity={0.18} />
-      <Path d={linePath} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+      <Path d={areaPath} fill={lineColor} fillOpacity={0.18} />
+      <Path d={linePath} fill="none" stroke={lineColor} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
 
       {/* Punkter på varje mätvärde — alltid synliga (Strava-stil), den valda
           ritas större ovanpå längre ner */}
@@ -162,13 +173,13 @@ export function DistanceAreaChart({
 
       {selIdx >= 0 && (
         <G>
-          <SvgLine x1={px(selIdx)} x2={px(selIdx)} y1={TOP_PAD} y2={baseY} stroke="rgba(255,255,255,0.18)" strokeWidth={1} />
+          <SvgLine x1={px(selIdx)} x2={px(selIdx)} y1={TOP_PAD} y2={baseY} stroke={selGuide} strokeWidth={1} />
           <Circle cx={px(selIdx)} cy={py(vals[selIdx])} r={5} fill={color} stroke={CARD} strokeWidth={2} />
           {/* Värdebubbla vid punkten — klämd så den inte hamnar utanför plotten */}
           <SvgText
             x={Math.min(plotW - 26, Math.max(26, px(selIdx)))}
             y={Math.max(10, py(vals[selIdx]) - 13)}
-            fontSize={11} fontWeight="700" textAnchor="middle" fill="#fff"
+            fontSize={11} fontWeight="700" textAnchor="middle" fill={selText}
           >
             {`${fmtV(vals[selIdx])} ${unitLabel}`}
           </SvgText>
@@ -182,7 +193,7 @@ export function DistanceAreaChart({
           x={px(i)} y={height - 6}
           fontSize={10} textAnchor="middle"
           fontWeight={b.isCurrent || selectedKey === b.key ? '700' : '400'}
-          fill={selectedKey === b.key ? '#fff' : b.isCurrent ? color : 'rgba(255,255,255,0.45)'}
+          fill={selectedKey === b.key ? selText : b.isCurrent ? color : axisDim}
         >
           {b.label}
         </SvgText>
