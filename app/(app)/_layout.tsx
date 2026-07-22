@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Tabs } from 'expo-router'
-import { View, Pressable, StyleSheet } from 'react-native'
+import { View, Pressable, StyleSheet, Keyboard, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, runOnJS } from 'react-native-reanimated'
@@ -31,8 +31,22 @@ const BUBBLE_H = 46
 // och fliken väljs när du släpper. Ett vanligt tryck fungerar precis som innan.
 // =============================================================================
 
+// Skärmar med eget skrivfält i botten — pillen skulle ligga i vägen
+const NO_TAB_BAR_ROUTES = new Set(['post'])
+
 function GlassTabBar({ state, navigation }: BottomTabBarProps) {
   const activeName = state.routes[state.index]?.name
+
+  // Pillen viker undan när tangentbordet är uppe — annars svävar den
+  // ovanpå tangentbord och skrivfält
+  const [keyboardUp, setKeyboardUp] = useState(false)
+  useEffect(() => {
+    const showEv = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
+    const hideEv = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
+    const show = Keyboard.addListener(showEv, () => setKeyboardUp(true))
+    const hide = Keyboard.addListener(hideEv, () => setKeyboardUp(false))
+    return () => { show.remove(); hide.remove() }
+  }, [])
   // Dolda rutter (Inställningar, Anpassning …) finns inte bland ikonerna —
   // bubblan ligger då kvar på senast besökta synliga flik istället för huset
   const rawIdx = TABS.findIndex(t => t.name === activeName)
@@ -117,6 +131,8 @@ function GlassTabBar({ state, navigation }: BottomTabBarProps) {
   }))
 
   const shownIdx = hotIdx ?? activeIdx
+
+  if (keyboardUp || NO_TAB_BAR_ROUTES.has(activeName ?? '')) return null
 
   return (
     <Animated.View style={[styles.wrap, shrinkStyle]} pointerEvents="box-none">

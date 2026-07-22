@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -49,6 +49,14 @@ export default function PostScreen() {
   const [comments, setComments] = useState<PostComment[]>([])
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
+  const inputRef = useRef<TextInput>(null)
+
+  // Sidan öppnas från pratbubblan — tangentbordet ska upp direkt.
+  // Kort fördröjning så slide-animationen hinner klart först.
+  useFocusEffect(useCallback(() => {
+    const timer = setTimeout(() => inputRef.current?.focus(), 400)
+    return () => clearTimeout(timer)
+  }, [postKey]))
 
   useFocusEffect(useCallback(() => {
     if (!postKey) return
@@ -223,6 +231,7 @@ export default function PostScreen() {
         {/* Skrivfältet ligger fast i botten och lyfter med tangentbordet */}
         <View style={[s.inputRow, { paddingBottom: Math.max(insets.bottom, 10) }]}>
           <TextInput
+            ref={inputRef}
             style={s.input}
             value={draft}
             onChangeText={setDraft}
