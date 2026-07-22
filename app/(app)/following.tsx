@@ -99,12 +99,11 @@ export default function FollowingScreen() {
           fallbackStyle={s.iconBtnFallback}
         />
         <Text style={s.title} numberOfLines={1}>{name || 'Community'}</Text>
-        {/* Platshållare — sökfunktionen byggs tillsammans med följ-systemet */}
         <GlassCircleButton
           icon="search"
           size={40}
           iconColor={TEXT_PRIMARY}
-          onPress={() => {}}
+          onPress={() => router.push('/(app)/search-users' as never)}
           fallbackStyle={s.iconBtnFallback}
         />
       </View>

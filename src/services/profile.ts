@@ -27,6 +27,22 @@ export async function updateProfile(userId: string, updates: Partial<ProfileData
   if (error) throw error
 }
 
+export interface ProfileSearchHit {
+  id: string
+  name: string | null
+  avatar_url: string | null
+}
+
+/** Sök andra användare på namn — går via search_profiles-RPC:n som bara
+    lämnar ut id/namn/avatar (profilernas RLS är annars egna rader) */
+export async function searchProfiles(query: string): Promise<ProfileSearchHit[]> {
+  const trimmed = query.trim()
+  if (trimmed.length < 2) return []
+  const { data, error } = await supabase.rpc('search_profiles', { search: trimmed })
+  if (error || !data) return []
+  return data as ProfileSearchHit[]
+}
+
 export async function uploadAvatar(userId: string, uri: string): Promise<string> {
   const path = `${userId}.jpg`
   await uploadImage('avatars', path, uri)

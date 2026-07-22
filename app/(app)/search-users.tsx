@@ -1,0 +1,147 @@
+import { useEffect, useRef, useState } from 'react'
+import {
+  View, Text, StyleSheet, FlatList, TextInput, ActivityIndicator, Keyboard,
+} from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { searchProfiles, type ProfileSearchHit } from '@/services/profile'
+import { GlassCircleButton } from '@/components/GlassButton'
+import { FeedAvatar } from '@/components/FeedWorkoutCard'
+import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+
+// =============================================================================
+// SÖK ANVÄNDARE — riktig sökning mot databasen via search_profiles-RPC:n
+// (bara id/namn/avatar lämnas ut). Debounce så vi inte spammar Supabase
+// medan man skriver. Följ-knappar kommer när följ-systemet byggs — tills
+// dess visas träffarna som rena rader.
+// =============================================================================
+
+const DEBOUNCE_MS = 300
+
+export default function SearchUsersScreen() {
+  const [query, setQuery] = useState('')
+  const [hits, setHits] = useState<ProfileSearchHit[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searched, setSearched] = useState(false)   // minst en sökning har körts
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current)
+    const trimmed = query.trim()
+    if (trimmed.length < 2) {
+      setHits([])
+      setSearched(false)
+      setSearching(false)
+      return
+    }
+    setSearching(true)
+    timer.current = setTimeout(() => {
+      let alive = true
+      searchProfiles(trimmed)
+        .then(result => {
+          if (!alive) return
+          setHits(result)
+          setSearched(true)
+        })
+        .finally(() => { if (alive) setSearching(false) })
+      // Städas inte per timeout — senaste svaret vinner via ny debounce-runda
+      return () => { alive = false }
+    }, DEBOUNCE_MS)
+    return () => { if (timer.current) clearTimeout(timer.current) }
+  }, [query])
+
+  return (
+    <SafeAreaView style={s.screen}>
+      <View style={s.header}>
+        <GlassCircleButton
+          icon="chevron-back"
+          size={40}
+          iconColor={TEXT_PRIMARY}
+          onPress={() => router.back()}
+          fallbackStyle={s.iconBtnFallback}
+        />
+        <Text style={s.title}>Hitta vänner</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <View style={s.searchRow}>
+        <Ionicons name="search" size={18} color={TEXT_SECONDARY} />
+        <TextInput
+          style={s.searchInput}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Sök på namn"
+          placeholderTextColor="rgba(255,255,255,0.3)"
+          autoFocus
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+          onSubmitEditing={() => Keyboard.dismiss()}
+          testID="searchInput"
+        />
+        {searching && <ActivityIndicator size="small" color={ORANGE} />}
+      </View>
+
+      <FlatList
+        data={hits}
+        keyExtractor={h => h.id}
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => (
+          <View style={s.row}>
+            <FeedAvatar
+              url={item.avatar_url}
+              fallback={(item.name ?? '?').charAt(0).toUpperCase()}
+              size={52}
+            />
+            <Text style={s.rowName} numberOfLines={1}>{item.name ?? 'Namnlös'}</Text>
+          </View>
+        )}
+        ItemSeparatorComponent={() => <View style={s.rowDivider} />}
+        contentContainerStyle={s.listContent}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={s.empty}>
+            <Ionicons name="search-outline" size={44} color={TEXT_SECONDARY} />
+            <Text style={s.emptyTitle}>
+              {query.trim().length < 2 ? 'Sök efter andra'
+                : searched && !searching ? 'Inga träffar'
+                : ' '}
+            </Text>
+            <Text style={s.emptyBody}>
+              {query.trim().length < 2
+                ? 'Skriv minst två tecken för att hitta andra som kör utmaningen.'
+                : searched && !searching ? 'Ingen användare matchade din sökning.' : ' '}
+            </Text>
+          </View>
+        }
+      />
+    </SafeAreaView>
+  )
+}
+
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: BG },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 10,
+  },
+  iconBtnFallback: { backgroundColor: CARD },
+  title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
+
+  searchRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 20, marginTop: 4, marginBottom: 8,
+    backgroundColor: CARD, borderRadius: 12, paddingHorizontal: 14,
+  },
+  searchInput: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, paddingVertical: 12 },
+
+  listContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
+  rowName: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 66 },
+
+  empty: { alignItems: 'center', gap: 8, paddingTop: 70, paddingHorizontal: 40 },
+  emptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },
+  emptyBody: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
+})
