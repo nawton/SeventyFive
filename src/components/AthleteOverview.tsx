@@ -9,7 +9,7 @@ import { DistanceAreaChart, type AreaBucket } from '@/components/stats/DistanceA
 import { fmtDuration } from '@/lib/format'
 import type { UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
-import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, CARD_BORDER, accentAlpha } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, CARD_BORDER, accentAlpha, ORANGE } from '@/lib/theme'
 
 // =============================================================================
 // ATLETVY — delad mellan atletsidan (öppnas från flödet/sökningen) och
@@ -187,7 +187,8 @@ export function AthleteOverview({
             testID="streakCounter"
           >
             <View style={s.streakValueRow}>
-              <Ionicons name="flame" size={18} color={ACCENT} />
+              {/* Flamman är alltid eld — orange oavsett tema */}
+              <Ionicons name="flame" size={18} color={ORANGE} />
               <Text style={s.counterValue}>{streak}</Text>
             </View>
             <Text style={s.counterLabel}>Streak</Text>
