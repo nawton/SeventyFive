@@ -18,6 +18,7 @@ const TABS: Array<{ name: string; icon: IoniconName; iconActive: IoniconName }> 
   { name: 'dashboard', icon: 'home-outline',      iconActive: 'home' },
   { name: 'add',       icon: 'barbell-outline',   iconActive: 'barbell' },
   { name: 'stats',     icon: 'bar-chart-outline', iconActive: 'bar-chart' },
+  { name: 'community', icon: 'people-outline',    iconActive: 'people' },
   { name: 'profile',   icon: 'person-outline',    iconActive: 'person' },
 ]
 
@@ -164,6 +165,7 @@ export default function AppLayout() {
       <Tabs.Screen name="activity" options={{ href: null }} />
       <Tabs.Screen name="add" />
       <Tabs.Screen name="stats" />
+      <Tabs.Screen name="community" />
       <Tabs.Screen name="profile" />
       <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="anpassning" options={{ href: null }} />
