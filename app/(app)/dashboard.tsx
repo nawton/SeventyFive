@@ -173,7 +173,7 @@ export default function DashboardScreen() {
   const onScrollShrink = useTabBarShrinkOnScroll()
   // Gradienter kräver strängfärger — välj par efter aktuellt tema
   const lightMode = useColorScheme() === 'light'
-  const heroShadow = lightMode ? '#2B4EAE' : '#FFA817'
+  const heroShadow = lightMode ? '#3156C4' : '#FFA817'
   const heroGradient: [string, string] = lightMode
     ? ['#FFFFFF', '#F1F1F3'] : ['#1C1915', '#0F0F11']
   const insets = useSafeAreaInsets()

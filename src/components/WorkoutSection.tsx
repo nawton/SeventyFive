@@ -105,6 +105,8 @@ function ExerciseRow({
   lastKg?:     number
   onDelete:    () => void
 }) {
+  // Klar-radens gröna ton — sträng per schema (animerad nod)
+  const doneRowStr = useColorScheme() === 'light' ? '#E9F6EE' : '#0B2418'
   // ── Shared values ─────────────────────────────────────────────────────────
 
   const tx       = useSharedValue(0)  // card X offset
@@ -228,7 +230,7 @@ function ExerciseRow({
 
         {/* Förhandsvisning — ingen tap-interaktion */}
         <GestureDetector gesture={panGesture}>
-          <Animated.View style={[r.row, done && r.rowDone, cardStyle]}>
+          <Animated.View style={[r.row, done && { backgroundColor: doneRowStr }, cardStyle]}>
             <View style={r.text}>
               <Text style={[r.name, done && r.nameDone]} numberOfLines={1}>
                 {ex.exercise_name}
@@ -294,7 +296,6 @@ const r = StyleSheet.create({
     overflow:        'hidden',
     minHeight:       62,
   },
-  rowDone:  { backgroundColor: '#0B2418' },
   text:     { flex: 1, paddingVertical: 13, paddingHorizontal: 16 },
   name:     { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   nameDone: { color: TEXT_SECONDARY, textDecorationLine: 'line-through' },

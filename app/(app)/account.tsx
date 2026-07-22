@@ -16,6 +16,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { Picker } from '@react-native-picker/picker'
+import { AppTextInput } from '@/components/AppTextInput'
 
 // =============================================================================
 // PROFILINSTÄLLNINGAR — namn, födelsedatum, kön, vikt, längd och konto.
@@ -258,7 +259,7 @@ export default function AccountScreen() {
         <View style={styles.rowsCard}>
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Förnamn</Text>
-            <TextInput
+            <AppTextInput
               style={styles.rowInput}
               value={first}
               onChangeText={setFirst}
@@ -267,13 +268,12 @@ export default function AccountScreen() {
               returnKeyType="done"
               onSubmitEditing={doneEditingNames}
               placeholder="Lägg till"
-              placeholderTextColor="rgba(255,255,255,0.3)"
             />
           </View>
           <View style={styles.rowDivider} />
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Efternamn</Text>
-            <TextInput
+            <AppTextInput
               style={styles.rowInput}
               value={last}
               onChangeText={setLast}
@@ -282,7 +282,6 @@ export default function AccountScreen() {
               returnKeyType="done"
               onSubmitEditing={doneEditingNames}
               placeholder="Lägg till"
-              placeholderTextColor="rgba(255,255,255,0.3)"
             />
           </View>
           <View style={styles.rowDivider} />

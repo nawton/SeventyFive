@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
+import { AppTextInput } from '@/components/AppTextInput'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@ export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props
 
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>BOK</Text>
-            <TextInput
+            <AppTextInput
               style={styles.input}
               placeholder="Boktitel (valfritt)"
               placeholderTextColor="#444"
@@ -86,7 +87,7 @@ export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props
 
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>SIDOR</Text>
-            <TextInput
+            <AppTextInput
               style={styles.input}
               placeholder={targetPages ? String(targetPages) : '10'}
               placeholderTextColor="#444"

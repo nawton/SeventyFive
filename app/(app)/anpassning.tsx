@@ -19,6 +19,7 @@ import {
   getDefaultMapStyle, setDefaultMapStyle, type MapStyleKey,
   getLastMapCoord, getFiveKTime,
 } from '@/lib/prefs'
+import { AppTextInput } from '@/components/AppTextInput'
 
 // =============================================================================
 // ANPASSNING — samlade stil- och beteendeinställningar:
@@ -246,24 +247,22 @@ export default function AnpassningScreen() {
               <Text style={s.rowLabel}>Min 5 km-tid</Text>
             </View>
             <View style={s.fiveKRow}>
-              <TextInput
+              <AppTextInput
                 style={s.fiveKInput}
                 value={fiveKMin}
                 onChangeText={v => setFiveKMin(v.replace(/[^0-9]/g, '').slice(0, 2))}
                 keyboardType="number-pad"
                 returnKeyType="done"
                 placeholder="28"
-                placeholderTextColor="rgba(255,255,255,0.22)"
               />
               <Text style={s.fiveKColon}>:</Text>
-              <TextInput
+              <AppTextInput
                 style={s.fiveKInput}
                 value={fiveKSec}
                 onChangeText={v => setFiveKSec(v.replace(/[^0-9]/g, '').slice(0, 2))}
                 keyboardType="number-pad"
                 returnKeyType="done"
                 placeholder="30"
-                placeholderTextColor="rgba(255,255,255,0.22)"
               />
               <TouchableOpacity
                 style={[s.fiveKBtn, (!fiveKChanged || savingFiveK) && { opacity: 0.35 }]}

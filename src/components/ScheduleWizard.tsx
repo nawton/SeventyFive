@@ -11,6 +11,7 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accen
 import { toLocalDateString } from '@/lib/date'
 import { RUN_SESSION_INFO, plannedRunTypes, type RunExperience } from '@/services/scheduleGenerator'
 import type { Slug } from '@/lib/muscles'
+import { AppTextInput } from '@/components/AppTextInput'
 
 const SCREEN_W = Dimensions.get('window').width
 const BODY_SCALE = 0.46
@@ -399,27 +400,25 @@ export function ScheduleWizard({
                 <MaterialCommunityIcons name="timer-outline" size={30} color={ACCENT} />
                 <View style={s.testRow}>
                   <View style={s.testCol}>
-                    <TextInput
+                    <AppTextInput
                       style={s.testInputBig}
                       value={fiveKMin}
                       onChangeText={v => setFiveKMin(v.replace(/[^0-9]/g, '').slice(0, 2))}
                       keyboardType="number-pad"
                       returnKeyType="done"
                       placeholder="28"
-                      placeholderTextColor="rgba(255,255,255,0.22)"
                     />
                     <Text style={s.testUnit}>MINUTER</Text>
                   </View>
                   <Text style={s.testColonBig}>:</Text>
                   <View style={s.testCol}>
-                    <TextInput
+                    <AppTextInput
                       style={s.testInputBig}
                       value={fiveKSec}
                       onChangeText={v => setFiveKSec(v.replace(/[^0-9]/g, '').slice(0, 2))}
                       keyboardType="number-pad"
                       returnKeyType="done"
                       placeholder="30"
-                      placeholderTextColor="rgba(255,255,255,0.22)"
                     />
                     <Text style={s.testUnit}>SEKUNDER</Text>
                   </View>

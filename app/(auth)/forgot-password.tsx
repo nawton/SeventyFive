@@ -15,6 +15,7 @@ import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
+import { AppTextInput } from '@/components/AppTextInput'
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail]     = useState('')
@@ -78,7 +79,7 @@ export default function ForgotPasswordScreen() {
 
               <View style={s.inputWrapper}>
                 <Ionicons name="mail-outline" size={18} color={TEXT_SECONDARY} />
-                <TextInput
+                <AppTextInput
                   style={s.input}
                   value={email}
                   onChangeText={setEmail}

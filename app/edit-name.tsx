@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
+import { AppTextInput } from '@/components/AppTextInput'
 
 const MAX_NAME_LENGTH = 40
 
@@ -93,7 +94,7 @@ export default function EditNameScreen() {
           <Text style={styles.fieldLabel}>VISNINGSNAMN</Text>
           <View style={styles.inputWrapper}>
             <Ionicons name="person-outline" size={18} color={TEXT_SECONDARY} />
-            <TextInput
+            <AppTextInput
               ref={inputRef}
               style={styles.input}
               value={name}

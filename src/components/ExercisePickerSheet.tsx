@@ -11,6 +11,7 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } f
 import { CATEGORY_LABELS, type Exercise } from '@/services/exercises'
 import { getExerciseMuscleGroup, type Slug } from '@/lib/muscles'
 import type { ExerciseCategory } from '@/types/database'
+import { AppTextInput } from '@/components/AppTextInput'
 
 type Page = 'landing' | 'gym' | 'cardio' | 'exercises'
 
@@ -260,7 +261,7 @@ export function ExercisePickerSheet({
           <>
             <View style={s.searchBar}>
               <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} />
-              <TextInput
+              <AppTextInput
                 style={s.searchInput}
                 value={search}
                 onChangeText={setSearch}
@@ -336,7 +337,7 @@ export function ExercisePickerSheet({
               <View style={s.promptFields}>
                 <View style={s.promptField}>
                   <Text style={s.promptLabel}>SET</Text>
-                  <TextInput
+                  <AppTextInput
                     style={s.promptInput}
                     value={sets}
                     onChangeText={setSets}
@@ -349,7 +350,7 @@ export function ExercisePickerSheet({
                 <View style={s.promptDivider} />
                 <View style={s.promptField}>
                   <Text style={s.promptLabel}>REPS</Text>
-                  <TextInput
+                  <AppTextInput
                     style={s.promptInput}
                     value={reps}
                     onChangeText={setReps}

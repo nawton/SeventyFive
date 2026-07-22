@@ -27,7 +27,7 @@ export const THEME_LIGHT = {
   TEXT_PRIMARY: '#111214',
   TEXT_SECONDARY: '#75777D',
   DIVIDER: 'rgba(0,0,0,0.08)',
-  ACCENT: '#2B4EAE',
+  ACCENT: '#3156C4',
 } as const
 
 /** Temats råa strängfärger för AKTUELLT läge. Reanimated (Animated.View
@@ -68,7 +68,7 @@ export const ACCENT = Platform.OS === 'ios'
   : THEME_DARK.ACCENT
 
 const ACCENT_DARK_RGB  = '255,168,23'   // #FFA817
-const ACCENT_LIGHT_RGB = '43,78,174'    // #2B4EAE
+const ACCENT_LIGHT_RGB = '49,86,196'    // #3156C4
 
 /** Accent med alfa (ersätter ORANGE + '1A'-konkateneringarna — dynamiska
     färgobjekt går inte att strängkonkatenera) */

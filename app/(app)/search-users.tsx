@@ -14,6 +14,7 @@ import {
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT } from '@/lib/theme'
+import { AppTextInput } from '@/components/AppTextInput'
 
 // =============================================================================
 // SÖK ANVÄNDARE — riktig sökning mot databasen via search_profiles-RPC:n
@@ -96,12 +97,11 @@ export default function SearchUsersScreen() {
 
       <View style={s.searchRow}>
         <Ionicons name="search" size={18} color={TEXT_SECONDARY} />
-        <TextInput
+        <AppTextInput
           style={s.searchInput}
           value={query}
           onChangeText={setQuery}
           placeholder="Sök på namn"
-          placeholderTextColor="rgba(255,255,255,0.3)"
           autoFocus
           autoCorrect={false}
           autoCapitalize="none"

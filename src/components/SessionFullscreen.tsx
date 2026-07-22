@@ -23,6 +23,7 @@ import {
   setPassDraft, getPassDraft, clearPassDraft,
 } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
+import { AppTextInput } from '@/components/AppTextInput'
 
 type LogSet = { reps: string; weight: string; done: boolean }
 
@@ -556,24 +557,22 @@ export function SessionFullscreen({
                     return (
                       <View key={i} style={[s.setRow, r.done && s.setRowDone]}>
                         <Text style={s.setNum}>{i + 1}</Text>
-                        <TextInput
+                        <AppTextInput
                           style={[s.input, r.done && s.inputDone]}
                           value={r.reps}
                           onChangeText={v => updateLog(ex.id, i, 'reps', v.replace(/[^0-9]/g, ''))}
                           keyboardType="number-pad"
                           returnKeyType="done"
                           placeholder={p && p.reps > 0 ? String(p.reps) : (ex.reps ?? '0')}
-                          placeholderTextColor="rgba(255,255,255,0.22)"
                           selectTextOnFocus
                         />
-                        <TextInput
+                        <AppTextInput
                           style={[s.input, r.done && s.inputDone]}
                           value={r.weight}
                           onChangeText={v => updateLog(ex.id, i, 'weight', v.replace(/[^0-9.,]/g, '').replace(',', '.'))}
                           keyboardType="decimal-pad"
                           returnKeyType="done"
                           placeholder={p && p.weight_kg > 0 ? String(p.weight_kg) : '0'}
-                          placeholderTextColor="rgba(255,255,255,0.22)"
                           selectTextOnFocus
                         />
                         <TouchableOpacity

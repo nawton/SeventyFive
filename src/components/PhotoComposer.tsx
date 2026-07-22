@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
+import { AppTextInput } from '@/components/AppTextInput'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,7 +86,7 @@ export function PhotoComposer({ visible, imageUri, dayNumber, onCancel, onSave }
               <Ionicons name="create-outline" size={16} color={TEXT_SECONDARY} />
               <Text style={styles.captionLabel}>Om dagen</Text>
             </View>
-            <TextInput
+            <AppTextInput
               style={styles.input}
               placeholder="Hur kändes dagen eller passet? Skriv några rader..."
               placeholderTextColor="#444"

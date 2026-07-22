@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, ACCENT, accentAlpha } from '@/lib/theme'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import type { Exercise } from '@/services/exercises'
+import { AppTextInput } from '@/components/AppTextInput'
 
 
 type Step = 'choose' | 'cardio' | 'gymOverview'
@@ -199,7 +200,7 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 14 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <View>
                 <Text style={s.fieldLabel}>PASSNAMN</Text>
-                <TextInput
+                <AppTextInput
                   style={s.nameInput}
                   value={passName}
                   onChangeText={setPassName}

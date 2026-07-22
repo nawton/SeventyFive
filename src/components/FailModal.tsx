@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 
 import { BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
+import { AppTextInput } from '@/components/AppTextInput'
 
 // Hårdkodade motivationsvar — ersätts med OpenAI av Anton
 const AI_RESPONSES = [
@@ -85,7 +86,7 @@ export function FailModal({ visible, onClose, onConfirm }: Props) {
               Skriv ned vad som hindrade dig idag. Var ärlig mot dig själv.
             </Text>
 
-            <TextInput
+            <AppTextInput
               style={styles.input}
               placeholder="Jag missade för att..."
               placeholderTextColor="#444"

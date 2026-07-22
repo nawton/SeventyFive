@@ -28,6 +28,7 @@ import {
   distanceUnitLabel, paceForUnit, type UnitSystem,
 } from '@/lib/units'
 import { getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, getBodyWeightKg, setBodyWeightKg } from '@/lib/prefs'
+import { AppTextInput } from '@/components/AppTextInput'
 
 const SCREEN_W    = Dimensions.get('window').width
 const GOAL_PAGE_W = SCREEN_W - 40   // scrollens padding är 20 per sida
@@ -384,7 +385,7 @@ export default function CardioSessionScreen() {
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditTarget(null)} />
           <View style={s.editCard}>
             <Text style={s.editTitle}>{editTarget === 'dist' ? `Distans (${unitLabel})` : 'Tid (min)'}</Text>
-            <TextInput
+            <AppTextInput
               style={s.editInput}
               value={editValue}
               onChangeText={setEditValue}
@@ -452,14 +453,13 @@ export default function CardioSessionScreen() {
 
             <Text style={s.settingLabel}>VIKT — FÖR KALORIBERÄKNINGEN</Text>
             <View style={s.weightRow}>
-              <TextInput
+              <AppTextInput
                 style={s.weightInput}
                 value={weightStr}
                 onChangeText={v => setWeightStr(v.replace(/[^0-9]/g, '').slice(0, 3))}
                 keyboardType="number-pad"
                 returnKeyType="done"
                 placeholder="75"
-                placeholderTextColor="rgba(255,255,255,0.25)"
               />
               <Text style={s.weightUnit}>kg</Text>
             </View>

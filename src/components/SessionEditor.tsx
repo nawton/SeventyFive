@@ -41,6 +41,7 @@ import {
   type WorkoutSession,
 } from '@/services/workoutSchedule'
 import type { ExerciseCategory } from '@/types/database'
+import { AppTextInput } from '@/components/AppTextInput'
 
 // ─── Shared schedule helpers (also imported by add.tsx) ───────────────────────
 
@@ -395,7 +396,7 @@ export function SessionEditor({
 
             <View style={s.field}>
               <Text style={s.label}>NAMN</Text>
-              <TextInput
+              <AppTextInput
                 style={s.input}
                 value={name}
                 onChangeText={setName}
@@ -408,7 +409,7 @@ export function SessionEditor({
 
             <View style={s.field}>
               <Text style={s.label}>NOTAT</Text>
-              <TextInput
+              <AppTextInput
                 style={[s.input, s.inputMultiline]}
                 value={notes}
                 onChangeText={setNotes}
@@ -521,7 +522,7 @@ export function SessionEditor({
                       </View>
                     ) : (
                       <>
-                        <TextInput
+                        <AppTextInput
                           style={s.exSmall}
                           value={d.sets}
                           onChangeText={v => updateDraft(d.key, 'sets', v)}
@@ -530,7 +531,7 @@ export function SessionEditor({
                           keyboardType="number-pad"
                           returnKeyType="done"
                         />
-                        <TextInput
+                        <AppTextInput
                           style={[s.exSmall, { width: 70 }]}
                           value={d.reps}
                           onChangeText={v => updateDraft(d.key, 'reps', v)}
@@ -584,7 +585,7 @@ export function SessionEditor({
 
           <View style={s.pickerSearchBar}>
             <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} />
-            <TextInput
+            <AppTextInput
               style={s.pickerSearchInput}
               value={pickerSearch}
               onChangeText={setPickerSearch}

@@ -26,6 +26,7 @@ import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { timeAgo } from '@/lib/format'
 import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, ACCENT } from '@/lib/theme'
+import { AppTextInput } from '@/components/AppTextInput'
 
 // =============================================================================
 // DISKUSSION — ett inläggs egen sida (Strava-stil): kartan högst upp,
@@ -352,12 +353,11 @@ export default function PostScreen() {
 
         {/* Skrivfältet ligger fast i botten och lyfter med tangentbordet */}
         <View style={[s.inputRow, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-          <TextInput
+          <AppTextInput
             style={s.input}
             value={draft}
             onChangeText={setDraft}
             placeholder="Lägg till en kommentar"
-            placeholderTextColor="rgba(255,255,255,0.35)"
             maxLength={500}
             multiline
             testID="commentInput"

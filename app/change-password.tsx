@@ -16,6 +16,7 @@ import { useURL } from 'expo-linking'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
+import { AppTextInput } from '@/components/AppTextInput'
 
 /** Plockar ut auth-tokens ur deep link-fragmentet (#access_token=…&refresh_token=…) */
 function parseTokens(url: string): { access_token: string; refresh_token: string } | null {
@@ -139,7 +140,7 @@ export default function ChangePasswordScreen() {
           <Text style={s.fieldLabel}>NYTT LÖSENORD</Text>
           <View style={s.inputWrapper}>
             <Ionicons name="lock-closed-outline" size={18} color={TEXT_SECONDARY} />
-            <TextInput
+            <AppTextInput
               style={s.input}
               value={password}
               onChangeText={setPassword}
@@ -158,7 +159,7 @@ export default function ChangePasswordScreen() {
           <Text style={[s.fieldLabel, { marginTop: 14 }]}>BEKRÄFTA LÖSENORD</Text>
           <View style={s.inputWrapper}>
             <Ionicons name="lock-closed-outline" size={18} color={TEXT_SECONDARY} />
-            <TextInput
+            <AppTextInput
               style={s.input}
               value={confirm}
               onChangeText={setConfirm}
