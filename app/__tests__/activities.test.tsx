@@ -53,9 +53,12 @@ const RUN = {
   data: { category: 'cardio', type: 'running', distance_km: 5.01, duration_seconds: 2709, calories: 400 },
 }
 
+const { getStrengthWorkouts } = require('@/services/strengthWorkouts')
+
 beforeEach(() => {
   jest.clearAllMocks()
   ;(getCardioWorkouts as jest.Mock).mockResolvedValue([RUN])
+  ;(getStrengthWorkouts as jest.Mock).mockResolvedValue([])
 })
 
 describe('Aktiviteter', () => {
@@ -73,6 +76,28 @@ describe('Aktiviteter', () => {
     await screen.findByText('Anton Wretenberg')
     fireEvent.press(screen.getByTestId('post-w1'))
     expect(screen.getByText('summary:Morgonrunda')).toBeOnTheScreen()
+  })
+
+  it('filtret växlar mellan alla, cardio och gym', async () => {
+    ;(getStrengthWorkouts as jest.Mock).mockResolvedValue([{
+      id: 's1', name: 'Bänkpress', created_at: '2026-07-15T17:00:00.000Z',
+      data: {
+        category: 'strength', exercise_id: 'e1', exercise_name: 'Bänkpress',
+        sets: [{ reps: 8, weight_kg: 60 }], workout_date: '2026-07-15',
+      },
+    }])
+    render(<ActivitiesScreen />)
+    await screen.findAllByText('Anton Wretenberg')     // löprunda + gympass
+    expect(screen.getByText('5,01')).toBeOnTheScreen()
+    expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
+
+    fireEvent.press(screen.getByText('Gym'))
+    expect(screen.queryByText('5,01')).not.toBeOnTheScreen()
+    expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
+
+    fireEvent.press(screen.getByText('Cardio'))
+    expect(screen.getByText('5,01')).toBeOnTheScreen()
+    expect(screen.queryByText(/Gympass — /)).not.toBeOnTheScreen()
   })
 
   it('tom historik visar tomläge', async () => {

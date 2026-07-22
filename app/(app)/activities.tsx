@@ -8,6 +8,7 @@ import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
 import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { GlassSegment } from '@/components/GlassSegment'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import {
@@ -24,7 +25,10 @@ import { TAB_CONTENT_PAD } from '@/lib/glass'
 // delnings-backenden finns; sedan visas vald atlets historik.
 // =============================================================================
 
+type Filter = 'all' | 'cardio' | 'strength'
+
 export default function ActivitiesScreen() {
+  const [filter, setFilter] = useState<Filter>('all')
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loaded, setLoaded] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -70,8 +74,22 @@ export default function ActivitiesScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      {/* Filtrera historiken — samma klara glassegment som flödet */}
+      <View style={s.filterRow}>
+        <GlassSegment
+          value={filter}
+          options={[
+            { key: 'all', label: 'Alla' },
+            { key: 'cardio', label: 'Cardio' },
+            { key: 'strength', label: 'Gym' },
+          ]}
+          onChange={setFilter}
+          tint={null}
+        />
+      </View>
+
       <FlatList
-        data={posts}
+        data={filter === 'all' ? posts : posts.filter(p => p.kind === filter)}
         keyExtractor={p => p.id}
         renderItem={({ item }) => (
           // Ingen avatarnavigering — vi är redan på atletens sidor
@@ -82,8 +100,12 @@ export default function ActivitiesScreen() {
         ListEmptyComponent={loaded ? (
           <View style={s.empty}>
             <Ionicons name="fitness-outline" size={44} color={TEXT_SECONDARY} />
-            <Text style={s.emptyTitle}>Inga aktiviteter ännu</Text>
-            <Text style={s.emptyBody}>Avklarade cardio-pass hamnar här.</Text>
+            <Text style={s.emptyTitle}>
+              {filter === 'strength' ? 'Inga gympass ännu'
+                : filter === 'cardio' ? 'Inga cardio-pass ännu'
+                : 'Inga aktiviteter ännu'}
+            </Text>
+            <Text style={s.emptyBody}>Avklarade pass hamnar här.</Text>
           </View>
         ) : null}
       />
@@ -123,6 +145,7 @@ const s = StyleSheet.create({
   },
   iconBtnFallback: { backgroundColor: CARD },
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
+  filterRow: { paddingHorizontal: 20, paddingBottom: 12 },
 
   listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 + TAB_CONTENT_PAD, gap: 16 },
 
