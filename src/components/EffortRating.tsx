@@ -78,6 +78,9 @@ export function EffortRating({ visible, initial, onDone }: Props) {
 
   // Hooks måste ligga FÖRE den tidiga returnen — annars "fewer hooks than expected"
   const T = useThemeStrings()
+  const light = useColorScheme() === 'light'
+  // Ofyllda staplar och hoppa över-knappen: vit-alfa syns inte på ljus botten
+  const dimBar = light ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.14)'
   const accent = sel ? effortColor(sel) : T.ACCENT
   // Gradienten kräver riktiga strängfärger — dynamiska färgobjekt går inte
   const bgStr = T.BG
@@ -125,7 +128,7 @@ export function EffortRating({ visible, initial, onDone }: Props) {
                     { height: h },
                     filled
                       ? { backgroundColor: accent }
-                      : { backgroundColor: 'rgba(255,255,255,0.14)' },
+                      : { backgroundColor: dimBar },
                   ]}
                 />
               </View>
@@ -135,7 +138,7 @@ export function EffortRating({ visible, initial, onDone }: Props) {
       </GestureDetector>
 
       <View style={s.btnRow}>
-        <TouchableOpacity style={s.skipBtn} onPress={() => onDone(null)} activeOpacity={0.7}>
+        <TouchableOpacity style={[s.skipBtn, light && { backgroundColor: 'rgba(0,0,0,0.06)' }]} onPress={() => onDone(null)} activeOpacity={0.7}>
           <Text style={s.skipText}>Hoppa över</Text>
         </TouchableOpacity>
         <TouchableOpacity
