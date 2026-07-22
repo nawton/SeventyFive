@@ -9,6 +9,7 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, ACCENT, ac
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import type { Exercise } from '@/services/exercises'
 import { AppTextInput } from '@/components/AppTextInput'
+import { GlassCircleButton } from '@/components/GlassButton'
 
 
 type Step = 'choose' | 'cardio' | 'gymOverview'
@@ -126,13 +127,16 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
     <Modal visible={visible} animationType="slide" onRequestClose={back}>
       <View style={[s.screen, { paddingTop: insets.top }]}>
         <View style={s.header}>
-          <TouchableOpacity onPress={back} style={s.iconBtn} activeOpacity={0.7}>
-            <Ionicons name={step === 'choose' ? 'chevron-down' : 'chevron-back'} size={24} color={TEXT_PRIMARY} />
-          </TouchableOpacity>
+          {/* X i liquid glass stänger (chevron för understeg) — ingen Stäng-knapp */}
+          <GlassCircleButton
+            icon={step === 'choose' ? 'close' : 'chevron-back'}
+            size={40}
+            iconColor={TEXT_PRIMARY}
+            onPress={back}
+            fallbackStyle={s.iconBtnFallback}
+          />
           <Text style={s.title}>{headerTitle}</Text>
-          <TouchableOpacity onPress={onClose} style={s.closeBtn} activeOpacity={0.8}>
-            <Text style={s.closeText}>Stäng</Text>
-          </TouchableOpacity>
+          <View style={{ width: 40 }} />
         </View>
 
         {/* ── Val: Gym eller Cardio ── */}
@@ -271,8 +275,7 @@ const s = StyleSheet.create({
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
-  closeBtn: { backgroundColor: ACCENT, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
-  closeText: { color: '#000', fontWeight: '700', fontSize: 14 },
+  iconBtnFallback: { backgroundColor: CARD },
 
   chooseWrap: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
   chooseSub: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', marginBottom: 26 },
