@@ -133,6 +133,29 @@ export default function ActivitiesScreen() {
             unit={unit}
             onClose={() => setSelected(null)}
             effortReadOnly={isOther}
+            social={{
+              postKey: selected.id,
+              ownerId: selected.authorId,
+              onOpenComments: () => {
+                const post = selected
+                setSelected(null)
+                router.push({
+                  pathname: '/(app)/post',
+                  params: {
+                    postKey: post.id,
+                    ownerId: post.authorId,
+                    ownerName: post.authorName,
+                    ownerAvatar: post.authorAvatar ?? '',
+                    kind: 'cardio',
+                    title: post.kind === 'cardio' ? post.workout.name : 'Gympass',
+                    createdAt: post.createdAt,
+                    meta: post.kind === 'cardio'
+                      ? `${post.distanceKm.toFixed(2).replace('.', ',')} km`
+                      : '',
+                  },
+                } as never)
+              },
+            }}
           />
         )}
         {selected?.kind === 'strength' && (

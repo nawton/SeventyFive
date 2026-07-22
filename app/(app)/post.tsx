@@ -295,6 +295,8 @@ export default function PostScreen() {
             unit={unit}
             onClose={() => setDetailOpen(false)}
             effortReadOnly={ownerId !== ownId}
+            // Kommentarerna finns redan här under — stäng bara modalen
+            social={{ postKey, ownerId, onOpenComments: () => setDetailOpen(false) }}
           />
         )}
       </Modal>

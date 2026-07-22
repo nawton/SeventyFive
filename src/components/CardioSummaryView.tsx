@@ -13,6 +13,7 @@ import { fmtTime, fmtPace } from '@/lib/format'
 import type { CardioWorkout } from '@/services/workouts'
 import { updateCardioEffort } from '@/services/workouts'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
+import { PostSocialBar } from '@/components/PostSocialBar'
 import { getDefaultMapStyle } from '@/lib/prefs'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -60,7 +61,7 @@ const APPLE_MAP_TYPES: Record<string, 'standard' | 'satellite' | 'mutedStandard'
   dark: 'mutedStandard',
 }
 
-export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, onClose, onDelete, effortReadOnly }: {
+export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, onClose, onDelete, effortReadOnly, social }: {
   workout: CardioWorkout
   title: string
   dateLabel: string | null
@@ -70,6 +71,8 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   onDelete?: () => void
   /** Andras pass: betyget visas men går inte att ändra */
   effortReadOnly?: boolean
+  /** Community: gilla/kommentera/dela-raden under detaljerna */
+  social?: { postKey: string; ownerId: string; onOpenComments?: () => void }
 }) {
   const insets = useSafeAreaInsets()
   const d = workout.data
@@ -345,6 +348,16 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
               <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} style={{ marginLeft: 10 }} />
             )}
           </TouchableOpacity>
+
+          {/* Gilla/kommentera/dela — bara när passet öppnas som inlägg */}
+          {social && (
+            <PostSocialBar
+              postKey={social.postKey}
+              ownerId={social.ownerId}
+              onOpenComments={social.onOpenComments}
+              shareText={`${title} · ${String(d.distance_km.toFixed(2)).replace('.', ',')} km på ${fmtTime(d.duration_seconds)} — loggat med SeventyFive`}
+            />
+          )}
         </Animated.View>
       </GestureDetector>
 

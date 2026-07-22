@@ -264,6 +264,15 @@ export default function CommunityScreen() {
             unit={unit}
             onClose={() => setSelected(null)}
             effortReadOnly={selected.authorId !== ownId}
+            social={{
+              postKey: selected.id,
+              ownerId: selected.authorId,
+              onOpenComments: () => {
+                const post = selected
+                setSelected(null)
+                openDiscussion(post)
+              },
+            }}
           />
         )}
         {selected?.kind === 'strength' && (
