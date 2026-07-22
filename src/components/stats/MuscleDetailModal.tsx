@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { View, Text, StyleSheet, Modal, ScrollView, Dimensions, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, Modal, ScrollView, Dimensions, ActivityIndicator, useColorScheme } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Text as SvgText, Polygon, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -44,6 +44,13 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
   day: string | null
   dayLabel: string | null
 }) {
+  // Radar: spindelnät, förra veckans yta och etiketter — vit-alfa syns
+  // inte på ljus botten (SVG kräver strängfärger)
+  const radarLight = useColorScheme() === 'light'
+  const webStroke = radarLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)'
+  const prevFill  = radarLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)'
+  const prevLine  = radarLight ? 'rgba(0,0,0,0.28)' : 'rgba(255,255,255,0.30)'
+  const axisText  = radarLight ? 'rgba(0,0,0,0.60)' : 'rgba(255,255,255,0.65)'
   const insets = useSafeAreaInsets()
   const [period, setPeriod] = useState<Period>('sel')
   const [curNames, setCurNames] = useState<string[]>([])
@@ -170,7 +177,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
               return (
                 <Svg width={W} height={H}>
                   {[0.25, 0.5, 0.75, 1].map(f => (
-                    <Polygon key={f} points={ring(f)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
+                    <Polygon key={f} points={ring(f)} fill="none" stroke={webStroke} strokeWidth={1} />
                   ))}
                   {MUSCLE_GROUPS_6.map((_, i) => {
                     const a = (-90 + i * 60) * (Math.PI / 180)
@@ -179,14 +186,14 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
                         key={i}
                         x1={cx} y1={cy}
                         x2={cx + R * Math.cos(a)} y2={cy + R * Math.sin(a)}
-                        stroke="rgba(255,255,255,0.07)" strokeWidth={1}
+                        stroke={webStroke} strokeWidth={1}
                       />
                     )
                   })}
                   {radarPrev && radarPrev.some(v => v > 0) && (
                     <Polygon
                       points={radarPrev.map((v, i) => pt(i, v)).join(' ')}
-                      fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.30)" strokeWidth={1.5}
+                      fill={prevFill} stroke={prevLine} strokeWidth={1.5}
                     />
                   )}
                   {radarCur.some(v => v > 0) && (
@@ -202,7 +209,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
                         key={g.label}
                         x={cx + (R + 24) * Math.cos(a)} y={cy + (R + 24) * Math.sin(a) + 4}
                         fontSize={12} fontWeight="600" textAnchor="middle"
-                        fill="rgba(255,255,255,0.65)"
+                        fill={axisText}
                       >
                         {g.label}
                       </SvgText>
@@ -218,7 +225,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
               </View>
               {radarPrev && !!range.prevLegend && (
                 <View style={s.legItem}>
-                  <View style={[s.legDot, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
+                  <View style={[s.legDot, { backgroundColor: prevLine }]} />
                   <Text style={s.legText}>{range.prevLegend}</Text>
                 </View>
               )}
@@ -285,7 +292,7 @@ const s = StyleSheet.create({
   grpRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
   grpRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
   grpLbl: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', width: 62 },
-  grpTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  grpTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: DIVIDER, overflow: 'hidden' },
   grpFill: { height: '100%', borderRadius: 5, backgroundColor: ACCENT },
   grpVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'] },
 

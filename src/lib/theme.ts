@@ -92,6 +92,8 @@ export const DIVIDER        = dyn(THEME_DARK.DIVIDER, THEME_LIGHT.DIVIDER)
 /** Kortens YTTERRAM: syns i mörkt läge, försvinner helt i ljust — där ska
     block inte ha ram runt om, bara avdelare under raderna (Runkeeper) */
 export const CARD_BORDER    = dyn(THEME_DARK.BORDER, 'transparent')
+/** Text/ikon OVANPÅ accentfärgen: svart på orange, vit på marinblå */
+export const ACCENT_CONTRAST = dyn('#000000', '#FFFFFF')
 /** Inaktiv tabbikon i glaspillen */
 export const TAB_INACTIVE   = dyn('rgba(255,255,255,0.55)', 'rgba(60,60,67,0.55)')
 /** Dragbubblan i tabbpillen */

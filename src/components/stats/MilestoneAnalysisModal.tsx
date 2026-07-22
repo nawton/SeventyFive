@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, Modal, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, Modal, ScrollView , useColorScheme,
+} from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -38,6 +39,10 @@ export function MilestoneAnalysisModal({
   completedSessions: CompletedSessionItem[]
   unit: UnitSystem
 }) {
+  // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
+  const bodyLight = useColorScheme() === 'light'
+  const bodyFill = bodyLight ? '#DFE0E4' : '#2A2A2C'
+  const bodyBorder = bodyLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.10)'
   const P = useStatsColors()
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()

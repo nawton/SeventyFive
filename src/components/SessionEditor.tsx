@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   ActionSheetIOS,
+  useColorScheme,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, {
@@ -110,6 +111,10 @@ export function SessionEditor({
   initialDate?:  Date
   allowDelete?:  boolean
 }) {
+  // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
+  const bodyLight = useColorScheme() === 'light'
+  const bodyFill = bodyLight ? '#DFE0E4' : '#2A2A2C'
+  const bodyBorder = bodyLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.10)'
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const [name, setName]                 = useState('')
@@ -749,8 +754,8 @@ export function SessionEditor({
                       gender="male"
                       scale={1.6}
                       colors={[T.ACCENT]}
-                      defaultFill="#2A2A2C"
-                      border="rgba(255,255,255,0.10)"
+                      defaultFill={bodyFill}
+                      border={bodyBorder}
                     />
                   </View>
                   {muscles.length > 0 ? (

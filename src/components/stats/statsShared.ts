@@ -3,7 +3,7 @@
 // designen har en enda källa.
 import { StyleSheet, Dimensions } from 'react-native'
 import { useColorScheme } from 'react-native'
-import { BG, CARD, BORDER, ORANGE, ACCENT, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, ACCENT, ACCENT_CONTRAST, DIVIDER, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 
@@ -266,11 +266,11 @@ export const s = StyleSheet.create({
   // Body map
   muscleHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   muscleAuto:          { color: TEXT_SECONDARY, fontSize: 11, marginTop: 2 },
-  bodyToggle:          { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: 3, gap: 2 },
+  bodyToggle:          { flexDirection: 'row', backgroundColor: DIVIDER, borderRadius: 10, padding: 3, gap: 2 },
   bodyToggleBtn:       { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
-  bodyToggleBtnActive: { backgroundColor: ORANGE },
+  bodyToggleBtnActive: { backgroundColor: ACCENT },
   bodyToggleText:      { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  bodyToggleTextActive:{ color: '#000' },
+  bodyToggleTextActive:{ color: ACCENT_CONTRAST },
   bodyWrap:            { alignItems: 'center', paddingVertical: 8 },
   muscleEmpty:         { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', paddingBottom: 8 },
   muscleLinkRow:  { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },

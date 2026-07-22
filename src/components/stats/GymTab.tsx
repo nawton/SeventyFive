@@ -2,7 +2,8 @@
 // volymgraf, kroppskarta, genomförda pass och styrkerekord — med sina
 // detaljmodaler. Skalet (stats.tsx) äger rådatan och skickar in den.
 import { useEffect, useMemo, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator , useColorScheme,
+} from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -52,6 +53,10 @@ export function GymTab({
   /** Skalet äger completedSessions + databasraderingen; false = misslyckades */
   onDeleteCompletion: (id: string) => Promise<boolean>
 }) {
+  // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
+  const bodyLight = useColorScheme() === 'light'
+  const bodyFill = bodyLight ? '#DFE0E4' : '#2A2A2C'
+  const bodyBorder = bodyLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.10)'
   const P = useStatsColors()
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
@@ -527,8 +532,8 @@ export function GymTab({
                           gender="male"
                           scale={1.6}
                           colors={[P.BLUE, P.YELLOW, T.ACCENT]}
-                          defaultFill="#2A2A2C"
-                          border="rgba(255,255,255,0.10)"
+                          defaultFill={bodyFill}
+                          border={bodyBorder}
                         />
                       </Animated.View>
                     </TouchableOpacity>

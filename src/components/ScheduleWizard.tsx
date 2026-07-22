@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Modal, Dimensions, TextInput,
   KeyboardAvoidingView, Platform,
+  useColorScheme,
 } from 'react-native'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -111,6 +112,10 @@ export function ScheduleWizard({
   onClose:  () => void
   onFinish: (result: WizardResult) => void
 }) {
+  // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
+  const bodyLight = useColorScheme() === 'light'
+  const bodyFill = bodyLight ? '#DFE0E4' : '#2A2A2C'
+  const bodyBorder = bodyLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.10)'
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
 
@@ -485,14 +490,14 @@ export function ScheduleWizard({
                   side="front" gender="male"
                   scale={BODY_SCALE}
                   colors={['#F5A623']}
-                  defaultFill="#3A3A3C"
+                  defaultFill={bodyFill}
                 />
                 <Body
                   data={bodyData(ALL_SLUGS)}
                   side="back" gender="male"
                   scale={BODY_SCALE}
                   colors={['#F5A623']}
-                  defaultFill="#3A3A3C"
+                  defaultFill={bodyFill}
                 />
               </View>
 
@@ -544,14 +549,14 @@ export function ScheduleWizard({
                   side="front" gender="male"
                   scale={BODY_SCALE}
                   colors={[T.ACCENT]}
-                  defaultFill="#3A3A3C"
+                  defaultFill={bodyFill}
                 />
                 <Body
                   data={bodyData(focusSlugs.length > 0 ? focusSlugs : [])}
                   side="back" gender="male"
                   scale={BODY_SCALE}
                   colors={[T.ACCENT]}
-                  defaultFill="#3A3A3C"
+                  defaultFill={bodyFill}
                 />
               </View>
 
