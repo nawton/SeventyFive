@@ -687,12 +687,6 @@ export default function DashboardScreen() {
               <View style={s.heroBar}>
                 <View style={[s.heroBarFill, { width: `${challengePct}%` as any }]} />
               </View>
-              <TouchableOpacity style={s.heroPointsRow} onPress={() => router.push('/records')} activeOpacity={0.7} hitSlop={6}>
-                <Ionicons name="ribbon-outline" size={13} color={heroShadow} />
-                <Text style={[s.heroPoints, { color: heroShadow }]}>
-                  {allDone ? '+50 p idag · Medaljer' : 'Klara dagen → +50 p'}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             <View style={s.heroRight}>
@@ -966,9 +960,6 @@ const s = StyleSheet.create({
     marginRight: 10,
   },
   streakChipText: { color: TEXT_PRIMARY, fontSize: 14, fontFamily: NUM_FONT },
-
-  heroPointsRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
-  heroPoints: { fontSize: 12, fontWeight: '700' },
 
   pulseRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
