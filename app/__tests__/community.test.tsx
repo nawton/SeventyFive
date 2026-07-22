@@ -74,6 +74,14 @@ describe('Community', () => {
     expect(screen.getByText('summary:Löpning')).toBeOnTheScreen()
   })
 
+  it('avataren på kortet leder till atletprofilen', async () => {
+    const { router } = require('expo-router')
+    render(<CommunityScreen />)
+    await screen.findByText('Anton Wretenberg')
+    fireEvent.press(screen.getByTestId('avatar-w1'))
+    expect(router.push).toHaveBeenCalledWith('/(app)/athlete')
+  })
+
   it('följer-knappen leder till Följer-sidan', async () => {
     const { router } = require('expo-router')
     render(<CommunityScreen />)

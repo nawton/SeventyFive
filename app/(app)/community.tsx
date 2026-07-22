@@ -130,7 +130,14 @@ function FeedCard({ post, onOpen }: { post: FeedPost; onOpen: (w: CardioWorkout)
       testID={`post-${post.id}`}
     >
       <View style={s.cardHeader}>
-        <Avatar url={post.authorAvatar} fallback={post.authorName.charAt(0).toUpperCase()} size={44} />
+        {/* Avataren öppnar atletprofilen — kortet i övrigt öppnar passet */}
+        <TouchableOpacity
+          onPress={() => router.push('/(app)/athlete' as never)}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          testID={`avatar-${post.id}`}
+        >
+          <Avatar url={post.authorAvatar} fallback={post.authorName.charAt(0).toUpperCase()} size={44} />
+        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.cardName}>{post.authorName}</Text>
           <Text style={s.cardMeta}>{post.typeLabel} — {relativeDayLabel(post.createdAt)}</Text>

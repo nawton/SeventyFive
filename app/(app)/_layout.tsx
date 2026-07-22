@@ -167,6 +167,7 @@ export default function AppLayout() {
       <Tabs.Screen name="stats" />
       <Tabs.Screen name="community" />
       <Tabs.Screen name="following" options={{ href: null }} />
+      <Tabs.Screen name="athlete" options={{ href: null }} />
       <Tabs.Screen name="profile" />
       <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="anpassning" options={{ href: null }} />
