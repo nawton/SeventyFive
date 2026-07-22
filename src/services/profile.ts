@@ -9,12 +9,14 @@ export interface ProfileData {
   gender: string | null
   weight_kg: number | null
   height_cm: number | null
+  /** Offentlig profil: följare godkänns automatiskt */
+  is_public: boolean | null
 }
 
 export async function getProfile(userId: string): Promise<ProfileData | null> {
   const { data } = await supabase
     .from('profiles')
-    .select('name, avatar_url, birth_date, gender, weight_kg, height_cm')
+    .select('name, avatar_url, birth_date, gender, weight_kg, height_cm, is_public')
     .eq('id', userId)
     .maybeSingle()
   return data

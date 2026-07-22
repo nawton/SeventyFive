@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable,
-  TextInput, Keyboard, InputAccessoryView, Platform,
+  TextInput, Keyboard, InputAccessoryView, Platform, Switch,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
 import { setBodyWeightKg } from '@/lib/prefs'
 import { splitName, combineName } from '@/lib/profileName'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
+import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD, LIQUID_GLASS } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
@@ -125,6 +125,7 @@ export default function AccountScreen() {
   const [gender, setGender]       = useState<string | null>(null)
   const [weightKg, setWeightKg]   = useState<number | null>(null)
   const [heightCm, setHeightCm]   = useState<number | null>(null)
+  const [isPublic, setIsPublic]   = useState(false)
 
   const [sheet, setSheet] = useState<SheetKind>(null)
 
@@ -150,6 +151,7 @@ export default function AccountScreen() {
         setGender(p.gender ?? null)
         setWeightKg(p.weight_kg != null ? Number(p.weight_kg) : null)
         setHeightCm(p.height_cm ?? null)
+        setIsPublic(p.is_public ?? false)
       }).catch(() => {})
     })
     return () => { alive = false }
@@ -295,6 +297,23 @@ export default function AccountScreen() {
           <Row label="Längd" value={heightLabel} onPress={openHeight} chevron={false} />
           <View style={styles.rowDivider} />
           <Row label="Språk" value="Svenska" locked />
+          <View style={styles.rowDivider} />
+          {/* Offentlig profil: följare godkänns automatiskt — väntande
+              förfrågningar accepteras direkt när man slår på (servertrigger) */}
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Offentlig profil</Text>
+            <View style={{ flex: 1 }} />
+            <Switch
+              value={isPublic}
+              onValueChange={v => {
+                setIsPublic(v)
+                save({ is_public: v })
+              }}
+              trackColor={{ false: BORDER, true: ORANGE }}
+              thumbColor="#fff"
+              testID="publicSwitch"
+            />
+          </View>
         </View>
 
         <Text style={styles.sectionLabel}>KONTO</Text>

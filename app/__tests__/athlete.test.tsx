@@ -167,8 +167,25 @@ describe('Atletprofil', () => {
     expect(screen.queryByTestId('athleteFollow')).not.toBeOnTheScreen()
   })
 
+  it('offentlig profil: följ godkänns direkt och statistiken låses upp', async () => {
+    const { follow, getFollowStatus } = require('@/services/follows')
+    ;(getFollowStatus as jest.Mock)
+      .mockResolvedValueOnce('none')       // första laddningen
+      .mockResolvedValue('accepted')       // servertriggern godkände direkt
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    render(<AthleteScreen />)
+    await screen.findByText('Nawid')
+    fireEvent.press(screen.getByTestId('athleteFollow'))
+    expect(follow).toHaveBeenCalledWith('u2')
+    expect(await screen.findByText('Den här veckan')).toBeOnTheScreen()
+    expect(within(screen.getByTestId('athleteFollow')).getByText('Följer')).toBeOnTheScreen()
+  })
+
   it('följ skickar en vänförfrågan — pending tills godkännande', async () => {
-    const { follow, unfollow } = require('@/services/follows')
+    const { follow, unfollow, getFollowStatus } = require('@/services/follows')
+    ;(getFollowStatus as jest.Mock)
+      .mockResolvedValueOnce('none')       // första laddningen
+      .mockResolvedValue('pending')        // privat profil — väntar
     mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
     render(<AthleteScreen />)
     await screen.findByText('Nawid')

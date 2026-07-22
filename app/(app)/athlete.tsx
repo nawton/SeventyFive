@@ -115,9 +115,24 @@ export default function AthleteScreen() {
     Haptics.selectionAsync()
     const prev = followStatus
     if (prev === 'none') {
-      // Skicka vänförfrågan — räknarna rörs inte förrän den godkänts
+      // Skicka vänförfrågan. Servern sätter statusen: privat profil →
+      // pending, offentlig profil → accepted direkt (då hämtas statistiken
+      // på en gång)
       setFollowStatus('pending')
-      follow(otherId).catch(() => setFollowStatus('none'))
+      follow(otherId)
+        .then(() => getFollowStatus(otherId))
+        .then(async status => {
+          setFollowStatus(status)
+          if (status !== 'accepted') return
+          setCounts(c => ({ ...c, followers: c.followers + 1 }))
+          const [all, strength] = await Promise.all([
+            getCardioWorkouts(otherId, 200).catch(() => [] as CardioWorkout[]),
+            getStrengthWorkouts(otherId, 500).catch(() => [] as StrengthWorkout[]),
+          ])
+          setWorkouts(all)
+          setGymCount(strengthToPosts(strength, '', null).length)
+        })
+        .catch(() => setFollowStatus('none'))
     } else {
       // Ångra förfrågan eller avfölj — godkända följen sänker räknaren
       setFollowStatus('none')
