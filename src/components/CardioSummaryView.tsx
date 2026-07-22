@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, Pressable,
-, useColorScheme } from 'react-native'
+  useColorScheme,
+} from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { clamp, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
