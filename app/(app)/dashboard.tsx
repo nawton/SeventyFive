@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native'
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
@@ -492,7 +493,7 @@ export default function DashboardScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <SafeScreen style={s.screen} edges={['top']}>
 
       {/* Atmospheric background glow */}
       <LinearGradient
@@ -750,7 +751,7 @@ export default function DashboardScreen() {
         onClose={() => setAddRuleOpen(false)}
         onCreate={handleCreateRule}
       />
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

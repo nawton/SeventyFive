@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -34,7 +34,7 @@ export default function SetupScheduleScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeScreen style={styles.screen}>
       <View style={styles.container}>
 
         <View style={styles.header}>
@@ -82,7 +82,7 @@ export default function SetupScheduleScreen() {
         onClose={() => setWizardVisible(false)}
         onFinish={handleWizardFinish}
       />
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

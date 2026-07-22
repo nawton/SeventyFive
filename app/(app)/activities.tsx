@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, FlatList, Modal } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -74,7 +74,7 @@ export default function ActivitiesScreen() {
   }, [otherId, paramName, paramAvatar]))
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <View style={s.header}>
         <GlassCircleButton
           icon="chevron-back"
@@ -191,7 +191,7 @@ export default function ActivitiesScreen() {
           />
         )}
       </Modal>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

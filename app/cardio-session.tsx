@@ -12,7 +12,7 @@ import {
   Platform,
   Pressable,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
@@ -220,7 +220,7 @@ export default function CardioSessionScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* ── Topp: tillbaka + datum ── */}
@@ -514,7 +514,7 @@ export default function CardioSessionScreen() {
           <Text style={s.startBtnText}>Starta {meta.label.toLowerCase()}</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

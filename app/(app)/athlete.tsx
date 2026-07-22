@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { View, StyleSheet, ScrollView, Alert } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
@@ -201,7 +201,7 @@ export default function AthleteScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <View style={s.header}>
         <GlassCircleButton
           icon="chevron-back"
@@ -252,7 +252,7 @@ export default function AthleteScreen() {
           onPressStreak={() => router.push('/(app)/streak' as never)}
         />
       </ScrollView>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

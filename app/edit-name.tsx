@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -68,7 +68,7 @@ export default function EditNameScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeScreen style={styles.screen}>
 
       {/* ── Header: tillbaka · titel · bock ── */}
       <View style={styles.header}>
@@ -119,7 +119,7 @@ export default function EditNameScreen() {
         </View>
       </KeyboardAvoidingView>
 
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

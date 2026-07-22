@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useLocalSearchParams } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { acceptChallenge as saveChallenge } from '@/services/challenge'
@@ -103,7 +103,7 @@ export default function RecommendationScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeScreen style={styles.screen}>
       <View style={styles.container}>
 
         {/* Label */}
@@ -177,7 +177,7 @@ export default function RecommendationScreen() {
         </Text>
       </View>
 
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

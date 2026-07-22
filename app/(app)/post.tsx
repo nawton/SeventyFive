@@ -3,7 +3,8 @@ import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Alert,
 } from 'react-native'
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline, Marker } from 'react-native-maps'
@@ -178,7 +179,7 @@ export default function PostScreen() {
   const hasRoute = route.length > 1
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <SafeScreen style={s.screen} edges={['top']}>
       <View style={s.header}>
         <GlassCircleButton
           icon="chevron-back"
@@ -414,7 +415,7 @@ export default function PostScreen() {
           />
         )}
       </Modal>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

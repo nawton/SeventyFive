@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, Alert,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Notifications from 'expo-notifications'
@@ -219,7 +219,7 @@ export default function GeneralScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeScreen style={styles.screen}>
       <View style={styles.header}>
         <GlassCircleButton
           icon="chevron-back"
@@ -310,7 +310,7 @@ export default function GeneralScreen() {
         onClose={() => setWizardVisible(false)}
         onFinish={handleWizardFinish}
       />
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

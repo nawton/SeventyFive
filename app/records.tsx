@@ -17,7 +17,7 @@ const PAGE_W    = SCREEN_W - 68  // smalare än skärmen så nästa kort sticker
 const PAGE_GAP  = 14             // mellanrum mellan korten i pagern
 const SNAP_W    = PAGE_W + PAGE_GAP
 const MAX_THRESHOLD = 7500       // Diamant — sliderns högra ände
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -326,7 +326,7 @@ export default function RecordsScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <View style={s.header}>
         <GlassCircleButton
           icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
@@ -789,7 +789,7 @@ export default function RecordsScreen() {
           )}
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

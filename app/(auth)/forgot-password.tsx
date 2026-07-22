@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -42,7 +42,7 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
@@ -107,7 +107,7 @@ export default function ForgotPasswordScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

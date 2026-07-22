@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Switch, FlatList,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -162,7 +162,7 @@ export default function PrivacyScreen() {
   const active = picker ? SETTINGS[picker] : null
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <View style={s.header}>
         <GlassCircleButton
           icon="chevron-back"
@@ -227,7 +227,7 @@ export default function PrivacyScreen() {
       {/* Kartsynlighet: två riktiga val — klipp ruttändar vid sparning och
           dölj kartor helt för andra */}
       <Modal visible={mapsOpen} animationType="slide" onRequestClose={() => setMapsOpen(false)}>
-        <SafeAreaView style={s.screen}>
+        <SafeScreen style={s.screen}>
           <View style={s.header}>
             <GlassCircleButton
               icon="chevron-back"
@@ -282,12 +282,12 @@ export default function PrivacyScreen() {
               />
             </View>
           </ScrollView>
-        </SafeAreaView>
+        </SafeScreen>
       </Modal>
 
       {/* Blockerade konton — lista med avblockering */}
       <Modal visible={blockedOpen} animationType="slide" onRequestClose={() => setBlockedOpen(false)}>
-        <SafeAreaView style={s.screen}>
+        <SafeScreen style={s.screen}>
           <View style={s.header}>
             <GlassCircleButton
               icon="chevron-back"
@@ -330,12 +330,12 @@ export default function PrivacyScreen() {
               </View>
             }
           />
-        </SafeAreaView>
+        </SafeScreen>
       </Modal>
 
       {/* Undersidan: förklaring + radioval, som förlagan */}
       <Modal visible={picker !== null} animationType="slide" onRequestClose={() => setPicker(null)}>
-        <SafeAreaView style={s.screen}>
+        <SafeScreen style={s.screen}>
           <View style={s.header}>
             <GlassCircleButton
               icon="chevron-back"
@@ -373,9 +373,9 @@ export default function PrivacyScreen() {
               })}
             </ScrollView>
           )}
-        </SafeAreaView>
+        </SafeScreen>
       </Modal>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TextInput, ActivityIndicator, Keyboard,
   TouchableOpacity,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -81,7 +81,7 @@ export default function SearchUsersScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <View style={s.header}>
         <GlassCircleButton
           icon="chevron-back"
@@ -173,7 +173,7 @@ export default function SearchUsersScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

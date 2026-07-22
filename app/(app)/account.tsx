@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable,
   TextInput, Keyboard, InputAccessoryView, Platform,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -233,7 +233,7 @@ export default function AccountScreen() {
   const heightLabel = heightCm != null ? `${heightCm} cm` : 'Ej specificerad'
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeScreen style={styles.screen}>
       {/* ── Header i liquid glass: pil tillbaka · titel · checkbock som
           sparar ev. pågående namnredigering och stänger ── */}
       <View style={styles.header}>
@@ -387,7 +387,7 @@ export default function AccountScreen() {
           <DoneAccessory nativeID={LAST_NAME_DONE_ID} testID="lastNameDone" onPress={doneEditingNames} />
         </>
       )}
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

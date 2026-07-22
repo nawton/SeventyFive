@@ -10,7 +10,7 @@ import {
   ActionSheetIOS,
   Platform,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { useFocusEffect, router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, { FadeInDown } from 'react-native-reanimated'
@@ -298,7 +298,7 @@ export default function ManageSessionsScreen() {
   })()
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <SafeScreen style={s.screen} edges={['top']}>
 
       {/* Header — samma mönster som Rekord & medaljer */}
       <View style={s.header}>
@@ -403,7 +403,7 @@ export default function ManageSessionsScreen() {
           }
         }}
       />
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

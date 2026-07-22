@@ -10,7 +10,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useLocalSearchParams } from 'expo-router'
 import { signInWithGoogle } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
@@ -125,7 +125,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeScreen style={styles.screen}>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -239,7 +239,7 @@ export default function LoginScreen() {
 
       </View>
     </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

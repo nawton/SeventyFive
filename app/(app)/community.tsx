@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, Modal, TouchableOpacity, RefreshControl,
   ActivityIndicator,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -221,7 +221,7 @@ export default function CommunityScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <SafeScreen style={s.screen} edges={['top']}>
       {/* Rent otonat glas i tummen (som förlagan) + följer-knapp till höger */}
       <View style={s.segmentRow}>
         <View style={{ flex: 1 }}>
@@ -371,7 +371,7 @@ export default function CommunityScreen() {
           />
         )}
       </Modal>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

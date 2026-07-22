@@ -3,7 +3,8 @@ import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, TouchableOpacity, Modal, Dimensions, Alert,
 } from 'react-native'
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   useSharedValue, useAnimatedStyle, interpolate, runOnJS, Extrapolation,
@@ -259,7 +260,7 @@ export default function StatsScreen() {
 
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <SafeScreen style={s.screen} edges={['top']}>
       <View style={s.header}>
         <Text style={s.title}>Framsteg</Text>
         <Text style={s.subtitle}>
@@ -372,7 +373,7 @@ export default function StatsScreen() {
 
 
 
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

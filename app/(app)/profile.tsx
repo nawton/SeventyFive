@@ -12,7 +12,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
@@ -420,7 +420,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <SafeScreen style={s.screen} edges={['top']}>
       {/* Fast topp: titel + notisklocka står stilla, allt under uppdateras */}
       <View style={s.fixedTop}>
         <View style={s.topRow}>
@@ -482,7 +482,7 @@ export default function ProfileScreen() {
         onCancel={() => setComposerUri(null)}
         onSave={handleSavePhoto}
       />
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

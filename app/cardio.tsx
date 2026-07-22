@@ -18,7 +18,8 @@ import {
   View,
   Switch,
 } from 'react-native'
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline } from 'react-native-maps'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
@@ -974,7 +975,7 @@ export default function CardioScreen() {
       {/* ── Fullskärmskompass — kolsvart med vita symboler ── */}
       <Modal visible={compassOpen} animationType="fade" onRequestClose={closeCompass}>
         <View style={styles.compassRoot}>
-          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+          <SafeScreen style={{ flex: 1 }} edges={['top', 'bottom']}>
             <TouchableOpacity style={styles.compassClose} onPress={closeCompass} activeOpacity={0.7}>
               <Ionicons name="close" size={26} color="#fff" />
             </TouchableOpacity>
@@ -1012,13 +1013,13 @@ export default function CardioScreen() {
                 </View>
               </View>
             </View>
-          </SafeAreaView>
+          </SafeScreen>
         </View>
       </Modal>
 
       {/* ── Stats overlay — syns även innan start ── */}
       {hudHidden ? (
-        <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
+        <SafeScreen style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
           <GlassPill
             onPress={() => setHudHidden(false)}
             style={styles.hudMiniLayout}
@@ -1030,9 +1031,9 @@ export default function CardioScreen() {
               <Ionicons name="chevron-down" size={13} color="#fff" />
             </View>
           </GlassPill>
-        </SafeAreaView>
+        </SafeScreen>
       ) : (
-        <SafeAreaView style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
+        <SafeScreen style={styles.statsOverlay} edges={['top']} pointerEvents="box-none">
           {/* Tryck på kortet krymper det till miniläget — tryck på minit växer igen */}
           <TouchableOpacity
             activeOpacity={0.95}
@@ -1137,7 +1138,7 @@ export default function CardioScreen() {
             </View>
             <Ionicons name="chevron-down" size={14} color={lightCard ? '#999' : '#666'} style={{ marginTop: -2 }} />
           </TouchableOpacity>
-        </SafeAreaView>
+        </SafeScreen>
       )}
 
       {/* ── Km split toast ── */}
@@ -1175,7 +1176,7 @@ export default function CardioScreen() {
       >
         <GestureDetector gesture={splitsCollapseGesture}>
           <View style={{ flex: 1 }}>
-            <SafeAreaView style={styles.expandedInner} edges={['top']}>
+            <SafeScreen style={styles.expandedInner} edges={['top']}>
               <TouchableOpacity style={styles.expandedHandleWrap} onPress={closeSplits} activeOpacity={0.7}>
                 <View style={styles.sheetHandle} />
                 <Text style={styles.expandedHint}>Svep höger för detaljvyn</Text>
@@ -1204,15 +1205,15 @@ export default function CardioScreen() {
                   </View>
                 ))}
               </ScrollView>
-            </SafeAreaView>
+            </SafeScreen>
           </View>
         </GestureDetector>
       </Animated.View>
 
       {status === 'idle' && (
-        <SafeAreaView style={styles.topRight} edges={['top']}>
+        <SafeScreen style={styles.topRight} edges={['top']}>
           <GlassCircleButton icon="chevron-back" size={40} onPress={() => router.back()} />
-        </SafeAreaView>
+        </SafeScreen>
       )}
 
       {/* ── Fullskärms-stats (kartan dold) — går att öppna även innan start ── */}
@@ -1222,7 +1223,7 @@ export default function CardioScreen() {
           pointerEvents={statsExpanded ? 'auto' : 'none'}
         >
           <GestureDetector gesture={collapseGesture}>
-            <SafeAreaView style={styles.expandedInner} edges={['top']}>
+            <SafeScreen style={styles.expandedInner} edges={['top']}>
               <TouchableOpacity style={styles.expandedHandleWrap} onPress={closeStats} activeOpacity={0.7}>
                 <View style={styles.sheetHandle} />
                 <Text style={styles.expandedHint}>Svep höger för karta · vänster för splits</Text>
@@ -1353,7 +1354,7 @@ export default function CardioScreen() {
                   </View>
                 </View>
               </View>
-            </SafeAreaView>
+            </SafeScreen>
           </GestureDetector>
         </Animated.View>
       )}
@@ -1371,7 +1372,7 @@ export default function CardioScreen() {
                 <Text style={styles.sheetTitle}>Välj aktivitet</Text>
               </View>
             </GestureDetector>
-            <SafeAreaView edges={['bottom']}>
+            <SafeScreen edges={['bottom']}>
               {EXERCISES.map((ex) => {
                 const active = exercise === ex.key
                 return (
@@ -1393,7 +1394,7 @@ export default function CardioScreen() {
                   </TouchableOpacity>
                 )
               })}
-            </SafeAreaView>
+            </SafeScreen>
           </Animated.View>
         </>
       )}
@@ -1410,7 +1411,7 @@ export default function CardioScreen() {
                 <Text style={styles.sheetTitle}>Välj karta</Text>
               </View>
             </GestureDetector>
-            <SafeAreaView edges={['bottom']}>
+            <SafeScreen edges={['bottom']}>
               <View style={styles.mapGrid}>
                 {MAP_STYLES.map(ms => {
                   const active = activeStyle === ms.key
@@ -1447,7 +1448,7 @@ export default function CardioScreen() {
                   )
                 })}
               </View>
-            </SafeAreaView>
+            </SafeScreen>
           </Animated.View>
         </>
       )}
@@ -1995,7 +1996,7 @@ export default function CardioScreen() {
         </Pressable>
       </Modal>
 
-      <SafeAreaView
+      <SafeScreen
         style={[
           status === 'idle' ? styles.bottomBarIdle : styles.bottomBar,
           status !== 'idle' && LIQUID_GLASS && styles.glassSurface,
@@ -2111,7 +2112,7 @@ export default function CardioScreen() {
           )}
 
         </View>
-      </SafeAreaView>
+      </SafeScreen>
 
     </View>
   )

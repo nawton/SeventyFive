@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Svg, {
@@ -128,7 +128,7 @@ export default function StreakScreen() {
   const next = MILESTONES.find(m => m > streak)
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <View style={s.header}>
         <GlassCircleButton
           icon="chevron-back"
@@ -211,7 +211,7 @@ export default function StreakScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

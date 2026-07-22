@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useLocalSearchParams } from 'expo-router'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ export default function QuizScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeScreen style={styles.screen}>
 
       {/* Header */}
       <View style={styles.header}>
@@ -150,7 +150,7 @@ export default function QuizScreen() {
         </TouchableOpacity>
       </View>
 
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

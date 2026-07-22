@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useURL } from 'expo-linking'
 import { Ionicons } from '@expo/vector-icons'
@@ -92,7 +92,7 @@ export default function ChangePasswordScreen() {
 
   if (status === 'no-session') {
     return (
-      <SafeAreaView style={s.screen}>
+      <SafeScreen style={s.screen}>
         <View style={[s.body, { justifyContent: 'center' }]}>
           <View style={s.bigIcon}>
             <Ionicons name="alert-circle-outline" size={40} color={ORANGE} />
@@ -109,12 +109,12 @@ export default function ChangePasswordScreen() {
             <Text style={s.primaryBtnText}>Till inloggningen</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </SafeScreen>
     )
   }
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <View style={s.header}>
         {from === 'profile' ? (
           <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} activeOpacity={0.7}>
@@ -180,7 +180,7 @@ export default function ChangePasswordScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

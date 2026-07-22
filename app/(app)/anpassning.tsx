@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, TextInput, Alert,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -136,7 +136,7 @@ export default function AnpassningScreen() {
   }
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.titleRow}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
@@ -287,7 +287,7 @@ export default function AnpassningScreen() {
           />
         </Section>
       </ScrollView>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

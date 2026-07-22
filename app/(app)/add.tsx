@@ -14,7 +14,7 @@ import {
   ActionSheetIOS,
   type ViewStyle,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, router, useLocalSearchParams } from 'expo-router'
@@ -420,7 +420,7 @@ export default function SchemaScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top']}>
+    <SafeScreen style={styles.screen} edges={['top']}>
 
       {/* Sticky top bar */}
       <View style={styles.topHeader}>
@@ -721,7 +721,7 @@ export default function SchemaScreen() {
         </View>
       )}
 
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

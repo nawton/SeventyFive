@@ -8,7 +8,7 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
@@ -39,7 +39,7 @@ export default function Welcome() {
   }
 
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeScreen style={s.screen}>
       <View style={s.container}>
 
         {/* ── Branding ── */}
@@ -135,7 +135,7 @@ export default function Welcome() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 

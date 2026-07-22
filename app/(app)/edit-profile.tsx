@@ -11,7 +11,8 @@ import {
   Modal,
   TouchableWithoutFeedback,
 } from 'react-native'
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
@@ -144,7 +145,7 @@ export default function EditProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeScreen style={styles.screen}>
 
       {/* ── Fixed header: glas-pil tillbaka; avataren sparas direkt vid val
           så ingen bock behövs — snurran syns kort medan uppladdningen går ── */}
@@ -380,7 +381,7 @@ export default function EditProfileScreen() {
         </View>
       </Modal>
 
-    </SafeAreaView>
+    </SafeScreen>
   )
 }
 
