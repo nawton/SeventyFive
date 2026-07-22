@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Modal,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
@@ -17,6 +17,8 @@ import {
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar, relativeDayLabel, regionForRoute } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { CardioSummaryView } from '@/components/CardioSummaryView'
+import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { timeAgo } from '@/lib/format'
 import { BG, CARD, BORDER, CARDIO_BLUE, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 
@@ -49,6 +51,8 @@ export default function PostScreen() {
   const [comments, setComments] = useState<PostComment[]>([])
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
+  const [unit, setUnit] = useState<UnitSystem>('metric')
+  const [detailOpen, setDetailOpen] = useState(false)
 
   useFocusEffect(useCallback(() => {
     if (!postKey) return
@@ -62,6 +66,8 @@ export default function PostScreen() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (alive) setOwnId(session?.user?.id ?? null)
     })
+    getUnitSystem().then(u => { if (alive) setUnit(u) })
+    setDetailOpen(false)
     if (kind === 'cardio' && ownerId) {
       getCardioWorkoutById(ownerId, postKey)
         .then(w => { if (alive) setWorkout(w) })
@@ -130,9 +136,16 @@ export default function PostScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          {/* Kartan högst upp — som Stravas diskussionsvy */}
+          {/* Kartan högst upp — som Stravas diskussionsvy. Tryck öppnar
+              hela passdetaljvyn med splits, karta och allt. */}
           {hasRoute && (
-            <View style={s.mapWrap} pointerEvents="none">
+            <TouchableOpacity
+              style={s.mapWrap}
+              activeOpacity={0.9}
+              onPress={() => setDetailOpen(true)}
+              testID="postMap"
+            >
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
               <MapView
                 style={s.map}
                 initialRegion={regionForRoute(route)}
@@ -157,6 +170,7 @@ export default function PostScreen() {
                 </Marker>
               </MapView>
             </View>
+            </TouchableOpacity>
           )}
 
           <View style={s.body}>
@@ -268,6 +282,22 @@ export default function PostScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Hela passdetaljvyn — samma som statistiken, skrivskyddat betyg
+          på andras pass */}
+      <Modal visible={detailOpen && !!workout} animationType="slide" onRequestClose={() => setDetailOpen(false)}>
+        {workout && (
+          <CardioSummaryView
+            workout={workout}
+            title={workout.name}
+            dateLabel={new Date(workout.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            avatarUrl={typeof params.ownerAvatar === 'string' && params.ownerAvatar ? params.ownerAvatar : null}
+            unit={unit}
+            onClose={() => setDetailOpen(false)}
+            effortReadOnly={ownerId !== ownId}
+          />
+        )}
+      </Modal>
     </SafeAreaView>
   )
 }

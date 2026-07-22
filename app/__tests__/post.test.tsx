@@ -35,6 +35,13 @@ jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   ImpactFeedbackStyle: { Light: 'light' },
 }))
+// Detaljvyn har ett eget testpaket — här räcker det att se att den öppnas
+jest.mock('@/components/CardioSummaryView', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  return { CardioSummaryView: ({ title, effortReadOnly }: { title: string; effortReadOnly?: boolean }) =>
+    React.createElement(Text, null, `summary:${title}${effortReadOnly ? ':readonly' : ''}`) }
+})
 
 const {
   getFeedSocial, getPostLikers, getComments, addComment, likePost,
@@ -90,6 +97,22 @@ describe('Diskussion', () => {
       pathname: '/(app)/athlete',
       params: { userId: 'u3', name: 'Johan Wretenberg', avatar: '' },
     })
+  })
+
+  it('tryck på kartan öppnar passdetaljvyn — skrivskyddad på annans pass', async () => {
+    const { getCardioWorkoutById } = require('@/services/cardioWorkouts')
+    ;(getCardioWorkoutById as jest.Mock).mockResolvedValue({
+      id: 'w1', name: 'Löpning på eftermiddagen', created_at: '2026-07-21T16:00:00.000Z',
+      data: {
+        category: 'cardio', type: 'running',
+        distance_km: 6.05, duration_seconds: 2000, calories: 400,
+        route: [[58.55, 13.92], [58.56, 13.93]],
+      },
+    })
+    render(<PostScreen />)
+    const map = await screen.findByTestId('postMap')
+    fireEvent.press(map)
+    expect(screen.getByText('summary:Löpning på eftermiddagen:readonly')).toBeOnTheScreen()
   })
 
   it('skicka lägger till kommentaren', async () => {
