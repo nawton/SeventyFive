@@ -134,6 +134,15 @@ export async function addComment(postKey: string, ownerId: string, body: string)
   if (error) throw error
 }
 
+/** Radera en kommentar — RLS släpper bara igenom författaren och passägaren */
+export async function deleteComment(commentId: string): Promise<void> {
+  const { error } = await supabase
+    .from('post_comments')
+    .delete()
+    .eq('id', commentId)
+  if (error) throw error
+}
+
 /** Gillanden och kommentarer på MINA pass, nyast först — till notiscentret */
 export async function getSocialNotifications(limit = 30): Promise<SocialNotification[]> {
   const uid = await ownId()

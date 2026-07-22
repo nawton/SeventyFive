@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native'
 import PostScreen from '../(app)/post'
 
 jest.mock('@/lib/supabase', () => ({
@@ -18,6 +18,7 @@ jest.mock('@/services/social', () => ({
   getPostLikers: jest.fn().mockResolvedValue([]),
   getComments: jest.fn().mockResolvedValue([]),
   addComment: jest.fn().mockResolvedValue(undefined),
+  deleteComment: jest.fn().mockResolvedValue(undefined),
   likePost: jest.fn().mockResolvedValue(undefined),
   unlikePost: jest.fn().mockResolvedValue(undefined),
 }))
@@ -86,6 +87,36 @@ describe('Diskussion', () => {
     fireEvent.press(screen.getByTestId('postLike'))
     expect(likePost).toHaveBeenCalledWith('w1', 'u2')
     expect(screen.getByText('3')).toBeOnTheScreen()
+  })
+
+  it('long-press på egen kommentar raderar efter bekräftelse', async () => {
+    const { Alert } = require('react-native')
+    const { deleteComment } = require('@/services/social')
+    const alertSpy = jest.spyOn(Alert, 'alert')
+    ;(getComments as jest.Mock).mockResolvedValue([
+      {
+        id: 'c2', authorId: 'u1', authorName: 'Anton', authorAvatar: null,
+        body: 'Min egen kommentar', createdAt: '2026-07-21T19:00:00.000Z',
+      },
+    ])
+    render(<PostScreen />)
+    await screen.findByText('Min egen kommentar')
+    fireEvent(screen.getByTestId('comment-c2'), 'longPress')
+    expect(alertSpy).toHaveBeenCalled()
+    // Tryck "Radera" i dialogen
+    const buttons = alertSpy.mock.calls[0][2] as Array<{ text: string; onPress?: () => void }>
+    act(() => { buttons.find(b => b.text === 'Radera')?.onPress?.() })
+    expect(deleteComment).toHaveBeenCalledWith('c2')
+    expect(screen.queryByText('Min egen kommentar')).not.toBeOnTheScreen()
+  })
+
+  it('long-press på annans kommentar på annans pass gör ingenting', async () => {
+    const { Alert } = require('react-native')
+    const alertSpy = jest.spyOn(Alert, 'alert')
+    render(<PostScreen />)
+    await screen.findByText('Johan Wretenberg')
+    fireEvent(screen.getByTestId('comment-c1'), 'longPress')
+    expect(alertSpy).not.toHaveBeenCalled()
   })
 
   it('tryck på en kommentar öppnar personens profil', async () => {

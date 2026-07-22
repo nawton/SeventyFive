@@ -239,10 +239,13 @@ describe('Community', () => {
     expect(screen.getByText('Grupper kommer snart')).toBeOnTheScreen()
   })
 
-  it('tomt flöde visar tom-läge när laddningen är klar', async () => {
+  it('tomt flöde visar tom-läge med Hitta vänner-knapp', async () => {
+    const { router } = require('expo-router')
     ;(getCardioWorkouts as jest.Mock).mockResolvedValue([])
     render(<CommunityScreen />)
     expect(await screen.findByText('Inget i flödet ännu')).toBeOnTheScreen()
+    fireEvent.press(screen.getByTestId('emptyCta'))
+    expect(router.push).toHaveBeenCalledWith('/(app)/search-users')
   })
 
   it('relativeDayLabel: idag, igår och X dagar sedan', () => {

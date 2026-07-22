@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Modal,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Alert,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
@@ -11,8 +11,8 @@ import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getCardioWorkoutById, type CardioWorkout } from '@/services/cardioWorkouts'
 import {
-  getFeedSocial, getPostLikers, getComments, addComment, likePost, unlikePost,
-  type PostComment,
+  getFeedSocial, getPostLikers, getComments, addComment, deleteComment,
+  likePost, unlikePost, type PostComment,
 } from '@/services/social'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar, relativeDayLabel, regionForRoute } from '@/components/FeedWorkoutCard'
@@ -96,6 +96,26 @@ export default function PostScreen() {
         setLikedByMe(!next)
         setLikes(n => Math.max(0, n + (next ? -1 : 1)))
       })
+  }
+
+  // Long-press: egna kommentarer, och alla kommentarer på ens eget pass,
+  // kan raderas (samma regel som databasens RLS)
+  function handleLongPressComment(c: PostComment) {
+    const canDelete = c.authorId === ownId || ownerId === ownId
+    if (!canDelete) return
+    Alert.alert('Radera kommentar?', `”${c.body}”`, [
+      { text: 'Avbryt', style: 'cancel' },
+      {
+        text: 'Radera',
+        style: 'destructive',
+        onPress: () => {
+          setComments(prev => prev.filter(x => x.id !== c.id))
+          deleteComment(c.id).catch(() => {
+            getComments(postKey).then(setComments).catch(() => {})
+          })
+        },
+      },
+    ])
   }
 
   async function handleSend() {
@@ -211,14 +231,15 @@ export default function PostScreen() {
 
             <View style={s.divider} />
 
-            {/* Kommentarstråden — tryck på en kommentar öppnar personens
-                profil (egen kommentar → profilfliken) */}
+            {/* Kommentarstråden — tryck öppnar personens profil (egen
+                kommentar → profilfliken), long-press raderar när man får */}
             {comments.map(c => (
               <TouchableOpacity
                 key={c.id}
                 style={s.commentRow}
                 activeOpacity={0.7}
                 testID={`comment-${c.id}`}
+                onLongPress={() => handleLongPressComment(c)}
                 onPress={() => {
                   if (c.authorId === ownId) {
                     router.push('/(app)/profile' as never)

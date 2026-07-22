@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react'
-import { View, Text, StyleSheet, FlatList, Modal, TouchableOpacity } from 'react-native'
+import {
+  View, Text, StyleSheet, FlatList, Modal, TouchableOpacity, RefreshControl,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -47,14 +49,24 @@ const FILTERS: Array<{ key: Filter; label: string; icon?: React.ComponentProps<t
   { key: 'strength', label: 'Gym', icon: 'barbell-outline' },
 ]
 
-function EmptyState({ icon, title, body }: {
-  icon: React.ComponentProps<typeof Ionicons>['name']; title: string; body: string
+function EmptyState({ icon, title, body, ctaLabel, onCta }: {
+  icon: React.ComponentProps<typeof Ionicons>['name']
+  title: string
+  body: string
+  ctaLabel?: string
+  onCta?: () => void
 }) {
   return (
     <View style={s.empty}>
       <Ionicons name={icon} size={44} color={TEXT_SECONDARY} />
       <Text style={s.emptyTitle}>{title}</Text>
       <Text style={s.emptyBody}>{body}</Text>
+      {ctaLabel && onCta && (
+        <TouchableOpacity style={s.emptyCta} onPress={onCta} activeOpacity={0.8} testID="emptyCta">
+          <Ionicons name="search" size={15} color={ORANGE} />
+          <Text style={s.emptyCtaText}>{ctaLabel}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   )
 }
@@ -90,54 +102,57 @@ export default function CommunityScreen() {
     } as never)
   }
 
-  useFocusEffect(useCallback(() => {
-    let alive = true
-    getUnitSystem().then(u => { if (alive) setUnit(u) })
-    async function loadFeed() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user || !alive) return
-      const uid = session.user.id
-      setOwnId(uid)
-      const [profile, lists] = await Promise.all([
-        getProfile(uid).catch(() => null),
-        getFollowLists(uid).catch(() => ({ followers: [], following: [] })),
-      ])
-      if (!alive) return
+  // Delad mellan fokus-laddningen och pull-to-refresh
+  const loadFeed = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return
+    const uid = session.user.id
+    setOwnId(uid)
+    const [profile, lists] = await Promise.all([
+      getProfile(uid).catch(() => null),
+      getFollowLists(uid).catch(() => ({ followers: [], following: [] })),
+    ])
 
-      // Jag själv + alla jag följer (godkända) — varje författares pass
-      // hämtas parallellt och blandas till ett flöde
-      const authors = [
-        {
-          id: uid,
-          name: profile?.name || session.user.email?.split('@')[0] || 'Jag',
-          avatar: profile?.avatar_url ?? null,
-        },
-        ...lists.following.map(p => ({
-          id: p.id, name: p.name ?? 'Namnlös', avatar: p.avatar_url,
-        })),
+    // Jag själv + alla jag följer (godkända) — varje författares pass
+    // hämtas parallellt och blandas till ett flöde
+    const authors = [
+      {
+        id: uid,
+        name: profile?.name || session.user.email?.split('@')[0] || 'Jag',
+        avatar: profile?.avatar_url ?? null,
+      },
+      ...lists.following.map(p => ({
+        id: p.id, name: p.name ?? 'Namnlös', avatar: p.avatar_url,
+      })),
+    ]
+    const perAuthor = await Promise.all(authors.map(async a => {
+      const [cardio, strength] = await Promise.all([
+        getCardioWorkouts(a.id, 20).catch(() => [] as CardioWorkout[]),
+        getStrengthWorkouts(a.id, 200).catch(() => [] as StrengthWorkout[]),
+      ])
+      return [
+        ...cardio.map(w => workoutToPost(w, a.id, a.name, a.avatar)),
+        ...strengthToPosts(strength, a.id, a.name, a.avatar),
       ]
-      const perAuthor = await Promise.all(authors.map(async a => {
-        const [cardio, strength] = await Promise.all([
-          getCardioWorkouts(a.id, 20).catch(() => [] as CardioWorkout[]),
-          getStrengthWorkouts(a.id, 200).catch(() => [] as StrengthWorkout[]),
-        ])
-        return [
-          ...cardio.map(w => workoutToPost(w, a.id, a.name, a.avatar)),
-          ...strengthToPosts(strength, a.id, a.name, a.avatar),
-        ]
-      }))
-      if (!alive) return
-      const feed = mergePosts(perAuthor.flat()).slice(0, FEED_LIMIT)
-      setPosts(feed)
-      setLoaded(true)
-      // Gillanden och kommentarsantal för hela flödet i två frågor
-      getFeedSocial(feed.map(p => p.id))
-        .then(map => { if (alive) setSocial(map) })
-        .catch(() => {})
-    }
+    }))
+    const feed = mergePosts(perAuthor.flat()).slice(0, FEED_LIMIT)
+    setPosts(feed)
+    setLoaded(true)
+    // Gillanden och kommentarsantal för hela flödet i två frågor
+    getFeedSocial(feed.map(p => p.id)).then(setSocial).catch(() => {})
+  }, [])
+
+  useFocusEffect(useCallback(() => {
+    getUnitSystem().then(setUnit).catch(() => {})
     loadFeed()
-    return () => { alive = false }
-  }, []))
+  }, [loadFeed]))
+
+  const [refreshing, setRefreshing] = useState(false)
+  async function handleRefresh() {
+    setRefreshing(true)
+    await loadFeed().catch(() => {})
+    setRefreshing(false)
+  }
 
   // Optimistiskt gilla/ogilla — backas vid fel. Notisen till passägaren
   // sköter databasen + realtime.
@@ -217,6 +232,9 @@ export default function CommunityScreen() {
           showsVerticalScrollIndicator={false}
           onScroll={onScroll}
           scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ORANGE} />
+          }
           // Chipsen scrollar med flödet — headern förblir ren
           ListHeaderComponent={
             <View style={s.chipsRow}>
@@ -246,7 +264,13 @@ export default function CommunityScreen() {
               title={filter === 'strength' ? 'Inga gympass i flödet'
                 : filter === 'cardio' ? 'Inga cardio-pass i flödet'
                 : 'Inget i flödet ännu'}
-              body="Dina pass dyker upp här. Snart kan du dela dem så att andra kan se, gilla och kommentera."
+              body={filter === 'all'
+                ? 'Dina och dina vänners pass dyker upp här. Hitta vänner och börja följa varandra!'
+                : 'Passen dyker upp här så fort de loggas.'}
+              ctaLabel={filter === 'all' ? 'Hitta vänner' : undefined}
+              onCta={filter === 'all'
+                ? () => router.push('/(app)/search-users' as never)
+                : undefined}
             />
           ) : null}
         />
@@ -314,4 +338,10 @@ const s = StyleSheet.create({
   empty: { alignItems: 'center', gap: 8, paddingTop: 90, paddingHorizontal: 40 },
   emptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },
   emptyBody: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  emptyCta: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    marginTop: 14, paddingHorizontal: 18, paddingVertical: 11,
+    borderRadius: 20, borderWidth: 1.5, borderColor: ORANGE,
+  },
+  emptyCtaText: { color: ORANGE, fontSize: 14, fontWeight: '700' },
 })
