@@ -43,6 +43,7 @@ import {
 } from '@/services/workoutSchedule'
 import type { ExerciseCategory } from '@/types/database'
 import { AppTextInput } from '@/components/AppTextInput'
+import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 
 // ─── Shared schedule helpers (also imported by add.tsx) ───────────────────────
 
@@ -73,16 +74,6 @@ const CATEGORY_ICONS: Record<ExerciseCategory, React.ComponentProps<typeof Ionic
 }
 
 // Gym-pass innehåller bara styrkeövningar — cardio/rörlighet/HIIT är egna pass
-const PICKER_FILTERS = [
-  { key: 'all',       label: 'Alla' },
-  { key: 'legs',      label: 'Ben' },
-  { key: 'chest',     label: 'Bröst' },
-  { key: 'back',      label: 'Rygg' },
-  { key: 'shoulders', label: 'Axlar' },
-  { key: 'arms',      label: 'Armar' },
-  { key: 'core',      label: 'Mage' },
-]
-
 interface DraftExercise {
   key: string
   exercise_name: string
@@ -128,8 +119,6 @@ export function SessionEditor({
   const [sessionType, setSessionType]   = useState<'gym' | 'cardio'>('gym')
   const [cardioType, setCardioType]     = useState('running')
   const [showPicker, setShowPicker]     = useState(false)
-  const [pickerFilter, setPickerFilter] = useState('all')
-  const [pickerSearch, setPickerSearch] = useState('')
   const [saving, setSaving]             = useState(false)
   const [deleting, setDeleting]         = useState(false)
   const [infoEx, setInfoEx]             = useState<Exercise | null>(null)
@@ -324,18 +313,6 @@ export function SessionEditor({
       },
     ])
   }
-
-  // ── Picker ───────────────────────────────────────────────────────────────────
-  const uniqueExercises = [...new Map(exercises.map(e => [e.name.toLowerCase(), e])).values()]
-  const pickerExercises = uniqueExercises.filter(e => {
-    // Bara styrkeövningar i gym-passets väljare
-    if (e.category !== 'strength') return false
-    const matchesFilter = pickerFilter === 'all'
-      ? true
-      : getExerciseMuscleGroup(e.name) === pickerFilter
-    const matchesSearch = pickerSearch.trim() === '' || e.name.toLowerCase().includes(pickerSearch.toLowerCase())
-    return matchesFilter && matchesSearch
-  })
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -579,122 +556,21 @@ export function SessionEditor({
       </KeyboardAvoidingView>
 
       {/* Exercise picker */}
-      <Modal visible={showPicker} animationType="slide" onRequestClose={() => setShowPicker(false)}>
-        <View style={[s.pickerScreen, { paddingTop: insets.top }]}>
-          <View style={s.pickerHeader}>
-            <TouchableOpacity onPress={() => setShowPicker(false)} style={s.iconBtn} activeOpacity={0.7}>
-              <Ionicons name="chevron-down" size={22} color={TEXT_PRIMARY} />
-            </TouchableOpacity>
-            <Text style={s.title}>Lägg till övning</Text>
-            <TouchableOpacity onPress={() => setShowPicker(false)} style={s.klarBtn} activeOpacity={0.8}>
-              <Text style={s.klarBtnText}>Klar{drafts.length > 0 ? ` (${drafts.length})` : ''}</Text>
-            </TouchableOpacity>
-          </View>
+      {/* Lägg till övning — nya väljaren med muskelgrupper och kroppsbild.
+          multiSelect: bocka i flera, Klar lägger till alla som drafts */}
+      <ExercisePickerSheet
+        visible={showPicker}
+        exercises={exercises}
+        gymOnly={sessionType === 'gym'}
+        multiSelect
+        onConfirmMulti={exs => {
+          exs.forEach(ex => addExercise(ex.name))
+          setShowPicker(false)
+        }}
+        onSelect={(ex) => { addExercise(ex.name); setShowPicker(false) }}
+        onClose={() => setShowPicker(false)}
+      />
 
-          <View style={[s.pickerSearchBar, chip, chip]}>
-            <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} />
-            <AppTextInput
-              style={s.pickerSearchInput}
-              value={pickerSearch}
-              onChangeText={setPickerSearch}
-              placeholder="Sök övning…"
-              placeholderTextColor={TEXT_SECONDARY}
-              autoCorrect={false}
-              autoCapitalize="none"
-              returnKeyType="search"
-              clearButtonMode="while-editing"
-            />
-            {pickerSearch.length > 0 && (
-              <TouchableOpacity onPress={() => setPickerSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close-circle" size={17} color={TEXT_SECONDARY} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={s.pickerFilterStrip}
-            contentContainerStyle={s.pickerFilters}
-          >
-            {PICKER_FILTERS.map(f => (
-              <TouchableOpacity
-                key={f.key}
-                style={[s.pickerPill, chip, pickerFilter === f.key && s.pickerPillActive]}
-                onPress={() => setPickerFilter(f.key)}
-                activeOpacity={0.7}
-              >
-                <Text style={[s.pickerPillText, pickerFilter === f.key && s.pickerPillTextActive]}>
-                  {f.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <Text style={s.pickerCount}>{pickerExercises.length} övningar</Text>
-
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-            {pickerExercises.map(ex => {
-              const already = drafts.some(d => d.exercise_name === ex.name)
-
-              function handleLongPress() {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-                if (Platform.OS === 'ios') {
-                  ActionSheetIOS.showActionSheetWithOptions(
-                    {
-                      title: ex.name,
-                      options: ['Avbryt', already ? 'Ta bort från pass' : 'Lägg till i pass', 'Mer info'],
-                      cancelButtonIndex: 0,
-                    },
-                    (i) => {
-                      if (i === 1) already
-                        ? removeDraft(drafts.find(d => d.exercise_name === ex.name)!.key)
-                        : addExercise(ex.name)
-                      if (i === 2) { setShowPicker(false); setTimeout(() => setInfoEx(ex), 350) }
-                    },
-                  )
-                } else {
-                  Alert.alert(ex.name, undefined, [
-                    { text: already ? 'Ta bort från pass' : 'Lägg till i pass', onPress: () => already ? removeDraft(drafts.find(d => d.exercise_name === ex.name)!.key) : addExercise(ex.name) },
-                    { text: 'Mer info', onPress: () => { setShowPicker(false); setTimeout(() => setInfoEx(ex), 350) } },
-                    { text: 'Avbryt', style: 'cancel' },
-                  ])
-                }
-              }
-
-              return (
-                <TouchableOpacity
-                  key={ex.id}
-                  style={[s.pickerRow, already && s.pickerRowAdded]}
-                  onPress={() => already
-                    ? removeDraft(drafts.find(d => d.exercise_name === ex.name)!.key)
-                    : addExercise(ex.name)
-                  }
-                  onLongPress={handleLongPress}
-                  delayLongPress={400}
-                  activeOpacity={0.7}
-                >
-                  <View style={[s.pickerIcon, already && { backgroundColor: accentAlpha('20') }]}>
-                    <Ionicons name={CATEGORY_ICONS[ex.category]} size={18} color={already ? ACCENT : TEXT_SECONDARY} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.pickerRowName, already && { color: ACCENT }]}>{ex.name}</Text>
-                    <Text style={s.pickerRowSub}>{CATEGORY_LABELS[ex.category]}</Text>
-                  </View>
-                  <View style={[s.pickerAddBtn, already && { backgroundColor: ACCENT, borderColor: ACCENT }]}>
-                    <Ionicons name={already ? 'checkmark' : 'add'} size={18} color={already ? '#000' : TEXT_SECONDARY} />
-                  </View>
-                </TouchableOpacity>
-              )
-            })}
-            {pickerExercises.length === 0 && (
-              <Text style={{ color: TEXT_SECONDARY, textAlign: 'center', marginTop: 40, fontSize: 15 }}>
-                Inga övningar hittades
-              </Text>
-            )}
-          </ScrollView>
-        </View>
-      </Modal>
 
       {/* Exercise info sheet */}
       {(() => {
