@@ -933,7 +933,7 @@ export default function CardioScreen() {
     <View style={styles.root}>
 
       {/* ── Fullscreen Apple Maps — väntar på startregion så vi öppnar inzoomade ── */}
-      {initRegion === null && <View style={[StyleSheet.absoluteFill, { backgroundColor: '#101012' }]} />}
+      {initRegion === null && <View style={[StyleSheet.absoluteFill, { backgroundColor: lightCard ? '#F5F5F7' : '#101012' }]} />}
       {initRegion !== null && (
       <MapView
         ref={mapRef}
@@ -1144,7 +1144,7 @@ export default function CardioScreen() {
 
       {/* ── Km split toast ── */}
       {splitToast && (
-        <View style={[styles.splitToast, LIQUID_GLASS && styles.glassSurface]} pointerEvents="none">
+        <View style={[styles.splitToast, !LIQUID_GLASS && lightCard && { backgroundColor: 'rgba(255,255,255,0.92)' }, LIQUID_GLASS && styles.glassSurface]} pointerEvents="none">
           {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme={lightCard ? 'light' : 'dark'} tintColor={lightCard ? 'rgba(250,250,252,0.55)' : 'rgba(12,12,14,0.5)'} style={StyleSheet.absoluteFill} />}
           <Ionicons name="flag" size={16} color={CARDIO_ACCENT} />
           <Text style={styles.splitToastText}>{splitToast}</Text>
@@ -2000,6 +2000,7 @@ export default function CardioScreen() {
       <SafeScreen
         style={[
           status === 'idle' ? styles.bottomBarIdle : styles.bottomBar,
+          status !== 'idle' && !LIQUID_GLASS && lightCard && { backgroundColor: 'rgba(250,250,252,0.97)' },
           status !== 'idle' && LIQUID_GLASS && styles.glassSurface,
         ]}
         edges={['bottom']}
@@ -2017,7 +2018,7 @@ export default function CardioScreen() {
           {status === 'idle' ? (
             <View style={styles.idleWrap}>
               {/* Inställningsrutnät i eget flytande kort, Start separat under */}
-              <View style={styles.idleCard}>
+              <View style={[styles.idleCard, lightCard && { backgroundColor: 'rgba(255,255,255,0.94)' }]}>
               <View style={styles.idleGrid}>
                 {/* Guidade pass: planen äger aktivitet och mål — cellerna öppnar
                     infosheets istället för väljare */}
@@ -2105,7 +2106,7 @@ export default function CardioScreen() {
                 <Text style={styles.pausePillText}>Återuppta</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.finishPill} onPress={handleFinish} activeOpacity={0.85}>
+              <TouchableOpacity style={[styles.finishPill, lightCard && { backgroundColor: '#E5E5EA' }, lightCard && { backgroundColor: '#E5E5EA' }]} onPress={handleFinish} activeOpacity={0.85}>
                 <Ionicons name="stop" size={18} color="#fff" />
                 <Text style={styles.finishPillText}>Avsluta</Text>
               </TouchableOpacity>
@@ -2188,14 +2189,14 @@ const styles = StyleSheet.create({
   voiceList: { paddingHorizontal: 16, gap: 12 },
   voiceRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-    backgroundColor: '#161618', borderRadius: 18,
+    backgroundColor: CARD, borderRadius: 18,
     paddingVertical: 15, paddingHorizontal: 16,
   },
   voiceRowPlain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   voiceRowLabel: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   voiceRowValue: { color: '#9BA0A6', fontSize: 13, marginTop: 3 },
   voiceFreqBlock: {
-    backgroundColor: '#161618', borderRadius: 20,
+    backgroundColor: CARD, borderRadius: 20,
     padding: 18, gap: 18,
   },
   voiceStepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
@@ -2390,7 +2391,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   pausedBadgeText: {
-    color: TEXT_PRIMARY,
+    color: '#fff',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -2528,7 +2529,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#161618',
+    backgroundColor: CARD,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -2913,7 +2914,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pausePillText: {
-    color: TEXT_PRIMARY,
+    color: '#fff',
     fontSize: 17,
     fontWeight: '800',
   },
