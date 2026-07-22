@@ -368,7 +368,8 @@ export default function DashboardScreen() {
       // Fotouppgiften kräver ett faktiskt foto — är den ibockad utan bild
       // (t.ex. borttagen från profilen) bockas den ur igen
       const photoTask = completions.find(t => t.type === 'photo' && t.completed)
-      if (photoTask) {
+      // Medvetet skippade foton bockas inte ur — dagen är godkänd ändå
+      if (photoTask && !photoTask.details?.skipped) {
         try {
           if (!(await hasPhotoForDay(user.id, active.id, day))) {
             await setTaskCompleted(photoTask.completionId, false)
@@ -445,6 +446,23 @@ export default function DashboardScreen() {
       return
     }
     applyTaskUpdate(task, !task.completed, task.details)
+  }
+
+  // ── Framstegsfoto: ta bild eller skippa medvetet — dagen godkänns ändå ──
+  function handlePhotoPress(task: TaskItem) {
+    if (task.completed) {
+      router.push('/(app)/profile')
+      return
+    }
+    Alert.alert(
+      'Dagens framstegsfoto',
+      'Vill du ta ett foto nu eller hoppa över idag? Dagen godkänns även utan foto.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Hoppa över idag', onPress: () => applyTaskUpdate(task, true, { ...task.details, skipped: true }) },
+        { text: 'Ta foto', onPress: () => router.push({ pathname: '/(app)/profile', params: { action: 'addPhoto' } }) },
+      ],
+    )
   }
 
   // ── Vatten: glas à 250 ml mot nivåns litermål ──
@@ -804,8 +822,8 @@ export default function DashboardScreen() {
           <TaskGridCard
             key={task.completionId}
             task={task}
-            onPress={() => router.push('/(app)/profile')}
-            metaLabel={task.completed ? undefined : 'Läggs till i profilen'}
+            onPress={() => handlePhotoPress(task)}
+            metaLabel={task.completed ? (task.details?.skipped ? 'Överhoppat idag' : undefined) : 'Läggs till i profilen'}
             fullWidth
           />
         ))}

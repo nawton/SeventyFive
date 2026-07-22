@@ -8,6 +8,8 @@ export interface TaskDetails {
   glasses?: number
   book?: string
   pages?: number
+  /** Framstegsfotot medvetet överhoppat idag — dagen godkänns ändå */
+  skipped?: boolean
 }
 
 export interface TaskItem {
