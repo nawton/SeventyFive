@@ -222,21 +222,6 @@ export default function EditProfileScreen() {
 
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => router.push('/stats' as never)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.rowIconBox}>
-                  <Ionicons name="bar-chart-outline" size={17} color={TEXT_SECONDARY} />
-                </View>
-                <Text style={styles.rowLabel}>Statistik</Text>
-                <View style={{ flex: 1 }} />
-                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
-              </TouchableOpacity>
-
-              <View style={styles.rowDivider} />
-
-              <TouchableOpacity
-                style={styles.row}
                 onPress={() => Alert.alert('Kommer snart', 'Hitta lopp nära dig och koppla dem direkt till din träningsplan.')}
                 activeOpacity={0.7}
               >
@@ -283,20 +268,6 @@ export default function EditProfileScreen() {
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
 
-              <View style={styles.rowDivider} />
-
-              <TouchableOpacity
-                style={styles.row}
-                onPress={() => Alert.alert('SeventyFive', 'Version 1.0.0\n\nByggd av Nawton. 75 dagar — gym, löpning och allt däremellan.')}
-                activeOpacity={0.7}
-              >
-                <View style={styles.rowIconBox}>
-                  <Ionicons name="information-circle-outline" size={17} color={TEXT_SECONDARY} />
-                </View>
-                <Text style={styles.rowLabel}>Om SeventyFive</Text>
-                <Text style={styles.rowValue} numberOfLines={1}>1.0.0</Text>
-                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
-              </TouchableOpacity>
             </View>
           </View>
 
