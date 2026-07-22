@@ -305,9 +305,9 @@ export function AthleteOverview({
 
       </>)}
 
-      {/* Alla aktiviteter — hela historiken på egen sida (egen profil eller
-          upplåst väns) */}
-      {statsUnlocked && (
+      {/* Alla aktiviteter — bara på upplåsta vänners profiler; den egna
+          historiken finns redan i statistikfliken */}
+      {!isOwn && statsUnlocked && (
         <TouchableOpacity
           style={s.activitiesBtn}
           onPress={onOpenActivities}

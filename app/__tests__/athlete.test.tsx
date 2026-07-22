@@ -95,7 +95,7 @@ describe('Atletprofil', () => {
     expect(screen.getByText('Följare')).toBeOnTheScreen()
     expect(screen.queryByText('Den här veckan')).not.toBeOnTheScreen()
     expect(screen.queryByText('chart:12')).not.toBeOnTheScreen()
-    expect(screen.getByText('Aktiviteter')).toBeOnTheScreen()   // historiken finns kvar
+    expect(screen.queryByText('Aktiviteter')).not.toBeOnTheScreen()   // finns i statistikfliken
     fireEvent.press(screen.getByTestId('streakCounter'))
     expect(router.push).toHaveBeenCalledWith('/(app)/streak')
   })
@@ -124,15 +124,17 @@ describe('Atletprofil', () => {
     expect(screen.getByText('0,00 km')).toBeOnTheScreen()   // cyklingen var inte denna vecka
   })
 
-  it('Aktiviteter-knappen visar antal pass och leder till aktivitetslistan', async () => {
+  it('Aktiviteter-knappen finns på en godkänd väns profil och navigerar dit', async () => {
     const { router } = require('expo-router')
+    const { getFollowStatus } = require('@/services/follows')
+    ;(getFollowStatus as jest.Mock).mockResolvedValue('accepted')
+    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
     render(<AthleteScreen />)
-    await screen.findByText('Anton Wretenberg')
-    expect(screen.getByText('2 pass')).toBeOnTheScreen()
+    expect(await screen.findByText('2 pass')).toBeOnTheScreen()
     fireEvent.press(screen.getByTestId('athleteActivities'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/activities',
-      params: { userId: '', name: '', avatar: '' },
+      params: { userId: 'u2', name: 'Nawid', avatar: '' },
     })
   })
 
