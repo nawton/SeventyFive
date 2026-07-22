@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
@@ -12,8 +13,8 @@ import { BG, CARD, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 // FÖLJARE/FÖLJER — Runkeeper-förlagan: eget namn i headern, sökknapp,
 // två flikar med räknare och en lista med avatar, namn, total distans och
 // Följer-pill. Följ-backenden är inte byggd än (medvetet avgränsat) —
-// listorna visar exempeldata så designen kan utvärderas, och gilla/följ
-// är bara lokal state. Sökknappen är en platshållare tills sök byggs.
+// listorna är tomma tills den finns; PersonRow ligger redo för riktig
+// data. Sökknappen är en platshållare tills sök byggs.
 // =============================================================================
 
 type Tab = 'followers' | 'following'
@@ -24,12 +25,6 @@ interface Person {
   avatar: string | null   // emoji eller null (initialer)
   totalKm: number
 }
-
-// Exempeldata tills följ-systemet finns i backend
-const DEMO_PEOPLE: Person[] = [
-  { id: 'p1', name: 'Lukas', avatar: '😉', totalKm: 11 },
-  { id: 'p2', name: 'Tanja', avatar: '🏎️', totalKm: 706 },
-]
 
 function PersonRow({ person }: { person: Person }) {
   // Följ-status är bara lokal tills backenden finns
@@ -81,9 +76,9 @@ export default function FollowingScreen() {
     return () => { alive = false }
   }, []))
 
-  // Samma exempeldata i båda flikarna tills backenden finns
-  const followers = DEMO_PEOPLE
-  const following = DEMO_PEOPLE
+  // Tomt tills följ-backenden finns — fylls på med riktiga relationer där
+  const followers: Person[] = []
+  const following: Person[] = []
 
   const people = tab === 'followers' ? followers : following
 
@@ -136,6 +131,17 @@ export default function FollowingScreen() {
         ItemSeparatorComponent={() => <View style={s.rowDivider} />}
         contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={s.empty}>
+            <Ionicons name="people-outline" size={44} color={TEXT_SECONDARY} />
+            <Text style={s.emptyTitle}>
+              {tab === 'followers' ? 'Inga följare ännu' : 'Du följer ingen ännu'}
+            </Text>
+            <Text style={s.emptyBody}>
+              Snart kan du hitta vänner och se deras delade pass i flödet.
+            </Text>
+          </View>
+        }
       />
     </SafeAreaView>
   )
@@ -177,4 +183,8 @@ const s = StyleSheet.create({
   followPillActive: { backgroundColor: ORANGE, borderColor: ORANGE },
   followPillText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   followPillTextActive: { color: '#000' },
+
+  empty: { alignItems: 'center', gap: 8, paddingTop: 70, paddingHorizontal: 40 },
+  emptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 6 },
+  emptyBody: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
 })

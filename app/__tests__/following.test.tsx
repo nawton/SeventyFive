@@ -23,28 +23,18 @@ jest.mock('expo-router', () => ({
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }))
 
 describe('Följare/Följer', () => {
-  it('visar namnet i headern, flikar med räknare och exempellistan', async () => {
+  it('visar namnet i headern och flikar med nollräknare', async () => {
     render(<FollowingScreen />)
     expect(await screen.findByText('Anton Wretenberg')).toBeOnTheScreen()
-    expect(screen.getByText('2 Följare')).toBeOnTheScreen()
-    expect(screen.getByText('2 Följer')).toBeOnTheScreen()
-    expect(screen.getByText('Lukas')).toBeOnTheScreen()
-    expect(screen.getByText('11 km totalt')).toBeOnTheScreen()
+    expect(screen.getByText('0 Följare')).toBeOnTheScreen()
+    expect(screen.getByText('0 Följer')).toBeOnTheScreen()
   })
 
-  it('följer-pillen växlar mellan Följer och Följ lokalt', async () => {
+  it('tomlägena skiljer på flikarna', async () => {
     render(<FollowingScreen />)
-    await screen.findByText('Lukas')
-    fireEvent.press(screen.getByTestId('follow-p1'))
-    expect(screen.getByText('Följ')).toBeOnTheScreen()
-    fireEvent.press(screen.getByTestId('follow-p1'))
-    expect(screen.queryByText('Följ')).not.toBeOnTheScreen()
-  })
-
-  it('flikarna går att växla', async () => {
-    render(<FollowingScreen />)
-    await screen.findByText('Lukas')
-    fireEvent.press(screen.getByText('2 Följare'))
-    expect(screen.getByText('Tanja')).toBeOnTheScreen()
+    await screen.findByText('Anton Wretenberg')
+    expect(screen.getByText('Du följer ingen ännu')).toBeOnTheScreen()
+    fireEvent.press(screen.getByText('0 Följare'))
+    expect(screen.getByText('Inga följare ännu')).toBeOnTheScreen()
   })
 })
