@@ -37,6 +37,21 @@ export function useThemeStrings() {
   return useColorScheme() === 'light' ? THEME_LIGHT : THEME_DARK
 }
 
+/** Kortens "chrome": 1px-ram i mörkt läge (designspråket), mjuk skugga i
+    ljust. Som STRÄNGAR per schema — iOS fryser dynamiska färger i
+    border/skugga (CGColor) när fönstertraits växlar (t.ex. efter modaler),
+    så dynamiska konstanter är opålitliga just där. OBS: overflow 'hidden'
+    på samma vy dödar skuggan — lägg chromet på en yttre wrapper då. */
+export function useCardChrome() {
+  const light = useColorScheme() === 'light'
+  return light
+    ? {
+        shadowColor: '#101425', shadowOpacity: 0.07, shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 }, elevation: 2,
+      } as const
+    : { borderWidth: 1, borderColor: THEME_DARK.BORDER } as const
+}
+
 const dyn = (dark: string, light: string): ColorValue =>
   Platform.OS === 'ios' ? DynamicColorIOS({ dark, light }) : dark
 

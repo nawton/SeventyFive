@@ -14,7 +14,7 @@ import { getBlockedUsers, unblockUser } from '@/services/blocks'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, CARD_BORDER } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useCardChrome } from '@/lib/theme'
 
 // =============================================================================
 // INTEGRITETSINSTÄLLNINGAR — Strava-mönstret: lista med nuvarande värde,
@@ -155,6 +155,7 @@ const SETTINGS: Record<SettingKey, {
 }
 
 export default function PrivacyScreen() {
+  const chrome = useCardChrome()
   const [userId, setUserId] = useState<string | null>(null)
   const [searchable, setSearchable] = useState(true)
   const [isPublic, setIsPublic] = useState(false)
@@ -254,7 +255,7 @@ export default function PrivacyScreen() {
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <Text style={s.sectionLabel}>VAR DU VISAS</Text>
-        <View style={s.rowsCard}>
+        <View style={[s.rowsCard, chrome]}>
           {(Object.keys(SETTINGS) as SettingKey[]).map((key, i) => (
             <View key={key}>
               {i > 0 && <View style={s.rowDivider} />}
@@ -277,7 +278,7 @@ export default function PrivacyScreen() {
         </Text>
 
         <Text style={[s.sectionLabel, { marginTop: 26 }]}>YTTERLIGARE INSTÄLLNINGAR</Text>
-        <View style={s.rowsCard}>
+        <View style={[s.rowsCard, chrome]}>
           <TouchableOpacity
             style={s.row}
             onPress={() => { setMapsView('menu'); setMapsOpen(true) }}
@@ -326,7 +327,7 @@ export default function PrivacyScreen() {
 
           {mapsView === 'menu' && (
             <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-              <View style={s.rowsCard}>
+              <View style={[s.rowsCard, chrome]}>
                 <TouchableOpacity
                   style={s.row}
                   onPress={() => setMapsView('trim')}
@@ -522,7 +523,6 @@ const s = StyleSheet.create({
   },
   rowsCard: {
     backgroundColor: CARD, borderRadius: 14,
-    borderWidth: 1, borderColor: CARD_BORDER, overflow: 'hidden',
   },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

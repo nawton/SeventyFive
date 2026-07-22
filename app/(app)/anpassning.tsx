@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, TextInput, Alert,
+  View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, TextInput, Alert, Modal,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
@@ -12,6 +12,7 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, NUM_FONT, 
 import { GlassSegment } from '@/components/GlassSegment'
 import { getUnitSystem, setUnitSystem, type UnitSystem } from '@/lib/units'
 import { getTabBarShrinkEnabled, setTabBarShrinkEnabled } from '@/lib/tabBar'
+import { getThemeMode, setThemeMode, type ThemeMode } from '@/lib/themeMode'
 import { updateRunPaces } from '@/services/scheduleGenerator'
 import {
   getCardioStatsTheme, setCardioStatsTheme, type CardioStatsTheme,
@@ -75,6 +76,15 @@ function SwitchRow({ icon, label, hint, value, onChange, last }: {
 }
 
 export default function AnpassningScreen() {
+  // Ljust/mörkt läge — mörkt är standard, växlingen slår igenom direkt
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark')
+  const [themeOpen, setThemeOpen] = useState(false)
+  useEffect(() => { getThemeMode().then(setThemeModeState) }, [])
+  function chooseTheme(mode: ThemeMode) {
+    Haptics.selectionAsync()
+    setThemeModeState(mode)
+    setThemeMode(mode)
+  }
   const [navShrink, setNavShrink]   = useState(false)
   const [unit, setUnit]             = useState<UnitSystem>('metric')
   const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
@@ -144,6 +154,16 @@ export default function AnpassningScreen() {
           </TouchableOpacity>
           <Text style={s.title}>Anpassning</Text>
         </View>
+
+        {/* Utseende */}
+        <Section title="Utseende">
+          <TouchableOpacity style={s.row} onPress={() => setThemeOpen(true)} activeOpacity={0.6}>
+            <Ionicons name="moon-outline" size={20} color={TEXT_SECONDARY} />
+            <Text style={[s.rowLabel, { flex: 1 }]}>Tema</Text>
+            <Text style={s.rowValue}>{themeMode === 'dark' ? 'Mörkt' : 'Ljust'}</Text>
+            <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+          </TouchableOpacity>
+        </Section>
 
         {/* Navbar */}
         <Section title="Navbar">
@@ -287,11 +307,62 @@ export default function AnpassningScreen() {
           />
         </Section>
       </ScrollView>
+
+      {/* Temaval — samma radiomönster som integritetssidorna */}
+      <Modal visible={themeOpen} animationType="slide" onRequestClose={() => setThemeOpen(false)}>
+        <SafeScreen style={s.screen}>
+          <View style={[s.titleRow, { paddingHorizontal: 20, paddingTop: 16 }]}>
+            <TouchableOpacity onPress={() => setThemeOpen(false)} hitSlop={10}>
+              <Ionicons name="chevron-back" size={26} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
+            <Text style={s.title}>Tema</Text>
+          </View>
+          <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+            <Text style={s.themeIntro}>
+              Mörkt är appens standardläge. I ljust läge ligger texten direkt
+              på ljus botten med vita ytor och tunna linjer.
+            </Text>
+            {([
+              { mode: 'dark' as const, title: 'Mörkt', body: 'Appens vanliga utseende.' },
+              { mode: 'light' as const, title: 'Ljust', body: 'Ljus bakgrund med mörk text.' },
+            ]).map(opt => (
+              <TouchableOpacity
+                key={opt.mode}
+                style={s.themeOption}
+                onPress={() => chooseTheme(opt.mode)}
+                activeOpacity={0.7}
+                testID={`theme-${opt.mode}`}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={s.themeOptionTitle}>{opt.title}</Text>
+                  <Text style={s.themeOptionBody}>{opt.body}</Text>
+                </View>
+                <View style={[s.themeRadio, themeMode === opt.mode && s.themeRadioSelected]}>
+                  {themeMode === opt.mode && <View style={s.themeRadioDot} />}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </SafeScreen>
+      </Modal>
     </SafeScreen>
   )
 }
 
 const s = StyleSheet.create({
+  rowValue: { color: TEXT_SECONDARY, fontSize: 14 },
+  themeIntro: { color: TEXT_PRIMARY, fontSize: 15, lineHeight: 22, marginBottom: 26 },
+  themeOption: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16 },
+  themeOptionTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
+  themeOptionBody: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 20, marginTop: 5 },
+  themeRadio: {
+    width: 26, height: 26, borderRadius: 13,
+    borderWidth: 2, borderColor: 'rgba(128,128,128,0.5)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  themeRadioSelected: { borderColor: ACCENT },
+  themeRadioDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: ACCENT },
+
   screen: { flex: 1, backgroundColor: BG },
   scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40, gap: 24 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

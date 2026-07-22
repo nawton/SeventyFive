@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import {
   View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, Alert, Modal,
 } from 'react-native'
-import * as Haptics from 'expo-haptics'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -17,8 +16,7 @@ import { deleteRepeatingSessions } from '@/services/workoutSchedule'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
-import { getThemeMode, setThemeMode, type ThemeMode } from '@/lib/themeMode'
+import { RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useCardChrome } from '@/lib/theme'
 
 const IS_EXPO_GO = Constants.appOwnership === 'expo'
 
@@ -30,10 +28,13 @@ const IS_EXPO_GO = Constants.appOwnership === 'expo'
 // =============================================================================
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  // Mörk ram / ljus skugga — strängar per schema (dynamiska border-färger
+  // fryser fel på iOS när fönstertraits växlar)
+  const chrome = useCardChrome()
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionCard}>{children}</View>
+      <View style={[styles.sectionCard, chrome]}>{children}</View>
     </View>
   )
 }
@@ -76,15 +77,6 @@ export default function GeneralScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [userId, setUserId]         = useState<string | null>(null)
   const [wizardVisible, setWizardVisible] = useState(false)
-  // Ljust/mörkt läge — mörkt är standard, växlingen slår igenom direkt
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark')
-  const [themeOpen, setThemeOpen] = useState(false)
-  useEffect(() => { getThemeMode().then(setThemeModeState) }, [])
-  function chooseTheme(mode: ThemeMode) {
-    Haptics.selectionAsync()
-    setThemeModeState(mode)
-    setThemeMode(mode)
-  }
 
   useEffect(() => {
     async function load() {
@@ -271,16 +263,6 @@ export default function GeneralScreen() {
           />
         </Section>
 
-        <Section title="Utseende">
-          <SettingRow
-            icon="moon-outline"
-            label="Tema"
-            value={themeMode === 'dark' ? 'Mörkt' : 'Ljust'}
-            onPress={() => setThemeOpen(true)}
-            last
-          />
-        </Section>
-
         <Section title="Integritet">
           <SettingRow
             icon="shield-checkmark-outline"
@@ -326,49 +308,6 @@ export default function GeneralScreen() {
         </Section>
       </ScrollView>
 
-      {/* Temaval — samma radiomönster som integritetssidorna */}
-      <Modal visible={themeOpen} animationType="slide" onRequestClose={() => setThemeOpen(false)}>
-        <SafeScreen style={styles.screen}>
-          <View style={styles.header}>
-            <GlassCircleButton
-              icon="chevron-back"
-              size={40}
-              iconColor={TEXT_PRIMARY}
-              onPress={() => setThemeOpen(false)}
-              fallbackStyle={styles.iconBtnFallback}
-            />
-            <Text style={styles.title}>Tema</Text>
-            <View style={{ width: 40 }} />
-          </View>
-          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-            <Text style={styles.themeIntro}>
-              Mörkt är appens standardläge. I ljust läge ligger texten direkt
-              på ljus botten med vita ytor och tunna linjer.
-            </Text>
-            {([
-              { mode: 'dark' as const, title: 'Mörkt', body: 'Appens vanliga utseende.' },
-              { mode: 'light' as const, title: 'Ljust', body: 'Ljus bakgrund med mörk text.' },
-            ]).map(opt => (
-              <TouchableOpacity
-                key={opt.mode}
-                style={styles.themeOption}
-                onPress={() => chooseTheme(opt.mode)}
-                activeOpacity={0.7}
-                testID={`theme-${opt.mode}`}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.themeOptionTitle}>{opt.title}</Text>
-                  <Text style={styles.themeOptionBody}>{opt.body}</Text>
-                </View>
-                <View style={[styles.themeRadio, themeMode === opt.mode && styles.themeRadioSelected]}>
-                  {themeMode === opt.mode && <View style={styles.themeRadioDot} />}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </SafeScreen>
-      </Modal>
-
       <ScheduleWizard
         visible={wizardVisible}
         onClose={() => setWizardVisible(false)}
@@ -385,17 +324,6 @@ function formatDate(dateStr: string): string {
 }
 
 const styles = StyleSheet.create({
-  themeIntro: { color: TEXT_PRIMARY, fontSize: 15, lineHeight: 22, marginBottom: 26 },
-  themeOption: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16 },
-  themeOptionTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
-  themeOptionBody: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 20, marginTop: 5 },
-  themeRadio: {
-    width: 26, height: 26, borderRadius: 13,
-    borderWidth: 2, borderColor: 'rgba(128,128,128,0.5)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  themeRadioSelected: { borderColor: ACCENT },
-  themeRadioDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: ACCENT },
 
   screen: { flex: 1, backgroundColor: BG },
   header: {
@@ -413,7 +341,6 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: CARD_BORDER, overflow: 'hidden',
   },
 
   row: {

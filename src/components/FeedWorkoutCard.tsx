@@ -7,7 +7,7 @@ import type { CardioWorkout } from '@/services/cardioWorkouts'
 import type { StrengthWorkout } from '@/services/strengthWorkouts'
 import { formatPace } from '@/lib/cardioUtils'
 import { fmtTime } from '@/lib/format'
-import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, CARD_BORDER } from '@/lib/theme'
+import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, useCardChrome } from '@/lib/theme'
 
 // =============================================================================
 // FLÖDESKORT — delat mellan community-flödet och atletprofilens
@@ -192,6 +192,7 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
   onToggleLike?: () => void
   onOpenComments?: () => void
 }) {
+  const chrome = useCardChrome()
   const [localLiked, setLocalLiked] = useState(false)
   const liked = social ? social.likedByMe : localLiked
   const route = post.kind === 'cardio' ? post.route ?? [] : []
@@ -208,6 +209,9 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
   )
 
   return (
+    // Chromet (mörk ram/ljus skugga) på wrappern — kortet klipper kartan
+    // med overflow hidden, vilket annars äter upp skuggan
+    <View style={[s.cardChrome, chrome]}>
     <TouchableOpacity
       style={s.card}
       activeOpacity={0.92}
@@ -301,13 +305,14 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
+    </View>
   )
 }
 
 const s = StyleSheet.create({
+  cardChrome: { borderRadius: 20 },
   card: {
     backgroundColor: CARD, borderRadius: 20,
-    borderWidth: 1, borderColor: CARD_BORDER,
     overflow: 'hidden',
   },
   cardHeader: {
