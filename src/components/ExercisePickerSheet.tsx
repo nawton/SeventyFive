@@ -12,6 +12,7 @@ import { CATEGORY_LABELS, type Exercise } from '@/services/exercises'
 import { getExerciseMuscleGroup, type Slug } from '@/lib/muscles'
 import type { ExerciseCategory } from '@/types/database'
 import { AppTextInput } from '@/components/AppTextInput'
+import { GlassCircleButton } from '@/components/GlassButton'
 
 type Page = 'landing' | 'gym' | 'cardio' | 'exercises'
 
@@ -156,19 +157,17 @@ export function ExercisePickerSheet({
 
         {/* Header */}
         <View style={s.header}>
-          {showBack ? (
-            <TouchableOpacity onPress={handleBack} style={s.iconBtn} activeOpacity={0.7}>
-              <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={handleClose} style={s.iconBtn} activeOpacity={0.7}>
-              <Ionicons name="chevron-down" size={22} color={TEXT_PRIMARY} />
-            </TouchableOpacity>
-          )}
+          {/* Samma mönster som Logga pass: X i liquid glass stänger,
+              chevron backar på understegen — ingen Stäng-knapp */}
+          <GlassCircleButton
+            icon={showBack ? 'chevron-back' : 'close'}
+            size={40}
+            iconColor={TEXT_PRIMARY}
+            onPress={showBack ? handleBack : handleClose}
+            fallbackStyle={s.iconBtnFallback}
+          />
           <Text style={s.title}>{headerTitle}</Text>
-          <TouchableOpacity onPress={handleClose} style={s.closeBtn} activeOpacity={0.8}>
-            <Text style={s.closeBtnText}>Stäng</Text>
-          </TouchableOpacity>
+          <View style={{ width: 40 }} />
         </View>
 
         {/* ── LANDING ─────────────────────────────────────────────── */}
@@ -405,8 +404,7 @@ const s = StyleSheet.create({
   },
   iconBtn:      { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title:        { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
-  closeBtn:     { backgroundColor: ACCENT, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9 },
-  closeBtnText: { color: '#000', fontWeight: '700', fontSize: 14 },
+  iconBtnFallback: { backgroundColor: CARD },
 
   // Landing
   landingContainer: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
