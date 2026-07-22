@@ -798,7 +798,7 @@ const s = StyleSheet.create({
     height: '88%',
   },
   handleWrap: { alignItems: 'center', paddingTop: 12, paddingBottom: 6 },
-  handleBar:  { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.25)' },
+  handleBar:  { width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(128,128,128,0.45)' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12,
