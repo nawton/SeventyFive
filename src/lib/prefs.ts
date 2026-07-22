@@ -188,9 +188,9 @@ export type MapStyleKey = 'standard' | 'satellite' | 'terrain' | 'dark'
 export async function getDefaultMapStyle(): Promise<MapStyleKey> {
   try {
     const v = await AsyncStorage.getItem('defaultMapStyle')
-    return (v === 'standard' || v === 'satellite' || v === 'terrain' || v === 'dark') ? v : 'satellite'
+    return (v === 'standard' || v === 'satellite' || v === 'terrain' || v === 'dark') ? v : 'standard'
   } catch {
-    return 'satellite'
+    return 'standard'
   }
 }
 

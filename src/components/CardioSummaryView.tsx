@@ -98,7 +98,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
 
   // Kartstil + slide-up-väljare — startar på användarens standardkarta
   const mapRef = useRef<MapView>(null)
-  const [activeStyle, setActiveStyle] = useState('satellite')
+  const [activeStyle, setActiveStyle] = useState('standard')
   const [styleLoaded, setStyleLoaded] = useState(false)
   useEffect(() => {
     getDefaultMapStyle().then(k => {
@@ -160,6 +160,11 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
     { label: `Snitt /${unitLabel}`,    value: fmtPace(avgPaceSec),                     color: STAT_TEAL },
     { label: 'Kcal',                   value: String(d.calories ?? 0),                    color: STAT_PINK },
   ]
+  // Förhandsvisningsregion: rundans mittpunkt, tät zoom
+  const midPoint = route.length > 0 ? route[Math.floor(route.length / 2)] : null
+  const previewRegion = midPoint
+    ? { latitude: midPoint[0], longitude: midPoint[1], latitudeDelta: 0.01, longitudeDelta: 0.01 }
+    : undefined
   const splits = d.splits ?? []
   const fastestSplit = splits.length ? Math.min(...splits.map(sp => sp.paceSec)) : 0
   // Guidade pass: per-intervall-resultat + planerat antal ("4 av 6")
@@ -388,9 +393,25 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
                       onPress={() => changeStyle(ms.key)}
                       activeOpacity={0.85}
                     >
-                      <View style={[s.mapPreview, s.mapPreviewIcon]}>
-                        <Ionicons name={ms.icon} size={26} color={active ? ACCENT : '#9BA0A6'} />
-                      </View>
+                      {hasRoute ? (
+                        // Riktig miniförhandsvisning av kartstilen vid rundans mitt
+                        <View style={s.mapPreview} pointerEvents="none">
+                          <MapView
+                            style={StyleSheet.absoluteFill}
+                            mapType={APPLE_MAP_TYPES[ms.key] ?? 'standard'}
+                            userInterfaceStyle={ms.key === 'dark' ? 'dark' : 'light'}
+                            initialRegion={previewRegion}
+                            scrollEnabled={false}
+                            zoomEnabled={false}
+                            rotateEnabled={false}
+                            pitchEnabled={false}
+                          />
+                        </View>
+                      ) : (
+                        <View style={[s.mapPreview, s.mapPreviewIcon]}>
+                          <Ionicons name={ms.icon} size={26} color={active ? ACCENT : '#9BA0A6'} />
+                        </View>
+                      )}
                       <View style={s.mapCardLabelRow}>
                         <Text style={[s.mapCardLabel, active && { color: ACCENT }]}>{ms.label}</Text>
                         {active && <Ionicons name="checkmark-circle" size={15} color={ACCENT} />}

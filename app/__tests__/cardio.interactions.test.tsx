@@ -178,7 +178,7 @@ describe('röstmodalen', () => {
 describe('kartvalet', () => {
   it('byter kartstil från cellen', async () => {
     await renderIdle()
-    fireEvent.press(await screen.findByText('Satellit'))    // standardkartan
+    fireEvent.press(await screen.findByText('Karta'))       // appens standard är Apples vanliga karta
     expect(await screen.findByText('Välj karta')).toBeOnTheScreen()
     fireEvent.press(screen.getByText('Natt'))
     expect(screen.getAllByText('Natt').length).toBeGreaterThanOrEqual(1)
