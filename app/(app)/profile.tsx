@@ -305,27 +305,14 @@ export default function ProfileScreen() {
           onPressHero={() => router.push('/(app)/edit-profile')}
         />
 
-        {/* Lägg till foto — grönt kvittoläge när dagens redan är taget */}
-        {challenge && (hasTodayPhoto ? (
-          <TouchableOpacity style={s.addButtonDone} onPress={handleAddPhoto} activeOpacity={0.85}>
-            <Ionicons name="checkmark-circle" size={18} color={GREEN} />
-            <Text style={s.addButtonDoneText}>Dagens foto taget · lägg till fler</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={s.addButton} onPress={handleAddPhoto} activeOpacity={0.85}>
-            <Ionicons name="camera" size={18} color="#000" />
-            <Text style={s.addButtonText}>Lägg till dagens foto</Text>
-          </TouchableOpacity>
-        ))}
-
         <View style={s.sectionHeadRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.sectionHead}>Framstegsfoton</Text>
-            {photos.length > 0 && (
-              <Text style={s.sectionSub}>
-                {photos.length} {photos.length === 1 ? 'foto' : 'foton'} · {new Set(photos.map(p => p.dayNumber)).size} av {currentDay} dagar
-              </Text>
-            )}
+            <Text style={s.sectionSub}>
+              {photos.length > 0
+                ? `${photos.length} ${photos.length === 1 ? 'foto' : 'foton'} · ${new Set(photos.map(p => p.dayNumber)).size} av ${currentDay} dagar`
+                : 'Ta ett foto varje dag — om 75 dagar har du hela resan här.'}
+            </Text>
           </View>
           {photos.length >= 2 && (
             <TouchableOpacity style={s.compareChip} activeOpacity={0.8} onPress={() => setCompareOpen(true)}>
@@ -334,40 +321,57 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
         </View>
-
-        {photos.length === 0 && (
-          <View style={s.emptyCard}>
-            <Ionicons name="images-outline" size={28} color={TEXT_SECONDARY} />
-            <Text style={s.emptyTitle}>Inga foton än</Text>
-            <Text style={s.emptyText}>
-              Ta ett foto varje dag och skriv några rader. Om 75 dagar har du hela resan samlad här.
-            </Text>
-          </View>
-        )}
       </View>
     )
   }
 
-  // Rutnätscell: bild + dag-badge; pratbubbla i hörnet markerar bildtext.
-  // Datum och text visas i fullskärmsvisaren.
-  function renderPhoto({ item, index }: { item: ProgressPhotoItem; index: number }) {
+  // Rutnätet: första rutan är LÄGG TILL-plattan (grön med bock när dagens
+  // foto är taget), resten är foton med dag-badge; pratbubbla i hörnet
+  // markerar bildtext. Datum och text visas i fullskärmsvisaren.
+  type GridItem = { kind: 'add' } | { kind: 'photo'; photo: ProgressPhotoItem; photoIndex: number }
+  const gridData: GridItem[] = [
+    ...(challenge ? [{ kind: 'add' as const }] : []),
+    ...photos.map((photo, photoIndex) => ({ kind: 'photo' as const, photo, photoIndex })),
+  ]
+
+  function renderCell({ item }: { item: GridItem }) {
+    if (item.kind === 'add') {
+      return (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleAddPhoto}
+          style={[s.addTile, hasTodayPhoto && s.addTileDone, { width: cellSize, height: cellSize }]}
+          testID="addPhotoTile"
+        >
+          <Ionicons
+            name={hasTodayPhoto ? 'checkmark-circle' : 'camera'}
+            size={26}
+            color={hasTodayPhoto ? GREEN : ORANGE}
+          />
+          <Text style={[s.addTileText, hasTodayPhoto && s.addTileTextDone]}>
+            {hasTodayPhoto ? 'Dagens taget' : 'Dagens foto'}
+          </Text>
+        </TouchableOpacity>
+      )
+    }
+    const photo = item.photo
     return (
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={() => setViewerIndex(index)}
+        onPress={() => setViewerIndex(item.photoIndex)}
         style={{ width: cellSize, height: cellSize }}
       >
-        {item.url ? (
-          <Image source={{ uri: item.url }} style={s.gridImage} resizeMode="cover" />
+        {photo.url ? (
+          <Image source={{ uri: photo.url }} style={s.gridImage} resizeMode="cover" />
         ) : (
           <View style={[s.gridImage, s.gridImageMissing]}>
             <Ionicons name="image-outline" size={22} color={TEXT_SECONDARY} />
           </View>
         )}
         <View style={s.gridBadge}>
-          <Text style={s.gridBadgeText}>Dag {item.dayNumber}</Text>
+          <Text style={s.gridBadgeText}>Dag {photo.dayNumber}</Text>
         </View>
-        {!!item.caption && (
+        {!!photo.caption && (
           <View style={s.gridCaptionDot}>
             <Ionicons name="chatbox-ellipses" size={10} color="#fff" />
           </View>
@@ -405,9 +409,9 @@ export default function ProfileScreen() {
         // key tvingar omontering — RN vägrar byta numColumns på en levande
         // lista (annars kan hot reload fastna på gamla layouten)
         key={`photo-grid-${GRID_COLS}`}
-        data={photos}
-        keyExtractor={p => p.id}
-        renderItem={renderPhoto}
+        data={gridData}
+        keyExtractor={item => item.kind === 'add' ? 'add-tile' : item.photo.id}
+        renderItem={renderCell}
         numColumns={GRID_COLS}
         columnWrapperStyle={{ gap: GRID_GAP }}
         ListHeaderComponent={renderHeader()}
@@ -463,21 +467,17 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: ORANGE,
-    borderRadius: 14,
-    paddingVertical: 14,
+  // Lägg till-plattan — första rutan i rutnätet
+  addTile: {
+    borderRadius: 10, borderWidth: 1.5, borderColor: ORANGE + '66',
+    borderStyle: 'dashed', backgroundColor: ORANGE + '0F',
+    alignItems: 'center', justifyContent: 'center', gap: 6,
   },
-  addButtonText: { color: '#000', fontSize: 15, fontWeight: '700' },
-  addButtonDone: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: GREEN + '16', borderRadius: 14, paddingVertical: 14,
+  addTileDone: {
+    borderColor: GREEN + '55', backgroundColor: GREEN + '0D', borderStyle: 'solid',
   },
-  addButtonDoneText: { color: GREEN, fontSize: 15, fontWeight: '700' },
+  addTileText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
+  addTileTextDone: { color: GREEN },
 
   sectionHead: {
     color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
@@ -492,17 +492,6 @@ const s = StyleSheet.create({
   sectionSub: {
     color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI, marginTop: 3,
   },
-
-  // Empty state
-  emptyCard: {
-    backgroundColor: CARD,
-    borderRadius: 16,
-    padding: 28,
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  emptyText:  { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', lineHeight: 19 },
 
   // Fotorutnätet
   gridImage: {
