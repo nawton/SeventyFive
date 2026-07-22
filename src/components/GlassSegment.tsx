@@ -19,11 +19,14 @@ const SEG_SPRING = { damping: 17, stiffness: 240, mass: 0.8 } as const
 const AnimatedGlassView = Animated.createAnimatedComponent(GlassView)
 
 export function GlassSegment<T extends string>({
-  value, options, onChange,
+  value, options, onChange, tint = ORANGE,
 }: {
   value: T
   options: Array<{ key: T; label: string }>
   onChange: (v: T) => void
+  /** Glastummens färgton — null ger rent otonat glas (Apples egen look).
+      OBS: "transparent" släcker glasmaterialet, därför null → utelämnad prop */
+  tint?: string | null
 }) {
   const n = options.length
   const [segW, setSegW] = useState(0)
@@ -86,17 +89,19 @@ export function GlassSegment<T extends string>({
         {segW > 0 && (LIQUID_GLASS ? (
           <AnimatedGlassView
             glassEffectStyle="regular"
-            tintColor={ORANGE}
+            tintColor={tint ?? undefined}
             style={[s.segThumb, s.segThumbGlass, { width: slotW }, thumbStyle]}
           />
         ) : (
-          <Animated.View style={[s.segThumb, { width: slotW }, thumbStyle]} />
+          <Animated.View
+            style={[s.segThumb, tint == null && s.segThumbNeutral, { width: slotW }, thumbStyle]}
+          />
         ))}
         {options.map(o => (
           <TouchableOpacity key={o.key} style={s.segBtn} onPress={() => choose(o.key)} activeOpacity={0.8}>
             <Text style={[
               s.segText,
-              value === o.key && (LIQUID_GLASS ? s.segTextActiveGlass : s.segTextActive),
+              value === o.key && ((LIQUID_GLASS || tint == null) ? s.segTextActiveGlass : s.segTextActive),
             ]}>
               {o.label}
             </Text>
@@ -119,6 +124,7 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
   segThumbGlass: { backgroundColor: 'transparent', overflow: 'hidden', shadowOpacity: 0 },
+  segThumbNeutral: { backgroundColor: 'rgba(255,255,255,0.16)' },
   segBtn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   segText: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
   segTextActive: { color: '#000', fontWeight: '700' },

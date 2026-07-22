@@ -18,6 +18,7 @@ jest.mock('@/services/cardioWorkouts', () => ({
   getCardioWorkouts: jest.fn().mockResolvedValue([]),
 }))
 jest.mock('expo-router', () => ({
+  router: { push: jest.fn(), back: jest.fn() },
   useFocusEffect: (cb: () => void) => {
     const { useEffect } = require('react')
     useEffect(cb, [cb])
@@ -57,6 +58,14 @@ describe('Community', () => {
     // Gilla växlar hjärtat lokalt
     fireEvent.press(screen.getByTestId('like-w1'))
     expect(screen.getByText('icon:heart')).toBeOnTheScreen()
+  })
+
+  it('följer-knappen leder till Följer-sidan', async () => {
+    const { router } = require('expo-router')
+    render(<CommunityScreen />)
+    await screen.findByText('Anton Wretenberg')
+    fireEvent.press(screen.getByText('glassbtn:people-outline'))
+    expect(router.push).toHaveBeenCalledWith('/(app)/following')
   })
 
   it('Grupper-segmentet visar platshållare', async () => {

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useFocusEffect } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline, Marker } from 'react-native-maps'
 import * as Haptics from 'expo-haptics'
@@ -11,6 +11,7 @@ import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts
 import { formatPace } from '@/lib/cardioUtils'
 import { fmtTime } from '@/lib/format'
 import { GlassSegment } from '@/components/GlassSegment'
+import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -221,14 +222,23 @@ export default function CommunityScreen() {
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
+      {/* Rent otonat glas i tummen (som förlagan) + följer-knapp till höger */}
       <View style={s.segmentRow}>
         <View style={{ flex: 1 }}>
           <GlassSegment
             value={segment}
             options={[{ key: 'feed', label: 'Flöde' }, { key: 'groups', label: 'Grupper' }]}
             onChange={setSegment}
+            tint={null}
           />
         </View>
+        <GlassCircleButton
+          icon="people-outline"
+          size={44}
+          iconColor={TEXT_PRIMARY}
+          onPress={() => router.push('/(app)/following' as never)}
+          fallbackStyle={s.followBtnFallback}
+        />
       </View>
 
       {segment === 'groups' ? (
@@ -262,9 +272,10 @@ export default function CommunityScreen() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
   segmentRow: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12,
   },
+  followBtnFallback: { backgroundColor: CARD },
   listContent: { paddingHorizontal: 16, paddingBottom: 24 + TAB_CONTENT_PAD, gap: 16 },
 
   card: {
