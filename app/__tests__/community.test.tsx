@@ -20,6 +20,9 @@ jest.mock('@/services/cardioWorkouts', () => ({
 jest.mock('@/services/strengthWorkouts', () => ({
   getStrengthWorkouts: jest.fn().mockResolvedValue([]),
 }))
+jest.mock('@/services/follows', () => ({
+  getFollowLists: jest.fn().mockResolvedValue({ followers: [], following: [] }),
+}))
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
   useFocusEffect: (cb: () => void) => {
@@ -36,8 +39,8 @@ jest.mock('expo-haptics', () => ({
 jest.mock('@/components/CardioSummaryView', () => {
   const React = require('react')
   const { Text } = require('react-native')
-  return { CardioSummaryView: ({ title }: { title: string }) =>
-    React.createElement(Text, null, `summary:${title}`) }
+  return { CardioSummaryView: ({ title, effortReadOnly }: { title: string; effortReadOnly?: boolean }) =>
+    React.createElement(Text, null, `summary:${title}${effortReadOnly ? ':readonly' : ''}`) }
 })
 jest.mock('@/components/stats/GymSummaryView', () => {
   const React = require('react')
@@ -77,11 +80,23 @@ const GYM_DAY = [
 ]
 
 const { getStrengthWorkouts } = require('@/services/strengthWorkouts')
+const { getFollowLists } = require('@/services/follows')
+
+const FRIEND_RUN = {
+  id: 'w2',
+  name: 'Kvällsrunda',
+  created_at: '2026-07-20T18:30:00.000Z',
+  data: {
+    category: 'cardio', type: 'running',
+    distance_km: 8.2, duration_seconds: 2952, calories: 600,
+  },
+}
 
 beforeEach(() => {
   jest.clearAllMocks()
   ;(getCardioWorkouts as jest.Mock).mockResolvedValue([RUN])
   ;(getStrengthWorkouts as jest.Mock).mockResolvedValue([])
+  ;(getFollowLists as jest.Mock).mockResolvedValue({ followers: [], following: [] })
 })
 
 describe('Community', () => {
@@ -98,6 +113,29 @@ describe('Community', () => {
     expect(screen.getByText('icon:heart')).toBeOnTheScreen()
   })
 
+  it('godkända vänners pass blandas in i flödet', async () => {
+    const { router } = require('expo-router')
+    ;(getFollowLists as jest.Mock).mockResolvedValue({
+      followers: [],
+      following: [{ id: 'u2', name: 'Nawid', avatar_url: '🔥' }],
+    })
+    ;(getCardioWorkouts as jest.Mock).mockImplementation(async (uid: string) =>
+      uid === 'u1' ? [RUN] : [FRIEND_RUN])
+    render(<CommunityScreen />)
+    expect(await screen.findByText('Nawid')).toBeOnTheScreen()
+    expect(screen.getByText('Anton Wretenberg')).toBeOnTheScreen()
+    expect(screen.getByText('8,20')).toBeOnTheScreen()          // vännens distans
+    // Vännens avatar leder till DERAS profil
+    fireEvent.press(screen.getByTestId('avatar-w2'))
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/(app)/athlete',
+      params: { userId: 'u2', name: 'Nawid', avatar: '🔥' },
+    })
+    // Vännens pass öppnas med skrivskyddat betyg
+    fireEvent.press(screen.getByTestId('post-w2'))
+    expect(screen.getByText('summary:Kvällsrunda:readonly')).toBeOnTheScreen()
+  })
+
   it('gympass visas i flödet: dagens övningar grupperade till ett kort', async () => {
     ;(getStrengthWorkouts as jest.Mock).mockResolvedValue(GYM_DAY)
     render(<CommunityScreen />)
@@ -106,7 +144,7 @@ describe('Community', () => {
     expect(screen.getByText('övningar')).toBeOnTheScreen()
     expect(screen.getByText('3')).toBeOnTheScreen()            // 2 + 1 set
     expect(screen.getByText((2 * 8 * 60 + 5 * 100).toLocaleString('sv-SE'))).toBeOnTheScreen()
-    fireEvent.press(screen.getByTestId('post-gym-2026-07-15'))
+    fireEvent.press(screen.getByTestId('post-gym-u1-2026-07-15'))
     expect(screen.getByText('gym:Gympass')).toBeOnTheScreen()
   })
 

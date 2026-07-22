@@ -183,7 +183,7 @@ export default function ProfileScreen() {
       if (strength.status === 'fulfilled') {
         // Gymdagar räknas som pass i aktivitetsknappen — samma gruppering
         // som flödet använder
-        setGymCount(strengthToPosts(strength.value, '', null).length)
+        setGymCount(strengthToPosts(strength.value, '', '', null).length)
       }
       if (followCounts.status === 'fulfilled') setCounts(followCounts.value)
       if (pendingCount.status === 'fulfilled') setRequestCount(pendingCount.value)

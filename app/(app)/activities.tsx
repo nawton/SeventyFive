@@ -64,8 +64,8 @@ export default function ActivitiesScreen() {
       setAvatarUrl(avatar)
       setAllStrength(strength)
       setPosts(mergePosts([
-        ...cardio.map(w => workoutToPost(w, authorName, avatar)),
-        ...strengthToPosts(strength, authorName, avatar),
+        ...cardio.map(w => workoutToPost(w, targetId, authorName, avatar)),
+        ...strengthToPosts(strength, targetId, authorName, avatar),
       ]))
       setLoaded(true)
     })

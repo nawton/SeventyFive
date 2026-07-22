@@ -86,7 +86,7 @@ export default function AthleteScreen() {
         ])
         if (!alive) return
         setWorkouts(all)
-        setGymCount(strengthToPosts(strength, '', null).length)
+        setGymCount(strengthToPosts(strength, '', '', null).length)
         return
       }
       const [profile, all, strength] = await Promise.all([
@@ -100,7 +100,7 @@ export default function AthleteScreen() {
       setWorkouts(all)
       // Gymdagar räknas som pass i aktivitetsknappen — samma gruppering
       // som flödet använder
-      setGymCount(strengthToPosts(strength, '', null).length)
+      setGymCount(strengthToPosts(strength, '', '', null).length)
       // Streakräknaren (ersätter Totalt km på egna profilen)
       getActiveChallenge(session.user.id)
         .then(c => c ? getStreak(c.id) : 0)
@@ -130,7 +130,7 @@ export default function AthleteScreen() {
             getStrengthWorkouts(otherId, 500).catch(() => [] as StrengthWorkout[]),
           ])
           setWorkouts(all)
-          setGymCount(strengthToPosts(strength, '', null).length)
+          setGymCount(strengthToPosts(strength, '', '', null).length)
         })
         .catch(() => setFollowStatus('none'))
     } else {

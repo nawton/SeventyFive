@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
 import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
+import { getFollowLists } from '@/services/follows'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -21,13 +22,15 @@ import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/th
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 // =============================================================================
-// COMMUNITY — flöde med delade pass (Runkeeper-förlagan). Delnings-
-// backenden är inte byggd än, så flödet visar de egna cardio-passen som
-// förhandsvisning; när delning finns byts datakällan ut i loadFeed.
-// Sök/följ medvetet utelämnat. Grupper är en platshållare. Tryck på ett
-// kort öppnar samma passdetaljvy som statistiken (CardioSummaryView),
-// avataren öppnar atletprofilen.
+// COMMUNITY — flödet visar dina OCH dina godkända vänners pass (löprundor
+// och gympass), blandade kronologiskt. Vänners pass blir läsbara via
+// RLS-policyn först när de godkänt din vänförfrågan. Tryck på ett kort
+// öppnar samma passdetaljvy som statistiken (skrivskyddat betyg på andras
+// pass), avataren öppnar personens atletprofil. Grupper är en
+// platshållare. Gilla är bara lokal state ännu.
 // =============================================================================
+
+const FEED_LIMIT = 50
 
 // Testerna (och ev. andra skärmar) når hjälparna via den delade modulen
 export { relativeDayLabel, dayPartTitle } from '@/components/FeedWorkoutCard'
@@ -58,9 +61,8 @@ export default function CommunityScreen() {
   const [filter, setFilter] = useState<Filter>('all')
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [ownId, setOwnId] = useState<string | null>(null)
   const [unit, setUnit] = useState<UnitSystem>('metric')
-  const [allStrength, setAllStrength] = useState<StrengthWorkout[]>([])
   const [selected, setSelected] = useState<FeedPost | null>(null)
   const onScroll = useTabBarShrinkOnScroll()
 
@@ -70,20 +72,38 @@ export default function CommunityScreen() {
     async function loadFeed() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user || !alive) return
-      const [profile, cardio, strength] = await Promise.all([
-        getProfile(session.user.id).catch(() => null),
-        getCardioWorkouts(session.user.id, 20).catch(() => [] as CardioWorkout[]),
-        getStrengthWorkouts(session.user.id, 200).catch(() => [] as StrengthWorkout[]),
+      const uid = session.user.id
+      setOwnId(uid)
+      const [profile, lists] = await Promise.all([
+        getProfile(uid).catch(() => null),
+        getFollowLists(uid).catch(() => ({ followers: [], following: [] })),
       ])
       if (!alive) return
-      const authorName = profile?.name || session.user.email?.split('@')[0] || 'Jag'
-      const avatar = profile?.avatar_url ?? null
-      setAvatarUrl(avatar)
-      setAllStrength(strength)
-      setPosts(mergePosts([
-        ...cardio.map(w => workoutToPost(w, authorName, avatar)),
-        ...strengthToPosts(strength, authorName, avatar),
-      ]).slice(0, 30))
+
+      // Jag själv + alla jag följer (godkända) — varje författares pass
+      // hämtas parallellt och blandas till ett flöde
+      const authors = [
+        {
+          id: uid,
+          name: profile?.name || session.user.email?.split('@')[0] || 'Jag',
+          avatar: profile?.avatar_url ?? null,
+        },
+        ...lists.following.map(p => ({
+          id: p.id, name: p.name ?? 'Namnlös', avatar: p.avatar_url,
+        })),
+      ]
+      const perAuthor = await Promise.all(authors.map(async a => {
+        const [cardio, strength] = await Promise.all([
+          getCardioWorkouts(a.id, 20).catch(() => [] as CardioWorkout[]),
+          getStrengthWorkouts(a.id, 200).catch(() => [] as StrengthWorkout[]),
+        ])
+        return [
+          ...cardio.map(w => workoutToPost(w, a.id, a.name, a.avatar)),
+          ...strengthToPosts(strength, a.id, a.name, a.avatar),
+        ]
+      }))
+      if (!alive) return
+      setPosts(mergePosts(perAuthor.flat()).slice(0, FEED_LIMIT))
       setLoaded(true)
     }
     loadFeed()
@@ -128,11 +148,13 @@ export default function CommunityScreen() {
             <FeedWorkoutCard
               post={item}
               onOpen={setSelected}
-              // Tomma params skriver över ev. kvarliggande sökparametrar —
-              // annars kan den egna avataren visa senast besökta profil
+              // Egen avatar → egna profilen (tomma params skriver över
+              // kvarliggande), väns avatar → deras atletprofil
               onAvatarPress={() => router.push({
                 pathname: '/(app)/athlete',
-                params: { userId: '', name: '', avatar: '' },
+                params: item.authorId === ownId
+                  ? { userId: '', name: '', avatar: '' }
+                  : { userId: item.authorId, name: item.authorName, avatar: item.authorAvatar ?? '' },
               } as never)}
             />
           )}
@@ -175,16 +197,18 @@ export default function CommunityScreen() {
         />
       )}
 
-      {/* Samma detaljvyer som statistiken — utan radering härifrån */}
+      {/* Samma detaljvyer som statistiken — utan radering härifrån, och
+          skrivskyddat betyg på vänners pass */}
       <Modal visible={!!selected} animationType="slide" onRequestClose={() => setSelected(null)}>
         {selected?.kind === 'cardio' && (
           <CardioSummaryView
             workout={selected.workout}
             title={selected.workout.name}
             dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
-            avatarUrl={avatarUrl}
+            avatarUrl={selected.authorAvatar}
             unit={unit}
             onClose={() => setSelected(null)}
+            effortReadOnly={selected.authorId !== ownId}
           />
         )}
         {selected?.kind === 'strength' && (
@@ -193,7 +217,7 @@ export default function CommunityScreen() {
             dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
             logged={selected.workouts}
             plannedNames={[]}
-            allWorkouts={allStrength}
+            allWorkouts={selected.workouts}
             onClose={() => setSelected(null)}
           />
         )}

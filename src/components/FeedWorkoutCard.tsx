@@ -24,6 +24,7 @@ export const TYPE_LABELS: Record<string, string> = {
 
 interface BasePost {
   id: string
+  authorId: string              // vem passet tillhör — styr avatarnavigering m.m.
   authorName: string
   authorAvatar: string | null   // http-URL, emoji eller null (initialer)
   typeLabel: string
@@ -50,11 +51,12 @@ export type FeedPost = CardioPost | StrengthPost
 
 /** Gör om ett sparat cardio-pass till ett flödesinlägg */
 export function workoutToPost(
-  w: CardioWorkout, authorName: string, authorAvatar: string | null,
+  w: CardioWorkout, authorId: string, authorName: string, authorAvatar: string | null,
 ): CardioPost {
   return {
     kind: 'cardio',
     id: w.id,
+    authorId,
     authorName,
     authorAvatar,
     typeLabel: TYPE_LABELS[w.data.type] ?? 'Cardio',
@@ -68,7 +70,7 @@ export function workoutToPost(
 
 /** Grupperar styrkeloggar per träningsdag till gympass-inlägg */
 export function strengthToPosts(
-  workouts: StrengthWorkout[], authorName: string, authorAvatar: string | null,
+  workouts: StrengthWorkout[], authorId: string, authorName: string, authorAvatar: string | null,
 ): StrengthPost[] {
   const byDay = new Map<string, StrengthWorkout[]>()
   for (const w of workouts) {
@@ -89,7 +91,8 @@ export function strengthToPosts(
       .sort()[dayWorkouts.length - 1]
     return {
       kind: 'strength' as const,
-      id: `gym-${day}`,
+      id: `gym-${authorId}-${day}`,
+      authorId,
       authorName,
       authorAvatar,
       typeLabel: 'Gympass',
