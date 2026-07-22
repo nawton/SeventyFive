@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ScrollView, Alert } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ScrollView, Alert, useColorScheme } from 'react-native'
 import { Ionicons } from '@/components/Icon'
 import { Gesture, GestureDetector, type GestureType } from 'react-native-gesture-handler'
 import Animated, {
   runOnJS, useSharedValue, useAnimatedStyle, withTiming, interpolate, Extrapolation, Easing,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT } from '@/lib/theme'
+import { GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, BG } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
@@ -106,6 +106,11 @@ export function CalendarView({
   const today = new Date()
 
   const [yearOpen, setYearOpen] = useState(false)
+  // Vit ring/text på dagens datum syns inte på ljus botten — schemasträngar
+  const calLight = useColorScheme() === 'light'
+  const todayRing = calLight ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.4)'
+  const dimDay    = calLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.25)'
+  const onAccent  = calLight ? '#fff' : '#000'
   // Dagsvy + passdetalj som lager INUTI helskärmskalendern (så de stackar rätt)
   const [fsDay, setFsDay] = useState<DaySummary | null>(null)
   const [fsWorkout, setFsWorkout] = useState<CardioWorkout | null>(null)
@@ -218,7 +223,7 @@ export function CalendarView({
                 s.calDay,
                 { backgroundColor: bgColor },
                 isPending && s.calDayPending,
-                isToday && !isPending && s.calDayTodayRing,
+                isToday && !isPending && [s.calDayTodayRing, { borderColor: todayRing }],
               ]}
               onPress={() => summary && summary.status !== 'future' ? onPressDay(summary) : undefined}
               activeOpacity={summary && summary.status !== 'future' ? 0.75 : 1}
@@ -284,7 +289,7 @@ export function CalendarView({
                         onPress={() => { if (sum) { Haptics.selectionAsync(); setFsDay(sum) } }}
                       >
                         <View style={[s.fullDayNum, isToday && s.fullDayNumToday]}>
-                          <Text style={[s.fullDayNumText, !sum && { color: 'rgba(255,255,255,0.25)' }, isToday && { color: '#000', fontWeight: '800' }]}>
+                          <Text style={[s.fullDayNumText, !sum && { color: dimDay }, isToday && { color: onAccent, fontWeight: '800' }]}>
                             {date.getDate()}
                           </Text>
                         </View>
@@ -360,7 +365,7 @@ const s = StyleSheet.create({
   calMonthLabel: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
 
   // Helskärmsöversikt (Apple Fitness-stil)
-  fullScreen: { flex: 1, backgroundColor: '#0E0E10' },
+  fullScreen: { flex: 1, backgroundColor: BG },
   fullInner:  { flex: 1, paddingTop: 60 },
   fullHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -369,7 +374,7 @@ const s = StyleSheet.create({
   fullTitle: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800' },
   yearClose: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: DIVIDER,
     alignItems: 'center', justifyContent: 'center',
   },
   fullWeekRow: {
@@ -407,9 +412,9 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   calDayPending:     { borderWidth: 2, borderColor: ACCENT },
-  calDayTodayRing:   { borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
+  calDayTodayRing:   { borderWidth: 2 },
   calDayText:        { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '500' },
-  calDayTextPending: { color: '#fff', fontWeight: '800' },
+  calDayTextPending: { color: TEXT_PRIMARY, fontWeight: '800' },
 
   legend:      { flexDirection: 'row', gap: 16, flexWrap: 'wrap' },
   legendItem:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
