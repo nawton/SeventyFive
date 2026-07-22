@@ -39,3 +39,16 @@ export async function registerPushToken(): Promise<void> {
     // pushtoken är trevligt men aldrig kritiskt
   }
 }
+
+/** Vid utloggning: inga notiser till en utloggad enhet. Alla användarens
+    tokens raderas — inloggade enheter registrerar om sig vid nästa start. */
+export async function unregisterPushTokens(): Promise<void> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const uid = session?.user?.id
+    if (!uid) return
+    await supabase.from('push_tokens').delete().eq('user_id', uid)
+  } catch {
+    // bäst-effort
+  }
+}

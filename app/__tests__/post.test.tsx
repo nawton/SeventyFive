@@ -39,6 +39,9 @@ jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   ImpactFeedbackStyle: { Light: 'light' },
 }))
+jest.mock('@/services/reports', () => ({
+  reportContent: jest.fn().mockResolvedValue(undefined),
+}))
 // Detaljvyn har ett eget testpaket — här räcker det att se att den öppnas
 jest.mock('@/components/CardioSummaryView', () => {
   const React = require('react')
@@ -115,13 +118,18 @@ describe('Diskussion', () => {
     expect(screen.queryByText('Min egen kommentar')).not.toBeOnTheScreen()
   })
 
-  it('long-press på annans kommentar på annans pass gör ingenting', async () => {
+  it('long-press på annans kommentar: kan rapporteras men inte raderas', async () => {
     const { Alert } = require('react-native')
+    const { reportContent } = require('@/services/reports')
     const alertSpy = jest.spyOn(Alert, 'alert')
     render(<PostScreen />)
     await screen.findByText('Johan Wretenberg')
     fireEvent(screen.getByTestId('comment-c1'), 'longPress')
-    expect(alertSpy).not.toHaveBeenCalled()
+    expect(alertSpy).toHaveBeenCalled()
+    const buttons = alertSpy.mock.calls[0][2] as Array<{ text: string; onPress?: () => void }>
+    expect(buttons.map(b => b.text)).toEqual(['Rapportera', 'Avbryt'])   // ingen Radera
+    await act(async () => { buttons[0].onPress?.() })
+    expect(reportContent).toHaveBeenCalledWith('comment', 'c1')
   })
 
   it('hjärtat på en kommentar gillar och räknar upp', async () => {

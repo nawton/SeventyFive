@@ -14,6 +14,7 @@ import {
   type FollowCounts, type FollowStatus,
 } from '@/services/follows'
 import { blockUser, unblockUser, isBlocked } from '@/services/blocks'
+import { reportContent } from '@/services/reports'
 import { strengthToPosts } from '@/components/FeedWorkoutCard'
 import { AthleteOverview } from '@/components/AthleteOverview'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -114,6 +115,25 @@ export default function AthleteScreen() {
     return () => { alive = false; unsubscribe?.() }
   }, [otherId, paramName, paramAvatar]))
 
+  // ⋯-menyn: rapportera användaren och blockera/avblockera
+  function openProfileMenu() {
+    if (!otherId) return
+    Alert.alert(name || 'Profil', undefined, [
+      {
+        text: 'Rapportera användaren',
+        onPress: () => {
+          reportContent('user', otherId)
+            .then(() => Alert.alert('Tack', 'Rapporten är mottagen och granskas av teamet.'))
+            .catch(() => {})
+        },
+      },
+      blocked
+        ? { text: 'Avblockera', onPress: handleBlockToggle }
+        : { text: 'Blockera användaren', style: 'destructive', onPress: handleBlockToggle },
+      { text: 'Avbryt', style: 'cancel' },
+    ])
+  }
+
   // Avblockera direkt från knappen; blockera via ⋯-menyn med bekräftelse
   function handleBlockToggle() {
     if (!otherId) return
@@ -192,13 +212,13 @@ export default function AthleteScreen() {
           onPress={() => router.back()}
           fallbackStyle={s.iconBtnFallback}
         />
-        {/* ⋯-menyn: blockera/avblockera — bara på andras profiler */}
+        {/* ⋯-menyn: rapportera + blockera — bara på andras profiler */}
         {!isOwn ? (
           <GlassCircleButton
             icon="ellipsis-horizontal"
             size={40}
             iconColor={TEXT_PRIMARY}
-            onPress={handleBlockToggle}
+            onPress={openProfileMenu}
             fallbackStyle={s.iconBtnFallback}
           />
         ) : (

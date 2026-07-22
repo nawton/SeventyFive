@@ -26,6 +26,9 @@ jest.mock('@/services/challenge', () => ({
 jest.mock('@/services/dailyLog', () => ({
   getStreak: jest.fn().mockResolvedValue(4),
 }))
+jest.mock('@/services/reports', () => ({
+  reportContent: jest.fn().mockResolvedValue(undefined),
+}))
 jest.mock('@/services/blocks', () => ({
   blockUser: jest.fn().mockResolvedValue(undefined),
   unblockUser: jest.fn().mockResolvedValue(undefined),
@@ -242,17 +245,24 @@ describe('Atletprofil', () => {
     expect(await screen.findByText('Följ')).toBeOnTheScreen()
   })
 
-  it('⋯-menyn blockerar efter bekräftelse — knappen blir Avblockera', async () => {
+  it('⋯-menyn rapporterar och blockerar (med bekräftelse)', async () => {
     const { Alert } = require('react-native')
     const { blockUser } = require('@/services/blocks')
+    const { reportContent } = require('@/services/reports')
     const alertSpy = jest.spyOn(Alert, 'alert')
     mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
     render(<AthleteScreen />)
     await screen.findByText('Nawid')
     fireEvent.press(screen.getByText('glassbtn:ellipsis-horizontal'))
-    expect(alertSpy).toHaveBeenCalled()
-    const buttons = alertSpy.mock.calls[0][2] as Array<{ text: string; onPress?: () => void }>
-    act(() => { buttons.find(b => b.text === 'Blockera')?.onPress?.() })
+    // Menyn: rapportera + blockera
+    const menu = alertSpy.mock.calls[0][2] as Array<{ text: string; onPress?: () => void }>
+    expect(menu.map(b => b.text)).toEqual(['Rapportera användaren', 'Blockera användaren', 'Avbryt'])
+    await act(async () => { menu[0].onPress?.() })
+    expect(reportContent).toHaveBeenCalledWith('user', 'u2')
+    // Blockera → bekräftelsedialog → blockerad
+    act(() => { menu[1].onPress?.() })
+    const confirm = alertSpy.mock.calls.at(-1)?.[2] as Array<{ text: string; onPress?: () => void }>
+    act(() => { confirm.find(b => b.text === 'Blockera')?.onPress?.() })
     expect(blockUser).toHaveBeenCalledWith('u2')
     expect(within(screen.getByTestId('athleteFollow')).getByText('Avblockera')).toBeOnTheScreen()
     expect(screen.getByText('Blockerad')).toBeOnTheScreen()

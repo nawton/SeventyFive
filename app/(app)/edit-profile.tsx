@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '@/lib/supabase'
 import { compressImage } from '@/lib/image'
 import { getProfile, updateProfile, uploadAvatar } from '@/services/profile'
+import { unregisterPushTokens } from '@/services/pushTokens'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { ORANGE, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { SubscriptionCard } from '@/components/SubscriptionCard'
@@ -283,6 +284,8 @@ export default function EditProfileScreen() {
                       text: 'Logga ut',
                       style: 'destructive',
                       onPress: async () => {
+                        // Inga pushnotiser till en utloggad enhet
+                        await unregisterPushTokens()
                         await supabase.auth.signOut()
                         router.replace('/(auth)/welcome' as never)
                       },

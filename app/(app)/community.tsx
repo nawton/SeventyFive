@@ -359,6 +359,15 @@ export default function CommunityScreen() {
             plannedNames={[]}
             allWorkouts={selected.workouts}
             onClose={() => setSelected(null)}
+            social={{
+              postKey: selected.id,
+              ownerId: selected.authorId,
+              onOpenComments: () => {
+                const post = selected
+                setSelected(null)
+                openDiscussion(post)
+              },
+            }}
           />
         )}
       </Modal>

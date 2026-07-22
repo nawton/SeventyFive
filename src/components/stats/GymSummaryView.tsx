@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import Svg, { Polyline, Circle, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { PostSocialBar } from '@/components/PostSocialBar'
 import { BG, CARD, ORANGE, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
@@ -37,7 +38,7 @@ function progressionFor(all: StrengthWorkout[], exerciseName: string) {
 const PURPLE = '#D65CFF'
 const BLUE   = '#3FBBFF'
 
-export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorkouts, onClose }: {
+export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorkouts, onClose, social }: {
   name: string
   dateLabel: string | null
   /** Loggade övningar med set och vikter */
@@ -47,6 +48,8 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
   /** Hela styrkehistoriken — gör övningsraderna klickbara till progressionen */
   allWorkouts?: StrengthWorkout[]
   onClose: () => void
+  /** Community: gilla/kommentera/dela-raden under övningarna */
+  social?: { postKey: string; ownerId: string; onOpenComments?: () => void }
 }) {
   const insets = useSafeAreaInsets()
   const [progressEx, setProgressEx] = useState<string | null>(null)
@@ -165,6 +168,16 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
               ))}
             </View>
           </>
+        )}
+
+        {/* Gilla/kommentera/dela — bara när passet öppnas som inlägg */}
+        {social && (
+          <PostSocialBar
+            postKey={social.postKey}
+            ownerId={social.ownerId}
+            onOpenComments={social.onOpenComments}
+            shareText={`Gympass · ${logged.length} ${logged.length === 1 ? 'övning' : 'övningar'} — loggat med SeventyFive`}
+          />
         )}
       </ScrollView>
 

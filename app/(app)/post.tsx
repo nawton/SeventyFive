@@ -16,6 +16,7 @@ import {
   type PostComment,
 } from '@/services/social'
 import { LikersSheet } from '@/components/LikersSheet'
+import { reportContent } from '@/services/reports'
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar, relativeDayLabel, regionForRoute } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -122,14 +123,25 @@ export default function PostScreen() {
       .catch(() => apply(!next, next ? -1 : 1))
   }
 
-  // Long-press: egna kommentarer, och alla kommentarer på ens eget pass,
-  // kan raderas (samma regel som databasens RLS)
+  // Long-press: rapportera andras kommentarer; radera egna och alla på
+  // ens eget pass (samma regler som databasens RLS)
   function handleLongPressComment(c: PostComment) {
     const canDelete = c.authorId === ownId || ownerId === ownId
-    if (!canDelete) return
-    Alert.alert('Radera kommentar?', `”${c.body}”`, [
-      { text: 'Avbryt', style: 'cancel' },
-      {
+    const canReport = c.authorId !== ownId
+    if (!canDelete && !canReport) return
+    const buttons: Array<{ text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }> = []
+    if (canReport) {
+      buttons.push({
+        text: 'Rapportera',
+        onPress: () => {
+          reportContent('comment', c.id)
+            .then(() => Alert.alert('Tack', 'Rapporten är mottagen och granskas av teamet.'))
+            .catch(() => {})
+        },
+      })
+    }
+    if (canDelete) {
+      buttons.push({
         text: 'Radera',
         style: 'destructive',
         onPress: () => {
@@ -138,8 +150,10 @@ export default function PostScreen() {
             getComments(postKey).then(setComments).catch(() => {})
           })
         },
-      },
-    ])
+      })
+    }
+    buttons.push({ text: 'Avbryt', style: 'cancel' })
+    Alert.alert('Kommentar', `”${c.body}”`, buttons)
   }
 
   async function handleSend() {

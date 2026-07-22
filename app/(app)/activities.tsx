@@ -166,6 +166,27 @@ export default function ActivitiesScreen() {
             plannedNames={[]}
             allWorkouts={allStrength}
             onClose={() => setSelected(null)}
+            social={{
+              postKey: selected.id,
+              ownerId: selected.authorId,
+              onOpenComments: () => {
+                const post = selected
+                setSelected(null)
+                router.push({
+                  pathname: '/(app)/post',
+                  params: {
+                    postKey: post.id,
+                    ownerId: post.authorId,
+                    ownerName: post.authorName,
+                    ownerAvatar: post.authorAvatar ?? '',
+                    kind: 'strength',
+                    title: 'Gympass',
+                    createdAt: post.createdAt,
+                    meta: post.kind === 'strength' ? `${post.exercises} övningar` : '',
+                  },
+                } as never)
+              },
+            }}
           />
         )}
       </Modal>
