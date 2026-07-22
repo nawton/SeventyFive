@@ -211,7 +211,7 @@ export function CalendarView({
           const isFuture     = summary?.status === 'future'
 
           const bgColor = isFuture
-            ? 'rgba(255,255,255,0.07)'
+            ? (calLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)')
             : summary && !isPending
               ? DAY_COLORS[summary.status]
               : 'transparent'

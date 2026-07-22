@@ -612,6 +612,6 @@ const s = StyleSheet.create({
   handle: {
     width: 36, height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(128,128,128,0.45)',
   },
 })
