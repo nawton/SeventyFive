@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import { TASK_COLORS } from '@/components/TaskGridCard'
-import { BORDER, CARD, ACCENT, useThemeStrings } from '@/lib/theme'
+import { BORDER, CARD, ACCENT, useThemeStrings, BG, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT_CONTRAST } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
 
 const CARD_BG     = CARD
@@ -216,24 +216,24 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22,
   },
-  title: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
+  title: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800' },
   closeBtn: {
     width: 32, height: 32, borderRadius: 10,
     backgroundColor: BORDER, alignItems: 'center', justifyContent: 'center',
   },
   fieldLabel: {
-    color: '#3A3A40', fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginBottom: 8,
+    color: TEXT_SECONDARY, fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginBottom: 8,
   },
   input: {
-    backgroundColor: '#0F0F11', borderRadius: 14,
-    color: '#FFFFFF', fontSize: 16,
+    backgroundColor: BG, borderRadius: 14,
+    fontSize: 16,
     paddingHorizontal: 16, paddingVertical: 14,
   },
   iconScroll: { flexGrow: 0, flexShrink: 1 },
   iconGrid:   { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   iconBtn: {
     flexDirection: 'column', alignItems: 'center', gap: 4,
-    backgroundColor: '#0F0F11', borderRadius: 12,
+    backgroundColor: BG, borderRadius: 12,
     paddingHorizontal: 10, paddingVertical: 10, minWidth: 60,
   },
   // Tintad markering i regelfärgen — samma stil som ikonboxarna på korten
@@ -245,5 +245,5 @@ const s = StyleSheet.create({
     paddingVertical: 16, alignItems: 'center', marginTop: 24,
   },
   saveBtnDisabled: { opacity: 0.4 },
-  saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+  saveBtnText: { color: ACCENT_CONTRAST, fontSize: 16, fontWeight: '700' },
 })

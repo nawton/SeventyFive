@@ -881,10 +881,11 @@ const s = StyleSheet.create({
 
   // Rules section
   addRuleChip: {
+    // Accenttonad platta istället för ramen — ramfärger fryser fel och
+    // Anton vill inte ha den orange konturen
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: CARD_BG,
+    backgroundColor: accentAlpha('14'),
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5,
-    borderWidth: 1, borderColor: accentAlpha('44'),
   },
   addRuleChipText: { color: ACCENT, fontSize: 12, fontWeight: '700' },
 
