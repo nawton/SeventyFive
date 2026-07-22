@@ -27,7 +27,7 @@ import {
   getUnitSystem, setUnitSystem, toDisplayDistance, fromDisplayDistance,
   distanceUnitLabel, paceForUnit, type UnitSystem,
 } from '@/lib/units'
-import { getCardioStatsTheme, setCardioStatsTheme, getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, getBodyWeightKg, setBodyWeightKg, type CardioStatsTheme } from '@/lib/prefs'
+import { getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, getBodyWeightKg, setBodyWeightKg } from '@/lib/prefs'
 
 const SCREEN_W    = Dimensions.get('window').width
 const GOAL_PAGE_W = SCREEN_W - 40   // scrollens padding är 20 per sida
@@ -120,7 +120,6 @@ export default function CardioSessionScreen() {
   const [goalMin, setGoalMin] = useState(0)
   const [last, setLast]       = useState<CardioWorkout | null>(null)
   const [unit, setUnit]       = useState<UnitSystem>('metric')
-  const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
   const [voiceOn, setVoiceOn] = useState(true)
   // Kroppsvikt (kg) — bara för kaloriberäkningen under passet
   const [weightStr, setWeightStr] = useState('75')
@@ -131,7 +130,6 @@ export default function CardioSessionScreen() {
 
   useEffect(() => {
     getUnitSystem().then(setUnit)
-    getCardioStatsTheme().then(setStatsTheme)
     getVoiceCues().then(setVoiceOn)
     getBodyWeightKg().then(kg => setWeightStr(String(kg)))
     // Förifyll med senaste målet för den här passtypen
@@ -169,11 +167,6 @@ export default function CardioSessionScreen() {
     await setUnitSystem(u)
   }
 
-  async function chooseStatsTheme(t: CardioStatsTheme) {
-    Haptics.selectionAsync()
-    setStatsTheme(t)
-    await setCardioStatsTheme(t)
-  }
 
   async function chooseVoice(on: boolean) {
     Haptics.selectionAsync()
@@ -434,25 +427,6 @@ export default function CardioSessionScreen() {
                   activeOpacity={0.8}
                 >
                   <Text style={[s.unitBtnText, unit === key && s.unitBtnTextActive]}>{label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={s.settingLabel}>STATISTIKPANEL UNDER PASSET</Text>
-            <View style={s.unitRow}>
-              {([['dark', 'Mörk'], ['light', 'Ljus']] as const).map(([key, label]) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[s.unitBtn, { flexDirection: 'row', justifyContent: 'center', gap: 6 }, statsTheme === key && s.unitBtnActive]}
-                  onPress={() => chooseStatsTheme(key)}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name={key === 'dark' ? 'moon-outline' : 'sunny-outline'}
-                    size={15}
-                    color={statsTheme === key ? CARDIO_BLUE : TEXT_SECONDARY}
-                  />
-                  <Text style={[s.unitBtnText, statsTheme === key && s.unitBtnTextActive]}>{label}</Text>
                 </TouchableOpacity>
               ))}
             </View>

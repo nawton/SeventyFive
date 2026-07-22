@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   View,
   Switch,
+  useColorScheme,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SafeScreen } from '@/components/SafeScreen'
@@ -24,7 +25,7 @@ import { Ionicons } from '@expo/vector-icons'
 import MapView, { Polyline } from 'react-native-maps'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated'
-import { NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, BG, BORDER, CARD, DIVIDER, useThemeStrings, ACCENT, CARD_BORDER } from '@/lib/theme'
+import { NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, BG, BORDER, CARD, DIVIDER, useThemeStrings, ACCENT, CARD_BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { saveCardioWorkout, type CardioInterval } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
@@ -32,7 +33,7 @@ import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { RunSegment } from '@/lib/runProgression'
 import { advanceEngine, createEngineState, spokenSegmentIntro } from '@/lib/intervalEngine'
-import { getCardioStatsTheme, getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, getLastMapCoord, setLastMapCoord, getBodyWeightKg, type CardioStatsTheme, type VoiceSettings } from '@/lib/prefs'
+import { getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, getLastMapCoord, setLastMapCoord, getBodyWeightKg, type VoiceSettings } from '@/lib/prefs'
 import { estimateCalories, DEFAULT_WEIGHT_KG } from '@/lib/calories'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { GlassCircleButton, GlassPill } from '@/components/GlassButton'
@@ -152,9 +153,8 @@ export default function CardioScreen() {
   const unitLabel = distanceUnitLabel(unit)
 
   // Statspanelens utseende (mörk/ljus) — ändras i inställningarna på passdetaljen
-  const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
-  useEffect(() => { getCardioStatsTheme().then(setStatsTheme) }, [])
-  const lightCard = statsTheme === 'light'
+  // Statistikkortet och hela springflödet följer appens ljusa/mörka tema
+  const lightCard = useColorScheme() === 'light'
 
   // Röstguidning — talade besked om splittar och mål
   const voiceRef = useRef(true)
@@ -1145,7 +1145,7 @@ export default function CardioScreen() {
       {/* ── Km split toast ── */}
       {splitToast && (
         <View style={[styles.splitToast, LIQUID_GLASS && styles.glassSurface]} pointerEvents="none">
-          {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
+          {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme={lightCard ? 'light' : 'dark'} tintColor={lightCard ? 'rgba(250,250,252,0.55)' : 'rgba(12,12,14,0.5)'} style={StyleSheet.absoluteFill} />}
           <Ionicons name="flag" size={16} color={CARDIO_ACCENT} />
           <Text style={styles.splitToastText}>{splitToast}</Text>
         </View>
@@ -1366,7 +1366,7 @@ export default function CardioScreen() {
           {/* Osynlig yta bakom sheeten: tryck utanför stänger, utan att mörka kartan */}
           <Pressable style={styles.sheetDismiss} onPress={closePicker} />
           <Animated.View style={[styles.sheetWrap, { backgroundColor: T.CARD }, LIQUID_GLASS && styles.glassSurface, sheetStyle]}>
-            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
+            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme={lightCard ? 'light' : 'dark'} tintColor={lightCard ? 'rgba(250,250,252,0.55)' : 'rgba(12,12,14,0.5)'} style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={sheetDrag}>
               <View style={styles.sheetGrip}>
                 <View style={styles.sheetHandle} />
@@ -1405,7 +1405,7 @@ export default function CardioScreen() {
         <>
           <Pressable style={styles.sheetDismiss} onPress={closeStyleSheet} />
           <Animated.View style={[styles.sheetWrap, { backgroundColor: T.CARD }, LIQUID_GLASS && styles.glassSurface, styleSheetStyle]}>
-            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
+            {LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme={lightCard ? 'light' : 'dark'} tintColor={lightCard ? 'rgba(250,250,252,0.55)' : 'rgba(12,12,14,0.5)'} style={StyleSheet.absoluteFill} />}
             <GestureDetector gesture={styleDrag}>
               <View style={styles.sheetGrip}>
                 <View style={styles.sheetHandle} />
@@ -2004,7 +2004,7 @@ export default function CardioScreen() {
         ]}
         edges={['bottom']}
       >
-        {status !== 'idle' && LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor="rgba(12,12,14,0.5)" style={StyleSheet.absoluteFill} />}
+        {status !== 'idle' && LIQUID_GLASS && <GlassView glassEffectStyle="regular" colorScheme={lightCard ? 'light' : 'dark'} tintColor={lightCard ? 'rgba(250,250,252,0.55)' : 'rgba(12,12,14,0.5)'} style={StyleSheet.absoluteFill} />}
         {/* Tre sidor: Splits · Karta · Statistik */}
         <View style={styles.pageDots}>
           {[0, 1, 2].map(i => {
@@ -2138,7 +2138,7 @@ const styles = StyleSheet.create({
   },
   idleCellText: { flex: 1 },
   idleCellLabel: { color: '#9BA0A6', fontSize: 11, fontWeight: '600' },
-  idleCellValue: { color: '#fff', fontSize: 15, fontWeight: '700', marginTop: 1 },
+  idleCellValue: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', marginTop: 1 },
   startWide: {
     backgroundColor: CARDIO_ACCENT, borderRadius: 999,
     paddingVertical: 13, alignItems: 'center',
@@ -2146,13 +2146,13 @@ const styles = StyleSheet.create({
   startWideText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.3 },
 
   // ── Splits-sidan ──
-  splitsPageTitle: { color: '#fff', fontSize: 30, fontWeight: '800', letterSpacing: -0.4, marginTop: 4, marginBottom: 14 },
+  splitsPageTitle: { color: TEXT_PRIMARY, fontSize: 30, fontWeight: '800', letterSpacing: -0.4, marginTop: 4, marginBottom: 14 },
   splitsList: { gap: 10, paddingBottom: 160 },
   splitBlock: { backgroundColor: CARD, borderRadius: 18, padding: 18, gap: 2 },
   splitBlockActive: { backgroundColor: CARDIO_ACCENT },
   splitBlockLabel: { color: '#9BA0A6', fontSize: 14, fontWeight: '600' },
   splitBlockLabelActive: { color: 'rgba(0,0,0,0.6)', fontSize: 14, fontWeight: '700' },
-  splitBlockPace: { color: '#fff', fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
+  splitBlockPace: { color: TEXT_PRIMARY, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
   splitBlockPaceActive: { color: '#000', fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
   splitBlockUnit: { fontSize: 17, fontWeight: '700', color: '#9BA0A6' },
   splitBlockUnitActive: { fontSize: 17, fontWeight: '700', color: 'rgba(0,0,0,0.55)' },
@@ -2184,7 +2184,7 @@ const styles = StyleSheet.create({
     backgroundColor: CARDIO_ACCENT + '1C',
     alignItems: 'center', justifyContent: 'center',
   },
-  voiceTitle: { color: '#fff', fontSize: 26, fontWeight: '800', letterSpacing: -0.3 },
+  voiceTitle: { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800', letterSpacing: -0.3 },
   voiceList: { paddingHorizontal: 16, gap: 12 },
   voiceRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
@@ -2192,7 +2192,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15, paddingHorizontal: 16,
   },
   voiceRowPlain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  voiceRowLabel: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  voiceRowLabel: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   voiceRowValue: { color: '#9BA0A6', fontSize: 13, marginTop: 3 },
   voiceFreqBlock: {
     backgroundColor: '#161618', borderRadius: 20,
@@ -2214,7 +2214,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 12,
   },
   voiceOptionActive: { borderColor: CARDIO_ACCENT, backgroundColor: CARDIO_ACCENT + '10' },
-  voiceOptionLabel: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  voiceOptionLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
   voiceOptionSub: { color: '#9BA0A6', fontSize: 12, marginTop: 2 },
 
   // Målmodal
@@ -2223,7 +2223,7 @@ const styles = StyleSheet.create({
     backgroundColor: CARD, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, paddingBottom: 40, gap: 14,
   },
-  goalModalTitle: { color: '#fff', fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
+  goalModalTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
   goalIconWrap: { alignItems: 'center', gap: 10, marginBottom: 4 },
   goalIconCircle: {
     width: 58, height: 58, borderRadius: 29,
@@ -2356,7 +2356,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   hudMiniShowText: {
-    color: '#fff',
+    color: TEXT_PRIMARY,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -2390,7 +2390,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   pausedBadgeText: {
-    color: '#fff',
+    color: TEXT_PRIMARY,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -2489,7 +2489,7 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
   splitToastText: {
-    color: '#fff',
+    color: TEXT_PRIMARY,
     fontSize: 15,
     fontFamily: NUM_FONT,
     fontVariant: ['tabular-nums'],
@@ -2576,7 +2576,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   dialCardinal: {
-    color: '#fff',
+    color: TEXT_PRIMARY,
     fontSize: 24,
     fontWeight: '800',
     marginTop: 46,
@@ -2587,7 +2587,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   compassDeg: {
-    color: '#fff',
+    color: TEXT_PRIMARY,
     fontSize: 58,
     fontFamily: NUM_FONT,
     letterSpacing: -1,
@@ -2634,7 +2634,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   mapCardLabel: {
-    color: '#ccc',
+    color: TEXT_PRIMARY,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -2731,7 +2731,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#3A3A3C',
   },
   sheetTitle: {
-    color: '#fff',
+    color: TEXT_PRIMARY,
     fontSize: 18,
     fontWeight: '800',
     textAlign: 'center',
@@ -2758,12 +2758,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sheetItemText: {
-    color: '#ccc',
+    color: TEXT_SECONDARY,
     fontSize: 16,
     fontWeight: '600',
   },
   sheetItemTextActive: {
-    color: '#fff',
+    color: TEXT_PRIMARY,
     fontWeight: '700',
   },
 
@@ -2813,14 +2813,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   exValueBig: {
-    color: '#fff',
+    color: TEXT_PRIMARY,
     fontSize: 50,
     fontFamily: NUM_FONT,
     letterSpacing: -1.5,
     fontVariant: ['tabular-nums'],
   },
   exValueMed: {
-    color: '#fff',
+    color: TEXT_PRIMARY,
     fontSize: 34,
     fontFamily: NUM_FONT,
     letterSpacing: -0.5,
@@ -2913,7 +2913,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pausePillText: {
-    color: '#fff',
+    color: TEXT_PRIMARY,
     fontSize: 17,
     fontWeight: '800',
   },
@@ -2928,7 +2928,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   finishPillText: {
-    color: '#ddd',
+    color: TEXT_PRIMARY,
     fontSize: 15,
     fontWeight: '700',
   },

@@ -15,7 +15,6 @@ import { getTabBarShrinkEnabled, setTabBarShrinkEnabled } from '@/lib/tabBar'
 import { getThemeMode, setThemeMode, type ThemeMode } from '@/lib/themeMode'
 import { updateRunPaces } from '@/services/scheduleGenerator'
 import {
-  getCardioStatsTheme, setCardioStatsTheme, type CardioStatsTheme,
   getVoiceCues, setVoiceCues,
   getDefaultMapStyle, setDefaultMapStyle, type MapStyleKey,
   getLastMapCoord, getFiveKTime,
@@ -87,7 +86,6 @@ export default function AnpassningScreen() {
   }
   const [navShrink, setNavShrink]   = useState(false)
   const [unit, setUnit]             = useState<UnitSystem>('metric')
-  const [statsTheme, setStatsTheme] = useState<CardioStatsTheme>('dark')
   const [voice, setVoice]           = useState(true)
   const [mapStyle, setMapStyle]     = useState<MapStyleKey>('satellite')
   const [mapCoord, setMapCoord]     = useState<{ latitude: number; longitude: number } | null>(null)
@@ -101,7 +99,6 @@ export default function AnpassningScreen() {
   useEffect(() => {
     getTabBarShrinkEnabled().then(setNavShrink)
     getUnitSystem().then(setUnit)
-    getCardioStatsTheme().then(setStatsTheme)
     getVoiceCues().then(setVoice)
     // Gamla 'terrain'-val finns inte i Apple Maps — visas som Karta
     getDefaultMapStyle().then(m => setMapStyle(m === 'terrain' ? 'standard' : m))
@@ -241,20 +238,6 @@ export default function AnpassningScreen() {
               })}
             </View>
             <Text style={s.segHint}>Kartan som visas när du startar ett cardiopass</Text>
-          </View>
-          <View style={[s.segBlock, s.rowBorder]}>
-            <View style={s.segLabelRow}>
-              <Ionicons name="contrast-outline" size={20} color={TEXT_SECONDARY} />
-              <Text style={s.rowLabel}>Statistikkort under pass</Text>
-            </View>
-            <GlassSegment
-              value={statsTheme}
-              options={[
-                { key: 'dark',  label: 'Mörkt' },
-                { key: 'light', label: 'Ljust' },
-              ]}
-              onChange={t => { setStatsTheme(t); setCardioStatsTheme(t).catch(() => {}) }}
-            />
           </View>
           {/* 5 km-tid — räknar om löpplanens tempoförslag utan omgenerering */}
           <View style={[s.segBlock, s.rowBorder]}>
