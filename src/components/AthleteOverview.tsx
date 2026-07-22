@@ -9,7 +9,7 @@ import { DistanceAreaChart, type AreaBucket } from '@/components/stats/DistanceA
 import { fmtDuration } from '@/lib/format'
 import type { UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
-import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, CARD_BORDER } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, CARD_BORDER, accentAlpha } from '@/lib/theme'
 
 // =============================================================================
 // ATLETVY — delad mellan atletsidan (öppnas från flödet/sökningen) och
@@ -350,10 +350,10 @@ export function AthleteOverview({
 const s = StyleSheet.create({
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 6 },
   avatar: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: accentAlpha('1E'),
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
-  avatarInitial: { color: TEXT_PRIMARY, fontWeight: '800' },
+  avatarInitial: { color: ACCENT, fontWeight: '800' },
   name: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800' },
   activeMeta: { color: TEXT_SECONDARY, fontSize: 14, marginTop: 3 },
 
