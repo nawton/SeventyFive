@@ -301,7 +301,7 @@ export default function ProfileScreen() {
           following={false}
           onToggleFollow={() => {}}
           onOpenActivities={() => router.push('/(app)/activities' as never)}
-          onPressHero={() => router.push('/(app)/account' as never)}
+          onPressHero={() => router.push('/(app)/edit-profile')}
           onPressFollows={tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)}
         />
 

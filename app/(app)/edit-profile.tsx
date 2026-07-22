@@ -205,7 +205,7 @@ export default function EditProfileScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.rowIconBox}>
-                  <Ionicons name="calendar-outline" size={17} color={ORANGE} />
+                  <Ionicons name="calendar-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
                 <Text style={styles.rowLabel}>Veckoschema</Text>
                 <View style={{ flex: 1 }} />
@@ -220,7 +220,7 @@ export default function EditProfileScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.rowIconBox}>
-                  <Ionicons name="bar-chart-outline" size={17} color={ORANGE} />
+                  <Ionicons name="bar-chart-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
                 <Text style={styles.rowLabel}>Statistik</Text>
                 <View style={{ flex: 1 }} />
@@ -235,7 +235,7 @@ export default function EditProfileScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.rowIconBox}>
-                  <Ionicons name="flag-outline" size={17} color={ORANGE} />
+                  <Ionicons name="flag-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
                 <Text style={styles.rowLabel}>Hitta ett lopp</Text>
                 <Text style={styles.rowValue} numberOfLines={1}>Kommer snart</Text>
@@ -254,7 +254,7 @@ export default function EditProfileScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.rowIconBox}>
-                  <Ionicons name="options-outline" size={17} color={ORANGE} />
+                  <Ionicons name="options-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
                 <Text style={styles.rowLabel}>Anpassning</Text>
                 <Text style={styles.rowValue} numberOfLines={1}>Karta, röst, enheter</Text>
@@ -265,14 +265,15 @@ export default function EditProfileScreen() {
 
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => router.push('/settings' as never)}
+                onPress={() => router.push('/general' as never)}
                 activeOpacity={0.7}
+                testID="generalRow"
               >
                 <View style={styles.rowIconBox}>
-                  <Ionicons name="notifications-outline" size={17} color={ORANGE} />
+                  <Ionicons name="settings-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
-                <Text style={styles.rowLabel}>Notiser & påminnelser</Text>
-                <View style={{ flex: 1 }} />
+                <Text style={styles.rowLabel}>Allmänt</Text>
+                <Text style={styles.rowValue} numberOfLines={1}>Schema, notiser, konto</Text>
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
 
@@ -284,7 +285,7 @@ export default function EditProfileScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.rowIconBox}>
-                  <Ionicons name="information-circle-outline" size={17} color={ORANGE} />
+                  <Ionicons name="information-circle-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
                 <Text style={styles.rowLabel}>Om SeventyFive</Text>
                 <Text style={styles.rowValue} numberOfLines={1}>1.0.0</Text>
@@ -473,9 +474,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 13,
   },
   rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.10)', marginLeft: 60 },
+  // Neutralt grå — inga orange accenter bland raderna, enkelt och stilrent
   rowIconBox: {
     width: 32, height: 32, borderRadius: 9,
-    backgroundColor: ORANGE + '18',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center', justifyContent: 'center',
   },
   rowLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },

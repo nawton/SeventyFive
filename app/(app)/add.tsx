@@ -424,7 +424,7 @@ export default function SchemaScreen() {
 
       {/* Sticky top bar */}
       <View style={styles.topHeader}>
-        <TouchableOpacity onPress={() => router.push('/(app)/account' as never)} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => router.push('/(app)/edit-profile')} activeOpacity={0.8}>
           <View style={styles.avatar}>
             {avatarUrl?.startsWith('http') ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
