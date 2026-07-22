@@ -9,6 +9,9 @@ import { getProfile } from '@/services/profile'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
 import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
 import { getFollowLists } from '@/services/follows'
+import {
+  getFeedSocial, likePost, unlikePost, type PostSocial,
+} from '@/services/social'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -17,6 +20,7 @@ import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import {
   FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
 } from '@/components/FeedWorkoutCard'
+import { CommentsSheet } from '@/components/CommentsSheet'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import { BG, CARD, BORDER, ORANGE, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -64,6 +68,9 @@ export default function CommunityScreen() {
   const [ownId, setOwnId] = useState<string | null>(null)
   const [unit, setUnit] = useState<UnitSystem>('metric')
   const [selected, setSelected] = useState<FeedPost | null>(null)
+  // Gillanden/kommentarsantal per inlägg + vilket inläggs kommentarer som är öppna
+  const [social, setSocial] = useState<Record<string, PostSocial>>({})
+  const [commentsFor, setCommentsFor] = useState<FeedPost | null>(null)
   const onScroll = useTabBarShrinkOnScroll()
 
   useFocusEffect(useCallback(() => {
@@ -103,12 +110,36 @@ export default function CommunityScreen() {
         ]
       }))
       if (!alive) return
-      setPosts(mergePosts(perAuthor.flat()).slice(0, FEED_LIMIT))
+      const feed = mergePosts(perAuthor.flat()).slice(0, FEED_LIMIT)
+      setPosts(feed)
       setLoaded(true)
+      // Gillanden och kommentarsantal för hela flödet i två frågor
+      getFeedSocial(feed.map(p => p.id))
+        .then(map => { if (alive) setSocial(map) })
+        .catch(() => {})
     }
     loadFeed()
     return () => { alive = false }
   }, []))
+
+  // Optimistiskt gilla/ogilla — backas vid fel. Notisen till passägaren
+  // sköter databasen + realtime.
+  function toggleLike(post: FeedPost) {
+    const current = social[post.id] ?? { likes: 0, likedByMe: false, comments: 0 }
+    const next = !current.likedByMe
+    const apply = (likedByMe: boolean, delta: number) =>
+      setSocial(prev => ({
+        ...prev,
+        [post.id]: {
+          ...(prev[post.id] ?? current),
+          likedByMe,
+          likes: Math.max(0, (prev[post.id]?.likes ?? 0) + delta),
+        },
+      }))
+    apply(next, next ? 1 : -1)
+    ;(next ? likePost(post.id, post.authorId) : unlikePost(post.id))
+      .catch(() => apply(!next, next ? -1 : 1))
+  }
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -148,6 +179,9 @@ export default function CommunityScreen() {
             <FeedWorkoutCard
               post={item}
               onOpen={setSelected}
+              social={social[item.id]}
+              onToggleLike={() => toggleLike(item)}
+              onOpenComments={() => setCommentsFor(item)}
               // Egen avatar → egna profilen (tomma params skriver över
               // kvarliggande), väns avatar → deras atletprofil
               onAvatarPress={() => router.push({
@@ -196,6 +230,20 @@ export default function CommunityScreen() {
           ) : null}
         />
       )}
+
+      {/* Kommentarer för valt inlägg — räknaren tickar upp direkt */}
+      <CommentsSheet
+        postKey={commentsFor?.id ?? null}
+        ownerId={commentsFor?.authorId ?? null}
+        onClose={() => setCommentsFor(null)}
+        onCommentAdded={key => setSocial(prev => ({
+          ...prev,
+          [key]: {
+            ...(prev[key] ?? { likes: 0, likedByMe: false, comments: 0 }),
+            comments: (prev[key]?.comments ?? 0) + 1,
+          },
+        }))}
+      />
 
       {/* Samma detaljvyer som statistiken — utan radering härifrån, och
           skrivskyddat betyg på vänners pass */}

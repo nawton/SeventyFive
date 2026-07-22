@@ -27,6 +27,8 @@ import { getStrengthWorkouts } from '@/services/strengthWorkouts'
 import {
   getFollowCounts, getIncomingRequestCount, subscribeToFollows, type FollowCounts,
 } from '@/services/follows'
+import { getSocialNotificationCount, subscribeToSocial } from '@/services/social'
+import { getNotifSeenAt } from '@/lib/prefs'
 import { strengthToPosts } from '@/components/FeedWorkoutCard'
 import { AthleteOverview } from '@/components/AthleteOverview'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
@@ -74,6 +76,7 @@ export default function ProfileScreen() {
   const [gymCount, setGymCount]     = useState(0)
   const [counts, setCounts]         = useState<FollowCounts>({ followers: 0, following: 0 })
   const [requestCount, setRequestCount] = useState(0)
+  const [socialCount, setSocialCount] = useState(0)
   const [streak, setStreak]         = useState(0)
   const [unit, setUnit]             = useState<UnitSystem>('metric')
   const [loading, setLoading]       = useState(true)
@@ -110,8 +113,15 @@ export default function ProfileScreen() {
   useFocusEffect(useCallback(() => {
     let unsubscribe: (() => void) | null = null
     load()
-    // Följer någon dig eller skickar en förfrågan medan fliken är öppen
-    // uppdateras räknaren och klockans badge direkt
+    // Följer någon dig, skickar en förfrågan, gillar eller kommenterar
+    // medan fliken är öppen uppdateras räknare och klockans badge direkt
+    let unsubSocial: (() => void) | null = null
+    const refreshSocialCount = () =>
+      getNotifSeenAt()
+        .then(seen => getSocialNotificationCount(seen))
+        .then(setSocialCount)
+        .catch(() => {})
+    refreshSocialCount()
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) return
       const uid = session.user.id
@@ -119,8 +129,9 @@ export default function ProfileScreen() {
         getFollowCounts(uid).then(setCounts).catch(() => {})
         getIncomingRequestCount().then(setRequestCount).catch(() => {})
       })
+      unsubSocial = subscribeToSocial(uid, refreshSocialCount)
     })
-    return () => { unsubscribe?.() }
+    return () => { unsubscribe?.(); unsubSocial?.() }
   }, []))
 
   // Guidat flöde från engångsmålen: landa i fotoflödet, öppna sedan fotovalet
@@ -422,11 +433,11 @@ export default function ProfileScreen() {
               onPress={() => router.push('/(app)/notifications' as never)}
               fallbackStyle={s.bellButton}
             />
-            {/* Röd badge när det finns olästa förfrågningar/notiser */}
-            {requestCount > 0 && (
+            {/* Röd badge: väntande förfrågningar + osedda gillanden/kommentarer */}
+            {requestCount + socialCount > 0 && (
               <View style={s.bellBadge} pointerEvents="none" testID="bellBadge">
                 <Text style={s.bellBadgeText}>
-                  {requestCount > 9 ? '9+' : requestCount}
+                  {requestCount + socialCount > 9 ? '9+' : requestCount + socialCount}
                 </Text>
               </View>
             )}

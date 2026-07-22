@@ -23,6 +23,13 @@ jest.mock('@/services/strengthWorkouts', () => ({
 jest.mock('@/services/follows', () => ({
   getFollowLists: jest.fn().mockResolvedValue({ followers: [], following: [] }),
 }))
+jest.mock('@/services/social', () => ({
+  getFeedSocial: jest.fn().mockResolvedValue({}),
+  likePost: jest.fn().mockResolvedValue(undefined),
+  unlikePost: jest.fn().mockResolvedValue(undefined),
+  getComments: jest.fn().mockResolvedValue([]),
+  addComment: jest.fn().mockResolvedValue(undefined),
+}))
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
   useFocusEffect: (cb: () => void) => {
@@ -134,6 +141,30 @@ describe('Community', () => {
     // Vännens pass öppnas med skrivskyddat betyg
     fireEvent.press(screen.getByTestId('post-w2'))
     expect(screen.getByText('summary:Kvällsrunda:readonly')).toBeOnTheScreen()
+  })
+
+  it('gilla sparar på riktigt och räknaren tickar direkt', async () => {
+    const { likePost, unlikePost, getFeedSocial } = require('@/services/social')
+    ;(getFeedSocial as jest.Mock).mockResolvedValue({
+      w1: { likes: 2, likedByMe: false, comments: 1 },
+    })
+    render(<CommunityScreen />)
+    await screen.findByText('Anton Wretenberg')
+    expect(await screen.findByText('2')).toBeOnTheScreen()      // gillaräknare
+    fireEvent.press(screen.getByTestId('like-w1'))
+    expect(likePost).toHaveBeenCalledWith('w1', 'u1')
+    expect(screen.getByText('3')).toBeOnTheScreen()             // optimistiskt +1
+    fireEvent.press(screen.getByTestId('like-w1'))
+    expect(unlikePost).toHaveBeenCalledWith('w1')
+    expect(screen.getByText('2')).toBeOnTheScreen()
+  })
+
+  it('kommentarsknappen öppnar kommentarsarket', async () => {
+    render(<CommunityScreen />)
+    await screen.findByText('Anton Wretenberg')
+    fireEvent.press(screen.getByTestId('comments-w1'))
+    expect(await screen.findByText('Kommentarer')).toBeOnTheScreen()
+    expect(screen.getByText('Inga kommentarer ännu — bli först!')).toBeOnTheScreen()
   })
 
   it('gympass visas i flödet: dagens övningar grupperade till ett kort', async () => {

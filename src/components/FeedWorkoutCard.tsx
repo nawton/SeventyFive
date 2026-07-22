@@ -176,20 +176,31 @@ function Stat({ value, label }: { value: string; label: string }) {
   )
 }
 
-export function FeedWorkoutCard({ post, onOpen, onAvatarPress }: {
+export interface PostSocialState {
+  likes: number
+  likedByMe: boolean
+  comments: number
+}
+
+export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleLike, onOpenComments }: {
   post: FeedPost
   onOpen: (post: FeedPost) => void
   /** Utelämnas när avataren inte ska leda någonstans (t.ex. på atletens egen sida) */
   onAvatarPress?: () => void
+  /** Riktiga gillanden/kommentarer — utan dessa är hjärtat bara lokalt */
+  social?: PostSocialState
+  onToggleLike?: () => void
+  onOpenComments?: () => void
 }) {
-  // Gilla är än så länge bara lokal — sparas när delnings-backenden byggs
-  const [liked, setLiked] = useState(false)
+  const [localLiked, setLocalLiked] = useState(false)
+  const liked = social ? social.likedByMe : localLiked
   const route = post.kind === 'cardio' ? post.route ?? [] : []
   const hasRoute = route.length > 1
 
   function toggleLike() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    setLiked(v => !v)
+    if (onToggleLike) onToggleLike()
+    else setLocalLiked(v => !v)
   }
 
   const avatar = (
@@ -265,10 +276,29 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress }: {
       )}
 
       <View style={s.cardFooter}>
-        <TouchableOpacity onPress={toggleLike} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID={`like-${post.id}`}>
+        <TouchableOpacity
+          onPress={toggleLike}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          testID={`like-${post.id}`}
+          style={s.footerAction}
+        >
           <Ionicons name={liked ? 'heart' : 'heart-outline'} size={26} color={liked ? '#FF3B4A' : TEXT_PRIMARY} />
+          {social != null && social.likes > 0 && (
+            <Text style={s.footerCount}>{social.likes}</Text>
+          )}
         </TouchableOpacity>
-        <Ionicons name="chatbubble-ellipses-outline" size={24} color={TEXT_SECONDARY} />
+        <TouchableOpacity
+          onPress={onOpenComments}
+          disabled={!onOpenComments}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          testID={`comments-${post.id}`}
+          style={s.footerAction}
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={24} color={onOpenComments ? TEXT_PRIMARY : TEXT_SECONDARY} />
+          {social != null && social.comments > 0 && (
+            <Text style={s.footerCount}>{social.comments}</Text>
+          )}
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   )
@@ -313,4 +343,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 22,
     paddingHorizontal: 16, paddingVertical: 12,
   },
+  footerAction: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  footerCount: { color: TEXT_SECONDARY, fontSize: 14, fontFamily: NUM_FONT },
 })

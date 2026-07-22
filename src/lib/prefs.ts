@@ -282,3 +282,16 @@ export async function setBodyWeightKg(kg: number): Promise<void> {
   if (!Number.isFinite(kg) || kg < 30 || kg > 250) return
   await AsyncStorage.setItem('bodyWeightKg', String(Math.round(kg))).catch(() => {})
 }
+
+/** När notiscentret senast öppnades — badgen räknar bara nyare händelser */
+export async function getNotifSeenAt(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem('notifSeenAt')
+  } catch {
+    return null
+  }
+}
+
+export async function setNotifSeenAt(iso: string): Promise<void> {
+  await AsyncStorage.setItem('notifSeenAt', iso).catch(() => {})
+}
