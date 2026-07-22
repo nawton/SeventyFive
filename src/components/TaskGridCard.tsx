@@ -25,6 +25,17 @@ export const TASK_COLORS: Record<TaskType, string> = {
   custom:  '#9B6DFF',
 }
 
+// Ljust läge: samma identitet per uppgift men djupare, lugnare toner —
+// neonvarianterna ovan är byggda för mörk botten
+export const TASK_COLORS_LIGHT: Record<TaskType, string> = {
+  workout: '#C77F00',
+  water:   '#0097AB',
+  diet:    '#3E9A4E',
+  reading: '#8E3AA6',
+  photo:   '#C42D63',
+  custom:  '#7A50D6',
+}
+
 export const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']> = {
   workout: 'barbell-outline',
   diet:    'restaurant-outline',
@@ -48,7 +59,8 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
   // Ljust läge: inga ramar på korten — mjuk skugga på ytterhöljet istället
   // (kortet klipper med overflow hidden, så skuggan måste ligga utanför)
   const light = useColorScheme() === 'light'
-  const color = TASK_COLORS[task.type] ?? T.ACCENT
+  const palette = useColorScheme() === 'light' ? TASK_COLORS_LIGHT : TASK_COLORS
+  const color = palette[task.type] ?? T.ACCENT
   const icon  = TASK_ICONS[task.type]  ?? 'checkmark-outline'
   const scale = useSharedValue(1)
 

@@ -65,13 +65,14 @@ import { FailModal } from '@/components/FailModal'
 import { ReadingLogModal } from '@/components/ReadingLogModal'
 import { RestartPromptModal } from '@/components/RestartPromptModal'
 import { VictoryModal } from '@/components/VictoryModal'
-import { TaskGridCard, TASK_COLORS, TASK_GAP } from '@/components/TaskGridCard'
+import { TaskGridCard, TASK_COLORS, TASK_COLORS_LIGHT, TASK_GAP } from '@/components/TaskGridCard'
 import { AddRuleSheet } from '@/components/AddRuleSheet'
 import type { UserChallengeWithLevel } from '@/types/database'
 import { getGreetingSubtitle } from '@/lib/getGreetingSubtitle'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import { BG, BORDER, CARD, TEXT_PRIMARY, useThemeStrings, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
+import { getWorkoutsForDate, getCardioWorkoutsForDate } from '@/services/workouts'
 
 const NUM_FONT  = 'Nunito_700Bold'
 const SCENE_BG  = BG
@@ -211,6 +212,7 @@ export default function DashboardScreen() {
   const [todaySessions, setTodaySessions] = useState<WorkoutSession[]>([])
   const [todayDoneIds, setTodayDoneIds]   = useState<string[]>([])
   const [hasAnySchedule, setHasAnySchedule] = useState(false)
+  const [hasActivityToday, setHasActivityToday] = useState(false)
   const [streak, setStreak]               = useState(0)
   const [pulseCount, setPulseCount]       = useState(0)
   const [pulseRequests, setPulseRequests] = useState(0)
@@ -305,6 +307,12 @@ export default function DashboardScreen() {
       setCurrentDay(day)
 
       // Dagens pass + streak + social puls — fel här får inte fälla hemskärmen
+      getWorkoutsForDate(user.id, isoDate(todayMidnight()))
+        .then(ws => { if (ws.length > 0) setHasActivityToday(true) })
+        .catch(() => {})
+      getCardioWorkoutsForDate(user.id, isoDate(todayMidnight()))
+        .then(ws => { if (ws.length > 0) setHasActivityToday(true) })
+        .catch(() => {})
       Promise.allSettled([
         getWorkoutSessions(user.id),
         getCompletedSessionIds(user.id, isoDate(todayMidnight())),
@@ -335,6 +343,7 @@ export default function DashboardScreen() {
           )
         }))
         setTodayDoneIds(done.status === 'fulfilled' ? done.value : [])
+        if (done.status === 'fulfilled' && done.value.length > 0) setHasActivityToday(true)
       })
 
       const log = await getOrCreateTodayLog(active.id, user.id, day)
@@ -409,6 +418,19 @@ export default function DashboardScreen() {
   }
 
   function toggleTask(task: TaskItem) {
+    // Träningen bockas inte i på ren vilja — minst en aktivitet idag krävs
+    // (avbockat schemapass, GPS-runda eller loggad övning)
+    if (task.type === 'workout' && !task.completed && !hasActivityToday) {
+      Alert.alert(
+        'Inget pass loggat idag',
+        'Kör ett pass först — allt räknas! Inget gym? Ta ett hemmapass: armhävningar, situps och utfall, eller en rask promenad med GPS:en igång.',
+        [
+          { text: 'Senare', style: 'cancel' },
+          { text: 'Logga pass', onPress: () => router.push('/(app)/add') },
+        ],
+      )
+      return
+    }
     applyTaskUpdate(task, !task.completed, task.details)
   }
 
@@ -801,7 +823,7 @@ export default function DashboardScreen() {
               )
             })}
             {customTasks.map((task, i) => {
-              const color  = TASK_COLORS.custom
+              const color  = lightMode ? TASK_COLORS_LIGHT.custom : TASK_COLORS.custom
               const isLast = i === customTasks.length - 1
               return (
                 <TouchableOpacity
