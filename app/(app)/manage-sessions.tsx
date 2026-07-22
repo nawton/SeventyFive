@@ -9,6 +9,7 @@ import {
   Alert,
   ActionSheetIOS,
   Platform,
+  useColorScheme,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { useFocusEffect, router } from 'expo-router'
@@ -96,13 +97,19 @@ function DayCard({
   const hasSession    = daySessions.length > 0
   const exerciseCount = daySessions.reduce((n, s) => n + s.exercises.length, 0)
   const firstCardio   = daySessions.find(x => x.session_type === 'cardio')
+  // Accenttonad platta för dagar med pass — schemasträngar (ramar fryser
+  // annars fel efter modalbesök)
+  const light = useColorScheme() === 'light'
+  const activeBg     = light ? '#EDF1FA' : '#1A1510'
+  const activeBorder = light ? 'rgba(49,86,196,0.30)' : 'rgba(255,168,23,0.25)'
+  const todayBorder  = light ? '#3156C4' : '#FFA817'
 
   return (
     <TouchableOpacity
       style={[
         s.dayCard,
-        hasSession && s.dayCardActive,
-        isToday   && s.dayCardToday,
+        hasSession && { backgroundColor: activeBg, borderColor: activeBorder },
+        isToday   && { borderColor: todayBorder },
       ]}
       onPress={onPress}
       onLongPress={onLongPress}
@@ -457,13 +464,9 @@ const s = StyleSheet.create({
     gap: 6,
     justifyContent: 'space-between',
   },
-  dayCardActive: {
-    backgroundColor: '#1A1510',
-    borderColor: accentAlpha('40'),
-  },
-  dayCardToday: {
-    borderColor: ACCENT,
-  },
+  // Färgerna sätts inline per schema — dagar med pass var hårdkodat mörka
+  dayCardActive: {},
+  dayCardToday: {},
 
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dayShort: {
