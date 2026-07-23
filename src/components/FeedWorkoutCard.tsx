@@ -183,7 +183,7 @@ export interface PostSocialState {
   comments: number
 }
 
-export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleLike, onOpenComments }: {
+export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleLike, onOpenComments, onMenuPress }: {
   post: FeedPost
   onOpen: (post: FeedPost) => void
   /** Utelämnas när avataren inte ska leda någonstans (t.ex. på atletens egen sida) */
@@ -192,6 +192,8 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
   social?: PostSocialState
   onToggleLike?: () => void
   onOpenComments?: () => void
+  /** ⋯ i övre hörnet — anmälningsmenyn; utelämnas på egna inlägg */
+  onMenuPress?: () => void
 }) {
   const chrome = useCardChrome()
   const routeColor = useRouteColor()
@@ -234,6 +236,12 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
           <Text style={s.cardName}>{post.authorName}</Text>
           <Text style={s.cardMeta}>{post.typeLabel} — {relativeDayLabel(post.createdAt)}</Text>
         </View>
+        {onMenuPress && (
+          <TouchableOpacity onPress={onMenuPress} hitSlop={10} style={s.cardMenu}
+            testID={`postMenu-${post.id}`}>
+            <Ionicons name="ellipsis-horizontal" size={18} color={TEXT_SECONDARY} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={s.cardDivider} />
@@ -321,6 +329,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingVertical: 14,
   },
+  cardMenu: { alignSelf: 'flex-start', padding: 2 },
   avatar: {
     backgroundColor: accentAlpha('1E'),
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',

@@ -16,6 +16,10 @@ import { GroupEditSheet } from '@/components/GroupEditSheet'
 import { GroupInviteSheet } from '@/components/GroupInviteSheet'
 import { fetchGroupFeedPage, type FeedPage } from '@/services/feed'
 import { getFeedSocial, likePost, unlikePost, type PostSocial } from '@/services/social'
+import { CardioSummaryView } from '@/components/CardioSummaryView'
+import { GymSummaryView } from '@/components/stats/GymSummaryView'
+import { getUnitSystem, type UnitSystem } from '@/lib/units'
+import { promptReport, postReportMenu } from '@/lib/report'
 import {
   getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember,
   deleteGroup, acceptGroupInvite, type Group, type GroupMember,
@@ -57,12 +61,15 @@ export default function GroupScreen() {
   const [cardioRows, setCardioRows] = useState<FeedPage['cardio']>([])
   const [strengthRows, setStrengthRows] = useState<FeedPage['strength']>([])
   const [social, setSocial] = useState<Record<string, PostSocial>>({})
+  const [selected, setSelected] = useState<FeedPost | null>(null)
+  const [unit, setUnit] = useState<UnitSystem>('metric')
 
   const load = useCallback(async () => {
     if (!groupId) return
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return
     setMe(session.user.id)
+    getUnitSystem().then(setUnit).catch(() => {})
     const [g, m, feed] = await Promise.all([
       getGroup(groupId),
       getGroupMembers(groupId),
@@ -167,7 +174,12 @@ export default function GroupScreen() {
   }
 
   function openMenu() {
-    if (!isOwner || !group) return
+    if (!group) return
+    // Skaparen raderar, alla andra kan anmäla gruppen
+    if (!isOwner) {
+      promptReport('group', group.id, `Anmäl ${group.name}`)
+      return
+    }
     const destroy = () => Alert.alert('Radera gruppen?', 'Det här går inte att ångra.', [
       { text: 'Avbryt', style: 'cancel' },
       { text: 'Radera', style: 'destructive', onPress: async () => {
@@ -182,6 +194,33 @@ export default function GroupScreen() {
         i => { if (i === 1) destroy() },
       )
     } else destroy()
+  }
+
+  /** ⋯ på en medlemsrad: anmäl, och skaparen kan ta bort medlemmen */
+  function memberMenu(m: GroupMember) {
+    if (!group) return
+    const canRemove = isOwner && m.role !== 'owner'
+    const report = () => promptReport('user', m.id, `Anmäl ${m.name ?? 'medlemmen'}`)
+    const remove = () => removeMember(group.id, m.id).then(load).catch(() => {})
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: m.name ?? 'Medlem',
+          options: canRemove
+            ? ['Avbryt', 'Anmäl medlemmen', 'Ta bort ur gruppen']
+            : ['Avbryt', 'Anmäl medlemmen'],
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: canRemove ? 2 : undefined,
+        },
+        i => { if (i === 1) report(); else if (i === 2 && canRemove) remove() },
+      )
+    } else {
+      Alert.alert(m.name ?? 'Medlem', undefined, [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Anmäl medlemmen', onPress: report },
+        ...(canRemove ? [{ text: 'Ta bort ur gruppen', onPress: remove }] : []),
+      ])
+    }
   }
 
   function shareGroup() {
@@ -203,10 +242,8 @@ export default function GroupScreen() {
         <GlassCircleButton icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
           onPress={() => router.back()} fallbackStyle={s.iconFallback} />
         <Text style={s.headerTitle} numberOfLines={1}>{group?.name ?? 'Grupp'}</Text>
-        {isOwner ? (
-          <GlassCircleButton icon="ellipsis-horizontal" size={40} iconColor={TEXT_PRIMARY}
-            onPress={openMenu} fallbackStyle={s.iconFallback} />
-        ) : <View style={{ width: 40 }} />}
+        <GlassCircleButton icon="ellipsis-horizontal" size={40} iconColor={TEXT_PRIMARY}
+          onPress={openMenu} fallbackStyle={s.iconFallback} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -306,7 +343,7 @@ export default function GroupScreen() {
               <FeedWorkoutCard
                 key={post.id}
                 post={post}
-                onOpen={openPost}
+                onOpen={setSelected}
                 onAvatarPress={post.authorId !== me ? () => router.push({
                   pathname: '/(app)/athlete',
                   params: { userId: post.authorId, name: post.authorName, avatar: post.authorAvatar ?? '' },
@@ -314,11 +351,57 @@ export default function GroupScreen() {
                 social={social[post.id]}
                 onToggleLike={() => toggleLike(post)}
                 onOpenComments={() => openPost(post)}
+                onMenuPress={post.authorId !== me
+                  ? () => postReportMenu(post.id, post.authorId, post.authorName)
+                  : undefined}
               />
             ))}
           </View>
         )}
       </ScrollView>
+
+      {/* Kortet öppnar själva passet — pratbubblan leder till kommentarerna */}
+      <Modal visible={!!selected} animationType="slide" onRequestClose={() => setSelected(null)}>
+        {selected?.kind === 'cardio' && (
+          <CardioSummaryView
+            workout={selected.workout}
+            title={selected.workout.name}
+            dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            avatarUrl={selected.authorAvatar}
+            unit={unit}
+            onClose={() => setSelected(null)}
+            effortReadOnly={selected.authorId !== me}
+            social={{
+              postKey: selected.id,
+              ownerId: selected.authorId,
+              onOpenComments: () => {
+                const post = selected
+                setSelected(null)
+                openPost(post)
+              },
+            }}
+          />
+        )}
+        {selected?.kind === 'strength' && (
+          <GymSummaryView
+            name="Gympass"
+            dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            logged={selected.workouts}
+            plannedNames={[]}
+            allWorkouts={selected.workouts}
+            onClose={() => setSelected(null)}
+            social={{
+              postKey: selected.id,
+              ownerId: selected.authorId,
+              onOpenComments: () => {
+                const post = selected
+                setSelected(null)
+                openPost(post)
+              },
+            }}
+          />
+        )}
+      </Modal>
 
       {/* Medlemmarna bor bakom Medlemmar-cirkeln — inte på huvudsidan */}
       <Modal visible={membersOpen} animationType="slide" onRequestClose={() => setMembersOpen(false)}>
@@ -376,6 +459,11 @@ export default function GroupScreen() {
                     <View style={[s.tag, { backgroundColor: accentAlpha('14') }]}>
                       <Text style={[s.tagText, { color: T.ACCENT }]}>Skapare</Text>
                     </View>
+                  )}
+                  {m.id !== me && (
+                    <TouchableOpacity onPress={() => memberMenu(m)} hitSlop={10} testID={`memberMenu-${m.id}`}>
+                      <Ionicons name="ellipsis-horizontal" size={17} color={TEXT_SECONDARY} />
+                    </TouchableOpacity>
                   )}
                 </TouchableOpacity>
               ))}

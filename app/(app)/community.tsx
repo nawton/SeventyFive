@@ -19,6 +19,7 @@ import {
   getFeedSocial, likePost, unlikePost, type PostSocial,
 } from '@/services/social'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
+import { postReportMenu } from '@/lib/report'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
@@ -321,6 +322,9 @@ export default function CommunityScreen() {
               social={social[item.id]}
               onToggleLike={() => toggleLike(item)}
               onOpenComments={() => openDiscussion(item)}
+              onMenuPress={item.authorId !== ownId
+                ? () => postReportMenu(item.id, item.authorId, item.authorName)
+                : undefined}
               // Egen avatar → profilfliken (hela egna profilen med foton),
               // väns avatar → deras atletprofil
               onAvatarPress={() => {
