@@ -426,7 +426,7 @@ function ActionCircle({ icon, label, edge, onPress, testID }: {
       <View style={[s.actionCircle, { borderColor: edge }]}>
         <Ionicons name={icon} size={22} color={TEXT_PRIMARY} />
       </View>
-      <Text style={s.actionLabel}>{label}</Text>
+      <Text style={s.actionLabel} numberOfLines={1}>{label}</Text>
     </TouchableOpacity>
   )
 }
@@ -461,7 +461,7 @@ const s = StyleSheet.create({
     flexGrow: 1, flexDirection: 'row', justifyContent: 'center',
     alignItems: 'flex-start', gap: 26, paddingHorizontal: 20,
   },
-  action: { alignItems: 'center', gap: 7, maxWidth: 76 },
+  action: { alignItems: 'center', gap: 7 },
   actionCircle: {
     width: 58, height: 58, borderRadius: 29, backgroundColor: CARD,
     borderWidth: 1, alignItems: 'center', justifyContent: 'center',
