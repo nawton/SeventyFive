@@ -118,6 +118,8 @@ export function AthleteOverview({
   // Chipramar som strängar per schema — dynamiska ramfärger fryser fel
   const T = useThemeStrings()
   const chipEdge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'rgba(0,0,0,0.10)'
+  // Följer-knappens vilande ram: vit-alfa i mörkt, läsbar grå i ljust
+  const followEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)'
   const { width: screenW } = useWindowDimensions()
   const [type, setType] = useState<CardioType>('running')
 
@@ -233,7 +235,11 @@ export function AthleteOverview({
         <TouchableOpacity
           style={[
             s.followBtn,
-            blocked ? s.followBtnBlocked : followStatus === 'none' && s.followBtnInvite,
+            { borderColor: blocked
+              ? '#FF3B4A88'
+              : followStatus === 'none'
+                ? T.ACCENT
+                : followEdge },
           ]}
           onPress={onToggleFollow}
           activeOpacity={0.8}
@@ -373,10 +379,9 @@ const s = StyleSheet.create({
 
   followBtn: {
     marginTop: 18, borderRadius: 26, paddingVertical: 13,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)', alignItems: 'center',
+    borderWidth: 1.5, alignItems: 'center',
   },
-  followBtnInvite: { borderColor: ACCENT },
-  followBtnBlocked: { borderColor: '#FF3B4A88' },
+  followBtnBlocked: {},
   followBtnText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   followBtnTextInvite: { color: ACCENT },
   followBtnTextBlocked: { color: '#FF3B4A' },
