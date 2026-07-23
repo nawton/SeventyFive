@@ -2209,17 +2209,18 @@ const styles = StyleSheet.create({
   idleGridDivH: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginVertical: -4 },
   idleGridDivV: { width: StyleSheet.hairlineWidth, backgroundColor: DIVIDER },
   idleCell: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 10, paddingHorizontal: 12,
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 11,
+    paddingVertical: 14, paddingHorizontal: 14,
   },
   idleCellText: { flex: 1 },
-  idleCellLabel: { color: '#9BA0A6', fontSize: 11, fontWeight: '600' },
-  idleCellValue: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', marginTop: 1 },
+  idleCellLabel: { color: '#9BA0A6', fontSize: 12, fontWeight: '600' },
+  idleCellValue: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginTop: 2 },
   startWide: {
     backgroundColor: CARDIO_ACCENT, borderRadius: 999,
-    paddingVertical: 13, alignItems: 'center',
+    paddingVertical: 11, alignItems: 'center',
+    alignSelf: 'stretch', marginHorizontal: 2,
   },
-  startWideText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.3 },
+  startWideText: { color: '#fff', fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
 
   // ── Splits-sidan ──
   splitsPageTitle: { color: TEXT_PRIMARY, fontSize: 30, fontWeight: '800', letterSpacing: -0.4, marginTop: 4, marginBottom: 14 },
