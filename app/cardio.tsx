@@ -33,6 +33,7 @@ import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { RunSegment } from '@/lib/runProgression'
 import { advanceEngine, createEngineState, spokenSegmentIntro } from '@/lib/intervalEngine'
+import { getSwedishVoices, getCoachVoiceId, setCoachVoiceId, previewVoice, type CoachVoice } from '@/lib/voice'
 import { getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, getLastMapCoord, setLastMapCoord, getBodyWeightKg, type VoiceSettings } from '@/lib/prefs'
 import { estimateCalories, DEFAULT_WEIGHT_KG } from '@/lib/calories'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
@@ -165,7 +166,11 @@ export default function CardioScreen() {
   const [voiceSet, setVoiceSet] = useState<VoiceSettings>(DEFAULT_VOICE_SETTINGS)
   const voiceSetRef = useRef<VoiceSettings>(DEFAULT_VOICE_SETTINGS)
   const [voiceModalOpen, setVoiceModalOpen] = useState(false)
-  const [voicePage, setVoicePage] = useState<'main' | 'freq' | 'stats'>('main')
+  const [voicePage, setVoicePage] = useState<'main' | 'freq' | 'stats' | 'voice'>('main')
+  // Coachrösten — förbättrad svensk röst väljs automatiskt, byts i listan
+  const coachVoiceRef = useRef<string | null>(null)
+  const [coachVoices, setCoachVoices] = useState<CoachVoice[]>([])
+  const [coachVoiceId, setCoachVoiceIdState] = useState<string | null>(null)
   const lastVoiceMinute = useRef(0)
   const nextVoiceKm = useRef(0)
 
@@ -184,17 +189,19 @@ export default function CardioScreen() {
   useEffect(() => {
     getVoiceCues().then(on => { voiceRef.current = on; setVoiceOn(on) })
     getVoiceSettings().then(v => { voiceSetRef.current = v; setVoiceSet(v) })
+    getCoachVoiceId().then(id => { coachVoiceRef.current = id; setCoachVoiceIdState(id) })
+    getSwedishVoices().then(setCoachVoices)
     return () => { Speech.stop() }
   }, [])
   function speak(text: string) {
     if (!voiceRef.current) return
-    Speech.speak(text, { language: 'sv-SE' })
+    Speech.speak(text, { language: 'sv-SE', voice: coachVoiceRef.current ?? undefined })
   }
   /** Intervallguidningens röst — egen toggle, oberoende av huvudrösten.
       Man kan stänga av km-rapporterna och ändå höra "Vila 90 sekunder". */
   function speakGuide(text: string) {
     if (!voiceSetRef.current.say.intervals) return
-    Speech.speak(text, { language: 'sv-SE' })
+    Speech.speak(text, { language: 'sv-SE', voice: coachVoiceRef.current ?? undefined })
   }
   const goalKmSaid = useRef(false)
   const goalMinSaid = useRef(false)
@@ -1672,7 +1679,7 @@ export default function CardioScreen() {
                 <Ionicons name="volume-high-outline" size={36} color={CARDIO_ACCENT} />
               </View>
               <Text style={styles.voiceTitle}>
-                {voicePage === 'main' ? 'Röstguidning' : voicePage === 'freq' ? 'Hur ofta?' : 'Vilken statistik?'}
+                {voicePage === 'main' ? 'Röstguidning' : voicePage === 'freq' ? 'Hur ofta?' : voicePage === 'stats' ? 'Vilken statistik?' : 'Röst'}
               </Text>
             </View>
 
@@ -1700,6 +1707,18 @@ export default function CardioScreen() {
                     thumbColor="#fff"
                   />
                 </View>
+                <TouchableOpacity style={styles.voiceRow} onPress={() => setVoicePage('voice')} activeOpacity={0.7}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.voiceRowLabel}>Röst</Text>
+                    <Text style={styles.voiceRowValue} numberOfLines={1}>
+                      {(() => {
+                        const v = coachVoices.find(x => x.identifier === coachVoiceId)
+                        return v ? `${v.name}${v.quality === 'Enhanced' ? ' · Förbättrad' : ''}` : 'Automatisk'
+                      })()}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#666" />
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.voiceRow} onPress={() => setVoicePage('freq')} activeOpacity={0.7}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.voiceRowLabel}>Hur ofta?</Text>
@@ -1731,6 +1750,42 @@ export default function CardioScreen() {
               </View>
             )}
 
+            {voicePage === 'voice' && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.voiceHint}>
+                  Tryck för att välja och provlyssna. Mjukare röster (t.ex. Alva
+                  Förbättrad) laddas ner i iOS: Inställningar → Hjälpmedel →
+                  Uppläst innehåll → Röster → Svenska.
+                </Text>
+                {coachVoices.map(v => {
+                  const active = v.identifier === coachVoiceId
+                  return (
+                    <TouchableOpacity
+                      key={v.identifier}
+                      style={styles.voiceRow}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        setCoachVoiceIdState(v.identifier)
+                        coachVoiceRef.current = v.identifier
+                        setCoachVoiceId(v.identifier)
+                        previewVoice(v.identifier)
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.voiceRowLabel}>{v.name}</Text>
+                        <Text style={styles.voiceRowValue}>
+                          {v.quality === 'Enhanced' ? 'Förbättrad' : 'Standard'}
+                        </Text>
+                      </View>
+                      {active && <Ionicons name="checkmark-circle" size={20} color={CARDIO_ACCENT} />}
+                    </TouchableOpacity>
+                  )
+                })}
+                {coachVoices.length === 0 && (
+                  <Text style={styles.voiceHint}>Inga svenska röster hittades på enheten.</Text>
+                )}
+              </ScrollView>
+            )}
             {voicePage === 'freq' && (
               <View style={styles.voiceList}>
                 <View style={styles.voiceFreqBlock}>
@@ -2196,6 +2251,7 @@ const styles = StyleSheet.create({
   },
   voiceRowPlain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   voiceRowLabel: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+  voiceHint: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 19, marginBottom: 14 },
   voiceRowValue: { color: '#9BA0A6', fontSize: 13, marginTop: 3 },
   voiceFreqBlock: {
     backgroundColor: CARD, borderRadius: 20,
