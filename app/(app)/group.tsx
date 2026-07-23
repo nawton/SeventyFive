@@ -246,8 +246,14 @@ export default function GroupScreen() {
           ) : null}
           {group?.description ? <Text style={s.desc}>{group.description}</Text> : null}
 
-          {/* Åtgärdscirklar som i förlagan — medlemmar bjuder in, skaparen redigerar */}
-          <View style={s.actionsRow}>
+          {/* Åtgärdscirklar som i förlagan — centrerade när de får plats,
+              skrollbara i sidled när de blir fler */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.actionsScroll}
+            contentContainerStyle={s.actionsRow}
+          >
             {mine?.status === 'accepted' && (
               <ActionCircle icon="person-add-outline" label="Bjud in" edge={circleEdge}
                 onPress={() => { Haptics.selectionAsync(); setInviteOpen(true) }} testID="groupInvite" />
@@ -261,7 +267,7 @@ export default function GroupScreen() {
             <ActionCircle icon="people-outline" label="Medlemmar" edge={circleEdge}
               onPress={() => { Haptics.selectionAsync(); setMembersOpen(true) }}
               testID="groupMembers" />
-          </View>
+          </ScrollView>
 
           {mine?.status !== 'accepted' && (
             <TouchableOpacity
@@ -448,9 +454,12 @@ const s = StyleSheet.create({
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   meta: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
 
+  // Negativa marginaler låter raden blöda ut till skärmkanterna så
+  // skrollningen känns naturlig; flexGrow centrerar när allt får plats
+  actionsScroll: { alignSelf: 'stretch', marginTop: 12, marginHorizontal: -20 },
   actionsRow: {
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start',
-    gap: 26, marginTop: 12, alignSelf: 'stretch',
+    flexGrow: 1, flexDirection: 'row', justifyContent: 'center',
+    alignItems: 'flex-start', gap: 26, paddingHorizontal: 20,
   },
   action: { alignItems: 'center', gap: 7, maxWidth: 76 },
   actionCircle: {
