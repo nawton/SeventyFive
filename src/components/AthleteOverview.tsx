@@ -9,7 +9,7 @@ import { DistanceAreaChart, type AreaBucket } from '@/components/stats/DistanceA
 import { fmtDuration } from '@/lib/format'
 import type { UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
-import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, CARD_BORDER, accentAlpha, ORANGE, useThemeStrings, THEME_DARK } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, ORANGE, useThemeStrings, useCardChrome, THEME_DARK } from '@/lib/theme'
 
 // =============================================================================
 // ATLETVY — delad mellan atletsidan (öppnas från flödet/sökningen) och
@@ -117,9 +117,16 @@ export function AthleteOverview({
 }) {
   // Chipramar som strängar per schema — dynamiska ramfärger fryser fel
   const T = useThemeStrings()
-  const chipEdge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'rgba(0,0,0,0.10)'
+  const chrome = useCardChrome()
+  const chipEdge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'rgba(0,0,0,0.07)'
   // Följer-knappens vilande ram: vit-alfa i mörkt, läsbar grå i ljust
-  const followEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)'
+  const followEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.14)'
+  // Ljust läge: vita pillerknappar med mjuk skugga i stället för hårda ramar
+  const lift = T.TEXT_PRIMARY !== '#FFFFFF' ? {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#101425', shadowOpacity: 0.06, shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 }, elevation: 2,
+  } : null
   const { width: screenW } = useWindowDimensions()
   const [type, setType] = useState<CardioType>('running')
 
@@ -235,6 +242,7 @@ export function AthleteOverview({
         <TouchableOpacity
           style={[
             s.followBtn,
+            lift,
             { borderColor: blocked
               ? '#FF3B4A88'
               : followStatus === 'none'
@@ -287,7 +295,7 @@ export function AthleteOverview({
           return (
             <TouchableOpacity
               key={t.key}
-              style={[s.chip, { borderColor: on ? T.ACCENT : chipEdge }]}
+              style={[s.chip, lift, { borderColor: on ? T.ACCENT : chipEdge }]}
               onPress={() => switchType(t.key)}
               activeOpacity={0.8}
             >
@@ -317,7 +325,7 @@ export function AthleteOverview({
           </View>
         </View>
 
-        <View style={s.chartCard}>
+        <View style={[s.chartCard, chrome]}>
           <DistanceAreaChart
             buckets={buckets}
             width={screenW - 40 - 32}
@@ -336,7 +344,7 @@ export function AthleteOverview({
           historiken finns redan i statistikfliken */}
       {!isOwn && statsUnlocked && (
         <TouchableOpacity
-          style={s.activitiesBtn}
+          style={[s.activitiesBtn, chrome]}
           onPress={onOpenActivities}
           activeOpacity={0.8}
           testID="athleteActivities"
@@ -402,15 +410,14 @@ const s = StyleSheet.create({
   weekLabel: { color: TEXT_SECONDARY, fontSize: 13 },
   weekValue: { color: TEXT_PRIMARY, fontSize: 18, fontFamily: NUM_FONT },
 
+  // Korten får chromet i JSX: mörk ram i mörkt läge, mjuk skugga i ljust
   chartCard: {
-    marginTop: 20, backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: CARD_BORDER, padding: 16,
+    marginTop: 20, backgroundColor: CARD, borderRadius: 16, padding: 16,
   },
 
   activitiesBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    marginTop: 20, backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: CARD_BORDER, padding: 16,
+    marginTop: 20, backgroundColor: CARD, borderRadius: 16, padding: 16,
   },
   activitiesIcon: {
     width: 40, height: 40, borderRadius: 12,
