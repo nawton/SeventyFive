@@ -4,10 +4,12 @@ import {
   ActivityIndicator, Alert, Share,
 } from 'react-native'
 import * as Haptics from 'expo-haptics'
+import QRCode from 'react-native-qrcode-svg'
 import { SafeScreen } from '@/components/SafeScreen'
 import { AppTextInput } from '@/components/AppTextInput'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { Ionicons } from '@/components/Icon'
+import { groupQrValue } from '@/lib/groupQr'
 import { getFollowLists, type FollowProfile } from '@/services/follows'
 import { inviteToGroup, type Group, type GroupMember } from '@/services/groups'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
@@ -35,6 +37,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [sending, setSending] = useState(false)
+  const [qrOpen, setQrOpen] = useState(false)
 
   useEffect(() => {
     if (!visible || !userId) return
@@ -100,12 +103,21 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
         </View>
 
         <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={s.shareAction} onPress={share} activeOpacity={0.7} testID="inviteShare">
-            <View style={s.shareCircle}>
-              <Ionicons name="share-outline" size={24} color={TEXT_PRIMARY} />
-            </View>
-            <Text style={s.shareLabel}>Dela</Text>
-          </TouchableOpacity>
+          <View style={s.circleRow}>
+            <TouchableOpacity style={s.shareAction} activeOpacity={0.7} testID="inviteQr"
+              onPress={() => { Haptics.selectionAsync(); setQrOpen(true) }}>
+              <View style={s.shareCircle}>
+                <Ionicons name="qr-code-outline" size={24} color={TEXT_PRIMARY} />
+              </View>
+              <Text style={s.shareLabel}>QR-kod</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.shareAction} onPress={share} activeOpacity={0.7} testID="inviteShare">
+              <View style={s.shareCircle}>
+                <Ionicons name="share-outline" size={24} color={TEXT_PRIMARY} />
+              </View>
+              <Text style={s.shareLabel}>Dela</Text>
+            </TouchableOpacity>
+          </View>
 
           <AppTextInput
             style={s.search}
@@ -147,6 +159,17 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
             </Text>
           )}
         </ScrollView>
+
+        {/* QR-koden — alltid svart på vitt kort, det kräver skannbarheten */}
+        <Modal visible={qrOpen} transparent animationType="fade" onRequestClose={() => setQrOpen(false)}>
+          <TouchableOpacity style={s.qrBackdrop} activeOpacity={1} onPress={() => setQrOpen(false)} testID="qrBackdrop">
+            <View style={s.qrCard} onStartShouldSetResponder={() => true}>
+              {group && <QRCode value={groupQrValue(group.id)} size={216} backgroundColor="#FFFFFF" color="#000000" />}
+              <Text style={s.qrName} numberOfLines={1}>{group?.name ?? ''}</Text>
+              <Text style={s.qrHint}>Låt en kompis skanna koden för att hitta gruppen</Text>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </SafeScreen>
     </Modal>
   )
@@ -162,7 +185,11 @@ const s = StyleSheet.create({
   headerTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
 
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
-  shareAction: { alignItems: 'center', gap: 7, marginTop: 10, marginBottom: 20 },
+  circleRow: {
+    flexDirection: 'row', justifyContent: 'center', gap: 34,
+    marginTop: 10, marginBottom: 20,
+  },
+  shareAction: { alignItems: 'center', gap: 7 },
   shareCircle: {
     width: 62, height: 62, borderRadius: 31, backgroundColor: CARD,
     alignItems: 'center', justifyContent: 'center',
@@ -182,4 +209,15 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   empty: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 30 },
+
+  qrBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center', justifyContent: 'center', padding: 32,
+  },
+  qrCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 24, padding: 26,
+    alignItems: 'center', gap: 10, alignSelf: 'stretch',
+  },
+  qrName: { color: '#0B0B0D', fontSize: 18, fontWeight: '800', marginTop: 8 },
+  qrHint: { color: 'rgba(0,0,0,0.55)', fontSize: 13, textAlign: 'center', lineHeight: 19 },
 })
