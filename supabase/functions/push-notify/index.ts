@@ -83,6 +83,36 @@ Deno.serve(async (req) => {
     }
   }
 
+  else if (table === 'group_members') {
+    // Inbjudan → den inbjudna; förfrågan → gruppens ägare;
+    // godkänd förfrågan (UPDATE) → den som väntat
+    const groupRes = await fetch(
+      `${supabaseUrl}/rest/v1/groups?id=eq.${record.group_id}&select=name,owner_id`,
+      { headers },
+    )
+    const group: { name: string; owner_id: string } | undefined = (await groupRes.json())?.[0]
+    if (!group) return json({ skipped: 'no group' })
+    if (op === 'UPDATE') {
+      senderId = group.owner_id
+      recipients.push({
+        userId: record.user_id as string,
+        makeBody: () => `Din förfrågan till ${group.name} godkändes — välkommen in!`,
+      })
+    } else if (record.status === 'invited') {
+      senderId = (record.invited_by as string) ?? group.owner_id
+      recipients.push({
+        userId: record.user_id as string,
+        makeBody: n => `${n} bjöd in dig till gruppen ${group.name}`,
+      })
+    } else {
+      senderId = record.user_id as string
+      recipients.push({
+        userId: group.owner_id,
+        makeBody: n => `${n} vill gå med i ${group.name}`,
+      })
+    }
+  }
+
   const targets = recipients.filter(r => r.userId && r.userId !== senderId)
   if (!senderId || targets.length === 0) return json({ skipped: 'self or unknown' })
 

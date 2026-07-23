@@ -87,8 +87,10 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
               <View style={{ flex: 1 }}>
                 <Text style={s.rowName} numberOfLines={1}>{g.name}</Text>
                 <Text style={s.rowMeta}>
-                  {g.memberCount} {g.memberCount === 1 ? 'medlem' : 'medlemmar'}
-                  {g.is_private ? ' · Privat' : ''}
+                  {/* Privata gruppers medlemsantal är dolt för utomstående (RLS) */}
+                  {g.is_private && g.memberCount === 0
+                    ? 'Privat'
+                    : `${g.memberCount} ${g.memberCount === 1 ? 'medlem' : 'medlemmar'}${g.is_private ? ' · Privat' : ''}`}
                   {g.location ? ` · ${g.location}` : ''}
                 </Text>
               </View>

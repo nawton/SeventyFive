@@ -36,6 +36,15 @@ export interface GroupMember {
   status: 'pending' | 'accepted' | 'invited'
 }
 
+type MiniProfile = { id: string; name: string | null; avatar_url: string | null }
+
+export interface GroupNotification {
+  kind: 'invite' | 'request'
+  group: Group
+  /** invite: vem som bjöd in; request: vem som vill gå med */
+  from: MiniProfile | null
+}
+
 export interface CreateGroupInput {
   name: string
   description: string
@@ -173,7 +182,6 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
   if (error || !data || data.length === 0) return []
   const ids = data.map(m => m.user_id)
   const { data: profiles } = await supabase.rpc('follow_profiles', { ids })
-  type MiniProfile = { id: string; name: string | null; avatar_url: string | null }
   const byId = new Map<string, MiniProfile>(
     ((profiles ?? []) as MiniProfile[]).map(p => [p.id, p]))
   return data.map(m => {
@@ -199,16 +207,63 @@ export async function joinGroup(groupId: string, userId: string, isPrivate: bool
   if (error) throw error
 }
 
-/** Bjud in flera på en gång — de som redan är med hoppas över tyst */
+/** Bjud in flera på en gång — de som redan är med hoppas över tyst.
+    invited_by krävs av RLS och bär avsändaren i pushnotisen. */
 export async function inviteToGroup(groupId: string, userIds: string[]): Promise<void> {
   if (userIds.length === 0) return
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) throw new Error('inte inloggad')
   const rows = userIds.map(id => ({
     group_id: groupId, user_id: id, role: 'member', status: 'invited',
+    invited_by: session.user.id,
   }))
   const { error } = await supabase
     .from('group_members')
     .upsert(rows, { onConflict: 'group_id,user_id', ignoreDuplicates: true })
   if (error) throw error
+}
+
+/** Notiscentrets grupprader: inbjudningar till mig + förfrågningar till
+    grupper jag skapat. Pushnotisen pekar hit. */
+export async function getGroupNotifications(userId: string): Promise<GroupNotification[]> {
+  const [invitesRes, ownedRes] = await Promise.all([
+    supabase.from('group_members')
+      .select('invited_by, groups(*)')
+      .eq('user_id', userId)
+      .eq('status', 'invited'),
+    supabase.from('groups').select('*').eq('owner_id', userId),
+  ])
+  const owned = (ownedRes.data ?? []) as Group[]
+  let pendings: Array<{ group_id: string; user_id: string }> = []
+  if (owned.length > 0) {
+    const { data } = await supabase.from('group_members')
+      .select('group_id, user_id')
+      .in('group_id', owned.map(g => g.id))
+      .eq('status', 'pending')
+    pendings = data ?? []
+  }
+  const invites = (invitesRes.data ?? []).filter(r => r.groups)
+  const profileIds = Array.from(new Set([
+    ...invites.map(r => r.invited_by as string | null).filter((v): v is string => !!v),
+    ...pendings.map(p => p.user_id),
+  ]))
+  const byId = new Map<string, MiniProfile>()
+  if (profileIds.length > 0) {
+    const { data } = await supabase.rpc('follow_profiles', { ids: profileIds })
+    for (const p of ((data ?? []) as MiniProfile[])) byId.set(p.id, p)
+  }
+  return [
+    ...pendings.map(p => ({
+      kind: 'request' as const,
+      group: owned.find(g => g.id === p.group_id)!,
+      from: byId.get(p.user_id) ?? { id: p.user_id, name: null, avatar_url: null },
+    })),
+    ...invites.map(r => ({
+      kind: 'invite' as const,
+      group: r.groups as unknown as Group,
+      from: r.invited_by ? byId.get(r.invited_by as string) ?? null : null,
+    })),
+  ]
 }
 
 /** Tacka ja till en inbjudan — definer-RPC:n rör bara den egna raden */

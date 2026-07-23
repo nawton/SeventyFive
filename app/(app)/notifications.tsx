@@ -12,6 +12,10 @@ import {
 import {
   getSocialNotifications, subscribeToSocial, type SocialNotification,
 } from '@/services/social'
+import {
+  getGroupNotifications, acceptGroupInvite, leaveGroup, approveMember, removeMember,
+  type GroupNotification,
+} from '@/services/groups'
 import { setNotifSeenAt } from '@/lib/prefs'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
@@ -71,6 +75,53 @@ function RequestRow({ person, onAccept, onDecline }: {
   )
 }
 
+function GroupRow({ item, onAnswer }: {
+  item: GroupNotification
+  onAnswer: (item: GroupNotification, accept: boolean) => void
+}) {
+  const T = useThemeStrings()
+  const pillEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)'
+  const isRequest = item.kind === 'request'
+  return (
+    <View style={s.row}>
+      <TouchableOpacity
+        style={s.rowPerson}
+        activeOpacity={0.7}
+        onPress={() => router.push({ pathname: '/(app)/group', params: { groupId: item.group.id } } as never)}
+      >
+        <FeedAvatar
+          url={isRequest ? item.from?.avatar_url ?? null : item.group.avatar_url}
+          fallback={((isRequest ? item.from?.name : item.group.name) ?? '?').charAt(0).toUpperCase()}
+          size={52}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={s.rowName} numberOfLines={2}>
+            <Text style={{ fontWeight: '800' }}>{item.from?.name ?? 'Någon'}</Text>
+            {isRequest ? ' vill gå med i ' : ' bjöd in dig till '}
+            <Text style={{ fontWeight: '800' }}>{item.group.name}</Text>
+          </Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[s.pill, { borderColor: T.ACCENT }]}
+        onPress={() => onAnswer(item, true)}
+        activeOpacity={0.8}
+        testID={`groupYes-${item.group.id}-${item.from?.id ?? 'x'}`}
+      >
+        <Text style={s.pillAcceptText}>{isRequest ? 'Godkänn' : 'Gå med'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[s.pill, { borderColor: pillEdge }]}
+        onPress={() => onAnswer(item, false)}
+        activeOpacity={0.8}
+        testID={`groupNo-${item.group.id}-${item.from?.id ?? 'x'}`}
+      >
+        <Text style={s.pillText}>Avböj</Text>
+      </TouchableOpacity>
+    </View>
+  )
+}
+
 /** "gillade ditt gympass" / "gillade din löprunda" utifrån inläggsnyckeln */
 function likeLabel(postKey: string): string {
   return postKey.startsWith('gym-') ? 'gillade ditt gympass' : 'gillade ditt pass'
@@ -88,6 +139,8 @@ function timeAgo(iso: string, now = new Date()): string {
 export default function NotificationsScreen() {
   const [requests, setRequests] = useState<FollowProfile[]>([])
   const [socialItems, setSocialItems] = useState<SocialNotification[]>([])
+  const [groupItems, setGroupItems] = useState<GroupNotification[]>([])
+  const [myId, setMyId] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   useFocusEffect(useCallback(() => {
@@ -103,6 +156,13 @@ export default function NotificationsScreen() {
       getSocialNotifications().then(items => {
         if (alive) setSocialItems(items)
       }).catch(() => {})
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session?.user || !alive) return
+        setMyId(session.user.id)
+        getGroupNotifications(session.user.id).then(items => {
+          if (alive) setGroupItems(items)
+        }).catch(() => {})
+      })
     }
     loadAll()
     // Badgen på klockan nollställs — allt som fanns nu räknas som sett
@@ -126,6 +186,25 @@ export default function NotificationsScreen() {
     Haptics.selectionAsync()
     setRequests(prev => prev.filter(p => p.id !== id))
     declineFollower(id).catch(() => {})
+  }
+
+  /** Svar på gruppnotis: inbjudan accepteras/avböjs av mig, förfrågan
+      godkänns/avböjs av mig som skapare. Optimistiskt — raden försvinner. */
+  function handleGroupAnswer(item: GroupNotification, accept: boolean) {
+    if (accept) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
+    else Haptics.selectionAsync()
+    setGroupItems(prev => prev.filter(g =>
+      !(g.kind === item.kind && g.group.id === item.group.id && g.from?.id === item.from?.id)))
+    const act = item.kind === 'invite'
+      ? (accept
+        ? acceptGroupInvite(item.group.id)
+        : myId ? leaveGroup(item.group.id, myId) : Promise.resolve())
+      : item.from
+        ? (accept
+          ? approveMember(item.group.id, item.from.id)
+          : removeMember(item.group.id, item.from.id))
+        : Promise.resolve()
+    act.catch(() => {})
   }
 
   return (
@@ -195,20 +274,31 @@ export default function NotificationsScreen() {
                 ))}
               </>
             )}
+            {groupItems.length > 0 && (
+              <>
+                <Text style={[s.sectionHead, requests.length > 0 && { marginTop: 18 }]}>Grupper</Text>
+                {groupItems.map((item, i) => (
+                  <View key={`${item.kind}-${item.group.id}-${item.from?.id ?? 'x'}`}>
+                    {i > 0 && <View style={s.rowDivider} />}
+                    <GroupRow item={item} onAnswer={handleGroupAnswer} />
+                  </View>
+                ))}
+              </>
+            )}
             {socialItems.length > 0 && (
-              <Text style={[s.sectionHead, requests.length > 0 && { marginTop: 18 }]}>Aktivitet</Text>
+              <Text style={[s.sectionHead, (requests.length > 0 || groupItems.length > 0) && { marginTop: 18 }]}>Aktivitet</Text>
             )}
           </>
         }
         ItemSeparatorComponent={() => <View style={s.rowDivider} />}
         contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={loaded && requests.length === 0 ? (
+        ListEmptyComponent={loaded && requests.length === 0 && groupItems.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="notifications-outline" size={44} color={TEXT_SECONDARY} />
             <Text style={s.emptyTitle}>Inga notiser ännu</Text>
             <Text style={s.emptyBody}>
-              Här samlas vänförfrågningar, gillanden och kommentarer.
+              Här samlas vänförfrågningar, gruppinbjudningar, gillanden och kommentarer.
             </Text>
           </View>
         ) : null}

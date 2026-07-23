@@ -89,6 +89,9 @@ export default function GroupScreen() {
   const pending = members.filter(m => m.status === 'pending')
   const mine = members.find(m => m.id === me)
   const isOwner = group?.owner_id === me
+  // Privata gruppers medlemmar syns bara för medlemmar (RLS döljer raderna
+  // — det här styr bara vad UI:t låtsas veta)
+  const membersVisible = !group?.is_private || mine?.status === 'accepted'
 
   // Passflödet byggs som i communityt — namn/avatarer från medlemslistan
   const posts = useMemo(() => {
@@ -361,10 +364,12 @@ export default function GroupScreen() {
               <Ionicons name={SPORT_ICONS[group?.sport ?? 'all']} size={14} color={TEXT_SECONDARY} />
               <Text style={s.meta}>{SPORT_LABELS[group?.sport ?? 'all']}</Text>
             </View>
-            <View style={s.metaItem}>
-              <Ionicons name="people-outline" size={14} color={TEXT_SECONDARY} />
-              <Text style={s.meta}>{accepted.length} {accepted.length === 1 ? 'medlem' : 'medlemmar'}</Text>
-            </View>
+            {membersVisible && (
+              <View style={s.metaItem}>
+                <Ionicons name="people-outline" size={14} color={TEXT_SECONDARY} />
+                <Text style={s.meta}>{accepted.length} {accepted.length === 1 ? 'medlem' : 'medlemmar'}</Text>
+              </View>
+            )}
             <View style={s.metaItem}>
               <Ionicons name={group?.is_private ? 'lock-closed-outline' : 'earth-outline'} size={14} color={TEXT_SECONDARY} />
               <Text style={s.meta}>{group?.is_private ? 'Privat' : 'Offentlig'}</Text>
@@ -405,9 +410,11 @@ export default function GroupScreen() {
             )}
             <ActionCircle icon="share-outline" label="Dela" edge={circleEdge}
               onPress={shareGroup} testID="groupShare" />
-            <ActionCircle icon="people-outline" label="Medlemmar" edge={circleEdge}
-              onPress={() => { Haptics.selectionAsync(); setMembersOpen(true) }}
-              testID="groupMembers" />
+            {membersVisible && (
+              <ActionCircle icon="people-outline" label="Medlemmar" edge={circleEdge}
+                onPress={() => { Haptics.selectionAsync(); setMembersOpen(true) }}
+                testID="groupMembers" />
+            )}
           </ScrollView>
 
           {mine?.status !== 'accepted' && (
