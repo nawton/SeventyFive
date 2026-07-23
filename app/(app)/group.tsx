@@ -22,7 +22,8 @@ import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { promptReport, postReportMenu } from '@/lib/report'
 import {
   getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember,
-  deleteGroup, acceptGroupInvite, updateGroupSettings, type Group, type GroupMember,
+  deleteGroup, acceptGroupInvite, updateGroupSettings, transferGroupOwnership,
+  type Group, type GroupMember,
 } from '@/services/groups'
 import {
   BG, CARD, BORDER, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome, accentAlpha,
@@ -105,6 +106,50 @@ export default function GroupScreen() {
       strengthToPosts(rows.map(r => r.workout), userId, nameOf(userId), avatarOf(userId)))
     return mergePosts([...cardioPosts, ...gymPosts])
   }, [cardioRows, strengthRows, members])
+
+  // Veckans topplista ur flödesraderna: km för cardiogrupper, pass för gym,
+  // pass (+km) för Alla sporter. Veckan börjar på måndagen.
+  const leaderboard = useMemo(() => {
+    if (!group?.show_leaderboard) return []
+    const start = new Date()
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
+    start.setHours(0, 0, 0, 0)
+    const by = new Map<string, { id: string; km: number; cardioPasses: number; gymDays: Set<string> }>()
+    const rowFor = (id: string) => {
+      let row = by.get(id)
+      if (!row) { row = { id, km: 0, cardioPasses: 0, gymDays: new Set() }; by.set(id, row) }
+      return row
+    }
+    for (const r of cardioRows) {
+      if (new Date(r.workout.created_at) < start) continue
+      const row = rowFor(r.userId)
+      row.km += r.workout.data.distance_km
+      row.cardioPasses += 1
+    }
+    for (const r of strengthRows) {
+      if (new Date(r.workout.created_at) < start) continue
+      rowFor(r.userId).gymDays.add(r.workout.data.workout_date ?? r.workout.created_at.split('T')[0])
+    }
+    const cardioSport = ['running', 'cycling', 'walking'].includes(group.sport)
+    return Array.from(by.values())
+      .map(e => {
+        const passes = e.cardioPasses + e.gymDays.size
+        const km = Math.round(e.km * 10) / 10
+        return {
+          id: e.id,
+          score: cardioSport ? e.km : passes,
+          value: cardioSport
+            ? `${km.toFixed(1).replace('.', ',')} km`
+            : `${passes} pass`,
+          meta: cardioSport
+            ? `${passes} ${passes === 1 ? 'pass' : 'pass'}`
+            : km > 0 ? `${km.toFixed(1).replace('.', ',')} km` : '',
+        }
+      })
+      .filter(e => e.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+  }, [cardioRows, strengthRows, group])
 
   const postIdsKey = posts.map(p => p.id).join(',')
   useEffect(() => {
@@ -198,8 +243,50 @@ export default function GroupScreen() {
     ])
   }
 
+  /** Ägaren väljer en accepterad medlem som ny ägare — själv blir man medlem */
+  function transferOwnership() {
+    if (!group) return
+    const candidates = accepted.filter(m => m.id !== me)
+    if (candidates.length === 0) {
+      Alert.alert('Inga andra medlemmar', 'Det finns ingen att överlåta gruppen till ännu.')
+      return
+    }
+    const pick = (m: GroupMember) => Alert.alert(
+      `Överlåt gruppen till ${m.name ?? 'medlemmen'}?`,
+      'Hen blir ny skapare och du blir vanlig medlem. Det här går inte att ångra själv.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Överlåt', style: 'destructive', onPress: async () => {
+          try {
+            await transferGroupOwnership(group.id, m.id)
+            setSettingsOpen(false)
+            await load()
+          } catch {
+            Alert.alert('Kunde inte överlåta', 'Kontrollera anslutningen och försök igen.')
+          }
+        } },
+      ],
+    )
+    const names = candidates.slice(0, 8)
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: 'Ny skapare',
+          options: ['Avbryt', ...names.map(m => m.name ?? 'Namnlös')],
+          cancelButtonIndex: 0,
+        },
+        i => { if (i > 0) pick(names[i - 1]) },
+      )
+    } else {
+      Alert.alert('Ny skapare', undefined, [
+        { text: 'Avbryt', style: 'cancel' },
+        ...names.map(m => ({ text: m.name ?? 'Namnlös', onPress: () => pick(m) })),
+      ])
+    }
+  }
+
   /** Optimistisk inställningsändring — backas vid fel */
-  async function applySetting(patch: Partial<Pick<Group, 'is_private' | 'show_feed'>>) {
+  async function applySetting(patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites'>>) {
     if (!group) return
     Haptics.selectionAsync()
     const prev = group
@@ -308,7 +395,7 @@ export default function GroupScreen() {
             style={s.actionsScroll}
             contentContainerStyle={s.actionsRow}
           >
-            {mine?.status === 'accepted' && (
+            {mine?.status === 'accepted' && (isOwner || group?.allow_member_invites !== false) && (
               <ActionCircle icon="person-add-outline" label="Bjud in" edge={circleEdge}
                 onPress={() => { Haptics.selectionAsync(); setInviteOpen(true) }} testID="groupInvite" />
             )}
@@ -340,6 +427,34 @@ export default function GroupScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Veckans topplista — bygger på samma flödesdata som passen nedan */}
+        {mine?.status === 'accepted' && group?.show_leaderboard && group.show_feed && (
+          <>
+            <Text style={s.sectionLabel}>VECKANS TOPPLISTA</Text>
+            <View style={[s.card, chrome]}>
+              {leaderboard.length === 0 ? (
+                <Text style={s.boardEmpty}>Inga pass den här veckan ännu.</Text>
+              ) : leaderboard.map((e, i) => {
+                const m = members.find(mm => mm.id === e.id)
+                return (
+                  <View key={e.id} style={[s.boardRow, i > 0 && s.rowDivider]}>
+                    <Text style={[s.boardRank, i === 0 && { color: T.ACCENT }]}>{i + 1}</Text>
+                    <FeedAvatar url={m?.avatar_url ?? null}
+                      fallback={(m?.name ?? '?').charAt(0).toUpperCase()} size={34} />
+                    <Text style={[s.boardName, e.id === me && { color: T.ACCENT }]} numberOfLines={1}>
+                      {e.id === me ? 'Du' : m?.name ?? 'Namnlös'}
+                    </Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={s.boardValue}>{e.value}</Text>
+                      {e.meta ? <Text style={s.boardMeta}>{e.meta}</Text> : null}
+                    </View>
+                  </View>
+                )
+              })}
+            </View>
+          </>
+        )}
 
         {/* Huvudsidan visar medlemmarnas pass — sporten filtreras i databasen */}
         <Text style={s.sectionLabel}>SENASTE PASS</Text>
@@ -393,6 +508,41 @@ export default function GroupScreen() {
               onPress={() => setSettingsOpen(false)} fallbackStyle={s.iconFallback} />
           </View>
           <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+            <Text style={s.sectionLabel}>VISNING</Text>
+            <View style={[s.card, chrome]}>
+              <View style={s.settingRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.settingTitle}>Visa aktivitetsflöde</Text>
+                  <Text style={s.settingBody}>
+                    Medlemmarnas pass visas på gruppsidan. Avstängt döljer
+                    flödet för alla i gruppen.
+                  </Text>
+                </View>
+                <Switch
+                  value={!!group?.show_feed}
+                  onValueChange={v => applySetting({ show_feed: v })}
+                  trackColor={{ false: BORDER, true: ACCENT }}
+                  testID="setFeed"
+                />
+              </View>
+              <View style={[s.settingRow, s.rowDivider]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.settingTitle}>Visa veckans topplista</Text>
+                  <Text style={s.settingBody}>
+                    Rankar medlemmarna efter veckans
+                    {group && ['running', 'cycling', 'walking'].includes(group.sport)
+                      ? ' kilometrar' : ' pass'} på gruppsidan.
+                  </Text>
+                </View>
+                <Switch
+                  value={!!group?.show_leaderboard}
+                  onValueChange={v => applySetting({ show_leaderboard: v })}
+                  trackColor={{ false: BORDER, true: ACCENT }}
+                  testID="setLeaderboard"
+                />
+              </View>
+            </View>
+
             <Text style={s.sectionLabel}>TILLSTÅND</Text>
             <View style={[s.card, chrome]}>
               <View style={s.settingRow}>
@@ -412,17 +562,16 @@ export default function GroupScreen() {
               </View>
               <View style={[s.settingRow, s.rowDivider]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.settingTitle}>Visa aktivitetsflöde</Text>
+                  <Text style={s.settingTitle}>Medlemmar kan bjuda in</Text>
                   <Text style={s.settingBody}>
-                    Medlemmarnas pass visas på gruppsidan. Avstängt döljer
-                    flödet för alla i gruppen.
+                    Avstängt betyder att bara du kan bjuda in nya medlemmar.
                   </Text>
                 </View>
                 <Switch
-                  value={!!group?.show_feed}
-                  onValueChange={v => applySetting({ show_feed: v })}
+                  value={group?.allow_member_invites !== false}
+                  onValueChange={v => applySetting({ allow_member_invites: v })}
                   trackColor={{ false: BORDER, true: ACCENT }}
-                  testID="setFeed"
+                  testID="setInvites"
                 />
               </View>
             </View>
@@ -437,6 +586,11 @@ export default function GroupScreen() {
               <TouchableOpacity style={[s.settingLink, s.rowDivider]} activeOpacity={0.7} testID="settingsMembers"
                 onPress={() => { setSettingsOpen(false); setMembersOpen(true) }}>
                 <Text style={s.settingTitle}>Medlemmar och förfrågningar</Text>
+                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.settingLink, s.rowDivider]} activeOpacity={0.7} testID="settingsTransfer"
+                onPress={transferOwnership}>
+                <Text style={s.settingTitle}>Överlåt ägarskap</Text>
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
             </View>
@@ -663,6 +817,13 @@ const s = StyleSheet.create({
     color: TEXT_SECONDARY, fontSize: 14, lineHeight: 21,
     textAlign: 'center', paddingVertical: 26, paddingHorizontal: 20,
   },
+
+  boardRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
+  boardRank: { width: 20, color: TEXT_SECONDARY, fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  boardName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  boardValue: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
+  boardMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 1 },
+  boardEmpty: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', paddingVertical: 16 },
 
   settingRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 13 },
   settingTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },

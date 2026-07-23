@@ -21,6 +21,10 @@ export interface Group {
   location: string | null
   /** Ägaren kan stänga av aktivitetsflödet — upprätthålls i get_group_feed */
   show_feed: boolean
+  /** Veckans topplista på gruppsidan */
+  show_leaderboard: boolean
+  /** Avstängt = bara ägaren får bjuda in — upprätthålls i RLS */
+  allow_member_invites: boolean
   created_at: string
 }
 
@@ -120,7 +124,7 @@ export async function getMyGroups(userId: string): Promise<Array<Group & { membe
 /** Ägarens snabbinställningar — RLS släpper bara igenom ägaren */
 export async function updateGroupSettings(
   groupId: string,
-  patch: Partial<Pick<Group, 'is_private' | 'show_feed'>>,
+  patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites'>>,
 ): Promise<Group> {
   const { data, error } = await supabase
     .from('groups')
@@ -233,6 +237,15 @@ export async function approveMember(groupId: string, userId: string): Promise<vo
 
 export async function removeMember(groupId: string, userId: string): Promise<void> {
   return leaveGroup(groupId, userId)
+}
+
+/** Överlåt gruppen till en accepterad medlem — RPC:n byter ägare och roller i ett svep */
+export async function transferGroupOwnership(groupId: string, newOwnerId: string): Promise<void> {
+  const { error } = await supabase.rpc('transfer_group_ownership', {
+    gid: groupId,
+    new_owner: newOwnerId,
+  })
+  if (error) throw error
 }
 
 export async function deleteGroup(groupId: string): Promise<void> {
