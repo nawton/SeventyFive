@@ -19,6 +19,8 @@ export interface Group {
   tags: string[]
   is_private: boolean
   location: string | null
+  /** Ägaren kan stänga av aktivitetsflödet — upprätthålls i get_group_feed */
+  show_feed: boolean
   created_at: string
 }
 
@@ -113,6 +115,21 @@ export async function getMyGroups(userId: string): Promise<Array<Group & { membe
     return count ?? 0
   }))
   return rows.map((g, i) => ({ ...g, memberCount: counts[i] }))
+}
+
+/** Ägarens snabbinställningar — RLS släpper bara igenom ägaren */
+export async function updateGroupSettings(
+  groupId: string,
+  patch: Partial<Pick<Group, 'is_private' | 'show_feed'>>,
+): Promise<Group> {
+  const { data, error } = await supabase
+    .from('groups')
+    .update(patch)
+    .eq('id', groupId)
+    .select()
+    .single()
+  if (error) throw error
+  return data as Group
 }
 
 /** Sök bland alla grupper på namn — upptäcktsvägen utöver QR och inbjudan */

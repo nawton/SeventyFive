@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActionSheetIOS, Platform, Share,
-  Modal, Dimensions,
+  Modal, Dimensions, Switch,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
@@ -22,10 +22,10 @@ import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { promptReport, postReportMenu } from '@/lib/report'
 import {
   getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember,
-  deleteGroup, acceptGroupInvite, type Group, type GroupMember,
+  deleteGroup, acceptGroupInvite, updateGroupSettings, type Group, type GroupMember,
 } from '@/services/groups'
 import {
-  BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome, accentAlpha,
+  BG, CARD, BORDER, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome, accentAlpha,
 } from '@/lib/theme'
 
 // =============================================================================
@@ -58,6 +58,7 @@ export default function GroupScreen() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [imageOpen, setImageOpen] = useState(false)
   const [membersOpen, setMembersOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [cardioRows, setCardioRows] = useState<FeedPage['cardio']>([])
   const [strengthRows, setStrengthRows] = useState<FeedPage['strength']>([])
   const [social, setSocial] = useState<Record<string, PostSocial>>({})
@@ -173,27 +174,43 @@ export default function GroupScreen() {
     }
   }
 
+  // Skaparen får inställningssidan, alla andra kan anmäla gruppen
   function openMenu() {
     if (!group) return
-    // Skaparen raderar, alla andra kan anmäla gruppen
-    if (!isOwner) {
-      promptReport('group', group.id, `Anmäl ${group.name}`)
+    if (isOwner) {
+      Haptics.selectionAsync()
+      setSettingsOpen(true)
       return
     }
-    const destroy = () => Alert.alert('Radera gruppen?', 'Det här går inte att ångra.', [
+    promptReport('group', group.id, `Anmäl ${group.name}`)
+  }
+
+  function confirmDelete() {
+    if (!group) return
+    Alert.alert('Radera gruppen?', 'Det här går inte att ångra.', [
       { text: 'Avbryt', style: 'cancel' },
       { text: 'Radera', style: 'destructive', onPress: async () => {
         const ok = await deleteGroup(group.id).then(() => true).catch(() => false)
         if (!ok) { Alert.alert('Kunde inte radera', 'Försök igen.'); return }
+        setSettingsOpen(false)
         router.back()
       } },
     ])
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options: ['Avbryt', 'Radera gruppen'], destructiveButtonIndex: 1, cancelButtonIndex: 0 },
-        i => { if (i === 1) destroy() },
-      )
-    } else destroy()
+  }
+
+  /** Optimistisk inställningsändring — backas vid fel */
+  async function applySetting(patch: Partial<Pick<Group, 'is_private' | 'show_feed'>>) {
+    if (!group) return
+    Haptics.selectionAsync()
+    const prev = group
+    setGroup({ ...group, ...patch })
+    try {
+      setGroup(await updateGroupSettings(group.id, patch))
+      if ('show_feed' in patch) await load()
+    } catch {
+      setGroup(prev)
+      Alert.alert('Kunde inte spara', 'Kontrollera anslutningen och försök igen.')
+    }
   }
 
   /** ⋯ på en medlemsrad: anmäl, och skaparen kan ta bort medlemmen */
@@ -332,6 +349,11 @@ export default function GroupScreen() {
               ? 'Gå med i gruppen för att se medlemmarnas pass.'
               : 'Gå med i gruppen så ser du medlemmarnas pass här.'}
           </Text>
+        ) : group && !group.show_feed ? (
+          <Text style={s.feedEmpty}>
+            Aktivitetsflödet är avstängt för den här gruppen.
+            {isOwner ? ' Du kan slå på det i gruppinställningarna.' : ''}
+          </Text>
         ) : posts.length === 0 ? (
           <Text style={s.feedEmpty}>
             Inga pass ännu — de dyker upp här när någon i gruppen loggar
@@ -359,6 +381,72 @@ export default function GroupScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Gruppinställningar — bara skaparen, via ⋯ i headern. Bara riktiga,
+          databasstödda inställningar: privat/offentlig och flödet på/av */}
+      <Modal visible={settingsOpen} animationType="slide" onRequestClose={() => setSettingsOpen(false)}>
+        <SafeScreen style={s.screen}>
+          <View style={s.header}>
+            <View style={{ width: 40 }} />
+            <Text style={s.headerTitle}>Gruppinställningar</Text>
+            <GlassCircleButton icon="close" size={40} iconColor={TEXT_PRIMARY}
+              onPress={() => setSettingsOpen(false)} fallbackStyle={s.iconFallback} />
+          </View>
+          <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+            <Text style={s.sectionLabel}>TILLSTÅND</Text>
+            <View style={[s.card, chrome]}>
+              <View style={s.settingRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.settingTitle}>Privat grupp</Text>
+                  <Text style={s.settingBody}>
+                    Man begär medlemskap och bara du godkänner nya medlemmar.
+                    Inbjudna går alltid med direkt.
+                  </Text>
+                </View>
+                <Switch
+                  value={!!group?.is_private}
+                  onValueChange={v => applySetting({ is_private: v })}
+                  trackColor={{ false: BORDER, true: ACCENT }}
+                  testID="setPrivate"
+                />
+              </View>
+              <View style={[s.settingRow, s.rowDivider]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.settingTitle}>Visa aktivitetsflöde</Text>
+                  <Text style={s.settingBody}>
+                    Medlemmarnas pass visas på gruppsidan. Avstängt döljer
+                    flödet för alla i gruppen.
+                  </Text>
+                </View>
+                <Switch
+                  value={!!group?.show_feed}
+                  onValueChange={v => applySetting({ show_feed: v })}
+                  trackColor={{ false: BORDER, true: ACCENT }}
+                  testID="setFeed"
+                />
+              </View>
+            </View>
+
+            <Text style={s.sectionLabel}>GRUPPEN</Text>
+            <View style={[s.card, chrome]}>
+              <TouchableOpacity style={s.settingLink} activeOpacity={0.7} testID="settingsEdit"
+                onPress={() => { setSettingsOpen(false); setEditOpen(true) }}>
+                <Text style={s.settingTitle}>Redigera grupp</Text>
+                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.settingLink, s.rowDivider]} activeOpacity={0.7} testID="settingsMembers"
+                onPress={() => { setSettingsOpen(false); setMembersOpen(true) }}>
+                <Text style={s.settingTitle}>Medlemmar och förfrågningar</Text>
+                <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={s.deleteRow} onPress={confirmDelete} testID="settingsDelete">
+              <Text style={s.deleteText}>Radera gruppen</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeScreen>
+      </Modal>
 
       {/* Kortet öppnar själva passet — pratbubblan leder till kommentarerna */}
       <Modal visible={!!selected} animationType="slide" onRequestClose={() => setSelected(null)}>
@@ -575,6 +663,16 @@ const s = StyleSheet.create({
     color: TEXT_SECONDARY, fontSize: 14, lineHeight: 21,
     textAlign: 'center', paddingVertical: 26, paddingHorizontal: 20,
   },
+
+  settingRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 13 },
+  settingTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
+  settingBody: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 18, marginTop: 3 },
+  settingLink: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 15,
+  },
+  deleteRow: { alignItems: 'center', marginTop: 22, paddingVertical: 10 },
+  deleteText: { color: RED, fontSize: 15, fontWeight: '600' },
   card: { backgroundColor: CARD, borderRadius: 16, paddingHorizontal: 14 },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.25)' },
