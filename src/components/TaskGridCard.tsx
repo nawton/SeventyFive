@@ -83,26 +83,31 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
         style={[
           s.taskCard,
           light && { borderWidth: 0 },
-          task.completed && {
+          task.completed && !light && {
             borderColor: color + '45',
-            backgroundColor: color + (light ? '0A' : '0E'),
+            backgroundColor: color + '0E',
           },
-          task.completed && light && { borderWidth: 0 },
         ]}
         onPress={handlePress}
         activeOpacity={0.85}
       >
-        {/* Klar-stapeln: enhetligt blå i ljust läge — uppgiftsfärgen bor
-            kvar i ikonchip och bock */}
-        {task.completed && (
-          <View style={[s.taskSidebar, { backgroundColor: light ? T.ACCENT : color }]} />
+        {/* Klar-stapeln hör mörka läget till — i ljust bor statusen i den
+            gröna bocken och genomstrykningen, som DAGENS PASS */}
+        {task.completed && !light && (
+          <View style={[s.taskSidebar, { backgroundColor: color }]} />
         )}
         <View style={s.taskCardTop}>
           <View style={[s.taskIconBox, { backgroundColor: color + '1C' }]}>
             <Ionicons name={icon} size={17} color={color} />
           </View>
-          <View style={[s.taskCheck, light && { borderColor: 'rgba(0,0,0,0.22)' }, task.completed && { backgroundColor: color, borderColor: color }]}>
-            {task.completed && <Ionicons name="checkmark" size={10} color="#000" />}
+          <View style={[
+            s.taskCheck,
+            light && { borderColor: 'rgba(0,0,0,0.22)' },
+            task.completed && (light
+              ? { backgroundColor: DONE_GREEN, borderColor: DONE_GREEN }
+              : { backgroundColor: color, borderColor: color }),
+          ]}>
+            {task.completed && <Ionicons name="checkmark" size={10} color={light ? '#fff' : '#000'} />}
           </View>
         </View>
         <View style={s.taskBody}>
@@ -111,7 +116,7 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
               s.taskName,
               light && { color: '#26272B' },
               task.completed && s.taskNameDone,
-              task.completed && light && { color: '#8A8A90' },
+              task.completed && light && { color: '#8A8A90', textDecorationLine: 'line-through' as const },
             ]}
             numberOfLines={metaLabel || counter ? 1 : 2}
           >
@@ -158,6 +163,9 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
     </Animated.View>
   )
 }
+
+// Samma gröna som avbockade pass i DAGENS PASS — en bockfärg i hela appen
+const DONE_GREEN = '#2EAF62'
 
 const LIGHT_SHADOW = {
   shadowColor: '#101425', shadowOpacity: 0.07, shadowRadius: 10,
