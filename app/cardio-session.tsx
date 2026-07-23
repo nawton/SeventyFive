@@ -528,7 +528,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
   },
   sectionOptional: {
-    color: 'rgba(255,255,255,0.35)', fontSize: 11, fontStyle: 'italic',
+    color: 'rgba(128,128,128,0.8)', fontSize: 11, fontStyle: 'italic',
   },
   card: {
     backgroundColor: CARD, borderRadius: 18,
@@ -548,7 +548,7 @@ const s = StyleSheet.create({
   presetChip: {
     minWidth: 34, alignItems: 'center',
     paddingHorizontal: 8, paddingVertical: 5, borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: DIVIDER,
   },
   presetChipActive: { backgroundColor: CARDIO_BLUE + '2E' },
   presetText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '700' },
@@ -573,7 +573,7 @@ const s = StyleSheet.create({
   editBtnRow:   { flexDirection: 'row', gap: 10 },
   editClearBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 13,
-    borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: 14, backgroundColor: DIVIDER,
   },
   editClearText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
   editSaveBtn: {
@@ -599,7 +599,7 @@ const s = StyleSheet.create({
   unitRow: { flexDirection: 'row', gap: 8 },
   unitBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 12,
-    borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 14, backgroundColor: DIVIDER,
   },
   unitBtnActive:     { backgroundColor: CARDIO_BLUE + '2A' },
   unitBtnText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
@@ -608,7 +608,7 @@ const s = StyleSheet.create({
   goalDots: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginTop: 2 },
   goalDot: {
     width: 6, height: 6, borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(128,128,128,0.4)',
   },
   goalDotActive: { backgroundColor: CARDIO_BLUE, width: 16 },
 

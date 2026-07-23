@@ -1166,7 +1166,7 @@ export default function CardioScreen() {
         <GlassCircleButton onPress={openCompass} fallbackStyle={styles.compassBtn}>
           <Animated.View style={[{ alignItems: 'center' }, needleStyle]}>
             <Ionicons name="caret-up" size={17} color="#FF3B4A" style={{ marginBottom: -5 }} />
-            <Ionicons name="caret-down" size={17} color="#fff" style={{ marginTop: -5 }} />
+            <Ionicons name="caret-down" size={17} color={lightCard ? '#3A3A40' : '#fff'} style={{ marginTop: -5 }} />
           </Animated.View>
         </GlassCircleButton>
         <GlassCircleButton icon="locate" draggable onPress={centerOnUser} />
@@ -2860,7 +2860,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   sheetItemActive: {
-    backgroundColor: '#242426',
+    backgroundColor: DIVIDER,
   },
   sheetItemIcon: {
     width: 44,
