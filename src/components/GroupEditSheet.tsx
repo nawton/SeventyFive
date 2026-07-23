@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import {
   Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ActionSheetIOS,
+  TouchableWithoutFeedback, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated'
 import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
 import { SafeScreen } from '@/components/SafeScreen'
@@ -43,6 +45,21 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
   const [location, setLocation] = useState('')
   const [imageUri, setImageUri] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [sportOpen, setSportOpen] = useState(false)
+
+  // Sportväljaren är ett bottenark med appens dragfysik: fjädrar tillbaka
+  // under tröskeln, stängs förbi den. Färgerna bor på den inre vyn —
+  // dynamiska färger på animerade noder kraschar Reanimated.
+  const sheetY = useSharedValue(0)
+  const closeSport = () => setSportOpen(false)
+  const pan = Gesture.Pan()
+    .activeOffsetY([-12, 12])
+    .onUpdate(e => { sheetY.value = Math.max(0, e.translationY) })
+    .onEnd(e => {
+      if (e.translationY > 110 || e.velocityY > 800) runOnJS(closeSport)()
+      else sheetY.value = withSpring(0, { damping: 20, stiffness: 260 })
+    })
+  const sheetAnim = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }))
 
   useEffect(() => {
     if (visible && group) {
@@ -64,18 +81,8 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
 
   function pickSport() {
     Haptics.selectionAsync()
-    const apply = (i: number) => { if (i > 0) setSport(SPORTS[i - 1].key) }
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options: ['Avbryt', ...SPORTS.map(sp => sp.label)], cancelButtonIndex: 0 },
-        apply,
-      )
-    } else {
-      Alert.alert('Sport', undefined, [
-        { text: 'Avbryt', style: 'cancel' },
-        ...SPORTS.map(sp => ({ text: sp.label, onPress: () => setSport(sp.key) })),
-      ])
-    }
+    sheetY.value = 0
+    setSportOpen(true)
   }
 
   function toggleTag(tag: string) {
@@ -204,6 +211,39 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
           />
         </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* Sportväljaren — bottenark som dras ner för att stängas */}
+        <Modal visible={sportOpen} transparent animationType="slide" onRequestClose={closeSport}>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <View style={s.sheetBackdrop}>
+              <TouchableWithoutFeedback onPress={closeSport}>
+                <View style={StyleSheet.absoluteFill} />
+              </TouchableWithoutFeedback>
+              <Animated.View style={sheetAnim}>
+                <GestureDetector gesture={pan}>
+                  <View style={s.sheet}>
+                    <View style={s.handle} />
+                    <Text style={s.sheetTitle}>Sport</Text>
+                    {SPORTS.map(sp => {
+                      const on = sport === sp.key
+                      return (
+                        <TouchableOpacity key={sp.key} style={s.sheetRow} activeOpacity={0.7}
+                          onPress={() => { Haptics.selectionAsync(); setSport(sp.key); closeSport() }}
+                          testID={`sportOpt-${sp.key}`}>
+                          <Ionicons name={sp.icon} size={20} color={T.ACCENT} />
+                          <Text style={s.sheetRowText}>{sp.label}</Text>
+                          <View style={[s.radio, { borderColor: on ? T.ACCENT : radioEdge }]}>
+                            {on && <View style={[s.radioDot, { backgroundColor: T.ACCENT }]} />}
+                          </View>
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </View>
+                </GestureDetector>
+              </Animated.View>
+            </View>
+          </GestureHandlerRootView>
+        </Modal>
       </SafeScreen>
     </Modal>
   )
@@ -264,4 +304,18 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   radioDot: { width: 12, height: 12, borderRadius: 6 },
+
+  sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
+  sheet: {
+    backgroundColor: BG, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 24, paddingTop: 10, paddingBottom: 42,
+  },
+  handle: {
+    width: 40, height: 5, borderRadius: 3,
+    backgroundColor: 'rgba(128,128,128,0.45)',
+    alignSelf: 'center', marginBottom: 12,
+  },
+  sheetTitle: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', marginBottom: 6 },
+  sheetRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
+  sheetRowText: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
 })
