@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  View, Text, StyleSheet, FlatList, Modal, TouchableOpacity,
+  View, Text, StyleSheet, FlatList, Modal, TouchableOpacity, ScrollView,
   ActivityIndicator,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { AppRefreshControl, useAppRefresh } from '@/components/AppRefresh'
+import { GroupWizard } from '@/components/GroupWizard'
+import { getMyGroups } from '@/services/groups'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
@@ -21,10 +23,10 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import {
-  FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
+  FeedWorkoutCard, FeedAvatar, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
 } from '@/components/FeedWorkoutCard'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings, THEME_DARK } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings, THEME_DARK, useCardChrome, ACCENT_CONTRAST } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 
 // =============================================================================
@@ -170,6 +172,18 @@ export default function CommunityScreen() {
   }, [loadFeed]))
 
   const { refreshing, onRefresh } = useAppRefresh(loadFeed)
+  // Grupper: mina grupper + skaparguiden
+  const [myGroups, setMyGroups] = useState<Awaited<ReturnType<typeof getMyGroups>>>([])
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const [meId, setMeId] = useState<string | null>(null)
+  const chrome = useCardChrome()
+  const loadGroups = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return
+    setMeId(session.user.id)
+    setMyGroups(await getMyGroups(session.user.id))
+  }, [])
+  useFocusEffect(useCallback(() => { loadGroups().catch(() => {}) }, [loadGroups]))
   // Chipramar som strängar per schema — dynamiska ramfärger fryser i modaler
   const T = useThemeStrings()
   const chipEdge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'transparent'
@@ -244,11 +258,44 @@ export default function CommunityScreen() {
       </View>
 
       {segment === 'groups' ? (
-        <EmptyState
-          icon="people-outline"
-          title="Grupper kommer snart"
-          body="Skapa grupper med vänner och peppa varandra genom utmaningen."
-        />
+        <ScrollView contentContainerStyle={s.groupsScroll} showsVerticalScrollIndicator={false}>
+          {myGroups.map(g => (
+            <TouchableOpacity
+              key={g.id}
+              style={[s.groupRow, chrome]}
+              activeOpacity={0.75}
+              testID={`group-${g.id}`}
+              onPress={() => router.push({ pathname: '/(app)/group', params: { groupId: g.id } } as never)}
+            >
+              <FeedAvatar url={g.avatar_url} fallback={g.name.charAt(0).toUpperCase()} size={48} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.groupName} numberOfLines={1}>{g.name}</Text>
+                <Text style={s.groupMeta}>
+                  {g.myStatus === 'pending'
+                    ? 'Förfrågan skickad'
+                    : `${g.memberCount} ${g.memberCount === 1 ? 'medlem' : 'medlemmar'}`}
+                  {g.is_private ? ' · Privat' : ''}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
+            </TouchableOpacity>
+          ))}
+
+          {myGroups.length === 0 && (
+            <View style={s.groupsEmpty}>
+              <Ionicons name="people-outline" size={44} color={TEXT_SECONDARY} />
+              <Text style={s.groupsEmptyTitle}>Inga grupper ännu</Text>
+              <Text style={s.groupsEmptyBody}>
+                Skapa en grupp och peppa varandra genom utmaningen.
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity style={s.createGroupBtn} onPress={() => setWizardOpen(true)} activeOpacity={0.85} testID="createGroup">
+            <Ionicons name="add" size={19} color={ACCENT_CONTRAST} />
+            <Text style={s.createGroupText}>Skapa grupp</Text>
+          </TouchableOpacity>
+        </ScrollView>
       ) : (
         <FlatList
           data={filter === 'all' ? posts : posts.filter(p => p.kind === filter)}
@@ -370,11 +417,39 @@ export default function CommunityScreen() {
           />
         )}
       </Modal>
+
+      <GroupWizard
+        visible={wizardOpen}
+        userId={meId}
+        onClose={() => setWizardOpen(false)}
+        onCreated={g => {
+          setWizardOpen(false)
+          loadGroups().catch(() => {})
+          router.push({ pathname: '/(app)/group', params: { groupId: g.id } } as never)
+        }}
+      />
+
     </SafeScreen>
   )
 }
 
 const s = StyleSheet.create({
+  groupsScroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 120, gap: 10 },
+  groupRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: CARD, borderRadius: 16, padding: 14,
+  },
+  groupName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+  groupMeta: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
+  groupsEmpty: { alignItems: 'center', gap: 8, paddingTop: 60, paddingHorizontal: 30 },
+  groupsEmptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 4 },
+  groupsEmptyBody: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  createGroupBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: ACCENT, borderRadius: 999, paddingVertical: 14, marginTop: 8,
+  },
+  createGroupText: { color: ACCENT_CONTRAST, fontSize: 16, fontWeight: '700' },
+
   screen: { flex: 1, backgroundColor: BG },
   segmentRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

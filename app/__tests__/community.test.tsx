@@ -20,6 +20,17 @@ jest.mock('@/services/feed', () => ({
 jest.mock('@/services/follows', () => ({
   getFollowLists: jest.fn().mockResolvedValue({ followers: [], following: [] }),
 }))
+jest.mock('@/services/groups', () => ({
+  getMyGroups: jest.fn().mockResolvedValue([
+    { id: 'g1', name: 'Löparligan', avatar_url: null, is_private: false, memberCount: 3, myStatus: 'accepted' },
+  ]),
+}))
+jest.mock('@/components/GroupWizard', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  return { GroupWizard: ({ visible }: { visible: boolean }) =>
+    visible ? React.createElement(Text, null, 'wizard:open') : null }
+})
 jest.mock('@/services/social', () => ({
   getFeedSocial: jest.fn().mockResolvedValue({}),
   likePost: jest.fn().mockResolvedValue(undefined),
@@ -252,11 +263,26 @@ describe('Community', () => {
     })
   })
 
-  it('Grupper-segmentet visar platshållare', async () => {
+  it('Grupper-segmentet listar mina grupper och öppnar gruppsidan', async () => {
+    const { router } = require('expo-router')
     render(<CommunityScreen />)
     await screen.findByText('Anton Wretenberg')
     fireEvent.press(screen.getByText('Grupper'))
-    expect(screen.getByText('Grupper kommer snart')).toBeOnTheScreen()
+    expect(await screen.findByText('Löparligan')).toBeOnTheScreen()
+    expect(screen.getByText('3 medlemmar')).toBeOnTheScreen()
+    fireEvent.press(screen.getByTestId('group-g1'))
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/(app)/group',
+      params: { groupId: 'g1' },
+    })
+  })
+
+  it('Skapa grupp öppnar skaparguiden', async () => {
+    render(<CommunityScreen />)
+    await screen.findByText('Anton Wretenberg')
+    fireEvent.press(screen.getByText('Grupper'))
+    fireEvent.press(await screen.findByTestId('createGroup'))
+    expect(screen.getByText('wizard:open')).toBeOnTheScreen()
   })
 
   it('tomt flöde visar tom-läge med Hitta vänner-knapp', async () => {

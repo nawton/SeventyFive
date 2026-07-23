@@ -193,6 +193,7 @@ export default function AppLayout() {
       <Tabs.Screen name="general" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="streak" options={{ href: null }} />
+      <Tabs.Screen name="group" options={{ href: null }} />
       <Tabs.Screen name="post" options={{ href: null }} />
       <Tabs.Screen name="privacy" options={{ href: null }} />
       <Tabs.Screen name="anpassning" options={{ href: null }} />
