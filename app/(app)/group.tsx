@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActionSheetIOS, Platform, Share,
   Modal, Dimensions,
@@ -9,9 +9,13 @@ import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { FeedAvatar } from '@/components/FeedWorkoutCard'
+import {
+  FeedAvatar, FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
+} from '@/components/FeedWorkoutCard'
 import { GroupEditSheet } from '@/components/GroupEditSheet'
 import { GroupInviteSheet } from '@/components/GroupInviteSheet'
+import { fetchGroupFeedPage, type FeedPage } from '@/services/feed'
+import { getFeedSocial, likePost, unlikePost, type PostSocial } from '@/services/social'
 import {
   getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember,
   deleteGroup, acceptGroupInvite, type Group, type GroupMember,
@@ -49,17 +53,25 @@ export default function GroupScreen() {
   const [editOpen, setEditOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [imageOpen, setImageOpen] = useState(false)
-  const scrollRef = useRef<ScrollView>(null)
-  const membersY = useRef(0)
+  const [membersOpen, setMembersOpen] = useState(false)
+  const [cardioRows, setCardioRows] = useState<FeedPage['cardio']>([])
+  const [strengthRows, setStrengthRows] = useState<FeedPage['strength']>([])
+  const [social, setSocial] = useState<Record<string, PostSocial>>({})
 
   const load = useCallback(async () => {
     if (!groupId) return
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return
     setMe(session.user.id)
-    const [g, m] = await Promise.all([getGroup(groupId), getGroupMembers(groupId)])
+    const [g, m, feed] = await Promise.all([
+      getGroup(groupId),
+      getGroupMembers(groupId),
+      fetchGroupFeedPage(groupId),
+    ])
     setGroup(g)
     setMembers(m)
+    setCardioRows(feed.cardio)
+    setStrengthRows(feed.strength)
   }, [groupId])
 
   useFocusEffect(useCallback(() => { load().catch(() => {}) }, [load]))
@@ -68,6 +80,66 @@ export default function GroupScreen() {
   const pending = members.filter(m => m.status === 'pending')
   const mine = members.find(m => m.id === me)
   const isOwner = group?.owner_id === me
+
+  // Passflödet byggs som i communityt — namn/avatarer från medlemslistan
+  const posts = useMemo(() => {
+    const nameOf = (id: string) => members.find(m => m.id === id)?.name ?? 'Namnlös'
+    const avatarOf = (id: string) => members.find(m => m.id === id)?.avatar_url ?? null
+    const cardioPosts = cardioRows.map(r =>
+      workoutToPost(r.workout, r.userId, nameOf(r.userId), avatarOf(r.userId)))
+    const byUser = new Map<string, typeof strengthRows>()
+    for (const r of strengthRows) {
+      const list = byUser.get(r.userId)
+      if (list) list.push(r)
+      else byUser.set(r.userId, [r])
+    }
+    const gymPosts = Array.from(byUser.entries()).flatMap(([userId, rows]) =>
+      strengthToPosts(rows.map(r => r.workout), userId, nameOf(userId), avatarOf(userId)))
+    return mergePosts([...cardioPosts, ...gymPosts])
+  }, [cardioRows, strengthRows, members])
+
+  const postIdsKey = posts.map(p => p.id).join(',')
+  useEffect(() => {
+    if (posts.length === 0) return
+    getFeedSocial(posts.map(p => p.id)).then(setSocial).catch(() => {})
+    // postIdsKey fångar ändringar i uppsättningen — posts-referensen byts varje build
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postIdsKey])
+
+  function toggleLike(post: FeedPost) {
+    const current = social[post.id] ?? { likes: 0, likedByMe: false, comments: 0 }
+    const next = !current.likedByMe
+    const apply = (likedByMe: boolean, delta: number) =>
+      setSocial(prev => ({
+        ...prev,
+        [post.id]: {
+          ...(prev[post.id] ?? current),
+          likedByMe,
+          likes: Math.max(0, (prev[post.id]?.likes ?? 0) + delta),
+        },
+      }))
+    apply(next, next ? 1 : -1)
+    ;(next ? likePost(post.id, post.authorId) : unlikePost(post.id))
+      .catch(() => apply(!next, next ? -1 : 1))
+  }
+
+  function openPost(post: FeedPost) {
+    router.push({
+      pathname: '/(app)/post',
+      params: {
+        postKey: post.id,
+        ownerId: post.authorId,
+        ownerName: post.authorName,
+        ownerAvatar: post.authorAvatar ?? '',
+        kind: post.kind,
+        title: post.kind === 'cardio' ? post.workout.name : 'Gympass',
+        createdAt: post.createdAt,
+        meta: post.kind === 'cardio'
+          ? `${post.distanceKm.toFixed(2).replace('.', ',')} km`
+          : `${post.exercises} övningar`,
+      },
+    } as never)
+  }
 
   async function handleJoin() {
     if (!group || !me) return
@@ -137,7 +209,7 @@ export default function GroupScreen() {
         ) : <View style={{ width: 40 }} />}
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
           <TouchableOpacity onPress={() => setImageOpen(true)} activeOpacity={0.75} testID="groupAvatar">
             <FeedAvatar url={group?.avatar_url ?? null} fallback={(group?.name ?? '?').charAt(0).toUpperCase()} size={92} />
@@ -187,7 +259,7 @@ export default function GroupScreen() {
             <ActionCircle icon="share-outline" label="Dela" edge={circleEdge}
               onPress={shareGroup} testID="groupShare" />
             <ActionCircle icon="people-outline" label="Medlemmar" edge={circleEdge}
-              onPress={() => scrollRef.current?.scrollTo({ y: Math.max(0, membersY.current - 8), animated: true })}
+              onPress={() => { Haptics.selectionAsync(); setMembersOpen(true) }}
               testID="groupMembers" />
           </View>
 
@@ -209,54 +281,102 @@ export default function GroupScreen() {
           )}
         </View>
 
-        {/* Väntande förfrågningar — bara skaparen */}
-        {isOwner && pending.length > 0 && (
-          <>
-            <Text style={s.sectionLabel}>VÄNTANDE FÖRFRÅGNINGAR</Text>
+        {/* Huvudsidan visar medlemmarnas pass — sporten filtreras i databasen */}
+        <Text style={s.sectionLabel}>SENASTE PASS</Text>
+        {mine?.status !== 'accepted' ? (
+          <Text style={s.feedEmpty}>
+            {group?.is_private
+              ? 'Gå med i gruppen för att se medlemmarnas pass.'
+              : 'Gå med i gruppen så ser du medlemmarnas pass här.'}
+          </Text>
+        ) : posts.length === 0 ? (
+          <Text style={s.feedEmpty}>
+            Inga pass ännu — de dyker upp här när någon i gruppen loggar
+            {group?.sport === 'gym' ? ' ett gympass' : group?.sport === 'all' ? ' ett pass' : ` ${SPORT_LABELS[group?.sport ?? 'all'].toLowerCase()}`}.
+          </Text>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {posts.map(post => (
+              <FeedWorkoutCard
+                key={post.id}
+                post={post}
+                onOpen={openPost}
+                onAvatarPress={post.authorId !== me ? () => router.push({
+                  pathname: '/(app)/athlete',
+                  params: { userId: post.authorId, name: post.authorName, avatar: post.authorAvatar ?? '' },
+                } as never) : undefined}
+                social={social[post.id]}
+                onToggleLike={() => toggleLike(post)}
+                onOpenComments={() => openPost(post)}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Medlemmarna bor bakom Medlemmar-cirkeln — inte på huvudsidan */}
+      <Modal visible={membersOpen} animationType="slide" onRequestClose={() => setMembersOpen(false)}>
+        <SafeScreen style={s.screen}>
+          <View style={s.header}>
+            <View style={{ width: 40 }} />
+            <Text style={s.headerTitle}>Medlemmar</Text>
+            <GlassCircleButton icon="close" size={40} iconColor={TEXT_PRIMARY}
+              onPress={() => setMembersOpen(false)} fallbackStyle={s.iconFallback} />
+          </View>
+          <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+            {isOwner && pending.length > 0 && (
+              <>
+                <Text style={s.sectionLabel}>VÄNTANDE FÖRFRÅGNINGAR</Text>
+                <View style={[s.card, chrome]}>
+                  {pending.map((m, i) => (
+                    <View key={m.id} style={[s.memberRow, i > 0 && s.rowDivider]}>
+                      <FeedAvatar url={m.avatar_url} fallback={(m.name ?? '?').charAt(0).toUpperCase()} size={44} />
+                      <Text style={s.memberName} numberOfLines={1}>{m.name ?? 'Namnlös'}</Text>
+                      <TouchableOpacity style={[s.pill, { borderColor: T.ACCENT }]} testID={`approve-${m.id}`}
+                        onPress={() => approveMember(group!.id, m.id).then(load).catch(() => {})}>
+                        <Text style={[s.pillText, { color: T.ACCENT }]}>Godkänn</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[s.pill, { borderColor: pillEdge }]}
+                        onPress={() => removeMember(group!.id, m.id).then(load).catch(() => {})}>
+                        <Text style={s.pillText}>Avböj</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+
+            <Text style={s.sectionLabel}>
+              {accepted.length} {accepted.length === 1 ? 'MEDLEM' : 'MEDLEMMAR'}
+            </Text>
             <View style={[s.card, chrome]}>
-              {pending.map((m, i) => (
-                <View key={m.id} style={[s.memberRow, i > 0 && s.rowDivider]}>
+              {accepted.map((m, i) => (
+                <TouchableOpacity
+                  key={m.id}
+                  style={[s.memberRow, i > 0 && s.rowDivider]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    if (m.id === me) return
+                    setMembersOpen(false)
+                    router.push({
+                      pathname: '/(app)/athlete',
+                      params: { userId: m.id, name: m.name ?? 'Namnlös', avatar: m.avatar_url ?? '' },
+                    } as never)
+                  }}
+                >
                   <FeedAvatar url={m.avatar_url} fallback={(m.name ?? '?').charAt(0).toUpperCase()} size={44} />
                   <Text style={s.memberName} numberOfLines={1}>{m.name ?? 'Namnlös'}</Text>
-                  <TouchableOpacity style={[s.pill, { borderColor: T.ACCENT }]} testID={`approve-${m.id}`}
-                    onPress={() => approveMember(group!.id, m.id).then(load).catch(() => {})}>
-                    <Text style={[s.pillText, { color: T.ACCENT }]}>Godkänn</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[s.pill, { borderColor: pillEdge }]}
-                    onPress={() => removeMember(group!.id, m.id).then(load).catch(() => {})}>
-                    <Text style={s.pillText}>Avböj</Text>
-                  </TouchableOpacity>
-                </View>
+                  {m.role === 'owner' && (
+                    <View style={[s.tag, { backgroundColor: accentAlpha('14') }]}>
+                      <Text style={[s.tagText, { color: T.ACCENT }]}>Skapare</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
               ))}
             </View>
-          </>
-        )}
-
-        <Text style={s.sectionLabel} onLayout={e => { membersY.current = e.nativeEvent.layout.y }}>
-          {accepted.length} {accepted.length === 1 ? 'MEDLEM' : 'MEDLEMMAR'}
-        </Text>
-        <View style={[s.card, chrome]}>
-          {accepted.map((m, i) => (
-            <TouchableOpacity
-              key={m.id}
-              style={[s.memberRow, i > 0 && s.rowDivider]}
-              activeOpacity={0.7}
-              onPress={() => m.id !== me && router.push({
-                pathname: '/(app)/athlete',
-                params: { userId: m.id, name: m.name ?? 'Namnlös', avatar: m.avatar_url ?? '' },
-              } as never)}
-            >
-              <FeedAvatar url={m.avatar_url} fallback={(m.name ?? '?').charAt(0).toUpperCase()} size={44} />
-              <Text style={s.memberName} numberOfLines={1}>{m.name ?? 'Namnlös'}</Text>
-              {m.role === 'owner' && (
-                <View style={[s.tag, { backgroundColor: accentAlpha('14') }]}>
-                  <Text style={[s.tagText, { color: T.ACCENT }]}>Skapare</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+          </ScrollView>
+        </SafeScreen>
+      </Modal>
 
       <GroupEditSheet
         visible={editOpen}
@@ -353,6 +473,10 @@ const s = StyleSheet.create({
   sectionLabel: {
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
     letterSpacing: 1.5, marginBottom: 8, marginTop: 14, paddingHorizontal: 4,
+  },
+  feedEmpty: {
+    color: TEXT_SECONDARY, fontSize: 14, lineHeight: 21,
+    textAlign: 'center', paddingVertical: 26, paddingHorizontal: 20,
   },
   card: { backgroundColor: CARD, borderRadius: 16, paddingHorizontal: 14 },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },

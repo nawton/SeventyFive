@@ -85,6 +85,22 @@ export async function fetchFeedPage(beforeIso?: string): Promise<FeedPage> {
   }
 }
 
+/** Gruppens flöde — accepterade medlemmars pass, sport-filtrerat i databasen */
+export async function fetchGroupFeedPage(groupId: string, beforeIso?: string): Promise<FeedPage> {
+  const { data, error } = await supabase.rpc('get_group_feed', {
+    gid: groupId,
+    before: beforeIso ?? new Date().toISOString(),
+    page_size: FEED_PAGE_SIZE,
+  })
+  if (error || !data) return { cardio: [], strength: [], count: 0, oldest: null }
+  const rows = data as FeedRow[]
+  return {
+    ...mapRows(rows),
+    count: rows.length,
+    oldest: rows.length > 0 ? rows[rows.length - 1].created_at : null,
+  }
+}
+
 /** En användares historik — rutter strippas av servern om ägaren döljer
     kartor; RLS avgör om man alls får se passen */
 export async function fetchUserWorkouts(targetId: string): Promise<Pick<FeedPage, 'cardio' | 'strength'>> {
