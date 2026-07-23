@@ -10,9 +10,10 @@ import { supabase } from '@/lib/supabase'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { GroupWizard } from '@/components/GroupWizard'
+import { GroupInviteSheet } from '@/components/GroupInviteSheet'
 import {
   getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember,
-  deleteGroup, type Group, type GroupMember,
+  deleteGroup, acceptGroupInvite, type Group, type GroupMember,
 } from '@/services/groups'
 import {
   BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome, accentAlpha,
@@ -45,6 +46,7 @@ export default function GroupScreen() {
   const [group, setGroup] = useState<Group | null>(null)
   const [members, setMembers] = useState<GroupMember[]>([])
   const [editOpen, setEditOpen] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
   const membersY = useRef(0)
 
@@ -65,17 +67,25 @@ export default function GroupScreen() {
   const mine = members.find(m => m.id === me)
   const isOwner = group?.owner_id === me
 
-  async function handleJoinLeave() {
+  async function handleJoin() {
     if (!group || !me) return
     Haptics.selectionAsync()
     try {
-      if (!mine) {
-        await joinGroup(group.id, me, group.is_private)
-      } else if (isOwner) {
-        return
-      } else {
-        await leaveGroup(group.id, me)
-      }
+      if (mine?.status === 'invited') await acceptGroupInvite(group.id)
+      else if (!mine) await joinGroup(group.id, me, group.is_private)
+      else return
+      await load()
+    } catch {
+      Alert.alert('Något gick fel', 'Kontrollera anslutningen och försök igen.')
+    }
+  }
+
+  /** Avböj inbjudan eller lämna gruppen — samma sak i databasen: raden bort */
+  async function declineOrLeave() {
+    if (!group || !me) return
+    Haptics.selectionAsync()
+    try {
+      await leaveGroup(group.id, me)
       await load()
     } catch {
       Alert.alert('Något gick fel', 'Kontrollera anslutningen och försök igen.')
@@ -100,19 +110,18 @@ export default function GroupScreen() {
     } else destroy()
   }
 
-  function shareGroup(invite: boolean) {
+  function shareGroup() {
     if (!group) return
     Haptics.selectionAsync()
     Share.share({
-      message: invite
-        ? `Häng med i gruppen "${group.name}" i SeventyFive! Öppna Community → Grupper och gå med.`
-        : `Kolla in gruppen "${group.name}" i SeventyFive${group.description ? ` — ${group.description}` : ''}`,
+      message: `Kolla in gruppen "${group.name}" i SeventyFive${group.description ? ` — ${group.description}` : ''}`,
     }).catch(() => {})
   }
 
   const joinLabel = !mine
     ? (group?.is_private ? 'Begär medlemskap' : 'Gå med')
-    : 'Förfrågan skickad'
+    : mine.status === 'invited' ? 'Acceptera inbjudan' : 'Förfrågan skickad'
+  const joinActive = !mine || mine.status === 'invited'
 
   return (
     <SafeScreen style={s.screen}>
@@ -165,33 +174,33 @@ export default function GroupScreen() {
           <View style={s.actionsRow}>
             {mine?.status === 'accepted' && (
               <ActionCircle icon="person-add-outline" label="Bjud in" edge={circleEdge}
-                onPress={() => shareGroup(true)} testID="groupInvite" />
+                onPress={() => { Haptics.selectionAsync(); setInviteOpen(true) }} testID="groupInvite" />
             )}
             {isOwner && (
               <ActionCircle icon="pencil-outline" label="Redigera" edge={circleEdge}
                 onPress={() => { Haptics.selectionAsync(); setEditOpen(true) }} testID="groupEdit" />
             )}
             <ActionCircle icon="share-outline" label="Dela" edge={circleEdge}
-              onPress={() => shareGroup(false)} testID="groupShare" />
+              onPress={shareGroup} testID="groupShare" />
             <ActionCircle icon="people-outline" label="Medlemmar" edge={circleEdge}
               onPress={() => scrollRef.current?.scrollTo({ y: Math.max(0, membersY.current - 8), animated: true })}
               testID="groupMembers" />
           </View>
 
-          {(!mine || mine.status === 'pending') && (
+          {mine?.status !== 'accepted' && (
             <TouchableOpacity
-              style={[s.joinBtn, { borderColor: !mine ? T.ACCENT : pillEdge }]}
-              onPress={handleJoinLeave}
+              style={[s.joinBtn, { borderColor: joinActive ? T.ACCENT : pillEdge }]}
+              onPress={handleJoin}
               activeOpacity={0.8}
               disabled={mine?.status === 'pending'}
               testID="groupJoin"
             >
-              <Text style={[s.joinText, !mine && { color: T.ACCENT }]}>{joinLabel}</Text>
+              <Text style={[s.joinText, joinActive && { color: T.ACCENT }]}>{joinLabel}</Text>
             </TouchableOpacity>
           )}
-          {mine && !isOwner && mine.status === 'accepted' && (
-            <TouchableOpacity onPress={handleJoinLeave} hitSlop={8}>
-              <Text style={s.leave}>Lämna gruppen</Text>
+          {mine && !isOwner && mine.status !== 'pending' && (
+            <TouchableOpacity onPress={declineOrLeave} hitSlop={8}>
+              <Text style={s.leave}>{mine.status === 'invited' ? 'Avböj inbjudan' : 'Lämna gruppen'}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -251,6 +260,15 @@ export default function GroupScreen() {
         group={group}
         onClose={() => setEditOpen(false)}
         onCreated={g => { setEditOpen(false); setGroup(g); load().catch(() => {}) }}
+      />
+
+      <GroupInviteSheet
+        visible={inviteOpen}
+        userId={me}
+        group={group}
+        members={members}
+        onClose={() => setInviteOpen(false)}
+        onInvited={() => load().catch(() => {})}
       />
     </SafeScreen>
   )

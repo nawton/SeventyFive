@@ -27,7 +27,7 @@ export interface GroupMember {
   name: string | null
   avatar_url: string | null
   role: 'owner' | 'member'
-  status: 'pending' | 'accepted'
+  status: 'pending' | 'accepted' | 'invited'
 }
 
 export interface CreateGroupInput {
@@ -152,6 +152,24 @@ export async function joinGroup(groupId: string, userId: string, isPrivate: bool
     role: 'member',
     status: isPrivate ? 'pending' : 'accepted',
   })
+  if (error) throw error
+}
+
+/** Bjud in flera på en gång — de som redan är med hoppas över tyst */
+export async function inviteToGroup(groupId: string, userIds: string[]): Promise<void> {
+  if (userIds.length === 0) return
+  const rows = userIds.map(id => ({
+    group_id: groupId, user_id: id, role: 'member', status: 'invited',
+  }))
+  const { error } = await supabase
+    .from('group_members')
+    .upsert(rows, { onConflict: 'group_id,user_id', ignoreDuplicates: true })
+  if (error) throw error
+}
+
+/** Tacka ja till en inbjudan — definer-RPC:n rör bara den egna raden */
+export async function acceptGroupInvite(groupId: string): Promise<void> {
+  const { error } = await supabase.rpc('accept_group_invite', { gid: groupId })
   if (error) throw error
 }
 
