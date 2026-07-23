@@ -27,8 +27,12 @@ export interface Group {
   allow_member_invites: boolean
   /** Dold: syns inte i sökningen, nås via QR-kod/inbjudan (RLS) */
   hidden: boolean
+  /** Bara ägaren får skriva inlägg — upprätthålls i RLS */
+  only_owner_posts: boolean
   created_at: string
 }
+
+export type GroupNotifyLevel = 'all' | 'owner' | 'off'
 
 export interface GroupMember {
   id: string
@@ -36,6 +40,8 @@ export interface GroupMember {
   avatar_url: string | null
   role: 'owner' | 'member'
   status: 'pending' | 'accepted' | 'invited' | 'banned'
+  /** Egen notisnivå för gruppens inlägg (bara meningsfull på egna raden) */
+  notifyPosts: GroupNotifyLevel
 }
 
 type MiniProfile = { id: string; name: string | null; avatar_url: string | null }
@@ -135,7 +141,7 @@ export async function getMyGroups(userId: string): Promise<Array<Group & { membe
 /** Ägarens snabbinställningar — RLS släpper bara igenom ägaren */
 export async function updateGroupSettings(
   groupId: string,
-  patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites' | 'hidden'>>,
+  patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites' | 'hidden' | 'only_owner_posts'>>,
 ): Promise<Group> {
   const { data, error } = await supabase
     .from('groups')
@@ -181,7 +187,7 @@ export async function getGroup(groupId: string): Promise<Group | null> {
 export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
   const { data, error } = await supabase
     .from('group_members')
-    .select('user_id, role, status')
+    .select('user_id, role, status, notify_posts')
     .eq('group_id', groupId)
   if (error || !data || data.length === 0) return []
   const ids = data.map(m => m.user_id)
@@ -196,6 +202,7 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
       avatar_url: p?.avatar_url ?? null,
       role: m.role as GroupMember['role'],
       status: m.status as GroupMember['status'],
+      notifyPosts: (m.notify_posts ?? 'all') as GroupNotifyLevel,
     }
   }).sort((a, b) => (a.role === 'owner' ? -1 : 0) - (b.role === 'owner' ? -1 : 0))
 }
@@ -358,5 +365,65 @@ export async function transferGroupOwnership(groupId: string, newOwnerId: string
 
 export async function deleteGroup(groupId: string): Promise<void> {
   const { error } = await supabase.from('groups').delete().eq('id', groupId)
+  if (error) throw error
+}
+
+// ── Gruppinlägg ──────────────────────────────────────────────────────────────
+
+export interface GroupPost {
+  id: string
+  group_id: string
+  author_id: string
+  body: string
+  created_at: string
+  authorName: string | null
+  authorAvatar: string | null
+}
+
+/** Senaste inläggen, nyast först. Namn via follow_profiles-RPC:n så även
+    ex-medlemmars gamla inlägg får rätt avsändare. */
+export async function getGroupPosts(groupId: string, limit = 50): Promise<GroupPost[]> {
+  const { data, error } = await supabase
+    .from('group_posts')
+    .select('*')
+    .eq('group_id', groupId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error || !data || data.length === 0) return []
+  const ids = Array.from(new Set(data.map(p => p.author_id as string)))
+  const { data: profiles } = await supabase.rpc('follow_profiles', { ids })
+  const byId = new Map<string, MiniProfile>(
+    ((profiles ?? []) as MiniProfile[]).map(p => [p.id, p]))
+  return data.map(p => ({
+    id: p.id as string,
+    group_id: p.group_id as string,
+    author_id: p.author_id as string,
+    body: p.body as string,
+    created_at: p.created_at as string,
+    authorName: byId.get(p.author_id as string)?.name ?? null,
+    authorAvatar: byId.get(p.author_id as string)?.avatar_url ?? null,
+  }))
+}
+
+export async function createGroupPost(groupId: string, body: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) throw new Error('inte inloggad')
+  const { error } = await supabase.from('group_posts').insert({
+    group_id: groupId,
+    author_id: session.user.id,
+    body: body.trim(),
+  })
+  if (error) throw error
+}
+
+/** Författaren eller gruppens ägare — RLS avgör */
+export async function deleteGroupPost(postId: string): Promise<void> {
+  const { error } = await supabase.from('group_posts').delete().eq('id', postId)
+  if (error) throw error
+}
+
+/** Egen notisnivå för gruppens inlägg — via definer-RPC:n */
+export async function setGroupNotify(groupId: string, level: GroupNotifyLevel): Promise<void> {
+  const { error } = await supabase.rpc('set_group_notify', { gid: groupId, level })
   if (error) throw error
 }

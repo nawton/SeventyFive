@@ -83,6 +83,32 @@ Deno.serve(async (req) => {
     }
   }
 
+  else if (table === 'group_posts') {
+    // Nytt inlägg → medlemmarna enligt sin notisnivå (alla/bara skaparens/av)
+    const gid = record.group_id as string
+    const [groupRes, memberRes] = await Promise.all([
+      fetch(`${supabaseUrl}/rest/v1/groups?id=eq.${gid}&select=name,owner_id`, { headers }),
+      fetch(
+        `${supabaseUrl}/rest/v1/group_members?group_id=eq.${gid}&status=eq.accepted&select=user_id,notify_posts`,
+        { headers },
+      ),
+    ])
+    const group: { name: string; owner_id: string } | undefined = (await groupRes.json())?.[0]
+    if (!group) return json({ skipped: 'no group' })
+    const members: Array<{ user_id: string; notify_posts: string }> = (await memberRes.json()) ?? []
+    senderId = record.author_id as string
+    const authorIsOwner = senderId === group.owner_id
+    const excerpt = String(record.body ?? '').slice(0, 80)
+    for (const m of members) {
+      if (m.notify_posts === 'off') continue
+      if (m.notify_posts === 'owner' && !authorIsOwner) continue
+      recipients.push({
+        userId: m.user_id,
+        makeBody: n => `${n} i ${group.name}: ”${excerpt}”`,
+      })
+    }
+  }
+
   else if (table === 'group_members') {
     // Inbjudan → den inbjudna; förfrågan → gruppens ägare;
     // godkänd förfrågan (UPDATE) → den som väntat

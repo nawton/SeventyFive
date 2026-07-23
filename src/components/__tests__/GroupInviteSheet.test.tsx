@@ -19,8 +19,8 @@ jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }))
 
 const group = { id: 'g1', name: 'Löparligan', description: '', is_private: false } as Group
 const members: GroupMember[] = [
-  { id: 'f1', name: 'Alva Wretenberg', avatar_url: null, role: 'member', status: 'accepted' },
-  { id: 'f3', name: 'Tanja Sadiq', avatar_url: null, role: 'member', status: 'invited' },
+  { id: 'f1', name: 'Alva Wretenberg', avatar_url: null, role: 'member', status: 'accepted', notifyPosts: 'all' },
+  { id: 'f3', name: 'Tanja Sadiq', avatar_url: null, role: 'member', status: 'invited', notifyPosts: 'all' },
 ]
 
 function mount(onInvited = jest.fn(), onClose = jest.fn()) {

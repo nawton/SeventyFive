@@ -23,8 +23,10 @@ import { promptReport, postReportMenu } from '@/lib/report'
 import {
   getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember, banMember,
   deleteGroup, acceptGroupInvite, updateGroupSettings, transferGroupOwnership,
-  getGroupLeaderboard, type Group, type GroupMember, type GroupLeaderboardRow,
+  getGroupLeaderboard, setGroupNotify,
+  type Group, type GroupMember, type GroupLeaderboardRow, type GroupNotifyLevel,
 } from '@/services/groups'
+import { GroupPosts } from '@/components/GroupPosts'
 import {
   BG, CARD, BORDER, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome, accentAlpha,
 } from '@/lib/theme'
@@ -42,6 +44,11 @@ const SPORT_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']>
   all: 'infinite-outline', running: 'fitness-outline', cycling: 'bicycle-outline',
   walking: 'walk-outline', gym: 'barbell-outline',
 }
+const NOTIFY_OPTIONS: Array<{ v: GroupNotifyLevel; title: string; body: string }> = [
+  { v: 'all',   title: 'Alla inlägg',    body: 'Notis för varje nytt inlägg i gruppen.' },
+  { v: 'owner', title: 'Bara skaparens', body: 'Notis bara när skaparen publicerar.' },
+  { v: 'off',   title: 'Av',             body: 'Inga notiser för gruppens inlägg.' },
+]
 
 export default function GroupScreen() {
   const params = useLocalSearchParams<{ groupId?: string }>()
@@ -60,6 +67,7 @@ export default function GroupScreen() {
   const [imageOpen, setImageOpen] = useState(false)
   const [membersOpen, setMembersOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [notifyLevel, setNotifyLevel] = useState<GroupNotifyLevel>('all')
   const [cardioRows, setCardioRows] = useState<FeedPage['cardio']>([])
   const [strengthRows, setStrengthRows] = useState<FeedPage['strength']>([])
   const [oldest, setOldest] = useState<string | null>(null)
@@ -119,6 +127,22 @@ export default function GroupScreen() {
   // Privata gruppers medlemmar syns bara för medlemmar (RLS döljer raderna
   // — det här styr bara vad UI:t låtsas veta)
   const membersVisible = !group?.is_private || mine?.status === 'accepted'
+
+  // Egen notisnivå följer medlemsraden
+  useEffect(() => {
+    if (mine?.notifyPosts) setNotifyLevel(mine.notifyPosts)
+  }, [mine?.notifyPosts])
+
+  function pickNotify(level: GroupNotifyLevel) {
+    if (!group) return
+    Haptics.selectionAsync()
+    const prev = notifyLevel
+    setNotifyLevel(level)
+    setGroupNotify(group.id, level).catch(() => {
+      setNotifyLevel(prev)
+      Alert.alert('Kunde inte spara', 'Kontrollera anslutningen och försök igen.')
+    })
+  }
 
   // Passflödet byggs som i communityt — namn/avatarer från medlemslistan
   const posts = useMemo(() => {
@@ -230,10 +254,11 @@ export default function GroupScreen() {
     }
   }
 
-  // Skaparen får inställningssidan, alla andra kan anmäla gruppen
+  // Medlemmar får inställningssidan (skaparen hela, medlemmar notisnivåerna),
+  // utomstående kan anmäla gruppen
   function openMenu() {
     if (!group) return
-    if (isOwner) {
+    if (isOwner || mine?.status === 'accepted') {
       Haptics.selectionAsync()
       setSettingsOpen(true)
       return
@@ -297,7 +322,7 @@ export default function GroupScreen() {
   }
 
   /** Optimistisk inställningsändring — backas vid fel */
-  async function applySetting(patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites' | 'hidden'>>) {
+  async function applySetting(patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites' | 'hidden' | 'only_owner_posts'>>) {
     if (!group) return
     Haptics.selectionAsync()
     const prev = group
@@ -482,6 +507,11 @@ export default function GroupScreen() {
           </>
         )}
 
+        {/* Inlägg — "Post something": textmeddelanden till gruppen */}
+        {mine?.status === 'accepted' && group && (
+          <GroupPosts group={group} me={me} isOwner={isOwner} />
+        )}
+
         {/* Huvudsidan visar medlemmarnas pass — sporten filtreras i databasen */}
         <Text style={s.sectionLabel}>SENASTE PASS</Text>
         {mine?.status !== 'accepted' ? (
@@ -544,6 +574,37 @@ export default function GroupScreen() {
               onPress={() => setSettingsOpen(false)} fallbackStyle={s.iconFallback} />
           </View>
           <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+            {/* Notisnivån är personlig — alla medlemmar ser den */}
+            <Text style={s.sectionLabel}>PUSH-NOTISER FÖR INLÄGG</Text>
+            <View style={[s.card, chrome]}>
+              {NOTIFY_OPTIONS.map((opt, i) => (
+                <TouchableOpacity key={opt.v} style={[s.settingRow, i > 0 && s.rowDivider]}
+                  activeOpacity={0.7} onPress={() => pickNotify(opt.v)} testID={`notify-${opt.v}`}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.settingTitle}>{opt.title}</Text>
+                    <Text style={s.settingBody}>{opt.body}</Text>
+                  </View>
+                  {notifyLevel === opt.v && (
+                    <Ionicons name="checkmark" size={20} color={T.ACCENT} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {!isOwner && (
+              <>
+                <Text style={s.sectionLabel}>GRUPPEN</Text>
+                <View style={[s.card, chrome]}>
+                  <TouchableOpacity style={s.settingLink} activeOpacity={0.7} testID="memberReport"
+                    onPress={() => group && promptReport('group', group.id, `Anmäl ${group.name}`)}>
+                    <Text style={s.settingTitle}>Anmäl gruppen</Text>
+                    <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {isOwner && (<>
             <Text style={s.sectionLabel}>VISNING</Text>
             <View style={[s.card, chrome]}>
               <View style={s.settingRow}>
@@ -625,6 +686,20 @@ export default function GroupScreen() {
                   testID="setHidden"
                 />
               </View>
+              <View style={[s.settingRow, s.rowDivider]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.settingTitle}>Endast du kan skriva inlägg</Text>
+                  <Text style={s.settingBody}>
+                    Medlemmarna kan läsa men inte publicera egna inlägg.
+                  </Text>
+                </View>
+                <Switch
+                  value={!!group?.only_owner_posts}
+                  onValueChange={v => applySetting({ only_owner_posts: v })}
+                  trackColor={{ false: BORDER, true: ACCENT }}
+                  testID="setOwnerPosts"
+                />
+              </View>
             </View>
 
             <Text style={s.sectionLabel}>GRUPPEN</Text>
@@ -649,6 +724,7 @@ export default function GroupScreen() {
             <TouchableOpacity style={s.deleteRow} onPress={confirmDelete} testID="settingsDelete">
               <Text style={s.deleteText}>Radera gruppen</Text>
             </TouchableOpacity>
+            </>)}
           </ScrollView>
         </SafeScreen>
       </Modal>
