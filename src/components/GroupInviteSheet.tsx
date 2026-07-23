@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, Share,
+  ActivityIndicator, Alert, Share, Dimensions,
 } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import QRCode from 'react-native-qrcode-svg'
@@ -21,15 +21,13 @@ import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, useThemeStrings } fro
 // Vi har inga grupplänkar/QR ännu, så delning sker via delningsarket.
 // =============================================================================
 
-export function GroupInviteSheet({ visible, userId, group, members, onClose, onInvited, onAvatarPress }: {
+export function GroupInviteSheet({ visible, userId, group, members, onClose, onInvited }: {
   visible: boolean
   userId: string | null
   group: Group | null
   members: GroupMember[]
   onClose: () => void
   onInvited: () => void
-  /** Sätt för skaparen — tryck på avataren på QR-sidan byter gruppbild */
-  onAvatarPress?: () => void
 }) {
   const T = useThemeStrings()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
@@ -41,6 +39,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [sending, setSending] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
+  const [imageOpen, setImageOpen] = useState(false)
 
   useEffect(() => {
     if (!visible || !userId) return
@@ -174,8 +173,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
               <View style={{ width: 40 }} />
             </View>
             <View style={s.qrBody}>
-              <TouchableOpacity onPress={onAvatarPress} disabled={!onAvatarPress}
-                activeOpacity={0.75} testID="qrAvatar">
+              <TouchableOpacity onPress={() => setImageOpen(true)} activeOpacity={0.75} testID="qrAvatar">
                 <FeedAvatar url={group?.avatar_url ?? null}
                   fallback={(group?.name ?? '?').charAt(0).toUpperCase()} size={84} />
               </TouchableOpacity>
@@ -198,6 +196,15 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
                 <Text style={[s.qrShareText, { color: T.ACCENT }]}>Dela länk</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Tryck på gruppbilden → förstorad vy */}
+            <Modal visible={imageOpen} transparent animationType="fade" onRequestClose={() => setImageOpen(false)}>
+              <TouchableOpacity style={s.imageBackdrop} activeOpacity={1} onPress={() => setImageOpen(false)}>
+                <FeedAvatar url={group?.avatar_url ?? null}
+                  fallback={(group?.name ?? '?').charAt(0).toUpperCase()}
+                  size={Dimensions.get('window').width - 88} />
+              </TouchableOpacity>
+            </Modal>
           </SafeScreen>
         </Modal>
       </SafeScreen>
@@ -264,4 +271,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 26, paddingVertical: 12, marginTop: 6,
   },
   qrShareText: { fontSize: 15, fontWeight: '700' },
+  imageBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.85)',
+    alignItems: 'center', justifyContent: 'center',
+  },
 })

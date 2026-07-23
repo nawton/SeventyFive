@@ -1,22 +1,21 @@
 import { useCallback, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActionSheetIOS, Platform, Share,
+  Modal, Dimensions,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
-import * as ImagePicker from 'expo-image-picker'
 import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { GroupWizard } from '@/components/GroupWizard'
+import { GroupEditSheet } from '@/components/GroupEditSheet'
 import { GroupInviteSheet } from '@/components/GroupInviteSheet'
 import {
   getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember,
-  deleteGroup, acceptGroupInvite, updateGroupImage, type Group, type GroupMember,
+  deleteGroup, acceptGroupInvite, type Group, type GroupMember,
 } from '@/services/groups'
-import { compressImage } from '@/lib/image'
 import {
   BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome, accentAlpha,
 } from '@/lib/theme'
@@ -49,6 +48,7 @@ export default function GroupScreen() {
   const [members, setMembers] = useState<GroupMember[]>([])
   const [editOpen, setEditOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [imageOpen, setImageOpen] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
   const membersY = useRef(0)
 
@@ -79,21 +79,6 @@ export default function GroupScreen() {
       await load()
     } catch {
       Alert.alert('Något gick fel', 'Kontrollera anslutningen och försök igen.')
-    }
-  }
-
-  /** Skaparen byter gruppbild genom att trycka på avataren */
-  async function changeImage() {
-    if (!isOwner || !group || !me) return
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [1, 1],
-    })
-    if (res.canceled || !res.assets[0]) return
-    try {
-      const uri = await compressImage(res.assets[0].uri)
-      setGroup(await updateGroupImage(me, group.id, uri))
-    } catch {
-      Alert.alert('Kunde inte uppdatera bilden', 'Kontrollera anslutningen och försök igen.')
     }
   }
 
@@ -154,14 +139,8 @@ export default function GroupScreen() {
 
       <ScrollView ref={scrollRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
-          <TouchableOpacity onPress={changeImage} disabled={!isOwner}
-            activeOpacity={0.75} testID="groupAvatar">
+          <TouchableOpacity onPress={() => setImageOpen(true)} activeOpacity={0.75} testID="groupAvatar">
             <FeedAvatar url={group?.avatar_url ?? null} fallback={(group?.name ?? '?').charAt(0).toUpperCase()} size={92} />
-            {isOwner && (
-              <View style={[s.avatarPencil, { backgroundColor: T.ACCENT }]}>
-                <Ionicons name="pencil" size={12} color={light ? '#fff' : '#000'} />
-              </View>
-            )}
           </TouchableOpacity>
           <Text style={s.name}>{group?.name ?? ''}</Text>
           <View style={s.metaRow}>
@@ -279,12 +258,12 @@ export default function GroupScreen() {
         </View>
       </ScrollView>
 
-      <GroupWizard
+      <GroupEditSheet
         visible={editOpen}
         userId={me}
         group={group}
         onClose={() => setEditOpen(false)}
-        onCreated={g => { setEditOpen(false); setGroup(g); load().catch(() => {}) }}
+        onSaved={g => { setEditOpen(false); setGroup(g); load().catch(() => {}) }}
       />
 
       <GroupInviteSheet
@@ -294,8 +273,17 @@ export default function GroupScreen() {
         members={members}
         onClose={() => setInviteOpen(false)}
         onInvited={() => load().catch(() => {})}
-        onAvatarPress={isOwner ? changeImage : undefined}
       />
+
+      {/* Tryck på gruppbilden → förstorad vy, tryck igen för att stänga */}
+      <Modal visible={imageOpen} transparent animationType="fade" onRequestClose={() => setImageOpen(false)}>
+        <TouchableOpacity style={s.imageBackdrop} activeOpacity={1}
+          onPress={() => setImageOpen(false)} testID="imageViewer">
+          <FeedAvatar url={group?.avatar_url ?? null}
+            fallback={(group?.name ?? '?').charAt(0).toUpperCase()}
+            size={Dimensions.get('window').width - 88} />
+        </TouchableOpacity>
+      </Modal>
     </SafeScreen>
   )
 }
@@ -328,9 +316,8 @@ const s = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
 
   hero: { alignItems: 'center', paddingTop: 10, paddingBottom: 22, gap: 10 },
-  avatarPencil: {
-    position: 'absolute', bottom: -2, right: -2,
-    width: 26, height: 26, borderRadius: 13,
+  imageBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.85)',
     alignItems: 'center', justifyContent: 'center',
   },
   name: { color: TEXT_PRIMARY, fontSize: 24, fontWeight: '800', textAlign: 'center' },

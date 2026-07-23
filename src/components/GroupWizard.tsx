@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, ActivityIndicator, Image, Alert,
@@ -10,7 +10,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { AppTextInput } from '@/components/AppTextInput'
 import { Ionicons } from '@/components/Icon'
 import { compressImage } from '@/lib/image'
-import { createGroup, updateGroup, type CreateGroupInput, type Group, type GroupSport } from '@/services/groups'
+import { createGroup, type CreateGroupInput, type Group, type GroupSport } from '@/services/groups'
 import {
   BG, CARD, ACCENT, ACCENT_CONTRAST, TEXT_PRIMARY, TEXT_SECONDARY,
   useThemeStrings, THEME_DARK, accentAlpha,
@@ -22,7 +22,7 @@ import {
 // temad botten, glas-X, accentknapp och radiomönstret från integritetssidorna.
 // =============================================================================
 
-const SPORTS: Array<{ key: GroupSport; label: string; desc?: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = [
+export const SPORTS: Array<{ key: GroupSport; label: string; desc?: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = [
   { key: 'all',     label: 'Alla sporter', desc: 'Håll gruppen bred — allt räknas', icon: 'infinite-outline' },
   { key: 'running', label: 'Löpning',   icon: 'fitness-outline' },
   { key: 'cycling', label: 'Cykling',   icon: 'bicycle-outline' },
@@ -30,15 +30,13 @@ const SPORTS: Array<{ key: GroupSport; label: string; desc?: string; icon: React
   { key: 'gym',     label: 'Gym',       icon: 'barbell-outline' },
 ]
 
-const TAGS = ['Bara för skojs skull', 'Kompisgäng', 'Team', 'Jobbet', 'Tränarledd', 'Familj & vänner']
+export const TAGS = ['Bara för skojs skull', 'Kompisgäng', 'Team', 'Jobbet', 'Tränarledd', 'Familj & vänner']
 
 const STEPS = 5
 
-export function GroupWizard({ visible, userId, group, onClose, onCreated }: {
+export function GroupWizard({ visible, userId, onClose, onCreated }: {
   visible: boolean
   userId: string | null
-  /** Sätt för att redigera en befintlig grupp — stegen förifylls och Spara uppdaterar */
-  group?: Group | null
   onClose: () => void
   onCreated: (group: Group) => void
 }) {
@@ -62,15 +60,6 @@ export function GroupWizard({ visible, userId, group, onClose, onCreated }: {
     setStep(0); setSport('all'); setTags([]); setName(''); setDescription('')
     setImageUri(null); setIsPrivate(false); setUseLocation(false); setLocation('')
   }
-
-  // Redigering: fyll stegen med gruppens nuvarande värden när guiden öppnas
-  useEffect(() => {
-    if (visible && group) {
-      setStep(0); setSport(group.sport); setTags(group.tags ?? []); setName(group.name)
-      setDescription(group.description ?? ''); setImageUri(null)
-      setIsPrivate(group.is_private); setUseLocation(!!group.location); setLocation(group.location ?? '')
-    }
-  }, [visible, group])
 
   function close() { reset(); onClose() }
 
@@ -102,14 +91,11 @@ export function GroupWizard({ visible, userId, group, onClose, onCreated }: {
         location: useLocation ? location : null,
         imageUri,
       }
-      const saved = group
-        ? await updateGroup(userId, group.id, input)
-        : await createGroup(userId, input)
+      const saved = await createGroup(userId, input)
       reset()
       onCreated(saved)
     } catch {
-      Alert.alert(group ? 'Kunde inte spara ändringarna' : 'Kunde inte skapa gruppen',
-        'Kontrollera anslutningen och försök igen.')
+      Alert.alert('Kunde inte skapa gruppen', 'Kontrollera anslutningen och försök igen.')
     } finally {
       setSaving(false)
     }
@@ -193,8 +179,8 @@ export function GroupWizard({ visible, userId, group, onClose, onCreated }: {
           {step === 2 && (
             <>
               <TouchableOpacity style={s.imageTile} onPress={pickImage} activeOpacity={0.8} testID="groupImage">
-                {imageUri || group?.avatar_url ? (
-                  <Image source={{ uri: imageUri ?? group?.avatar_url ?? undefined }} style={s.imagePreview} />
+                {imageUri ? (
+                  <Image source={{ uri: imageUri }} style={s.imagePreview} />
                 ) : (
                   <>
                     <Ionicons name="image-outline" size={30} color={TEXT_SECONDARY} />
@@ -291,7 +277,7 @@ export function GroupWizard({ visible, userId, group, onClose, onCreated }: {
 
         {/* ── Footer ── */}
         <View style={s.footer}>
-          {!group && <Text style={s.footerHint}>Du kan alltid ändra detta senare</Text>}
+          <Text style={s.footerHint}>Du kan alltid ändra detta senare</Text>
           <TouchableOpacity
             style={[s.nextBtn, (!canNext || saving) && { opacity: 0.4 }]}
             onPress={next}
@@ -301,7 +287,7 @@ export function GroupWizard({ visible, userId, group, onClose, onCreated }: {
           >
             {saving
               ? <ActivityIndicator color={light ? '#fff' : '#000'} />
-              : <Text style={s.nextBtnText}>{step === STEPS - 1 ? (group ? 'Spara ändringar' : 'Skapa grupp') : 'Nästa'}</Text>}
+              : <Text style={s.nextBtnText}>{step === STEPS - 1 ? 'Skapa grupp' : 'Nästa'}</Text>}
           </TouchableOpacity>
         </View>
         </KeyboardAvoidingView>
