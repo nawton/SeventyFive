@@ -15,7 +15,7 @@ import {
 import { setNotifSeenAt } from '@/lib/prefs'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useThemeStrings, THEME_DARK } from '@/lib/theme'
 
 // =============================================================================
 // NOTISER — notiscentret, nås från klockan på profilfliken. Idag:
@@ -29,6 +29,8 @@ function RequestRow({ person, onAccept, onDecline }: {
   onAccept: (id: string) => void
   onDecline: (id: string) => void
 }) {
+  const T = useThemeStrings()
+  const pillEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)'
   return (
     <View style={s.row}>
       <TouchableOpacity
@@ -50,7 +52,7 @@ function RequestRow({ person, onAccept, onDecline }: {
         </View>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[s.pill, s.pillAccept]}
+        style={[s.pill, { borderColor: T.ACCENT }]}
         onPress={() => onAccept(person.id)}
         activeOpacity={0.8}
         testID={`accept-${person.id}`}
@@ -58,7 +60,7 @@ function RequestRow({ person, onAccept, onDecline }: {
         <Text style={s.pillAcceptText}>Godkänn</Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={s.pill}
+        style={[s.pill, { borderColor: pillEdge }]}
         onPress={() => onDecline(person.id)}
         activeOpacity={0.8}
         testID={`decline-${person.id}`}
@@ -240,11 +242,11 @@ const s = StyleSheet.create({
   rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginLeft: 64 },
 
   pill: {
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)',
+    borderWidth: 1.5,
     borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7,
   },
   pillText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
-  pillAccept: { borderColor: ACCENT },
+  pillAccept: {},
   pillAcceptText: { color: ACCENT, fontSize: 13, fontWeight: '700' },
 
   empty: { alignItems: 'center', gap: 8, paddingTop: 90, paddingHorizontal: 40 },

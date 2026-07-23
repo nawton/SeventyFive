@@ -758,7 +758,7 @@ export default function DashboardScreen() {
         {/* ── Tasks section header ── */}
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>DAGENS UPPGIFTER</Text>
-          <View style={[s.countBadge, allDone && s.countBadgeDone]}>
+          <View style={[s.countBadge, { borderColor: lightMode ? 'transparent' : '#1E1E21' }, allDone && s.countBadgeDone]}>
             <Text style={[s.countText, allDone && s.countTextDone]}>
               {completedCount}/{standardTasks.length}
             </Text>
@@ -1082,7 +1082,7 @@ const s = StyleSheet.create({
   countBadge: {
     backgroundColor: CARD,
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
   },
   countBadgeDone: { backgroundColor: '#3BE8621A', borderColor: '#3BE86235' },
   countText:     { color: '#444', fontSize: 12, fontWeight: '700' },
@@ -1112,7 +1112,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 13,
   },
   ruleItemBorder: {
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.18)',
   },
   // Samma markering som taskSidebar på uppgiftskorten
   ruleSidebar: {

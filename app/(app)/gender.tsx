@@ -6,7 +6,7 @@ import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings, THEME_DARK } from '@/lib/theme'
 
 // =============================================================================
 // KÖN — egen sida (nås från Profilinställningar) med de fyra vanliga
@@ -16,6 +16,8 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, CA
 const OPTIONS = ['Man', 'Kvinna', 'Annat', 'Vill inte ange']
 
 export default function GenderScreen() {
+  const T = useThemeStrings()
+  const edge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'transparent'
   const [gender, setGender] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -54,7 +56,7 @@ export default function GenderScreen() {
           return (
             <TouchableOpacity
               key={g}
-              style={[s.optionRow, selected && s.optionRowActive]}
+              style={[s.optionRow, { borderColor: selected ? T.ACCENT : edge }, selected && s.optionRowActive]}
               onPress={() => pick(g)}
               activeOpacity={0.8}
             >
@@ -83,8 +85,8 @@ const s = StyleSheet.create({
   optionRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 16,
-    borderWidth: 1, borderColor: CARD_BORDER,
+    borderWidth: 1,
   },
-  optionRowActive: { borderColor: ACCENT, backgroundColor: accentAlpha('12') },
+  optionRowActive: { backgroundColor: accentAlpha('12') },
   optionText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
 })

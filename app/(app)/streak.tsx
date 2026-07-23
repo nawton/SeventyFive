@@ -11,7 +11,7 @@ import { getActiveChallenge } from '@/services/challenge'
 import { getStreak, getWeekStatuses } from '@/services/dailyLog'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
-import { BG, CARD, BORDER, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
+import { BG, CARD, BORDER, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, useThemeStrings, useCardChrome, THEME_DARK } from '@/lib/theme'
 
 // =============================================================================
 // STREAK — hur många dagar i rad utmaningen klarats. Glödande låga,
@@ -88,6 +88,9 @@ function Flame({ size = 230 }: { size?: number }) {
 }
 
 export default function StreakScreen() {
+  const T = useThemeStrings()
+  const chrome = useCardChrome()
+  const dotEdge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'rgba(0,0,0,0.30)'
   const [streak, setStreak] = useState(0)
   const [weekStatuses, setWeekStatuses] = useState<Record<string, string>>({})
 
@@ -153,7 +156,7 @@ export default function StreakScreen() {
         </Text>
 
         {/* Veckan: bock för klarade dagar, kryss för missade, siffror framåt */}
-        <View style={s.weekCard}>
+        <View style={[s.weekCard, chrome]}>
           <View style={s.weekRow}>
             {week.map(d => (
               <Text key={`l-${d.key}`} style={[s.weekLabel, d.isToday && s.weekLabelToday]}>
@@ -165,17 +168,17 @@ export default function StreakScreen() {
             {week.map(d => (
               <View key={d.key} style={s.weekSlot}>
                 {d.status === 'completed' ? (
-                  <View style={[s.dayDot, s.dayDotDone]}>
+                  <View style={[s.dayDot, { backgroundColor: T.ACCENT, borderColor: T.ACCENT }]}>
                     <Ionicons name="checkmark" size={14} color="#000" />
                   </View>
                 ) : d.status === 'failed' ? (
-                  <View style={[s.dayDot, s.dayDotFailed]}>
+                  <View style={[s.dayDot, { borderColor: RED + '88' }]}>
                     <Ionicons name="close" size={13} color={RED} />
                   </View>
                 ) : d.isFuture ? (
                   <Text style={s.dayNumber}>{d.dayOfMonth}</Text>
                 ) : (
-                  <View style={[s.dayDot, d.isToday && s.dayDotToday]} />
+                  <View style={[s.dayDot, { borderColor: d.isToday ? T.ACCENT : dotEdge }]} />
                 )}
               </View>
             ))}
@@ -183,7 +186,7 @@ export default function StreakScreen() {
         </View>
 
         {/* Milstolpar — nästa mål har streckad orange ram som i förlagan */}
-        <View style={s.milestoneCard}>
+        <View style={[s.milestoneCard, chrome]}>
           <Text style={s.milestoneHead}>
             {next ? `NÄSTA MILSTOLPE: ${next} DAGAR` : 'ALLA MILSTOLPAR KLARADE'}
           </Text>
@@ -236,7 +239,6 @@ const s = StyleSheet.create({
   weekCard: {
     alignSelf: 'stretch', marginTop: 26,
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: CARD_BORDER,
     paddingVertical: 16, paddingHorizontal: 10, gap: 12,
   },
   weekRow: { flexDirection: 'row' },
@@ -248,18 +250,15 @@ const s = StyleSheet.create({
   weekSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', height: 30 },
   dayDot: {
     width: 26, height: 26, borderRadius: 13,
-    borderWidth: 1.5, borderColor: BORDER,
+    borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
   },
-  dayDotDone: { backgroundColor: ACCENT, borderColor: ACCENT },
-  dayDotFailed: { borderColor: RED + '88' },
-  dayDotToday: { borderColor: ACCENT },
+  dayDotFailed: {},
   dayNumber: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT },
 
   milestoneCard: {
     alignSelf: 'stretch', marginTop: 14,
     backgroundColor: CARD, borderRadius: 16,
-    borderWidth: 1, borderColor: CARD_BORDER,
     padding: 16, gap: 14,
   },
   milestoneHead: {

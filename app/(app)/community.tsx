@@ -61,7 +61,7 @@ function EmptyState({ icon, title, body, ctaLabel, onCta }: {
       <Text style={s.emptyTitle}>{title}</Text>
       <Text style={s.emptyBody}>{body}</Text>
       {ctaLabel && onCta && (
-        <TouchableOpacity style={s.emptyCta} onPress={onCta} activeOpacity={0.8} testID="emptyCta">
+        <TouchableOpacity style={[s.emptyCta, { borderColor: useThemeStrings().ACCENT }]} onPress={onCta} activeOpacity={0.8} testID="emptyCta">
           <Ionicons name="search" size={15} color={ACCENT} />
           <Text style={s.emptyCtaText}>{ctaLabel}</Text>
         </TouchableOpacity>
@@ -401,7 +401,7 @@ const s = StyleSheet.create({
   emptyCta: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     marginTop: 14, paddingHorizontal: 18, paddingVertical: 11,
-    borderRadius: 20, borderWidth: 1.5, borderColor: ACCENT,
+    borderRadius: 20, borderWidth: 1.5,
   },
   emptyCtaText: { color: ACCENT, fontSize: 14, fontWeight: '700' },
 })
