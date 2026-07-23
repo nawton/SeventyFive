@@ -234,7 +234,7 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
         ) : avatar}
         <View style={{ flex: 1 }}>
           <Text style={s.cardName}>{post.authorName}</Text>
-          <Text style={s.cardMeta}>{post.typeLabel} — {relativeDayLabel(post.createdAt)}</Text>
+          <Text style={s.cardMeta}>{post.typeLabel}, {relativeDayLabel(post.createdAt)}</Text>
         </View>
         {onMenuPress && (
           <TouchableOpacity onPress={onMenuPress} hitSlop={10} style={s.cardMenu}

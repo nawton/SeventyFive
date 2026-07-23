@@ -125,7 +125,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
             style={s.search}
             value={search}
             onChangeText={setSearch}
-            placeholder="Sök efter idrottare som följer dig"
+            placeholder="Sök bland dina följare"
             testID="inviteSearch"
           />
 

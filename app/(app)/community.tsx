@@ -291,7 +291,7 @@ export default function CommunityScreen() {
                 <Text style={s.groupName} numberOfLines={1}>{g.name}</Text>
                 <Text style={s.groupMeta}>
                   {g.myStatus === 'pending' ? 'Förfrågan skickad'
-                    : g.myStatus === 'invited' ? 'Inbjuden – tryck för att svara'
+                    : g.myStatus === 'invited' ? 'Inbjuden, tryck för att svara'
                     : `${g.memberCount} ${g.memberCount === 1 ? 'medlem' : 'medlemmar'}`}
                   {g.is_private ? ' · Privat' : ''}
                 </Text>

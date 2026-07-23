@@ -67,7 +67,7 @@ describe('Aktiviteter', () => {
   it('listar passen som flödeskort med statistik', async () => {
     render(<ActivitiesScreen />)
     expect(await screen.findByText('Anton Wretenberg')).toBeOnTheScreen()
-    expect(screen.getByText(/Löpning — /)).toBeOnTheScreen()
+    expect(screen.getByText(/Löpning, /)).toBeOnTheScreen()
     expect(screen.getByText('5,01')).toBeOnTheScreen()
     expect(screen.getByText('45:09')).toBeOnTheScreen()
     expect(screen.getByText('min/km')).toBeOnTheScreen()
@@ -97,15 +97,15 @@ describe('Aktiviteter', () => {
     render(<ActivitiesScreen />)
     await screen.findAllByText('Anton Wretenberg')     // löprunda + gympass
     expect(screen.getByText('5,01')).toBeOnTheScreen()
-    expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
+    expect(screen.getByText(/Gympass, /)).toBeOnTheScreen()
 
     fireEvent.press(screen.getByText('Gym'))
     expect(screen.queryByText('5,01')).not.toBeOnTheScreen()
-    expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
+    expect(screen.getByText(/Gympass, /)).toBeOnTheScreen()
 
     fireEvent.press(screen.getByText('Cardio'))
     expect(screen.getByText('5,01')).toBeOnTheScreen()
-    expect(screen.queryByText(/Gympass — /)).not.toBeOnTheScreen()
+    expect(screen.queryByText(/Gympass, /)).not.toBeOnTheScreen()
   })
 
   it('annans pass: betyget är skrivskyddat i detaljvyn', async () => {
