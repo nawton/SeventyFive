@@ -12,7 +12,7 @@ import {
 } from '@/services/follows'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useThemeStrings } from '@/lib/theme'
 
 // =============================================================================
 // FÖLJARE/FÖLJER — riktiga listor ur follows-tabellen: eget namn i headern,
@@ -32,6 +32,9 @@ function PersonRow({ person, pillState, ownId, onToggle }: {
   onToggle: (id: string, state: PillState) => void
 }) {
   const isSelf = person.id === ownId
+  // Ramar som schemasträngar — dynamiska fryser fel, vit-alfa syns inte ljust
+  const T = useThemeStrings()
+  const pillEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)'
   return (
     <View style={s.row}>
       <TouchableOpacity
@@ -52,7 +55,7 @@ function PersonRow({ person, pillState, ownId, onToggle }: {
       {/* Man kan inte följa sig själv — egna raden får ingen pill */}
       {!isSelf && (
         <TouchableOpacity
-          style={[s.followPill, pillState === 'none' && s.followPillInvite]}
+          style={[s.followPill, { borderColor: pillState === 'none' ? T.ACCENT : pillEdge }]}
           onPress={() => onToggle(person.id, pillState)}
           activeOpacity={0.8}
           testID={`follow-${person.id}`}
@@ -240,11 +243,10 @@ const s = StyleSheet.create({
   rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginLeft: 66 },
 
   followPill: {
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)',
+    borderWidth: 1.5,
     borderRadius: 20, paddingHorizontal: 22, paddingVertical: 8,
     minWidth: 96, alignItems: 'center',
   },
-  followPillInvite: { borderColor: ACCENT },
   followPillText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   followPillTextInvite: { color: ACCENT },
 
