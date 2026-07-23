@@ -9,7 +9,7 @@ import { DistanceAreaChart, type AreaBucket } from '@/components/stats/DistanceA
 import { fmtDuration } from '@/lib/format'
 import type { UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
-import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, CARD_BORDER, accentAlpha, ORANGE } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, CARD_BORDER, accentAlpha, ORANGE, useThemeStrings, THEME_DARK } from '@/lib/theme'
 
 // =============================================================================
 // ATLETVY — delad mellan atletsidan (öppnas från flödet/sökningen) och
@@ -115,6 +115,9 @@ export function AthleteOverview({
   /** Jag har blockerat personen — knappen blir Avblockera, allt är låst */
   blocked?: boolean
 }) {
+  // Chipramar som strängar per schema — dynamiska ramfärger fryser fel
+  const T = useThemeStrings()
+  const chipEdge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'rgba(0,0,0,0.10)'
   const { width: screenW } = useWindowDimensions()
   const [type, setType] = useState<CardioType>('running')
 
@@ -278,7 +281,7 @@ export function AthleteOverview({
           return (
             <TouchableOpacity
               key={t.key}
-              style={[s.chip, on && s.chipActive]}
+              style={[s.chip, { borderColor: on ? T.ACCENT : chipEdge }]}
               onPress={() => switchType(t.key)}
               activeOpacity={0.8}
             >
@@ -381,10 +384,10 @@ const s = StyleSheet.create({
   chipsRow: { flexDirection: 'row', gap: 8, marginTop: 26 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1, borderColor: BORDER, borderRadius: 17,
+    borderWidth: 1, borderRadius: 17,
     paddingHorizontal: 11, paddingVertical: 7,
   },
-  chipActive: { borderColor: ACCENT },
+  chipActive: {},
   chipText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
   chipTextActive: { color: ACCENT, fontWeight: '700' },
 
