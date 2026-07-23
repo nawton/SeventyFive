@@ -158,7 +158,7 @@ export function ExercisePickerSheet({
         {/* Header */}
         <View style={s.header}>
           {/* Samma mönster som Logga pass: X i liquid glass stänger,
-              chevron backar på understegen — ingen Stäng-knapp */}
+              chevron backar på understegen, ingen Stäng-knapp */}
           <GlassCircleButton
             icon={showBack ? 'chevron-back' : 'close'}
             size={40}

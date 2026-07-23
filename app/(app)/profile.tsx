@@ -320,7 +320,7 @@ export default function ProfileScreen() {
             <Text style={s.sectionSub}>
               {photos.length > 0
                 ? `${photos.length} ${photos.length === 1 ? 'foto' : 'foton'} · ${new Set(photos.map(p => p.dayNumber)).size} av ${currentDay} dagar`
-                : 'Ta ett foto varje dag — om 75 dagar har du hela resan här.'}
+                : 'Ta ett foto varje dag, om 75 dagar har du hela resan här.'}
             </Text>
           </View>
           {photos.length >= 2 && (

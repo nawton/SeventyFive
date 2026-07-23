@@ -301,7 +301,7 @@ export function GymTab({
               <View style={s.tabEmptyIcon}><Ionicons name="barbell-outline" size={30} color={ACCENT} /></View>
               <Text style={s.tabEmptyTitle}>Inga gympass ännu</Text>
               <Text style={s.tabEmptyText}>
-                Bocka av övningar i schemat och logga reps och vikt i passen — då fylls muskelkartan, volymen och rekorden på här.
+                Bocka av övningar i schemat och logga reps och vikt i passen, då fylls muskelkartan, volymen och rekorden på här.
               </Text>
               <TouchableOpacity style={s.tabEmptyBtn} activeOpacity={0.85} onPress={() => router.push('/(app)/add')}>
                 <Text style={s.tabEmptyBtnText}>Till schemat</Text>

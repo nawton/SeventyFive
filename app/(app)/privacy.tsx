@@ -148,7 +148,7 @@ const SETTINGS: Record<SettingKey, {
       {
         value: 'private',
         title: 'Bara du',
-        description: 'Dina pass och din statistik är helt privata — även för godkända följare. Ingen kan gilla eller kommentera dina pass.',
+        description: 'Dina pass och din statistik är helt privata, även för godkända följare. Ingen kan gilla eller kommentera dina pass.',
       },
     ],
   },
@@ -206,7 +206,7 @@ export default function PrivacyScreen() {
   function save(updates: Parameters<typeof updateProfile>[1]) {
     if (!userId) return
     updateProfile(userId, updates).catch(() => {
-      Alert.alert('Kunde inte spara', 'Ändringen sparades inte — kontrollera anslutningen och försök igen.')
+      Alert.alert('Kunde inte spara', 'Ändringen sparades inte, kontrollera anslutningen och försök igen.')
       getProfile(userId).then(p => { if (p) applyProfile(p) }).catch(() => {})
     })
   }
@@ -394,7 +394,7 @@ export default function PrivacyScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={s.optionTitle}>Dölj alla kartor</Text>
                   <Text style={s.optionBody}>
-                    Dina rutter visas aldrig för följare — varken i flödet, på
+                    Dina rutter visas aldrig för följare, varken i flödet, på
                     din profil eller i passdetaljerna. Du ser dem alltid själv.
                   </Text>
                 </View>

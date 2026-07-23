@@ -39,7 +39,7 @@ export function GroupScanSheet({ visible, onClose, onFound }: {
               <Ionicons name="camera-outline" size={44} color={TEXT_PRIMARY} />
               <Text style={s.fallbackTitle}>Kameran är inte tillgänglig</Text>
               <Text style={s.fallbackBody}>
-                Den här appversionen saknar kameramodulen — installera den senaste
+                Den här appversionen saknar kameramodulen, installera den senaste
                 byggnationen för att skanna QR-koder.
               </Text>
             </View>

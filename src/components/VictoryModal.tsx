@@ -56,7 +56,7 @@ export function VictoryModal({ visible, completedDays, levelName, onNewChallenge
           <Animated.View style={[styles.rest, restStyle]}>
             <Text style={styles.title}>Du klarade utmaningen</Text>
             <Text style={styles.subtitle}>
-              75 dagar. Varje dag räknades — och du räknade dem alla.
+              75 dagar. Varje dag räknades, och du räknade dem alla.
             </Text>
 
             <View style={styles.statsCard}>

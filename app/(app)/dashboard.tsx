@@ -441,7 +441,7 @@ export default function DashboardScreen() {
     if (task.type === 'workout' && !task.completed && !hasActivityToday) {
       Alert.alert(
         'Inget pass loggat idag',
-        'Kör ett pass först — allt räknas! Inget gym? Ta ett hemmapass: armhävningar, situps och utfall, eller en rask promenad med GPS:en igång.',
+        'Kör ett pass först, allt räknas! Inget gym? Ta ett hemmapass: armhävningar, situps och utfall, eller en rask promenad med GPS:en igång.',
         [
           { text: 'Senare', style: 'cancel' },
           { text: 'Logga pass', onPress: () => router.push('/(app)/add') },

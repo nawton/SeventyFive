@@ -259,7 +259,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
           </View>
           {totalSets === 0 && (
             <Text style={s.hint}>
-              Set räknas från reps och vikt du loggar i passen — fyll i dem så växer tabellen.
+              Set räknas från reps och vikt du loggar i passen, fyll i dem så växer tabellen.
             </Text>
           )}
         </ScrollView>

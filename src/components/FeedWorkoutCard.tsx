@@ -25,7 +25,7 @@ export const TYPE_LABELS: Record<string, string> = {
 
 interface BasePost {
   id: string
-  authorId: string              // vem passet tillhör — styr avatarnavigering m.m.
+  authorId: string              // vem passet tillhör, styr avatarnavigering m.m.
   authorName: string
   authorAvatar: string | null   // http-URL, emoji eller null (initialer)
   typeLabel: string
@@ -37,7 +37,7 @@ export interface CardioPost extends BasePost {
   distanceKm: number
   durationS: number
   route?: Array<[number, number]>
-  workout: CardioWorkout        // hela passet — detaljvyn öppnas härifrån
+  workout: CardioWorkout        // hela passet, detaljvyn öppnas härifrån
 }
 
 export interface StrengthPost extends BasePost {
@@ -45,7 +45,7 @@ export interface StrengthPost extends BasePost {
   exercises: number
   sets: number
   volumeKg: number
-  workouts: StrengthWorkout[]   // dagens övningsrader — detaljvyn öppnas härifrån
+  workouts: StrengthWorkout[]   // dagens övningsrader, detaljvyn öppnas härifrån
 }
 
 export type FeedPost = CardioPost | StrengthPost

@@ -41,7 +41,7 @@ export async function registerPushToken(): Promise<void> {
 }
 
 /** Vid utloggning: inga notiser till en utloggad enhet. Alla användarens
-    tokens raderas — inloggade enheter registrerar om sig vid nästa start. */
+    tokens raderas, inloggade enheter registrerar om sig vid nästa start. */
 export async function unregisterPushTokens(): Promise<void> {
   try {
     const { data: { session } } = await supabase.auth.getSession()

@@ -38,7 +38,7 @@ export function buildParts(baseName: string, t: RunTarget, unit: UnitSystem): Pa
     if (baseName === 'Tempopass') {
       return [
         { tag: 'VÄRM UPP',  text: `${dist(RUN_RECIPE.warmupM / 1000)} lugn jogg` },
-        { tag: 'PASS',      text: `${km} i tempofart`, sub: pace ?? 'Jämn, ansträngande fart — strax under tävlingstempo' },
+        { tag: 'PASS',      text: `${km} i tempofart`, sub: pace ?? 'Jämn, ansträngande fart, strax under tävlingstempo' },
         { tag: 'VARVA NER', text: `${dist(RUN_RECIPE.cooldownTempoM / 1000)} lugn jogg` },
       ]
     }
@@ -52,7 +52,7 @@ export function buildParts(baseName: string, t: RunTarget, unit: UnitSystem): Pa
     if (baseName === 'Fartlek') {
       return [
         { tag: 'VÄRM UPP',  text: `${Math.round(RUN_RECIPE.fartlekWarmupS / 60)} min lugn jogg` },
-        { tag: 'PASS',      text: `${km} fartlek`, sub: 'Växla fritt mellan snabbt och lugnt — lek med farten' },
+        { tag: 'PASS',      text: `${km} fartlek`, sub: 'Växla fritt mellan snabbt och lugnt, lek med farten' },
         { tag: 'VARVA NER', text: `${Math.round(RUN_RECIPE.fartlekCooldownS / 60)} min lugn jogg` },
       ]
     }

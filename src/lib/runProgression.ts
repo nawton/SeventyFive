@@ -200,7 +200,7 @@ export function isCutbackWeek(week: number): boolean {
 }
 
 /** Nedtrappning (taper) inför loppet: veckan före → 70 % volym,
-    tävlingsveckan → 50 %. Trumfar cutback — och får, till skillnad från
+    tävlingsveckan → 50 %. Trumfar cutback, och får, till skillnad från
     cutback, gå under planens startnivå: färska ben är hela poängen. */
 export function taperFactor(weeksToRace: number | null | undefined): number | null {
   if (weeksToRace == null || weeksToRace < 0 || weeksToRace > 1) return null

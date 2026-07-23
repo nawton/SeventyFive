@@ -31,7 +31,7 @@ export interface WorkoutSession {
 export const PLAN_WEEKS = 16
 
 /** Cardio-planens slutdatum (exklusivt): själva tävlingsdagen när ett
-    tävlingsdatum finns efter planstarten — på race day springer man loppet
+    tävlingsdatum finns efter planstarten, på race day springer man loppet
     (eget engångspass), inga vanliga träningspass den dagen eller efter.
     Utan tävlingsdatum gäller 16-veckorshorisonten. */
 export function planEndDateStr(createdAt: string, raceDate?: string | null): string {

@@ -179,7 +179,7 @@ export default function RunWorkoutScreen() {
         </View>
 
         <Text style={s.progressNote}>
-          Passet växer vecka för vecka — det här är målet för vecka {week + 1} i din plan.
+          Passet växer vecka för vecka, det här är målet för vecka {week + 1} i din plan.
         </Text>
       </ScrollView>
 

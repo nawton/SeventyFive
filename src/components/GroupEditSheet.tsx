@@ -208,7 +208,7 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
 
           <View style={s.labelRow}>
             <Text style={s.label}>PLATS</Text>
-            <Text style={s.labelHint}>Valfritt — tomt betyder Global</Text>
+            <Text style={s.labelHint}>Valfritt, tomt betyder Global</Text>
           </View>
           <AppTextInput
             style={s.input}

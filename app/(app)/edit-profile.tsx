@@ -167,7 +167,7 @@ export default function EditProfileScreen() {
     <SafeScreen style={styles.screen}>
 
       {/* ── Fixed header: glas-pil tillbaka; avataren sparas direkt vid val
-          så ingen bock behövs — snurran syns kort medan uppladdningen går ── */}
+          så ingen bock behövs, snurran syns kort medan uppladdningen går ── */}
       <View style={styles.header}>
         <GlassCircleButton
           icon="chevron-back"

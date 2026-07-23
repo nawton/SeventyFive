@@ -31,17 +31,17 @@ export const THEME_LIGHT = {
 } as const
 
 /** Temats råa strängfärger för AKTUELLT läge. Reanimated (Animated.View
-    m.fl.) kraschar på dynamiska färgobjekt — animerade element måste få
+    m.fl.) kraschar på dynamiska färgobjekt, animerade element måste få
     sina färger härifrån som inline-stil istället för från konstanterna. */
 export function useThemeStrings() {
   return useColorScheme() === 'light' ? THEME_LIGHT : THEME_DARK
 }
 
 /** Kortens "chrome": 1px-ram i mörkt läge (designspråket), mjuk skugga i
-    ljust. Som STRÄNGAR per schema — iOS fryser dynamiska färger i
+    ljust. Som STRÄNGAR per schema, iOS fryser dynamiska färger i
     border/skugga (CGColor) när fönstertraits växlar (t.ex. efter modaler),
     så dynamiska konstanter är opålitliga just där. OBS: overflow 'hidden'
-    på samma vy dödar skuggan — lägg chromet på en yttre wrapper då. */
+    på samma vy dödar skuggan, lägg chromet på en yttre wrapper då. */
 export function useCardChrome() {
   const light = useColorScheme() === 'light'
   return light

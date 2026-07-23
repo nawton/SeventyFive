@@ -120,7 +120,7 @@ export function MilestoneAnalysisModal({
   } else if (missed > 0) {
     tips.push({
       icon: 'alert-circle-outline', color: RED,
-      text: `${missed} ${missed === 1 ? 'missad dag' : 'missade dagar'} hittills. Vanligaste orsaken är att kvällen blir för kort — gör den svåraste uppgiften före lunch.`,
+      text: `${missed} ${missed === 1 ? 'missad dag' : 'missade dagar'} hittills. Vanligaste orsaken är att kvällen blir för kort, gör den svåraste uppgiften före lunch.`,
     })
   } else if (logged >= 3) {
     tips.push({
@@ -153,7 +153,7 @@ export function MilestoneAnalysisModal({
   } else {
     tips.push({
       icon: 'flame-outline', color: T.ACCENT,
-      text: `Streak: ${streak} ${streak === 1 ? 'dag' : 'dagar'}. Ta den till 7 så börjar rutinen sköta sig själv — en dag i taget.`,
+      text: `Streak: ${streak} ${streak === 1 ? 'dag' : 'dagar'}. Ta den till 7 så börjar rutinen sköta sig själv, en dag i taget.`,
     })
   }
   if (milestone) {

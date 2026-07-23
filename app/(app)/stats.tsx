@@ -109,7 +109,7 @@ export default function StatsScreen() {
   }
 
   // ── Flikrad: text + glidande underline, dragbar ──────────────────────────────
-  const pagerX = useSharedValue(0)   // horisontell offset — driver indikatorn
+  const pagerX = useSharedValue(0)   // horisontell offset, driver indikatorn
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: (pagerX.value / STATS_SCREEN_W) * SEG_W }],
   }))

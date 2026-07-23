@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
         </View>
         <Text style={s.title}>Något gick fel</Text>
         <Text style={s.body}>
-          Ett oväntat fel inträffade. Din data är sparad — försök igen.
+          Ett oväntat fel inträffade. Din data är sparad, försök igen.
         </Text>
         <TouchableOpacity
           style={s.retryBtn}

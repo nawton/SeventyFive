@@ -399,7 +399,7 @@ export function ScheduleWizard({
             <>
               <Text style={s.stepTitle}>Hur snabbt springer{'\n'}du 5 km?</Text>
               <Text style={s.stepSub}>
-                Tempozonerna i varje pass — lugnt, tempo, intervaller — räknas ut från din tid, så planen blir din och ingen annans.
+                Tempozonerna i varje pass, lugnt, tempo, intervaller, räknas ut från din tid, så planen blir din och ingen annans.
               </Text>
 
               <View style={s.testCardBig}>
@@ -431,8 +431,8 @@ export function ScheduleWizard({
                 </View>
                 <Text style={fiveKImplausible ? s.testWarn : s.testHint}>
                   {fiveKImplausible
-                    ? 'Det där ser ut som ett tempo, inte en totaltid — ange hela tiden för 5 km, t.ex. 28:30.'
-                    : 'Osäker? Ta ett hederligt ungefär — du kan uppdatera tiden när som helst under Anpassning.'}
+                    ? 'Det där ser ut som ett tempo, inte en totaltid, ange hela tiden för 5 km, t.ex. 28:30.'
+                    : 'Osäker? Ta ett hederligt ungefär, du kan uppdatera tiden när som helst under Anpassning.'}
                 </Text>
               </View>
             </>
@@ -443,7 +443,7 @@ export function ScheduleWizard({
             <>
               <Text style={s.stepTitle}>Avsluta med{'\n'}ett lopp?</Text>
               <Text style={s.stepSub}>
-                Välj tävlingsdag i planens sista vecka — passen trappar ner de två sista veckorna och schemat slutar med loppet.
+                Välj tävlingsdag i planens sista vecka, passen trappar ner de två sista veckorna och schemat slutar med loppet.
               </Text>
 
               <View style={s.testCardBig}>
@@ -471,8 +471,8 @@ export function ScheduleWizard({
                 </View>
                 <Text style={s.testHint}>
                   {raceValid
-                    ? 'Inga träningspass på eller efter tävlingsdagen — då är det bara loppet som gäller.'
-                    : 'Frivilligt — hoppa över om du inte har ett lopp på gång. Tryck igen för att ångra ett val.'}
+                    ? 'Inga träningspass på eller efter tävlingsdagen, då är det bara loppet som gäller.'
+                    : 'Frivilligt, hoppa över om du inte har ett lopp på gång. Tryck igen för att ångra ett val.'}
                 </Text>
               </View>
             </>
@@ -595,7 +595,7 @@ export function ScheduleWizard({
             <>
               <Text style={s.stepTitle}>Vilka dagar vill du träna?</Text>
               <Text style={s.stepSub}>
-                Välj de dagar som passar din vecka — passen läggs på dagarna du bockar i.
+                Välj de dagar som passar din vecka, passen läggs på dagarna du bockar i.
               </Text>
 
               {WEEKDAY_OPTIONS.map(opt => {

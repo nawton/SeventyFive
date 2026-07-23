@@ -348,7 +348,7 @@ export default function PostScreen() {
               </TouchableOpacity>
             ))}
             {comments.length === 0 && (
-              <Text style={s.emptyComments}>Inga kommentarer ännu — bli först!</Text>
+              <Text style={s.emptyComments}>Inga kommentarer ännu, bli först!</Text>
             )}
           </View>
         </ScrollView>

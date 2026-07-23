@@ -487,7 +487,7 @@ export default function SchemaScreen() {
             <Text style={styles.planEndSub}>
               {planEnd?.ended
                 ? 'Skapa nästa plan utifrån var du är nu'
-                : 'Dags att planera nästa — utgå från din nya nivå'}
+                : 'Dags att planera nästa, utgå från din nya nivå'}
             </Text>
           </View>
           <TouchableOpacity
@@ -636,7 +636,7 @@ export default function SchemaScreen() {
               'gym',
               null,
             )
-          } catch { /* ignoreras — laddas om nedan */ }
+          } catch { /* ignoreras, laddas om nedan */ }
           setLogSheetOpen(false)
           loadData(userId)
         }}

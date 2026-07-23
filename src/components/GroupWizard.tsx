@@ -23,7 +23,7 @@ import {
 // =============================================================================
 
 export const SPORTS: Array<{ key: GroupSport; label: string; desc?: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = [
-  { key: 'all',     label: 'Alla sporter', desc: 'Håll gruppen bred — allt räknas', icon: 'infinite-outline' },
+  { key: 'all',     label: 'Alla sporter', desc: 'Håll gruppen bred, allt räknas', icon: 'infinite-outline' },
   { key: 'running', label: 'Löpning',   icon: 'fitness-outline' },
   { key: 'cycling', label: 'Cykling',   icon: 'bicycle-outline' },
   { key: 'walking', label: 'Promenad',  icon: 'walk-outline' },

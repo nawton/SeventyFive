@@ -105,7 +105,7 @@ export default function PremiumScreen() {
             <Text style={s.title}>Du har Premium</Text>
             <Text style={s.subtitle}>
               {sub.cancel_at_period_end
-                ? `Avslutas ${fmtDate(sub.current_period_end)} — förnyas inte`
+                ? `Avslutas ${fmtDate(sub.current_period_end)}, förnyas inte`
                 : `Förnyas ${fmtDate(sub.current_period_end)}`}
             </Text>
 
@@ -182,8 +182,8 @@ export default function PremiumScreen() {
           </TouchableOpacity>
           <Text style={s.footerNote}>
             {premium
-              ? 'Byt kort, se kvitton eller säg upp — via Stripe'
-              : 'Avsluta när du vill — hanteras säkert av Stripe'}
+              ? 'Byt kort, se kvitton eller säg upp, via Stripe'
+              : 'Avsluta när du vill, hanteras säkert av Stripe'}
           </Text>
         </View>
       )}

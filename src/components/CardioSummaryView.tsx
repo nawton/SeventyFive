@@ -369,7 +369,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
               postKey={social.postKey}
               ownerId={social.ownerId}
               onOpenComments={social.onOpenComments}
-              shareText={`${title} · ${String(d.distance_km.toFixed(2)).replace('.', ',')} km på ${fmtTime(d.duration_seconds)} — loggat med SeventyFive`}
+              shareText={`${title} · ${String(d.distance_km.toFixed(2)).replace('.', ',')} km på ${fmtTime(d.duration_seconds)}, loggat med SeventyFive`}
             />
           )}
         </Animated.View>

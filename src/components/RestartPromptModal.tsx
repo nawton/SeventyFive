@@ -65,7 +65,7 @@ export function RestartPromptModal({ visible, variant, missedDays, onRestart, on
 
           <View style={styles.card}>
             <Text style={styles.cardText}>
-              Att starta om är inte att förlora — det är att ta utmaningen på allvar.
+              Att starta om är inte att förlora, det är att ta utmaningen på allvar.
               Att fortsätta är okej, men dagen räknas som missad i din statistik.
             </Text>
           </View>

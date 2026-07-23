@@ -626,7 +626,7 @@ export function SessionFullscreen({
             setAddExOpen(false)
             Haptics.selectionAsync()
             await addSingleExerciseToSession(session.id, exInfo.name, exercises.length, sets, reps).catch(() => null)
-            onSaved?.()   // laddar om — övningen dyker upp i tabellen
+            onSaved?.()   // laddar om, övningen dyker upp i tabellen
           }}
         />
 

@@ -214,7 +214,7 @@ describe('Atletprofil', () => {
     fireEvent.press(screen.getByTestId('athleteFollow'))
     expect(follow).toHaveBeenCalledWith('u2')
     expect(within(screen.getByTestId('athleteFollow')).getByText('Förfrågan skickad')).toBeOnTheScreen()
-    expect(screen.getByText('Väntar på godkännande — när Kalle godkänner din förfrågan ser du statistiken här.')).toBeOnTheScreen()
+    expect(screen.getByText('Väntar på godkännande, när Kalle godkänner din förfrågan ser du statistiken här.')).toBeOnTheScreen()
     fireEvent.press(screen.getByTestId('athleteFollow'))     // ångra förfrågan
     expect(unfollow).toHaveBeenCalledWith('u2')
     expect(within(screen.getByTestId('athleteFollow')).getByText('Följ')).toBeOnTheScreen()

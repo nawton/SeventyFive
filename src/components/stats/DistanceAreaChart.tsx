@@ -18,7 +18,7 @@ import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/uni
 export interface AreaBucket {
   key:       string
   label:     string
-  total:     number   // km — konverteras till vald enhet vid rendering
+  total:     number   // km, konverteras till vald enhet vid rendering
   isCurrent: boolean
 }
 

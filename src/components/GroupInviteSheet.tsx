@@ -157,7 +157,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
 
           {loaded && followers.length === 0 && (
             <Text style={s.empty}>
-              Inga följare ännu — dela gruppen så kan andra gå med själva.
+              Inga följare ännu, dela gruppen så kan andra gå med själva.
             </Text>
           )}
         </ScrollView>

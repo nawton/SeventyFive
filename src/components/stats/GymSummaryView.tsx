@@ -176,7 +176,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
             postKey={social.postKey}
             ownerId={social.ownerId}
             onOpenComments={social.onOpenComments}
-            shareText={`Gympass · ${logged.length} ${logged.length === 1 ? 'övning' : 'övningar'} — loggat med SeventyFive`}
+            shareText={`Gympass · ${logged.length} ${logged.length === 1 ? 'övning' : 'övningar'}, loggat med SeventyFive`}
           />
         )}
       </ScrollView>

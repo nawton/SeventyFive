@@ -78,7 +78,7 @@ export function setCoachVoiceId(id: string): void {
 
 export function previewVoice(id: string): void {
   Speech.stop()
-  Speech.speak('Så här låter jag. En kilometer avklarad — håll tempot!', {
+  Speech.speak('Så här låter jag. En kilometer avklarad, håll tempot!', {
     language: 'sv-SE',
     voice: id,
   })

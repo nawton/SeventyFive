@@ -36,7 +36,7 @@ export async function getSubscription(userId: string): Promise<Subscription> {
 }
 
 /** Premium = aktivt/testperiod och perioden inte passerad. En uppsagd
-    prenumeration är premium till periodens slut — man har betalat för den. */
+    prenumeration är premium till periodens slut, man har betalat för den. */
 export function isPremium(sub: Subscription, now: Date = new Date()): boolean {
   if (sub.status !== 'active' && sub.status !== 'trialing') return false
   if (!sub.current_period_end) return true

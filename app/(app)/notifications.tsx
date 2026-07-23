@@ -189,7 +189,7 @@ export default function NotificationsScreen() {
   }
 
   /** Svar på gruppnotis: inbjudan accepteras/avböjs av mig, förfrågan
-      godkänns/avböjs av mig som skapare. Optimistiskt — raden försvinner. */
+      godkänns/avböjs av mig som skapare. Optimistiskt, raden försvinner. */
   function handleGroupAnswer(item: GroupNotification, accept: boolean) {
     if (accept) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
     else Haptics.selectionAsync()

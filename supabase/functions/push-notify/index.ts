@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       senderId = group.owner_id
       recipients.push({
         userId: record.user_id as string,
-        makeBody: () => `Din förfrågan till ${group.name} godkändes — välkommen in!`,
+        makeBody: () => `Din förfrågan till ${group.name} godkändes, välkommen in!`,
       })
     } else if (record.status === 'invited') {
       senderId = (record.invited_by as string) ?? group.owner_id

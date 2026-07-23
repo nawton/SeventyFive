@@ -71,7 +71,7 @@ function Row({ label, value, onPress, locked, chevron = true }: {
 }
 
 /** Flytande Done-knapp som Apples inbyggda: rent liquid glass (ingen
-    tintColor — "transparent" släcker glasmaterialet helt), engelsk etikett,
+    tintColor, "transparent" släcker glasmaterialet helt), engelsk etikett,
     vanligt tryck utan drag. Pressable istället för GlassPill: gesture-
     handler når inte tangentbordets fönster, och draggesten hörde aldrig
     hemma här. */

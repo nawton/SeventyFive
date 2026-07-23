@@ -451,7 +451,7 @@ export default function CardioSessionScreen() {
               ))}
             </View>
 
-            <Text style={s.settingLabel}>VIKT — FÖR KALORIBERÄKNINGEN</Text>
+            <Text style={s.settingLabel}>VIKT, FÖR KALORIBERÄKNINGEN</Text>
             <View style={s.weightRow}>
               <AppTextInput
                 style={s.weightInput}

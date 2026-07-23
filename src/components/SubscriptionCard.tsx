@@ -37,7 +37,7 @@ export function SubscriptionCard({ name }: { name?: string }) {
 
   useFocusEffect(reload)
 
-  if (sub === null) return null   // laddar — bannern dyker upp när svaret kommit
+  if (sub === null) return null   // laddar, bannern dyker upp när svaret kommit
 
   const premium = isPremium(sub)
   const firstName = name?.split(' ')[0]
@@ -69,7 +69,7 @@ export function SubscriptionCard({ name }: { name?: string }) {
               ? `Avslutas ${fmtDate(sub.current_period_end)}`
               : `Aktivt · förnyas ${fmtDate(sub.current_period_end)}`
             : pastDue
-              ? 'Betalningen misslyckades — uppdatera ditt kort'
+              ? 'Betalningen misslyckades, uppdatera ditt kort'
               : 'Lås upp löpplaner, intervallguidning och full statistik'}
         </Text>
         <Text style={[s.action, { color: accent }]}>

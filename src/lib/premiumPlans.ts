@@ -21,7 +21,7 @@ export const PREMIUM_PLANS: PremiumPlan[] = [
 
 /** Vad Premium ger — checklistan på paywallen */
 export const PREMIUM_BENEFITS = [
-  'Personliga löpplaner mot ditt mål — från 5K till marathon, med tävlingsdag och nedtrappning',
+  'Personliga löpplaner mot ditt mål, från 5K till marathon, med tävlingsdag och nedtrappning',
   'Intervallguidning med röst under passet: segment, vila och tempo i öronen',
   'Full statistik: intervalltrend, tempoutveckling och ärliga kalorier',
 ]

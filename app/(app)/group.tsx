@@ -375,7 +375,7 @@ export default function GroupScreen() {
     if (!group) return
     Haptics.selectionAsync()
     Share.share({
-      message: `Kolla in gruppen "${group.name}" i SeventyFive${group.description ? ` — ${group.description}` : ''}`,
+      message: `Kolla in gruppen "${group.name}" i SeventyFive${group.description ? `, ${group.description}` : ''}`,
     }).catch(() => {})
   }
 
@@ -529,7 +529,7 @@ export default function GroupScreen() {
           </Text>
         ) : posts.length === 0 ? (
           <Text style={s.feedEmpty}>
-            Inga pass ännu — de dyker upp här när någon i gruppen loggar
+            Inga pass ännu, de dyker upp här när någon i gruppen loggar
             {group?.sport === 'gym' ? ' ett gympass' : group?.sport === 'all' ? ' ett pass' : ` ${SPORT_LABELS[group?.sport ?? 'all'].toLowerCase()}`}.
           </Text>
         ) : (
@@ -675,7 +675,7 @@ export default function GroupScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={s.settingTitle}>Dold grupp</Text>
                   <Text style={s.settingBody}>
-                    Syns inte i sökningen — nya medlemmar hittar gruppen via
+                    Syns inte i sökningen, nya medlemmar hittar gruppen via
                     QR-koden eller en inbjudan.
                   </Text>
                 </View>

@@ -16,7 +16,7 @@ const SCREEN_W  = Dimensions.get('window').width
 const PAGE_W    = SCREEN_W - 68  // smalare än skärmen så nästa kort sticker fram
 const PAGE_GAP  = 14             // mellanrum mellan korten i pagern
 const SNAP_W    = PAGE_W + PAGE_GAP
-const MAX_THRESHOLD = 7500       // Diamant — sliderns högra ände
+const MAX_THRESHOLD = 7500       // Diamant, sliderns högra ände
 import { SafeScreen } from '@/components/SafeScreen'
 import { router } from 'expo-router'
 import { Ionicons } from '@/components/Icon'

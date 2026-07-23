@@ -47,7 +47,7 @@ export default function Welcome() {
           </View>
           <Text style={s.tagline}>75 dagar. 5 uppgifter. Inga undantag.</Text>
           <Text style={s.desc}>
-            Utmaningen som förändrar din disciplin, ditt mindset och din kropp — en dag i taget.
+            Utmaningen som förändrar din disciplin, ditt mindset och din kropp, en dag i taget.
           </Text>
         </Animated.View>
 

@@ -60,36 +60,36 @@ const EXERCISES: { key: ExerciseType; label: string; icon: React.ComponentProps<
 // när man trycker på Aktivitet-cellen under ett guidat pass
 const ACTIVITY_INFO: Record<ExerciseType, { desc: string; tips: string[] }> = {
   running: {
-    desc: 'Löpning i din egen takt — grunden i all distansträning. Lugna kilometrar bygger motorn som gör de snabba passen möjliga.',
+    desc: 'Löpning i din egen takt, grunden i all distansträning. Lugna kilometrar bygger motorn som gör de snabba passen möjliga.',
     tips: [
-      'Starta lugnare än det känns nödvändigt — de första minuterna ljuger alltid',
+      'Starta lugnare än det känns nödvändigt, de första minuterna ljuger alltid',
       'Landa mjukt med foten under kroppen och blicken framåt',
       'Kan du prata i korta meningar ligger du rätt i lugnt tempo',
     ],
   },
   interval: {
-    desc: 'Korta upprepningar i hög fart med vila emellan. Inget pass höjer din maxfart och ditt flås mer — men bara om farten är jämn och vilan används.',
+    desc: 'Korta upprepningar i hög fart med vila emellan. Inget pass höjer din maxfart och ditt flås mer, men bara om farten är jämn och vilan används.',
     tips: [
-      'Håll jämn fart genom hela intervallen — starta inte i sprint',
+      'Håll jämn fart genom hela intervallen, starta inte i sprint',
       'Använd vilan aktivt: gå eller jogga lätt så pulsen hinner sjunka',
       'Sista intervallen ska kännas tuff, men du ska klara alla i samma fart',
-      'Tappar du tekniken — sakta ner hellre än att kämpa dig sönder',
+      'Tappar du tekniken, sakta ner hellre än att kämpa dig sönder',
     ],
   },
   cycling: {
-    desc: 'Cykling — kondition med minimal belastning på leder och senor. Perfekt som volymträning och aktiv återhämtning.',
+    desc: 'Cykling, kondition med minimal belastning på leder och senor. Perfekt som volymträning och aktiv återhämtning.',
     tips: [
       'Håll jämn kadens, runt 80–90 tramptag per minut',
       'Växla lättare i backarna istället för att trampa tungt',
-      'Slappna av i axlar och grepp — kraften kommer från benen',
+      'Slappna av i axlar och grepp, kraften kommer från benen',
     ],
   },
   walking: {
-    desc: 'Promenad — aktiv återhämtning som bygger grundkondition utan att slita. Underskattat verktyg mellan de tuffa passen.',
+    desc: 'Promenad, aktiv återhämtning som bygger grundkondition utan att slita. Underskattat verktyg mellan de tuffa passen.',
     tips: [
       'Håll ett tempo där du blir lätt andfådd',
       'Ta ut steget och låt armarna jobba med',
-      'Perfekt dagen efter ett tufft pass — blodflödet snabbar på återhämtningen',
+      'Perfekt dagen efter ett tufft pass, blodflödet snabbar på återhämtningen',
     ],
   },
 }
@@ -2006,7 +2006,7 @@ export default function CardioScreen() {
               </View>
               <Text style={styles.goalModalTitle}>Passets upplägg</Text>
               <Text style={styles.infoSheetSub}>
-                Följ guidningen — rösten och bannern säger till när det är dags att växla
+                Följ guidningen, rösten och bannern säger till när det är dags att växla
               </Text>
             </View>
             <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>

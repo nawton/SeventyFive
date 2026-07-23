@@ -92,7 +92,7 @@ export function PhotoCompare({ visible, photos, onClose }: {
         ) : (
           <>
             <Text style={s.hint}>
-              Tryck på två foton från olika dagar — startfotot hamnar till vänster.
+              Tryck på två foton från olika dagar, startfotot hamnar till vänster.
             </Text>
             <FlatList
               data={sorted}

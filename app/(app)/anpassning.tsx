@@ -138,7 +138,7 @@ export default function AnpassningScreen() {
         'Testtid uppdaterad',
         count > 0
           ? `Tempoförslagen i ${count} pass har räknats om efter din nya tid.`
-          : 'Tiden är sparad — den används när du skapar din nästa löpplan.',
+          : 'Tiden är sparad, den används när du skapar din nästa löpplan.',
       )
     } catch (e: any) {
       Alert.alert('Kunde inte uppdatera', e.message)
@@ -308,7 +308,7 @@ export default function AnpassningScreen() {
             <Text style={fiveKImplausible ? s.fiveKWarn : s.segHint}>
               {fiveKImplausible
                 ? 'Ange hela 5 km-tiden (12–90 min), inte ditt tempo.'
-                : 'Sprungit ett nytt test? Tempoförslagen i din löpplan räknas om direkt — progressionen påverkas inte.'}
+                : 'Sprungit ett nytt test? Tempoförslagen i din löpplan räknas om direkt, progressionen påverkas inte.'}
             </Text>
           </View>
           <SwitchRow

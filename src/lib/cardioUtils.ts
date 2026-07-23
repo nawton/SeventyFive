@@ -59,7 +59,7 @@ export function haversineDistance(a: Coord, b: Coord): number {
 }
 
 /** Kartintegritet: klipper bort punkter inom skyddszonen (i meter) från
-    ruttens början och slut — körs INNAN passet sparas, så start- och
+    ruttens början och slut, körs INNAN passet sparas, så start- och
     slutpunkterna lagras aldrig. Returnerar tom rutt om allt låg i zonen. */
 export function trimRouteEnds(
   route: Array<[number, number]>, meters = 200,

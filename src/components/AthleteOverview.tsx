@@ -282,7 +282,7 @@ export function AthleteOverview({
             {blocked
               ? `Du har blockerat ${name.split(' ')[0] || 'personen'}. Ni kan inte följa eller se varandra förrän du avblockerar.`
               : followStatus === 'pending'
-              ? `Väntar på godkännande — när ${name.split(' ')[0] || 'personen'} godkänner din förfrågan ser du statistiken här.`
+              ? `Väntar på godkännande, när ${name.split(' ')[0] || 'personen'} godkänner din förfrågan ser du statistiken här.`
               : `Skicka en vänförfrågan för att se ${name.split(' ')[0] || 'personens'} statistik och aktiviteter.`}
           </Text>
         </View>

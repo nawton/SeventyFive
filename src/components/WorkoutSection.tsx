@@ -75,7 +75,7 @@ function fmtPace(distanceKm: number, seconds: number): string {
 const SNAP_OPEN      = 82                          // snap-to-open offset (px)
 const FULL_THRESHOLD = Math.round(SCREEN_W * 0.54) // full-swipe auto-trigger
 
-const BTN_H     = 52    // fixed — never changes
+const BTN_H     = 52    // fixed, never changes
 const BTN_MIN_W = BTN_H // circle: W === H
 const BTN_MAX_W = 170   // pill at FULL_THRESHOLD
 const BTN_R_PAD = 12    // gap from right edge of container
@@ -551,7 +551,7 @@ export function WorkoutSection({
       )}
 
       {/* ── Kollapsbar kropp: allt under rubrik + progress.
-             Monteras lat — först vid första utfällningen. ── */}
+             Monteras lat, först vid första utfällningen. ── */}
       <Animated.View style={bodyStyle}>
       {bodyMounted && (
       <View onLayout={e => {

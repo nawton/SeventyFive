@@ -130,7 +130,7 @@ export function GroupPosts({ group, me, isOwner }: {
       )}
 
       {loaded && posts.length === 0 && canPost && (
-        <Text style={s.empty}>Inga inlägg ännu — skriv gruppens första!</Text>
+        <Text style={s.empty}>Inga inlägg ännu, skriv gruppens första!</Text>
       )}
 
       <View style={{ gap: 10, marginTop: posts.length > 0 ? 10 : 0 }}>

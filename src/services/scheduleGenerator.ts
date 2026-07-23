@@ -144,13 +144,13 @@ const RUN_TABLES: Record<string, Record<RunExperience, RunLevelPlan>> = {
 
 /** Vad varje passtyp betyder — visas i schemaguiden så begreppen inte är grekiska */
 export const RUN_SESSION_INFO: Record<string, string> = {
-  'Långpass':     'Långsamt och långt — bygger uthålligheten. Farten ska kännas pratvänlig.',
-  'Intervaller':  'Korta, snabba upprepningar med vila emellan — höjer maxfart och flås.',
-  'Återhämtning': 'Kort och riktigt lugnt — hjälper kroppen hämta sig mellan de tunga passen.',
-  'Tempopass':    'Jämn, ansträngande fart strax under tävlingstempo — lär dig hålla fart längre.',
-  'Fartlek':      'Lek med farten — växla fritt mellan snabbt och lugnt under passet.',
-  'Distanspass':  'Medellångt pass i jämn, behaglig fart — vänjer kroppen vid distans.',
-  'Maratonfart':  'Kilometer i din tänkta tävlingsfart — övar exakt det tempo du ska hålla.',
+  'Långpass':     'Långsamt och långt, bygger uthålligheten. Farten ska kännas pratvänlig.',
+  'Intervaller':  'Korta, snabba upprepningar med vila emellan, höjer maxfart och flås.',
+  'Återhämtning': 'Kort och riktigt lugnt, hjälper kroppen hämta sig mellan de tunga passen.',
+  'Tempopass':    'Jämn, ansträngande fart strax under tävlingstempo, lär dig hålla fart längre.',
+  'Fartlek':      'Lek med farten, växla fritt mellan snabbt och lugnt under passet.',
+  'Distanspass':  'Medellångt pass i jämn, behaglig fart, vänjer kroppen vid distans.',
+  'Maratonfart':  'Kilometer i din tänkta tävlingsfart, övar exakt det tempo du ska hålla.',
 }
 
 const fmtKm   = (n: number) => String(n).replace('.', ',')
@@ -164,7 +164,7 @@ const progNotes = (p: ProgSpec, suffix = '') =>
   `Start ${fmtKm(p.start)} km · +${fmtKm(p.step)} km per vecka · max ${fmtKm(p.max)} km${suffix}`
 
 /** Passen i prioritetsordning för valt mål — de första N används för N dagar.
-    Exporterad för enhetstester — appen går via generateScheduleFromWizard. */
+    Exporterad för enhetstester, appen går via generateScheduleFromWizard. */
 export function buildRunSessions(distance: string, exp: RunExperience, fiveKSec: number | null): PlannedSession[] {
   const t = (RUN_TABLES[distance] ?? RUN_TABLES['5k'])[exp]
   // Tempozoner från 5 km-testet (P = sek/km i testet) — beprövade påslag:
@@ -201,7 +201,7 @@ export function rewritePaces(notes: string, fiveKSec: number): string {
   const base = notes.replace(PACE_SUFFIX_RE, '')
   const isSpec = /^Start /.test(base)
   const isRecovery = base.includes('i lugnt tempo')
-  if (!isSpec && !isRecovery) return notes          // egna anteckningar — rör ej
+  if (!isSpec && !isRecovery) return notes          // egna anteckningar, rör ej
   if (/fartlek/i.test(base)) return base            // fartlek har inget tempoförslag
   const P = fiveKSec / 5
   if (/^Start \d+×\d+\s*m/.test(base))        return `${base} · ca ${fmtPace(P - 5)} /km`
@@ -576,10 +576,10 @@ export async function generateScheduleFromWizard(
         `ONCE:${result.raceDate}:Tävlingsdag 🏁`,
         [],
         [],
-        `Dagen du tränat för — ${label}! Starta lugnt, lita på träningen och njut av loppet.`,
+        `Dagen du tränat för, ${label}! Starta lugnt, lita på träningen och njut av loppet.`,
         'cardio',
         'running',
-      ).catch(() => { /* tävlingsdagen är grädde — får inte fälla schemat */ })
+      ).catch(() => { /* tävlingsdagen är grädde, får inte fälla schemat */ })
     }
   }
   return plan.length
