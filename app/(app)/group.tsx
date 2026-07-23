@@ -516,59 +516,42 @@ export default function GroupScreen() {
           </>
         )}
 
-        {/* Inlägg — "Post something": textmeddelanden till gruppen */}
-        {mine?.status === 'accepted' && group && (
-          <GroupPosts group={group} me={me} isOwner={isOwner} />
-        )}
-
-        {/* Huvudsidan visar medlemmarnas pass — sporten filtreras i databasen */}
-        <Text style={s.sectionLabel}>SENASTE PASS</Text>
-        {mine?.status !== 'accepted' ? (
-          <Text style={s.feedEmpty}>
-            {mine?.status === 'banned'
-              ? 'Du kan inte se innehållet i den här gruppen.'
-              : group?.is_private
-                ? 'Gå med i gruppen för att se medlemmarnas pass.'
-                : 'Gå med i gruppen så ser du medlemmarnas pass här.'}
-          </Text>
-        ) : group && !group.show_feed ? (
-          <Text style={s.feedEmpty}>
-            Aktivitetsflödet är avstängt för den här gruppen.
-            {isOwner ? ' Du kan slå på det i gruppinställningarna.' : ''}
-          </Text>
-        ) : posts.length === 0 ? (
-          <Text style={s.feedEmpty}>
-            Inga pass ännu, de dyker upp här när någon i gruppen loggar
-            {group?.sport === 'gym' ? ' ett gympass' : group?.sport === 'all' ? ' ett pass' : ` ${SPORT_LABELS[group?.sport ?? 'all'].toLowerCase()}`}.
-          </Text>
+        {/* Ett blandat flöde: inlägg + pass i tidsordning, fäst inlägg överst */}
+        {mine?.status === 'accepted' && group ? (
+          <GroupPosts
+            group={group}
+            me={me}
+            isOwner={isOwner}
+            workoutPosts={group.show_feed ? posts : []}
+            workoutSocial={social}
+            onToggleWorkoutLike={toggleLike}
+            onOpenWorkout={setSelected}
+            onOpenWorkoutComments={openPost}
+            avatarPressFor={p => p.authorId !== me ? () => router.push({
+              pathname: '/(app)/athlete',
+              params: { userId: p.authorId, name: p.authorName, avatar: p.authorAvatar ?? '' },
+            } as never) : undefined}
+            menuFor={p => p.authorId !== me
+              ? () => postReportMenu(p.id, p.authorId, p.authorName)
+              : undefined}
+            hasMore={group.show_feed && hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={loadMore}
+            feedNote={!group.show_feed
+              ? `Aktivitetsflödet är avstängt för den här gruppen.${isOwner ? ' Du kan slå på det i gruppinställningarna.' : ''}`
+              : undefined}
+          />
         ) : (
-          <View style={{ gap: 12 }}>
-            {posts.map(post => (
-              <FeedWorkoutCard
-                key={post.id}
-                post={post}
-                onOpen={setSelected}
-                onAvatarPress={post.authorId !== me ? () => router.push({
-                  pathname: '/(app)/athlete',
-                  params: { userId: post.authorId, name: post.authorName, avatar: post.authorAvatar ?? '' },
-                } as never) : undefined}
-                social={social[post.id]}
-                onToggleLike={() => toggleLike(post)}
-                onOpenComments={() => openPost(post)}
-                onMenuPress={post.authorId !== me
-                  ? () => postReportMenu(post.id, post.authorId, post.authorName)
-                  : undefined}
-              />
-            ))}
-            {hasMore && (
-              <TouchableOpacity style={[s.moreBtn, { borderColor: pillEdge }]}
-                onPress={loadMore} disabled={loadingMore} activeOpacity={0.8} testID="loadMore">
-                {loadingMore
-                  ? <ActivityIndicator size="small" color={TEXT_SECONDARY} />
-                  : <Text style={s.moreText}>Visa fler pass</Text>}
-              </TouchableOpacity>
-            )}
-          </View>
+          <>
+            <Text style={s.sectionLabel}>FLÖDE</Text>
+            <Text style={s.feedEmpty}>
+              {mine?.status === 'banned'
+                ? 'Du kan inte se innehållet i den här gruppen.'
+                : group?.is_private
+                  ? 'Gå med i gruppen för att se inlägg och pass.'
+                  : 'Gå med i gruppen så ser du inlägg och pass här.'}
+            </Text>
+          </>
         )}
       </ScrollView>
 

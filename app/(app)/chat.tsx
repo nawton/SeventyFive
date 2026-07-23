@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Modal, Dimensions,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -31,6 +32,7 @@ export default function ChatScreen() {
   const otherAvatar = typeof params.avatar === 'string' && params.avatar ? params.avatar : null
   const T = useThemeStrings()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
+  const insets = useSafeAreaInsets()
 
   const [me, setMe] = useState<string | null>(null)
   const [messages, setMessages] = useState<DirectMessage[]>([])
@@ -153,7 +155,7 @@ export default function ChatScreen() {
             </TouchableOpacity>
           </View>
         )}
-        <View style={s.inputRow}>
+        <View style={[s.inputRow, { paddingBottom: Math.max(insets.bottom, 10) }]}>
           <TouchableOpacity onPress={pickImage} hitSlop={8} style={s.imageBtn} testID="chatImage">
             <Ionicons name="image-outline" size={22} color={TEXT_SECONDARY} />
           </TouchableOpacity>

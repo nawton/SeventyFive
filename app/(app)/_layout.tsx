@@ -32,7 +32,7 @@ const BUBBLE_H = 46
 // =============================================================================
 
 // Skärmar med eget skrivfält i botten — pillen skulle ligga i vägen
-const NO_TAB_BAR_ROUTES = new Set(['post'])
+const NO_TAB_BAR_ROUTES = new Set(['post', 'chat', 'chats'])
 
 function GlassTabBar({ state, navigation }: BottomTabBarProps) {
   const activeName = state.routes[state.index]?.name

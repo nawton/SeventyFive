@@ -379,6 +379,8 @@ export interface GroupPost {
   image_url: string | null
   /** Svar på ett annat inlägg — visas indraget under föräldern */
   reply_to: string | null
+  /** Fäst av ägaren — ligger alltid överst i flödet */
+  pinned: boolean
   created_at: string
   authorName: string | null
   authorAvatar: string | null
@@ -405,6 +407,7 @@ export async function getGroupPosts(groupId: string, limit = 50): Promise<GroupP
     body: p.body as string,
     image_url: (p.image_url as string | null) ?? null,
     reply_to: (p.reply_to as string | null) ?? null,
+    pinned: !!p.pinned,
     created_at: p.created_at as string,
     authorName: byId.get(p.author_id as string)?.name ?? null,
     authorAvatar: byId.get(p.author_id as string)?.avatar_url ?? null,
@@ -437,6 +440,12 @@ export async function createGroupPost(
 /** Författaren eller gruppens ägare — RLS avgör */
 export async function deleteGroupPost(postId: string): Promise<void> {
   const { error } = await supabase.from('group_posts').delete().eq('id', postId)
+  if (error) throw error
+}
+
+/** Ägaren fäster/släpper ett inlägg — max ett fäst per grupp (RPC:n städar) */
+export async function setGroupPostPinned(postId: string, pinned: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_group_post_pinned', { pid: postId, is_pinned: pinned })
   if (error) throw error
 }
 
