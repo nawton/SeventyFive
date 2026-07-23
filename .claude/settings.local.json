@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git add *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(npx --prefix /Users/antonwretenberg/Desktop/Nawton/SeventyFive supabase db dump -s public -f dump.sql --workdir /Users/antonwretenberg/Desktop/Nawton/SeventyFive)"
     ]
   }
 }

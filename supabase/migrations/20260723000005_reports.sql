@@ -2,7 +2,8 @@
 -- skrivbar för alla inloggade (bara som sig själva) men läses inte via
 -- API:t alls — granskning sker i Supabase-panelen med service-rollen.
 
-CREATE TABLE reports (
+-- IF NOT EXISTS: första push-försöket hann skapa tabellen innan det avbröts
+CREATE TABLE IF NOT EXISTS reports (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   reporter_id UUID        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   target_type TEXT        NOT NULL CHECK (target_type IN ('group', 'post', 'user')),
@@ -13,6 +14,7 @@ CREATE TABLE reports (
 
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Man anmäler som sig själv" ON reports;
 CREATE POLICY "Man anmäler som sig själv"
   ON reports FOR INSERT
   WITH CHECK (auth.uid() = reporter_id);
