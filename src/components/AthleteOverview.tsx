@@ -240,40 +240,45 @@ export function AthleteOverview({
       {/* Följ-knappen finns bara på ANDRAS profiler — man kan inte följa
           sig själv. Bara kantlinje; orange ram + text när ingen förfrågan
           skickats ännu. */}
-      {!isOwn && (
-        <TouchableOpacity
-          style={[
-            s.followBtn,
-            lift,
-            { borderColor: blocked
-              ? '#FF3B4A88'
-              : followStatus === 'none'
-                ? T.ACCENT
-                : followEdge },
-          ]}
-          onPress={onToggleFollow}
-          activeOpacity={0.8}
-          testID="athleteFollow"
-        >
-          <Text style={[
-            s.followBtnText,
-            blocked ? s.followBtnTextBlocked : followStatus === 'none' && s.followBtnTextInvite,
-          ]}>
-            {blocked ? 'Avblockera'
-              : followStatus === 'accepted' ? 'Följer'
-              : followStatus === 'pending' ? 'Förfrågan skickad' : 'Följ'}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Chatten — databasen kräver följrelation eller gemensam grupp */}
-      {!isOwn && !blocked && onMessage && (
-        <TouchableOpacity style={[s.messageBtn, lift, { borderColor: followEdge }]}
-          onPress={onMessage} activeOpacity={0.8} testID="athleteMessage">
-          <Ionicons name="chatbubble-outline" size={15} color={TEXT_PRIMARY} />
-          <Text style={s.messageBtnText}>Meddelande</Text>
-        </TouchableOpacity>
-      )}
+      {/* Följer man: Följer + Meddelande sida vid sida. Annars tar
+          följ-knappen hela bredden och meddelandeknappen väntar. */}
+      {!isOwn && (() => {
+        const showMessage = followStatus === 'accepted' && !blocked && !!onMessage
+        return (
+          <View style={s.actionRow}>
+            <TouchableOpacity
+              style={[
+                s.followBtn,
+                lift,
+                { borderColor: blocked
+                  ? '#FF3B4A88'
+                  : followStatus === 'none'
+                    ? T.ACCENT
+                    : followEdge },
+              ]}
+              onPress={onToggleFollow}
+              activeOpacity={0.8}
+              testID="athleteFollow"
+            >
+              <Text style={[
+                s.followBtnText,
+                blocked ? s.followBtnTextBlocked : followStatus === 'none' && s.followBtnTextInvite,
+              ]}>
+                {blocked ? 'Avblockera'
+                  : followStatus === 'accepted' ? 'Följer'
+                  : followStatus === 'pending' ? 'Förfrågan skickad' : 'Följ'}
+              </Text>
+            </TouchableOpacity>
+            {showMessage && (
+              <TouchableOpacity style={[s.messageBtn, lift, { borderColor: followEdge }]}
+                onPress={onMessage} activeOpacity={0.8} testID="athleteMessage">
+                <Ionicons name="chatbubble-outline" size={15} color={TEXT_PRIMARY} />
+                <Text style={s.messageBtnText}>Meddelande</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )
+      })()}
 
       {/* ── Strava-delen: typ-chips, veckan och distansgraf — visas BARA på
           andras upplåsta profiler. Den egna statistiken har en hel flik i
@@ -396,17 +401,18 @@ const s = StyleSheet.create({
   counterLabel: { color: TEXT_SECONDARY, fontSize: 13 },
   counterDivider: { width: StyleSheet.hairlineWidth, height: 34, backgroundColor: 'rgba(255,255,255,0.15)' },
 
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   followBtn: {
-    marginTop: 18, borderRadius: 26, paddingVertical: 13,
-    borderWidth: 1.5, alignItems: 'center',
+    flex: 1, borderRadius: 26, paddingVertical: 13,
+    borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
   },
   followBtnBlocked: {},
   followBtnText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   messageBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    marginTop: 10, borderRadius: 26, paddingVertical: 11, borderWidth: 1.5,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    borderRadius: 26, paddingVertical: 13, borderWidth: 1.5,
   },
-  messageBtnText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
+  messageBtnText: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
   followBtnTextInvite: { color: ACCENT },
   followBtnTextBlocked: { color: '#FF3B4A' },
 
