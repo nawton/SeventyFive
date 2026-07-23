@@ -125,7 +125,7 @@ describe('Community', () => {
   it('visar flödeskort med namn, typ, statistik och gilla-knapp', async () => {
     render(<CommunityScreen />)
     expect(await screen.findByText('Anton Wretenberg')).toBeOnTheScreen()
-    expect(screen.getByText(/Löpning — /)).toBeOnTheScreen()
+    expect(screen.getByText(/Löpning, /)).toBeOnTheScreen()
     expect(screen.getByText('5,01')).toBeOnTheScreen()
     expect(screen.getByText('45:09')).toBeOnTheScreen()   // fmtTime(2709)
     expect(screen.getByText('km')).toBeOnTheScreen()
@@ -210,7 +210,7 @@ describe('Community', () => {
     })
     render(<CommunityScreen />)
     await screen.findAllByText('Anton Wretenberg')   // löprundan + gympasset
-    expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
+    expect(screen.getByText(/Gympass, /)).toBeOnTheScreen()
     expect(screen.getByText('övningar')).toBeOnTheScreen()
     expect(screen.getByText('3')).toBeOnTheScreen()            // 2 + 1 set
     expect(screen.getByText((2 * 8 * 60 + 5 * 100).toLocaleString('sv-SE'))).toBeOnTheScreen()
@@ -229,13 +229,13 @@ describe('Community', () => {
     await screen.findAllByText('Anton Wretenberg')
     fireEvent.press(screen.getByText('Gym'))
     expect(screen.queryByText('5,01')).not.toBeOnTheScreen()
-    expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
+    expect(screen.getByText(/Gympass, /)).toBeOnTheScreen()
     fireEvent.press(screen.getByText('Cardio'))
     expect(screen.getByText('5,01')).toBeOnTheScreen()
-    expect(screen.queryByText(/Gympass — /)).not.toBeOnTheScreen()
+    expect(screen.queryByText(/Gympass, /)).not.toBeOnTheScreen()
     fireEvent.press(screen.getByText('Alla'))
     expect(screen.getByText('5,01')).toBeOnTheScreen()
-    expect(screen.getByText(/Gympass — /)).toBeOnTheScreen()
+    expect(screen.getByText(/Gympass, /)).toBeOnTheScreen()
   })
 
   it('tryck på kortet öppnar samma passdetaljvy som statistiken', async () => {
