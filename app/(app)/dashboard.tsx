@@ -1100,7 +1100,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', marginBottom: -4,
   },
-  sectionTitle: { color: '#383840', fontSize: 11, fontWeight: '700', letterSpacing: 1.8 },
+  // TEXT_SECONDARY i stället för fast mörkgrå — den gamla #383840 drunknade
+  // nästan helt mot mörka bakgrunden
+  sectionTitle: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.8 },
   countBadge: {
     backgroundColor: CARD,
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
