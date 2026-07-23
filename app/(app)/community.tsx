@@ -6,7 +6,7 @@ import {
 import { SafeScreen } from '@/components/SafeScreen'
 import { AppRefreshControl, useAppRefresh } from '@/components/AppRefresh'
 import { GroupWizard } from '@/components/GroupWizard'
-import { GroupScanSheet } from '@/components/GroupScanSheet'
+import { GroupSearchSheet } from '@/components/GroupSearchSheet'
 import { getMyGroups } from '@/services/groups'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
@@ -176,7 +176,7 @@ export default function CommunityScreen() {
   // Grupper: mina grupper + skaparguiden
   const [myGroups, setMyGroups] = useState<Awaited<ReturnType<typeof getMyGroups>>>([])
   const [wizardOpen, setWizardOpen] = useState(false)
-  const [scanOpen, setScanOpen] = useState(false)
+  const [groupSearchOpen, setGroupSearchOpen] = useState(false)
   const [meId, setMeId] = useState<string | null>(null)
   const chrome = useCardChrome()
   const loadGroups = useCallback(async () => {
@@ -261,6 +261,22 @@ export default function CommunityScreen() {
 
       {segment === 'groups' ? (
         <ScrollView contentContainerStyle={s.groupsScroll} showsVerticalScrollIndicator={false}>
+          {/* Sök och skapa som små knappar överst — skanningen bor i sökvyn */}
+          <View style={s.groupActions}>
+            <TouchableOpacity
+              style={[s.groupActionBtn, { borderColor: T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)' }]}
+              onPress={() => setGroupSearchOpen(true)} activeOpacity={0.8} testID="searchGroups">
+              <Ionicons name="search" size={15} color={TEXT_PRIMARY} />
+              <Text style={s.groupActionText}>Sök grupper</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.groupActionBtn, s.groupActionAccent]}
+              onPress={() => setWizardOpen(true)} activeOpacity={0.85} testID="createGroup">
+              <Ionicons name="add" size={17} color={ACCENT_CONTRAST} />
+              <Text style={[s.groupActionText, { color: ACCENT_CONTRAST }]}>Skapa</Text>
+            </TouchableOpacity>
+          </View>
+
+          {myGroups.length > 0 && <Text style={s.groupsLabel}>MINA GRUPPER</Text>}
           {myGroups.map(g => (
             <TouchableOpacity
               key={g.id}
@@ -288,20 +304,11 @@ export default function CommunityScreen() {
               <Ionicons name="people-outline" size={44} color={TEXT_SECONDARY} />
               <Text style={s.groupsEmptyTitle}>Inga grupper ännu</Text>
               <Text style={s.groupsEmptyBody}>
-                Skapa en grupp och peppa varandra genom utmaningen.
+                Skapa en grupp och peppa varandra genom utmaningen, eller sök
+                upp en som redan finns.
               </Text>
             </View>
           )}
-
-          <TouchableOpacity style={s.createGroupBtn} onPress={() => setWizardOpen(true)} activeOpacity={0.85} testID="createGroup">
-            <Ionicons name="add" size={19} color={ACCENT_CONTRAST} />
-            <Text style={s.createGroupText}>Skapa grupp</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.scanGroupBtn, { borderColor: T.ACCENT }]}
-            onPress={() => setScanOpen(true)} activeOpacity={0.8} testID="scanGroup">
-            <Ionicons name="qr-code-outline" size={17} color={T.ACCENT} />
-            <Text style={[s.scanGroupText, { color: T.ACCENT }]}>Skanna QR-kod</Text>
-          </TouchableOpacity>
         </ScrollView>
       ) : (
         <FlatList
@@ -436,11 +443,11 @@ export default function CommunityScreen() {
         }}
       />
 
-      <GroupScanSheet
-        visible={scanOpen}
-        onClose={() => setScanOpen(false)}
-        onFound={g => {
-          setScanOpen(false)
+      <GroupSearchSheet
+        visible={groupSearchOpen}
+        onClose={() => setGroupSearchOpen(false)}
+        onOpenGroup={g => {
+          setGroupSearchOpen(false)
           router.push({ pathname: '/(app)/group', params: { groupId: g.id } } as never)
         }}
       />
@@ -460,16 +467,17 @@ const s = StyleSheet.create({
   groupsEmpty: { alignItems: 'center', gap: 8, paddingTop: 60, paddingHorizontal: 30 },
   groupsEmptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 4 },
   groupsEmptyBody: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  createGroupBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: ACCENT, borderRadius: 999, paddingVertical: 14, marginTop: 8,
+  groupActions: { flexDirection: 'row', gap: 10 },
+  groupActionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, borderWidth: 1.5, borderRadius: 999, paddingVertical: 10,
   },
-  createGroupText: { color: ACCENT_CONTRAST, fontSize: 16, fontWeight: '700' },
-  scanGroupBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    borderWidth: 1.5, borderRadius: 999, paddingVertical: 13,
+  groupActionAccent: { backgroundColor: ACCENT, borderWidth: 0 },
+  groupActionText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
+  groupsLabel: {
+    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
+    letterSpacing: 1.5, marginTop: 8, paddingHorizontal: 4,
   },
-  scanGroupText: { fontSize: 15, fontWeight: '700' },
 
   screen: { flex: 1, backgroundColor: BG },
   segmentRow: {

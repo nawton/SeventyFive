@@ -24,6 +24,7 @@ jest.mock('@/services/groups', () => ({
   getMyGroups: jest.fn().mockResolvedValue([
     { id: 'g1', name: 'Löparligan', avatar_url: null, is_private: false, memberCount: 3, myStatus: 'accepted' },
   ]),
+  searchGroups: jest.fn().mockResolvedValue([]),
 }))
 jest.mock('@/components/GroupWizard', () => {
   const React = require('react')
@@ -283,6 +284,15 @@ describe('Community', () => {
     fireEvent.press(screen.getByText('Grupper'))
     fireEvent.press(await screen.findByTestId('createGroup'))
     expect(screen.getByText('wizard:open')).toBeOnTheScreen()
+  })
+
+  it('Sök grupper öppnar sökvyn med QR-skanning', async () => {
+    render(<CommunityScreen />)
+    await screen.findByText('Anton Wretenberg')
+    fireEvent.press(screen.getByText('Grupper'))
+    fireEvent.press(await screen.findByTestId('searchGroups'))
+    expect(screen.getByText('Hitta grupper')).toBeOnTheScreen()
+    expect(screen.getByTestId('scanGroup')).toBeOnTheScreen()
   })
 
   it('tomt flöde visar tom-läge med Hitta vänner-knapp', async () => {

@@ -115,6 +115,29 @@ export async function getMyGroups(userId: string): Promise<Array<Group & { membe
   return rows.map((g, i) => ({ ...g, memberCount: counts[i] }))
 }
 
+/** Sök bland alla grupper på namn — upptäcktsvägen utöver QR och inbjudan */
+export async function searchGroups(query: string): Promise<Array<Group & { memberCount: number }>> {
+  const q = query.trim().replace(/[%_]/g, m => `\\${m}`)
+  if (q.length < 2) return []
+  const { data, error } = await supabase
+    .from('groups')
+    .select('*')
+    .ilike('name', `%${q}%`)
+    .order('created_at', { ascending: false })
+    .limit(25)
+  if (error || !data) return []
+  const rows = data as Group[]
+  const counts = await Promise.all(rows.map(async g => {
+    const { count } = await supabase
+      .from('group_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('group_id', g.id)
+      .eq('status', 'accepted')
+    return count ?? 0
+  }))
+  return rows.map((g, i) => ({ ...g, memberCount: counts[i] }))
+}
+
 export async function getGroup(groupId: string): Promise<Group | null> {
   const { data } = await supabase.from('groups').select('*').eq('id', groupId).maybeSingle()
   return (data as Group) ?? null
