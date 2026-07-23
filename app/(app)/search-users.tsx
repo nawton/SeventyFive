@@ -13,7 +13,7 @@ import {
 } from '@/services/follows'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
-import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useThemeStrings } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
 
 // =============================================================================
@@ -27,6 +27,9 @@ import { AppTextInput } from '@/components/AppTextInput'
 const DEBOUNCE_MS = 300
 
 export default function SearchUsersScreen() {
+  // Ramar som schemasträngar — dynamiska fryser, vit-alfa syns inte på ljust
+  const T = useThemeStrings()
+  const pillEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)'
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<ProfileSearchHit[]>([])
   const [statuses, setStatuses] = useState<Record<string, FollowStatus>>({})
@@ -142,7 +145,7 @@ export default function SearchUsersScreen() {
               </TouchableOpacity>
               {/* Följstatusen direkt i träffen: Följ → Förfrågad → Följer */}
               <TouchableOpacity
-                style={[s.followPill, status === 'none' && s.followPillInvite]}
+                style={[s.followPill, { borderColor: status === 'none' ? T.ACCENT : pillEdge }]}
                 onPress={() => toggleFollow(item.id)}
                 activeOpacity={0.8}
                 testID={`follow-${item.id}`}
@@ -200,11 +203,10 @@ const s = StyleSheet.create({
   rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginLeft: 66 },
 
   followPill: {
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)',
+    borderWidth: 1.5,
     borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
     minWidth: 92, alignItems: 'center',
   },
-  followPillInvite: { borderColor: ACCENT },
   followPillText: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '700' },
   followPillTextInvite: { color: ACCENT },
 
