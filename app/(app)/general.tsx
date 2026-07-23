@@ -297,7 +297,8 @@ export default function GeneralScreen() {
 
         <Section title="App">
           <SettingRow icon="information-circle-outline" label="Version" value="1.0.0" />
-          <SettingRow icon="lock-closed-outline" label="Integritetspolicy" onPress={() => {}} last />
+          <SettingRow icon="lock-closed-outline" label="Integritetspolicy"
+            onPress={() => router.push('/(app)/privacy-policy' as never)} last />
         </Section>
 
         <Section title="Konto">
