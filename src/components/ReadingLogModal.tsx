@@ -3,15 +3,17 @@ import {
   Modal,
   View,
   Text,
-  TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated'
 
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, ACCENT_CONTRAST, CARD_BORDER } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,6 +27,8 @@ interface Props {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
+// Bottenark med appens dragfysik: dra i handtags-/rubrikområdet, fjädrar
+// tillbaka under tröskeln och stängs förbi den. Fälten sköter tangentbordet.
 
 export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props) {
   const [book, setBook] = useState('')
@@ -35,8 +39,19 @@ export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props
     if (visible) {
       setBook('')
       setPages(targetPages ? String(targetPages) : '')
+      sheetY.value = 0
     }
   }, [visible, targetPages])
+
+  const sheetY = useSharedValue(0)
+  const pan = Gesture.Pan()
+    .activeOffsetY([-12, 12])
+    .onUpdate(e => { sheetY.value = Math.max(0, e.translationY) })
+    .onEnd(e => {
+      if (e.translationY > 110 || e.velocityY > 800) runOnJS(onClose)()
+      else sheetY.value = withSpring(0, { damping: 20, stiffness: 260 })
+    })
+  const sheetAnim = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }))
 
   const pagesNum = parseInt(pages, 10)
   const valid = !Number.isNaN(pagesNum) && pagesNum > 0
@@ -55,66 +70,75 @@ export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      transparent
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.container}>
-          <View style={styles.handle} />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={styles.backdrop}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={StyleSheet.absoluteFill} />
+        </TouchableWithoutFeedback>
 
-          <Text style={styles.emoji}>📖</Text>
-          <Text style={styles.title}>Logga läsning</Text>
-          <Text style={styles.subtitle}>
-            {targetPages
-              ? `Minst ${targetPages} sidor i en riktig bok, inte poddar eller artiklar.`
-              : 'Vad läste du idag?'}
-          </Text>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          {/* Färgerna på inre vyn — dynamiska färger på animerade noder kraschar */}
+          <Animated.View style={sheetAnim}>
+            <View style={styles.sheet}>
+              <GestureDetector gesture={pan}>
+                <View>
+                  <View style={styles.handle} />
+                  <Text style={styles.emoji}>📖</Text>
+                  <Text style={styles.title}>Logga läsning</Text>
+                  <Text style={styles.subtitle}>
+                    {targetPages
+                      ? `Minst ${targetPages} sidor i en riktig bok, inte poddar eller artiklar.`
+                      : 'Vad läste du idag?'}
+                  </Text>
+                </View>
+              </GestureDetector>
 
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>BOK</Text>
-            <AppTextInput
-              style={styles.input}
-              placeholder="Boktitel (valfritt)"
-              placeholderTextColor="#444"
-              value={book}
-              onChangeText={setBook}
-              returnKeyType="next"
-            />
-          </View>
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>BOK</Text>
+                <AppTextInput
+                  style={styles.input}
+                  placeholder="Boktitel (valfritt)"
+                  value={book}
+                  onChangeText={setBook}
+                  returnKeyType="next"
+                />
+              </View>
 
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>SIDOR</Text>
-            <AppTextInput
-              style={styles.input}
-              placeholder={targetPages ? String(targetPages) : '10'}
-              placeholderTextColor="#444"
-              value={pages}
-              onChangeText={setPages}
-              keyboardType="number-pad"
-              maxLength={4}
-            />
-          </View>
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>SIDOR</Text>
+                <AppTextInput
+                  style={styles.input}
+                  placeholder={targetPages ? String(targetPages) : '10'}
+                  value={pages}
+                  onChangeText={setPages}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+              </View>
 
-          <TouchableOpacity
-            style={[styles.saveButton, (!valid || saving) && styles.disabled]}
-            onPress={handleSave}
-            disabled={!valid || saving}
-            activeOpacity={0.8}
-          >
-            {saving
-              ? <ActivityIndicator color="#000" />
-              : <Text style={styles.saveButtonText}>Markera som läst</Text>
-            }
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveButton, (!valid || saving) && styles.disabled]}
+                onPress={handleSave}
+                disabled={!valid || saving}
+                activeOpacity={0.8}
+              >
+                {saving
+                  ? <ActivityIndicator color="#000" />
+                  : <Text style={styles.saveButtonText}>Markera som läst</Text>
+                }
+              </TouchableOpacity>
 
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={saving}>
-            <Text style={styles.cancelText}>Avbryt</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+              <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={saving}>
+                <Text style={styles.cancelText}>Avbryt</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </View>
+      </GestureHandlerRootView>
     </Modal>
   )
 }
@@ -122,23 +146,27 @@ export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  screen: {
+  backdrop: {
     flex: 1,
-    backgroundColor: BG,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.55)',
   },
-  container: {
-    flex: 1,
+  sheet: {
+    backgroundColor: BG,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 24,
-    paddingTop: 12,
+    paddingTop: 10,
+    paddingBottom: 40,
     gap: 16,
   },
   handle: {
     width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: BORDER,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(128,128,128,0.45)',
     alignSelf: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   emoji: {
     fontSize: 48,
@@ -155,6 +183,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     lineHeight: 22,
+    marginTop: 6,
   },
   field: {
     gap: 6,
@@ -183,7 +212,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveButtonText: {
-    color: '#000',
+    color: ACCENT_CONTRAST,
     fontSize: 16,
     fontWeight: '700',
   },

@@ -69,9 +69,10 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
   }))
 
   function handlePress() {
+    // Diskret tryckrespons — den gamla studsen (0.92 + lös fjäder) hoppade
     scale.value = withSequence(
-      withTiming(0.92, { duration: 80 }),
-      withSpring(1, { damping: 12, stiffness: 200 })
+      withTiming(0.97, { duration: 70 }),
+      withSpring(1, { damping: 22, stiffness: 300 })
     )
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     onPress()
