@@ -5,6 +5,7 @@ import {
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
+import * as ImagePicker from 'expo-image-picker'
 import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -13,8 +14,9 @@ import { GroupWizard } from '@/components/GroupWizard'
 import { GroupInviteSheet } from '@/components/GroupInviteSheet'
 import {
   getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember,
-  deleteGroup, acceptGroupInvite, type Group, type GroupMember,
+  deleteGroup, acceptGroupInvite, updateGroupImage, type Group, type GroupMember,
 } from '@/services/groups'
+import { compressImage } from '@/lib/image'
 import {
   BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome, accentAlpha,
 } from '@/lib/theme'
@@ -80,6 +82,21 @@ export default function GroupScreen() {
     }
   }
 
+  /** Skaparen byter gruppbild genom att trycka på avataren */
+  async function changeImage() {
+    if (!isOwner || !group || !me) return
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [1, 1],
+    })
+    if (res.canceled || !res.assets[0]) return
+    try {
+      const uri = await compressImage(res.assets[0].uri)
+      setGroup(await updateGroupImage(me, group.id, uri))
+    } catch {
+      Alert.alert('Kunde inte uppdatera bilden', 'Kontrollera anslutningen och försök igen.')
+    }
+  }
+
   /** Avböj inbjudan eller lämna gruppen — samma sak i databasen: raden bort */
   async function declineOrLeave() {
     if (!group || !me) return
@@ -137,7 +154,15 @@ export default function GroupScreen() {
 
       <ScrollView ref={scrollRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
-          <FeedAvatar url={group?.avatar_url ?? null} fallback={(group?.name ?? '?').charAt(0).toUpperCase()} size={92} />
+          <TouchableOpacity onPress={changeImage} disabled={!isOwner}
+            activeOpacity={0.75} testID="groupAvatar">
+            <FeedAvatar url={group?.avatar_url ?? null} fallback={(group?.name ?? '?').charAt(0).toUpperCase()} size={92} />
+            {isOwner && (
+              <View style={[s.avatarPencil, { backgroundColor: T.ACCENT }]}>
+                <Ionicons name="pencil" size={12} color={light ? '#fff' : '#000'} />
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={s.name}>{group?.name ?? ''}</Text>
           <View style={s.metaRow}>
             <View style={s.metaItem}>
@@ -269,6 +294,7 @@ export default function GroupScreen() {
         members={members}
         onClose={() => setInviteOpen(false)}
         onInvited={() => load().catch(() => {})}
+        onAvatarPress={isOwner ? changeImage : undefined}
       />
     </SafeScreen>
   )
@@ -302,6 +328,11 @@ const s = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
 
   hero: { alignItems: 'center', paddingTop: 10, paddingBottom: 22, gap: 10 },
+  avatarPencil: {
+    position: 'absolute', bottom: -2, right: -2,
+    width: 26, height: 26, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center',
+  },
   name: { color: TEXT_PRIMARY, fontSize: 24, fontWeight: '800', textAlign: 'center' },
   metaRow: {
     flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center',

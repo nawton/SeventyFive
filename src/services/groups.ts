@@ -93,6 +93,21 @@ export async function updateGroup(userId: string, groupId: string, input: Create
   return data as Group
 }
 
+/** Byt bara gruppbilden — tryck på avataren på gruppsidan/QR-sidan */
+export async function updateGroupImage(userId: string, groupId: string, imageUri: string): Promise<Group> {
+  const path = `groups/${userId}-${Date.now()}.jpg`
+  await uploadImage('avatars', path, imageUri)
+  const avatarUrl = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
+  const { data, error } = await supabase
+    .from('groups')
+    .update({ avatar_url: avatarUrl })
+    .eq('id', groupId)
+    .select()
+    .single()
+  if (error) throw error
+  return data as Group
+}
+
 /** Grupper jag är medlem i (inkl. väntande förfrågningar jag skickat) */
 export async function getMyGroups(userId: string): Promise<Array<Group & { memberCount: number; myStatus: string }>> {
   const { data, error } = await supabase

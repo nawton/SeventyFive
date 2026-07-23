@@ -6,13 +6,14 @@ import {
 import * as Haptics from 'expo-haptics'
 import QRCode from 'react-native-qrcode-svg'
 import { SafeScreen } from '@/components/SafeScreen'
+import { GlassCircleButton } from '@/components/GlassButton'
 import { AppTextInput } from '@/components/AppTextInput'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { Ionicons } from '@/components/Icon'
 import { groupQrValue } from '@/lib/groupQr'
 import { getFollowLists, type FollowProfile } from '@/services/follows'
 import { inviteToGroup, type Group, type GroupMember } from '@/services/groups'
-import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, useThemeStrings } from '@/lib/theme'
 
 // =============================================================================
 // BJUD IN TILL GRUPPEN — som förlagan: sök bland dina följare, de som redan
@@ -20,13 +21,15 @@ import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/t
 // Vi har inga grupplänkar/QR ännu, så delning sker via delningsarket.
 // =============================================================================
 
-export function GroupInviteSheet({ visible, userId, group, members, onClose, onInvited }: {
+export function GroupInviteSheet({ visible, userId, group, members, onClose, onInvited, onAvatarPress }: {
   visible: boolean
   userId: string | null
   group: Group | null
   members: GroupMember[]
   onClose: () => void
   onInvited: () => void
+  /** Sätt för skaparen — tryck på avataren på QR-sidan byter gruppbild */
+  onAvatarPress?: () => void
 }) {
   const T = useThemeStrings()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
@@ -63,7 +66,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
     if (!group) return
     Haptics.selectionAsync()
     Share.share({
-      message: `Häng med i gruppen "${group.name}" i SeventyFive! Öppna Community → Grupper och gå med.`,
+      message: `Häng med i gruppen "${group.name}" i SeventyFive! ${groupQrValue(group.id)}`,
     }).catch(() => {})
   }
 
@@ -160,15 +163,42 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
           )}
         </ScrollView>
 
-        {/* QR-koden — alltid svart på vitt kort, det kräver skannbarheten */}
-        <Modal visible={qrOpen} transparent animationType="fade" onRequestClose={() => setQrOpen(false)}>
-          <TouchableOpacity style={s.qrBackdrop} activeOpacity={1} onPress={() => setQrOpen(false)} testID="qrBackdrop">
-            <View style={s.qrCard} onStartShouldSetResponder={() => true}>
-              {group && <QRCode value={groupQrValue(group.id)} size={216} backgroundColor="#FFFFFF" color="#000000" />}
-              <Text style={s.qrName} numberOfLines={1}>{group?.name ?? ''}</Text>
-              <Text style={s.qrHint}>Låt en kompis skanna koden för att hitta gruppen</Text>
+        {/* QR-sidan — koden i accentfärgen med 75-loggan i mitten. ecl H
+            tål att loggan täcker mitten av koden */}
+        <Modal visible={qrOpen} animationType="slide" onRequestClose={() => setQrOpen(false)}>
+          <SafeScreen style={s.qrScreen}>
+            <View style={s.qrHeader}>
+              <GlassCircleButton icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
+                onPress={() => setQrOpen(false)} fallbackStyle={s.qrIconFallback} />
+              <Text style={s.qrHeaderTitle}>QR-kod</Text>
+              <View style={{ width: 40 }} />
             </View>
-          </TouchableOpacity>
+            <View style={s.qrBody}>
+              <TouchableOpacity onPress={onAvatarPress} disabled={!onAvatarPress}
+                activeOpacity={0.75} testID="qrAvatar">
+                <FeedAvatar url={group?.avatar_url ?? null}
+                  fallback={(group?.name ?? '?').charAt(0).toUpperCase()} size={84} />
+              </TouchableOpacity>
+              <Text style={s.qrTitle}>Skanna för att gå med{'\n'}i {group?.name ?? ''}</Text>
+              <View style={s.qrBox}>
+                {group && (
+                  <QRCode value={groupQrValue(group.id)} size={244}
+                    color={T.ACCENT} backgroundColor="transparent" ecl="H" />
+                )}
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <View style={s.qrLogoWrap}>
+                    <View style={[s.qrLogo, { backgroundColor: T.BG }]}>
+                      <Text style={[s.qrLogoText, { color: T.ACCENT }]}>75</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity style={[s.qrShareBtn, { borderColor: T.ACCENT }]}
+                onPress={share} activeOpacity={0.8} testID="qrShare">
+                <Text style={[s.qrShareText, { color: T.ACCENT }]}>Dela länk</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeScreen>
         </Modal>
       </SafeScreen>
     </Modal>
@@ -210,14 +240,28 @@ const s = StyleSheet.create({
   },
   empty: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 30 },
 
-  qrBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center', justifyContent: 'center', padding: 32,
+  qrScreen: { flex: 1, backgroundColor: BG },
+  qrHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 10,
   },
-  qrCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 24, padding: 26,
-    alignItems: 'center', gap: 10, alignSelf: 'stretch',
+  qrIconFallback: { backgroundColor: CARD },
+  qrHeaderTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
+  qrBody: { flex: 1, alignItems: 'center', paddingTop: 28, paddingHorizontal: 28, gap: 22 },
+  qrTitle: {
+    color: TEXT_PRIMARY, fontSize: 21, fontWeight: '800',
+    textAlign: 'center', lineHeight: 28,
   },
-  qrName: { color: '#0B0B0D', fontSize: 18, fontWeight: '800', marginTop: 8 },
-  qrHint: { color: 'rgba(0,0,0,0.55)', fontSize: 13, textAlign: 'center', lineHeight: 19 },
+  qrBox: { padding: 14 },
+  qrLogoWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  qrLogo: {
+    width: 56, height: 56, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  qrLogoText: { fontFamily: NUM_FONT, fontSize: 24, letterSpacing: -1 },
+  qrShareBtn: {
+    borderWidth: 1.5, borderRadius: 999,
+    paddingHorizontal: 26, paddingVertical: 12, marginTop: 6,
+  },
+  qrShareText: { fontSize: 15, fontWeight: '700' },
 })
