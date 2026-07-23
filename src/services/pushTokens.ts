@@ -4,6 +4,19 @@ import { supabase } from '@/lib/supabase'
 
 const IS_EXPO_GO = Constants.appOwnership === 'expo'
 
+// Notiser som kommer medan appen är ÖPPEN visas som banner ändå — utan
+// handler sväljs de tyst. Expo Go saknar pushmodulen, därav vakten.
+if (!IS_EXPO_GO) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  })
+}
+
 // =============================================================================
 // PUSH-TOKENS — registrerar enhetens Expo-pushtoken så databastriggrarna
 // kan skicka notiser om vänförfrågningar, gillanden och kommentarer.

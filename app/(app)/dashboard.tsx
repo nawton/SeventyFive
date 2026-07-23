@@ -58,6 +58,7 @@ import { getSocialNotificationCount } from '@/services/social'
 import { getIncomingRequestCount } from '@/services/follows'
 import { getGroupNotificationCount } from '@/services/groups'
 import { getUnreadMessageCount } from '@/services/messages'
+import { registerPushToken } from '@/services/pushTokens'
 import { getNotifSeenAt, getRaceDate } from '@/lib/prefs'
 import { isoDate, todayMidnight } from '@/lib/scheduleDates'
 import { weekdayOf } from '@/lib/date'
@@ -330,6 +331,9 @@ export default function DashboardScreen() {
       getCardioWorkoutsForDate(user.id, isoDate(todayMidnight()))
         .then(ws => { if (ws.length > 0) setHasActivityToday(true) })
         .catch(() => {})
+      // Håller enhetens pushtoken färsk (no-op i Expo Go/utan rättighet) —
+      // annars tappas notiserna vid ny enhet eller ominloggning
+      registerPushToken().catch(() => {})
       Promise.allSettled([
         getWorkoutSessions(user.id),
         getCompletedSessionIds(user.id, isoDate(todayMidnight())),

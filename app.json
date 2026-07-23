@@ -35,7 +35,8 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Vi använder din plats för att spåra din löprutt."
+          "locationWhenInUsePermission": "Vi använder din plats för att spåra din löprutt.",
+          "isIosBackgroundLocationEnabled": true
         }
       ],
       [
