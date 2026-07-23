@@ -67,6 +67,32 @@ export async function createGroup(userId: string, input: CreateGroupInput): Prom
   return data as Group
 }
 
+/** Ägaren uppdaterar gruppen (RLS). Ny bild laddas upp, annars behålls den gamla */
+export async function updateGroup(userId: string, groupId: string, input: CreateGroupInput): Promise<Group> {
+  let avatarUrl: string | undefined
+  if (input.imageUri) {
+    const path = `groups/${userId}-${Date.now()}.jpg`
+    await uploadImage('avatars', path, input.imageUri)
+    avatarUrl = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
+  }
+  const { data, error } = await supabase
+    .from('groups')
+    .update({
+      name: input.name.trim(),
+      description: input.description.trim(),
+      sport: input.sport,
+      tags: input.tags,
+      is_private: input.isPrivate,
+      location: input.location?.trim() || null,
+      ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+    })
+    .eq('id', groupId)
+    .select()
+    .single()
+  if (error) throw error
+  return data as Group
+}
+
 /** Grupper jag är medlem i (inkl. väntande förfrågningar jag skickat) */
 export async function getMyGroups(userId: string): Promise<Array<Group & { memberCount: number; myStatus: string }>> {
   const { data, error } = await supabase

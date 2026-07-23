@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActionSheetIOS, Platform,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActionSheetIOS, Platform, Share,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
@@ -9,6 +9,7 @@ import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
+import { GroupWizard } from '@/components/GroupWizard'
 import {
   getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember,
   deleteGroup, type Group, type GroupMember,
@@ -26,6 +27,10 @@ import {
 const SPORT_LABELS: Record<string, string> = {
   all: 'Alla sporter', running: 'Löpning', cycling: 'Cykling', walking: 'Promenad', gym: 'Gym',
 }
+const SPORT_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  all: 'infinite-outline', running: 'fitness-outline', cycling: 'bicycle-outline',
+  walking: 'walk-outline', gym: 'barbell-outline',
+}
 
 export default function GroupScreen() {
   const params = useLocalSearchParams<{ groupId?: string }>()
@@ -34,10 +39,14 @@ export default function GroupScreen() {
   const chrome = useCardChrome()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
   const pillEdge = light ? 'rgba(0,0,0,0.30)' : 'rgba(255,255,255,0.35)'
+  const circleEdge = light ? 'rgba(0,0,0,0.10)' : 'transparent'
 
   const [me, setMe] = useState<string | null>(null)
   const [group, setGroup] = useState<Group | null>(null)
   const [members, setMembers] = useState<GroupMember[]>([])
+  const [editOpen, setEditOpen] = useState(false)
+  const scrollRef = useRef<ScrollView>(null)
+  const membersY = useRef(0)
 
   const load = useCallback(async () => {
     if (!groupId) return
@@ -91,9 +100,19 @@ export default function GroupScreen() {
     } else destroy()
   }
 
+  function shareGroup(invite: boolean) {
+    if (!group) return
+    Haptics.selectionAsync()
+    Share.share({
+      message: invite
+        ? `Häng med i gruppen "${group.name}" i SeventyFive! Öppna Community → Grupper och gå med.`
+        : `Kolla in gruppen "${group.name}" i SeventyFive${group.description ? ` — ${group.description}` : ''}`,
+    }).catch(() => {})
+  }
+
   const joinLabel = !mine
     ? (group?.is_private ? 'Begär medlemskap' : 'Gå med')
-    : mine.status === 'pending' ? 'Förfrågan skickad' : isOwner ? 'Skapare' : 'Medlem'
+    : 'Förfrågan skickad'
 
   return (
     <SafeScreen style={s.screen}>
@@ -107,17 +126,29 @@ export default function GroupScreen() {
         ) : <View style={{ width: 40 }} />}
       </View>
 
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
           <FeedAvatar url={group?.avatar_url ?? null} fallback={(group?.name ?? '?').charAt(0).toUpperCase()} size={92} />
           <Text style={s.name}>{group?.name ?? ''}</Text>
           <View style={s.metaRow}>
-            <Ionicons name={group?.is_private ? 'lock-closed-outline' : 'earth-outline'} size={13} color={TEXT_SECONDARY} />
-            <Text style={s.meta}>
-              {group?.is_private ? 'Privat' : 'Offentlig'}
-              {' · '}{SPORT_LABELS[group?.sport ?? 'all']}
-              {group?.location ? ` · ${group.location}` : ' · Global'}
-            </Text>
+            <View style={s.metaItem}>
+              <Ionicons name={SPORT_ICONS[group?.sport ?? 'all']} size={14} color={TEXT_SECONDARY} />
+              <Text style={s.meta}>{SPORT_LABELS[group?.sport ?? 'all']}</Text>
+            </View>
+            <View style={s.metaItem}>
+              <Ionicons name="people-outline" size={14} color={TEXT_SECONDARY} />
+              <Text style={s.meta}>{accepted.length} {accepted.length === 1 ? 'medlem' : 'medlemmar'}</Text>
+            </View>
+            <View style={s.metaItem}>
+              <Ionicons name={group?.is_private ? 'lock-closed-outline' : 'earth-outline'} size={14} color={TEXT_SECONDARY} />
+              <Text style={s.meta}>{group?.is_private ? 'Privat' : 'Offentlig'}</Text>
+            </View>
+            {group?.location ? (
+              <View style={s.metaItem}>
+                <Ionicons name="location-outline" size={14} color={TEXT_SECONDARY} />
+                <Text style={s.meta}>{group.location}</Text>
+              </View>
+            ) : null}
           </View>
           {group?.tags?.length ? (
             <View style={s.tagRow}>
@@ -130,16 +161,34 @@ export default function GroupScreen() {
           ) : null}
           {group?.description ? <Text style={s.desc}>{group.description}</Text> : null}
 
-          <TouchableOpacity
-            style={[s.joinBtn, { borderColor: !mine ? T.ACCENT : pillEdge }]}
-            onPress={handleJoinLeave}
-            onLongPress={() => { if (mine && !isOwner) handleJoinLeave() }}
-            activeOpacity={0.8}
-            disabled={isOwner || mine?.status === 'pending'}
-            testID="groupJoin"
-          >
-            <Text style={[s.joinText, !mine && { color: T.ACCENT }]}>{joinLabel}</Text>
-          </TouchableOpacity>
+          {/* Åtgärdscirklar som i förlagan — medlemmar bjuder in, skaparen redigerar */}
+          <View style={s.actionsRow}>
+            {mine?.status === 'accepted' && (
+              <ActionCircle icon="person-add-outline" label="Bjud in" edge={circleEdge}
+                onPress={() => shareGroup(true)} testID="groupInvite" />
+            )}
+            {isOwner && (
+              <ActionCircle icon="pencil-outline" label="Redigera" edge={circleEdge}
+                onPress={() => { Haptics.selectionAsync(); setEditOpen(true) }} testID="groupEdit" />
+            )}
+            <ActionCircle icon="share-outline" label="Dela" edge={circleEdge}
+              onPress={() => shareGroup(false)} testID="groupShare" />
+            <ActionCircle icon="people-outline" label="Medlemmar" edge={circleEdge}
+              onPress={() => scrollRef.current?.scrollTo({ y: Math.max(0, membersY.current - 8), animated: true })}
+              testID="groupMembers" />
+          </View>
+
+          {(!mine || mine.status === 'pending') && (
+            <TouchableOpacity
+              style={[s.joinBtn, { borderColor: !mine ? T.ACCENT : pillEdge }]}
+              onPress={handleJoinLeave}
+              activeOpacity={0.8}
+              disabled={mine?.status === 'pending'}
+              testID="groupJoin"
+            >
+              <Text style={[s.joinText, !mine && { color: T.ACCENT }]}>{joinLabel}</Text>
+            </TouchableOpacity>
+          )}
           {mine && !isOwner && mine.status === 'accepted' && (
             <TouchableOpacity onPress={handleJoinLeave} hitSlop={8}>
               <Text style={s.leave}>Lämna gruppen</Text>
@@ -170,7 +219,9 @@ export default function GroupScreen() {
           </>
         )}
 
-        <Text style={s.sectionLabel}>{accepted.length} {accepted.length === 1 ? 'MEDLEM' : 'MEDLEMMAR'}</Text>
+        <Text style={s.sectionLabel} onLayout={e => { membersY.current = e.nativeEvent.layout.y }}>
+          {accepted.length} {accepted.length === 1 ? 'MEDLEM' : 'MEDLEMMAR'}
+        </Text>
         <View style={[s.card, chrome]}>
           {accepted.map((m, i) => (
             <TouchableOpacity
@@ -193,7 +244,32 @@ export default function GroupScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <GroupWizard
+        visible={editOpen}
+        userId={me}
+        group={group}
+        onClose={() => setEditOpen(false)}
+        onCreated={g => { setEditOpen(false); setGroup(g); load().catch(() => {}) }}
+      />
     </SafeScreen>
+  )
+}
+
+function ActionCircle({ icon, label, edge, onPress, testID }: {
+  icon: React.ComponentProps<typeof Ionicons>['name']
+  label: string
+  edge: string
+  onPress: () => void
+  testID?: string
+}) {
+  return (
+    <TouchableOpacity style={s.action} onPress={onPress} activeOpacity={0.7} testID={testID}>
+      <View style={[s.actionCircle, { borderColor: edge }]}>
+        <Ionicons name={icon} size={22} color={TEXT_PRIMARY} />
+      </View>
+      <Text style={s.actionLabel}>{label}</Text>
+    </TouchableOpacity>
   )
 }
 
@@ -209,8 +285,23 @@ const s = StyleSheet.create({
 
   hero: { alignItems: 'center', paddingTop: 10, paddingBottom: 22, gap: 10 },
   name: { color: TEXT_PRIMARY, fontSize: 24, fontWeight: '800', textAlign: 'center' },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  meta: { color: TEXT_SECONDARY, fontSize: 13 },
+  metaRow: {
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center',
+    justifyContent: 'center', columnGap: 16, rowGap: 6,
+  },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  meta: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+
+  actionsRow: {
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start',
+    gap: 26, marginTop: 12, alignSelf: 'stretch',
+  },
+  action: { alignItems: 'center', gap: 7, maxWidth: 76 },
+  actionCircle: {
+    width: 58, height: 58, borderRadius: 29, backgroundColor: CARD,
+    borderWidth: 1, alignItems: 'center', justifyContent: 'center',
+  },
+  actionLabel: { color: TEXT_PRIMARY, fontSize: 12, fontWeight: '600', textAlign: 'center' },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
   tag: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
   tagText: { fontSize: 12, fontWeight: '700' },
