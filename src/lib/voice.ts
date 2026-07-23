@@ -1,3 +1,4 @@
+import { Linking } from 'react-native'
 import * as Speech from 'expo-speech'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
@@ -16,6 +17,31 @@ export interface CoachVoice {
   quality: string
 }
 
+/** Premium > Förbättrad > Standard — premium märks i namnet, inte i quality */
+function rank(v: CoachVoice): number {
+  if (v.name.toLowerCase().includes('premium') || v.identifier.includes('premium')) return 2
+  if (v.quality === 'Enhanced' || v.identifier.includes('enhanced')) return 1
+  return 0
+}
+
+/** Visningsnamn utan kvalitetssuffix — kvaliteten visas som egen etikett */
+export function voiceDisplayName(v: CoachVoice): string {
+  return v.name.replace(/\s*\((Premium|Enhanced|Förbättrad)\)\s*$/i, '')
+}
+
+export function voiceQualityLabel(v: CoachVoice): string {
+  const r = rank(v)
+  return r === 2 ? 'Premium' : r === 1 ? 'Förbättrad' : 'Standard'
+}
+
+/** Direkt till iOS röstinställningar — privata schemat funkar på de flesta
+    versioner; faller tillbaka till appens inställningar */
+export function openVoiceSettings(): void {
+  Linking.openURL('App-Prefs:ACCESSIBILITY&path=SPEECH').catch(() => {
+    Linking.openURL('app-settings:').catch(() => {})
+  })
+}
+
 let cached: CoachVoice[] | null = null
 
 export async function getSwedishVoices(): Promise<CoachVoice[]> {
@@ -25,9 +51,7 @@ export async function getSwedishVoices(): Promise<CoachVoice[]> {
     cached = all
       .filter(v => (v.language ?? '').toLowerCase().startsWith('sv'))
       .map(v => ({ identifier: v.identifier, name: v.name, quality: String(v.quality ?? 'Default') }))
-      .sort((a, b) =>
-        Number(b.quality === 'Enhanced') - Number(a.quality === 'Enhanced')
-        || a.name.localeCompare(b.name, 'sv'))
+      .sort((a, b) => rank(b) - rank(a) || a.name.localeCompare(b.name, 'sv'))
   } catch {
     cached = []
   }

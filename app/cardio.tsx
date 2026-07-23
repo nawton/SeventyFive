@@ -33,7 +33,7 @@ import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { RunSegment } from '@/lib/runProgression'
 import { advanceEngine, createEngineState, spokenSegmentIntro } from '@/lib/intervalEngine'
-import { getSwedishVoices, getCoachVoiceId, setCoachVoiceId, previewVoice, type CoachVoice } from '@/lib/voice'
+import { getSwedishVoices, getCoachVoiceId, setCoachVoiceId, previewVoice, voiceDisplayName, voiceQualityLabel, openVoiceSettings, type CoachVoice } from '@/lib/voice'
 import { getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, getLastMapCoord, setLastMapCoord, getBodyWeightKg, type VoiceSettings } from '@/lib/prefs'
 import { estimateCalories, DEFAULT_WEIGHT_KG } from '@/lib/calories'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
@@ -1713,7 +1713,7 @@ export default function CardioScreen() {
                     <Text style={styles.voiceRowValue} numberOfLines={1}>
                       {(() => {
                         const v = coachVoices.find(x => x.identifier === coachVoiceId)
-                        return v ? `${v.name}${v.quality === 'Enhanced' ? ' · Förbättrad' : ''}` : 'Automatisk'
+                        return v ? `${voiceDisplayName(v)} · ${voiceQualityLabel(v)}` : 'Automatisk'
                       })()}
                     </Text>
                   </View>
@@ -1752,17 +1752,14 @@ export default function CardioScreen() {
 
             {voicePage === 'voice' && (
               <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.voiceHint}>
-                  Tryck för att välja och provlyssna. Mjukare röster (t.ex. Alva
-                  Förbättrad) laddas ner i iOS: Inställningar → Hjälpmedel →
-                  Uppläst innehåll → Röster → Svenska.
-                </Text>
+                <Text style={styles.voiceHint}>Tryck på en röst för att välja och provlyssna.</Text>
                 {coachVoices.map(v => {
                   const active = v.identifier === coachVoiceId
+                  const quality = voiceQualityLabel(v)
                   return (
                     <TouchableOpacity
                       key={v.identifier}
-                      style={styles.voiceRow}
+                      style={[styles.voiceRow, active && styles.voiceRowActive]}
                       activeOpacity={0.7}
                       onPress={() => {
                         setCoachVoiceIdState(v.identifier)
@@ -1771,19 +1768,40 @@ export default function CardioScreen() {
                         previewVoice(v.identifier)
                       }}
                     >
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.voiceRowLabel}>{v.name}</Text>
-                        <Text style={styles.voiceRowValue}>
-                          {v.quality === 'Enhanced' ? 'Förbättrad' : 'Standard'}
-                        </Text>
+                      <View style={styles.voiceAvatar}>
+                        <Ionicons name={active ? 'volume-high' : 'volume-medium-outline'} size={19} color={active ? CARDIO_ACCENT : '#9BA0A6'} />
                       </View>
-                      {active && <Ionicons name="checkmark-circle" size={20} color={CARDIO_ACCENT} />}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.voiceRowLabel}>{voiceDisplayName(v)}</Text>
+                      </View>
+                      <View style={[styles.voiceBadge, quality !== 'Standard' && styles.voiceBadgeGood]}>
+                        <Text style={[styles.voiceBadgeText, quality !== 'Standard' && styles.voiceBadgeTextGood]}>{quality}</Text>
+                      </View>
+                      {active && <Ionicons name="checkmark-circle" size={20} color={CARDIO_ACCENT} style={{ marginLeft: 8 }} />}
                     </TouchableOpacity>
                   )
                 })}
                 {coachVoices.length === 0 && (
                   <Text style={styles.voiceHint}>Inga svenska röster hittades på enheten.</Text>
                 )}
+
+                {/* Direkt in i iOS röstinställningar — Premium-rösterna bor där */}
+                <TouchableOpacity style={styles.voiceDownload} onPress={openVoiceSettings} activeOpacity={0.8}>
+                  <View style={styles.voiceAvatar}>
+                    <Ionicons name="cloud-download-outline" size={19} color={CARDIO_ACCENT} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.voiceRowLabel}>Hämta fler röster</Text>
+                    <Text style={styles.voiceRowValue}>
+                      Uppläst innehåll → Röster → Svenska → Alva
+                    </Text>
+                  </View>
+                  <Ionicons name="arrow-forward" size={17} color={CARDIO_ACCENT} />
+                </TouchableOpacity>
+                <Text style={styles.voiceHint}>
+                  Ladda ner Alva (Premium) där, kom tillbaka hit och välj den —
+                  det är den mjukaste svenska rösten.
+                </Text>
               </ScrollView>
             )}
             {voicePage === 'freq' && (
@@ -2252,6 +2270,24 @@ const styles = StyleSheet.create({
   voiceRowPlain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   voiceRowLabel: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   voiceHint: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 19, marginBottom: 14 },
+  voiceRowActive: { borderWidth: 1.5, borderColor: CARDIO_ACCENT + '66' },
+  voiceAvatar: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: CARDIO_ACCENT + '14',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  voiceBadge: {
+    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: 'rgba(128,128,128,0.16)',
+  },
+  voiceBadgeGood: { backgroundColor: CARDIO_ACCENT + '1E' },
+  voiceBadgeText: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700' },
+  voiceBadgeTextGood: { color: CARDIO_ACCENT },
+  voiceDownload: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: CARDIO_ACCENT + '10',
+    borderRadius: 16, padding: 14, marginTop: 6, marginBottom: 10,
+  },
   voiceRowValue: { color: '#9BA0A6', fontSize: 13, marginTop: 3 },
   voiceFreqBlock: {
     backgroundColor: CARD, borderRadius: 20,
