@@ -33,7 +33,7 @@ import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { RunSegment } from '@/lib/runProgression'
 import { advanceEngine, createEngineState, spokenSegmentIntro } from '@/lib/intervalEngine'
-import { getSwedishVoices, getCoachVoiceId, setCoachVoiceId, previewVoice, voiceDisplayName, voiceQualityLabel, openVoiceSettings, type CoachVoice } from '@/lib/voice'
+import { getSwedishVoices, getCoachVoiceId, setCoachVoiceId, previewVoice, voiceDisplayName, voiceQualityLabel, type CoachVoice } from '@/lib/voice'
 import { getVoiceCues, setVoiceCues, getVoiceSettings, setVoiceSettings, DEFAULT_VOICE_SETTINGS, getCardioGoal, setCardioGoal, getDefaultMapStyle, getLastMapCoord, setLastMapCoord, getBodyWeightKg, type VoiceSettings } from '@/lib/prefs'
 import { estimateCalories, DEFAULT_WEIGHT_KG } from '@/lib/calories'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
@@ -1788,23 +1788,29 @@ export default function CardioScreen() {
                   <Text style={styles.voiceHint}>Inga svenska röster hittades på enheten.</Text>
                 )}
 
-                {/* Direkt in i iOS röstinställningar — Premium-rösterna bor där */}
-                <TouchableOpacity style={styles.voiceDownload} onPress={openVoiceSettings} activeOpacity={0.8}>
-                  <View style={styles.voiceAvatar}>
-                    <Ionicons name="cloud-download-outline" size={19} color={CARDIO_ACCENT} />
+                {/* iOS tillåter inga djuplänkar till undersidor i Inställningar —
+                    en ärlig steg-för-steg-guide istället för en låtsasknapp */}
+                <View style={styles.voiceDownload}>
+                  <View style={styles.voiceDownloadHead}>
+                    <View style={styles.voiceAvatar}>
+                      <Ionicons name="cloud-download-outline" size={19} color={CARDIO_ACCENT} />
+                    </View>
+                    <Text style={styles.voiceRowLabel}>Så får du den mjukaste rösten</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.voiceRowLabel}>Hämta Alva (Premium)</Text>
-                    <Text style={styles.voiceRowValue}>
-                      Öppnar Inställningar — gå till Hjälpmedel{'\n'}→ Uppläst innehåll → Röster → Svenska
-                    </Text>
-                  </View>
-                  <Ionicons name="open-outline" size={18} color={CARDIO_ACCENT} />
-                </TouchableOpacity>
-                <Text style={styles.voiceHint}>
-                  Ladda ner rösten där, kom tillbaka hit och välj den — det är
-                  den mjukaste svenska rösten.
-                </Text>
+                  {[
+                    'Öppna Inställningar på din iPhone',
+                    'Hjälpmedel → Uppläst innehåll → Röster',
+                    'Svenska → Alva → hämta Alva (Premium)',
+                    'Kom tillbaka hit och välj den',
+                  ].map((step, i) => (
+                    <View key={i} style={styles.voiceStep}>
+                      <View style={styles.voiceStepNum}>
+                        <Text style={styles.voiceStepNumText}>{i + 1}</Text>
+                      </View>
+                      <Text style={styles.voiceStepText}>{step}</Text>
+                    </View>
+                  ))}
+                </View>
               </ScrollView>
             )}
             {voicePage === 'freq' && (
@@ -2288,10 +2294,18 @@ const styles = StyleSheet.create({
   voiceBadgeText: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700' },
   voiceBadgeTextGood: { color: CARDIO_ACCENT },
   voiceDownload: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: CARDIO_ACCENT + '10',
-    borderRadius: 16, padding: 14, marginTop: 6, marginBottom: 10,
+    borderRadius: 16, padding: 14, marginTop: 6, marginBottom: 10, gap: 10,
   },
+  voiceDownloadHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
+  voiceStep: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  voiceStepNum: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: CARDIO_ACCENT + '22',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  voiceStepNumText: { color: CARDIO_ACCENT, fontSize: 12, fontWeight: '800' },
+  voiceStepText: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, lineHeight: 19 },
   voiceRowValue: { color: '#9BA0A6', fontSize: 13, marginTop: 3 },
   voiceFreqBlock: {
     backgroundColor: CARD, borderRadius: 20,
