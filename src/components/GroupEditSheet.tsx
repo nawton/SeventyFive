@@ -4,7 +4,7 @@ import {
   TouchableWithoutFeedback, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native'
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated'
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS } from 'react-native-reanimated'
 import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
 import { SafeScreen } from '@/components/SafeScreen'
@@ -47,11 +47,17 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
   const [saving, setSaving] = useState(false)
   const [sportOpen, setSportOpen] = useState(false)
 
-  // Sportväljaren är ett bottenark med appens dragfysik: fjädrar tillbaka
-  // under tröskeln, stängs förbi den. Färgerna bor på den inre vyn —
-  // dynamiska färger på animerade noder kraschar Reanimated.
-  const sheetY = useSharedValue(0)
-  const closeSport = () => setSportOpen(false)
+  // Sportväljaren är ett bottenark med appens dragfysik. Modalen tonar inte:
+  // bakgrunden mörknar direkt och bara arket glider — in med fjäder, ut med
+  // en snabb glidning. Färgerna bor på den inre vyn — dynamiska färger på
+  // animerade noder kraschar Reanimated.
+  const SHEET_OFF = 620
+  const sheetY = useSharedValue(SHEET_OFF)
+  const closeSport = () => {
+    sheetY.value = withTiming(SHEET_OFF, { duration: 190 }, () => {
+      runOnJS(setSportOpen)(false)
+    })
+  }
   const pan = Gesture.Pan()
     .activeOffsetY([-12, 12])
     .onUpdate(e => { sheetY.value = Math.max(0, e.translationY) })
@@ -81,8 +87,9 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
 
   function pickSport() {
     Haptics.selectionAsync()
-    sheetY.value = 0
+    sheetY.value = SHEET_OFF
     setSportOpen(true)
+    sheetY.value = withSpring(0, { damping: 22, stiffness: 240 })
   }
 
   function toggleTag(tag: string) {
@@ -213,7 +220,7 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
         </KeyboardAvoidingView>
 
         {/* Sportväljaren — bottenark som dras ner för att stängas */}
-        <Modal visible={sportOpen} transparent animationType="slide" onRequestClose={closeSport}>
+        <Modal visible={sportOpen} transparent animationType="none" onRequestClose={closeSport}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <View style={s.sheetBackdrop}>
               <TouchableWithoutFeedback onPress={closeSport}>
