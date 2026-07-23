@@ -237,6 +237,10 @@ export default function AthleteScreen() {
           statsUnlocked={statsUnlocked}
           blocked={blocked}
           onToggleFollow={toggleFollow}
+          onMessage={otherId ? () => router.push({
+            pathname: '/(app)/chat',
+            params: { userId: otherId, name, avatar: avatarUrl ?? '' },
+          } as never) : undefined}
           // Tomma params när det är egna — skriver över kvarliggande
           onOpenActivities={() => router.push({
             pathname: '/(app)/activities',

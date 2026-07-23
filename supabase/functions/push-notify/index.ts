@@ -83,6 +83,15 @@ Deno.serve(async (req) => {
     }
   }
 
+  else if (table === 'direct_messages') {
+    senderId = record.sender_id as string
+    const excerpt = String(record.body ?? '').slice(0, 80)
+    recipients.push({
+      userId: record.recipient_id as string,
+      makeBody: excerpt ? (n => `${n}: ”${excerpt}”`) : (n => `${n} skickade en bild`),
+    })
+  }
+
   else if (table === 'group_posts') {
     // Nytt inlägg → medlemmarna enligt sin notisnivå (alla/bara skaparens/av)
     const gid = record.group_id as string

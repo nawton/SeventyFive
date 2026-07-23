@@ -89,7 +89,7 @@ function Avatar({ url, fallback, size }: { url: string | null; fallback: string;
 export function AthleteOverview({
   isOwn, name, avatarUrl, workouts, gymCount, counts, unit,
   followStatus, statsUnlocked, onToggleFollow, onOpenActivities, onPressHero, onPressFollows,
-  streak, onPressStreak, blocked,
+  streak, onPressStreak, blocked, onMessage,
 }: {
   isOwn: boolean
   name: string
@@ -114,6 +114,8 @@ export function AthleteOverview({
   onPressStreak?: () => void
   /** Jag har blockerat personen — knappen blir Avblockera, allt är låst */
   blocked?: boolean
+  /** Öppnar chatten med personen — bara på andras profiler */
+  onMessage?: () => void
 }) {
   // Chipramar som strängar per schema — dynamiska ramfärger fryser fel
   const T = useThemeStrings()
@@ -264,6 +266,15 @@ export function AthleteOverview({
         </TouchableOpacity>
       )}
 
+      {/* Chatten — databasen kräver följrelation eller gemensam grupp */}
+      {!isOwn && !blocked && onMessage && (
+        <TouchableOpacity style={[s.messageBtn, lift, { borderColor: followEdge }]}
+          onPress={onMessage} activeOpacity={0.8} testID="athleteMessage">
+          <Ionicons name="chatbubble-outline" size={15} color={TEXT_PRIMARY} />
+          <Text style={s.messageBtnText}>Meddelande</Text>
+        </TouchableOpacity>
+      )}
+
       {/* ── Strava-delen: typ-chips, veckan och distansgraf — visas BARA på
           andras upplåsta profiler. Den egna statistiken har en hel flik i
           navbaren, så här vore den bara dubblerad. Framstegsfoton visas
@@ -391,6 +402,11 @@ const s = StyleSheet.create({
   },
   followBtnBlocked: {},
   followBtnText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+  messageBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    marginTop: 10, borderRadius: 26, paddingVertical: 11, borderWidth: 1.5,
+  },
+  messageBtnText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   followBtnTextInvite: { color: ACCENT },
   followBtnTextBlocked: { color: '#FF3B4A' },
 

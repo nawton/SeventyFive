@@ -336,10 +336,17 @@ export default function GroupScreen() {
     }
   }
 
-  /** ⋯ på en medlemsrad: anmäl; skaparen kan ta bort eller spärra */
+  /** ⋯ på en medlemsrad: meddela, anmäl; skaparen kan ta bort eller spärra */
   function memberMenu(m: GroupMember) {
     if (!group) return
     const canRemove = isOwner && m.role !== 'owner'
+    const message = () => {
+      setMembersOpen(false)
+      router.push({
+        pathname: '/(app)/chat',
+        params: { userId: m.id, name: m.name ?? 'Namnlös', avatar: m.avatar_url ?? '' },
+      } as never)
+    }
     const report = () => promptReport('user', m.id, `Anmäl ${m.name ?? 'medlemmen'}`)
     const remove = () => removeMember(group.id, m.id).then(load).catch(() => {})
     const ban = () => banMember(group.id, m.id).then(load).catch(() => {})
@@ -348,20 +355,22 @@ export default function GroupScreen() {
         {
           title: m.name ?? 'Medlem',
           options: canRemove
-            ? ['Avbryt', 'Anmäl medlemmen', 'Ta bort ur gruppen', 'Ta bort och spärra']
-            : ['Avbryt', 'Anmäl medlemmen'],
+            ? ['Avbryt', 'Skicka meddelande', 'Anmäl medlemmen', 'Ta bort ur gruppen', 'Ta bort och spärra']
+            : ['Avbryt', 'Skicka meddelande', 'Anmäl medlemmen'],
           cancelButtonIndex: 0,
-          destructiveButtonIndex: canRemove ? 3 : undefined,
+          destructiveButtonIndex: canRemove ? 4 : undefined,
         },
         i => {
-          if (i === 1) report()
-          else if (i === 2 && canRemove) remove()
-          else if (i === 3 && canRemove) ban()
+          if (i === 1) message()
+          else if (i === 2) report()
+          else if (i === 3 && canRemove) remove()
+          else if (i === 4 && canRemove) ban()
         },
       )
     } else {
       Alert.alert(m.name ?? 'Medlem', undefined, [
         { text: 'Avbryt', style: 'cancel' },
+        { text: 'Skicka meddelande', onPress: message },
         { text: 'Anmäl medlemmen', onPress: report },
         ...(canRemove ? [
           { text: 'Ta bort ur gruppen', onPress: remove },

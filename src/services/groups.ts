@@ -375,6 +375,10 @@ export interface GroupPost {
   group_id: string
   author_id: string
   body: string
+  /** Bild i inlägget, uppladdad före insert */
+  image_url: string | null
+  /** Svar på ett annat inlägg — visas indraget under föräldern */
+  reply_to: string | null
   created_at: string
   authorName: string | null
   authorAvatar: string | null
@@ -399,19 +403,33 @@ export async function getGroupPosts(groupId: string, limit = 50): Promise<GroupP
     group_id: p.group_id as string,
     author_id: p.author_id as string,
     body: p.body as string,
+    image_url: (p.image_url as string | null) ?? null,
+    reply_to: (p.reply_to as string | null) ?? null,
     created_at: p.created_at as string,
     authorName: byId.get(p.author_id as string)?.name ?? null,
     authorAvatar: byId.get(p.author_id as string)?.avatar_url ?? null,
   }))
 }
 
-export async function createGroupPost(groupId: string, body: string): Promise<void> {
+export async function createGroupPost(
+  groupId: string,
+  body: string,
+  opts: { replyTo?: string | null; imageUri?: string | null } = {},
+): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.user) throw new Error('inte inloggad')
+  let imageUrl: string | null = null
+  if (opts.imageUri) {
+    const path = `posts/${session.user.id}-${Date.now()}.jpg`
+    await uploadImage('avatars', path, opts.imageUri)
+    imageUrl = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
+  }
   const { error } = await supabase.from('group_posts').insert({
     group_id: groupId,
     author_id: session.user.id,
     body: body.trim(),
+    reply_to: opts.replyTo ?? null,
+    image_url: imageUrl,
   })
   if (error) throw error
 }

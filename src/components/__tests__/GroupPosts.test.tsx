@@ -24,6 +24,7 @@ describe('GroupPosts', () => {
   it('visar inlägg med avsändare och text', async () => {
     ;(getGroupPosts as jest.Mock).mockResolvedValue([{
       id: 'p1', group_id: 'g1', author_id: 'u2', body: 'Grymt jobbat allihop!',
+      image_url: null, reply_to: null,
       created_at: new Date().toISOString(), authorName: 'Anna Andersson', authorAvatar: null,
     }])
     render(<GroupPosts group={group} me="u1" isOwner={false} />)
@@ -36,7 +37,8 @@ describe('GroupPosts', () => {
     const input = await screen.findByTestId('postDraft')
     fireEvent.changeText(input, 'Vi kör imorgon 07:00')
     fireEvent.press(screen.getByTestId('postSend'))
-    await waitFor(() => expect(createGroupPost).toHaveBeenCalledWith('g1', 'Vi kör imorgon 07:00'))
+    await waitFor(() => expect(createGroupPost).toHaveBeenCalledWith(
+      'g1', 'Vi kör imorgon 07:00', { replyTo: null, imageUri: null }))
   })
 
   it('endast-skaparen-läget gömmer composern för medlemmar', async () => {

@@ -8,6 +8,7 @@ import { AppRefreshControl, useAppRefresh } from '@/components/AppRefresh'
 import { GroupWizard } from '@/components/GroupWizard'
 import { GroupSearchSheet } from '@/components/GroupSearchSheet'
 import { getMyGroups } from '@/services/groups'
+import { getUnreadMessageCount } from '@/services/messages'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
@@ -179,11 +180,13 @@ export default function CommunityScreen() {
   const [wizardOpen, setWizardOpen] = useState(false)
   const [groupSearchOpen, setGroupSearchOpen] = useState(false)
   const [meId, setMeId] = useState<string | null>(null)
+  const [unreadMsgs, setUnreadMsgs] = useState(0)
   const chrome = useCardChrome()
   const loadGroups = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return
     setMeId(session.user.id)
+    getUnreadMessageCount(session.user.id).then(setUnreadMsgs).catch(() => {})
     setMyGroups(await getMyGroups(session.user.id))
   }, [])
   useFocusEffect(useCallback(() => { loadGroups().catch(() => {}) }, [loadGroups]))
@@ -247,6 +250,16 @@ export default function CommunityScreen() {
             onChange={setSegment}
             tint={null}
           />
+        </View>
+        <View>
+          <GlassCircleButton
+            icon="chatbubbles-outline"
+            size={44}
+            iconColor={TEXT_PRIMARY}
+            onPress={() => router.push('/(app)/chats' as never)}
+            fallbackStyle={s.followBtnFallback}
+          />
+          {unreadMsgs > 0 && <View style={s.msgDot} pointerEvents="none" testID="msgDot" />}
         </View>
         <GlassCircleButton
           icon="people-outline"
@@ -471,6 +484,10 @@ const s = StyleSheet.create({
   groupsEmpty: { alignItems: 'center', gap: 8, paddingTop: 60, paddingHorizontal: 30 },
   groupsEmptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 4 },
   groupsEmptyBody: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  msgDot: {
+    position: 'absolute', top: 2, right: 2,
+    width: 11, height: 11, borderRadius: 6, backgroundColor: '#FF3B4A',
+  },
   groupActions: { flexDirection: 'row', gap: 10 },
   groupActionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
