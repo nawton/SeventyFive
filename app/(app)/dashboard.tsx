@@ -57,6 +57,7 @@ import { getStreak } from '@/services/dailyLog'
 import { getSocialNotificationCount } from '@/services/social'
 import { getIncomingRequestCount } from '@/services/follows'
 import { getGroupNotificationCount } from '@/services/groups'
+import { getUnreadMessageCount } from '@/services/messages'
 import { getNotifSeenAt, getRaceDate } from '@/lib/prefs'
 import { isoDate, todayMidnight } from '@/lib/scheduleDates'
 import { weekdayOf } from '@/lib/date'
@@ -219,6 +220,7 @@ export default function DashboardScreen() {
   const [pulseCount, setPulseCount]       = useState(0)
   const [pulseRequests, setPulseRequests] = useState(0)
   const [pulseGroups, setPulseGroups]     = useState(0)
+  const [pulseMsgs, setPulseMsgs]         = useState(0)
   const chrome = useCardChrome()
 
   // Add-rule sheet (UI, animation och gest bor i AddRuleSheet-komponenten)
@@ -336,11 +338,13 @@ export default function DashboardScreen() {
         getNotifSeenAt().then(seen => getSocialNotificationCount(seen)),
         getIncomingRequestCount(),
         getGroupNotificationCount(user.id),
-      ]).then(([sess, done, race, st, social, reqs, grp]) => {
+        getUnreadMessageCount(user.id),
+      ]).then(([sess, done, race, st, social, reqs, grp, msgs]) => {
         if (st.status === 'fulfilled') setStreak(st.value)
         if (social.status === 'fulfilled') setPulseCount(social.value)
         if (reqs.status === 'fulfilled') setPulseRequests(reqs.value)
         if (grp.status === 'fulfilled') setPulseGroups(grp.value)
+        if (msgs.status === 'fulfilled') setPulseMsgs(msgs.value)
         if (sess.status !== 'fulfilled') return
         const all = sess.value
         setHasAnySchedule(all.some(x => x.weekdays.length > 0 && !x.name.startsWith('SKIP:')))
@@ -700,14 +704,22 @@ export default function DashboardScreen() {
         </Animated.View>
 
         {/* ── Social puls — visas bara när något faktiskt hänt ── */}
-        {(pulseCount > 0 || pulseRequests > 0 || pulseGroups > 0) && (
-          <TouchableOpacity style={s.pulseRow} onPress={() => router.push('/(app)/notifications')} activeOpacity={0.8}>
+        {(pulseCount > 0 || pulseRequests > 0 || pulseGroups > 0 || pulseMsgs > 0) && (
+          <TouchableOpacity
+            style={s.pulseRow}
+            // Bara olästa meddelanden → direkt till chattarna, annars notiserna
+            onPress={() => router.push(
+              (pulseMsgs > 0 && pulseCount + pulseRequests + pulseGroups === 0
+                ? '/(app)/chats' : '/(app)/notifications') as never)}
+            activeOpacity={0.8}
+          >
             <Ionicons name="notifications" size={16} color={ACCENT} />
             <Text style={s.pulseText} numberOfLines={1}>
               {[
                 pulseCount > 0 ? `${pulseCount} ${pulseCount === 1 ? 'ny händelse' : 'nya händelser'}` : '',
                 pulseRequests > 0 ? `${pulseRequests} ${pulseRequests === 1 ? 'vänförfrågan' : 'vänförfrågningar'}` : '',
                 pulseGroups > 0 ? `${pulseGroups} ${pulseGroups === 1 ? 'gruppnotis' : 'gruppnotiser'}` : '',
+                pulseMsgs > 0 ? `${pulseMsgs} ${pulseMsgs === 1 ? 'oläst meddelande' : 'olästa meddelanden'}` : '',
               ].filter(Boolean).join(' · ')}
             </Text>
             <Ionicons name="chevron-forward" size={15} color={TEXT_SECONDARY} />

@@ -4,9 +4,18 @@ import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { useFonts, Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito'
+import * as Sentry from '@sentry/react-native'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/lib/auth'
 import { applyStoredTheme } from '@/lib/themeMode'
+
+// Kraschrapportering — slås på först när EXPO_PUBLIC_SENTRY_DSN finns i
+// miljön (kräver också en byggnation med den nativa modulen). Utan DSN
+// är detta en no-op så utveckling och tester påverkas inte.
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN
+if (SENTRY_DSN) {
+  Sentry.init({ dsn: SENTRY_DSN, tracesSampleRate: 0.2 })
+}
 
 // Mörkt är standard oavsett systemläge — sätts före första renderingen så
 // systemljusa användare aldrig ser en ljus blink; ev. sparat ljust val

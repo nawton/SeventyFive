@@ -179,8 +179,9 @@ export function GroupPosts({
     const remove = () => deleteGroupPost(post.id).then(load).catch(() => {})
     const report = () => promptReport('post', `grp-${post.id}`, 'Anmäl inlägget')
     const togglePin = () => setGroupPostPinned(post.id, !post.pinned).then(load).catch(() => {})
+    const canPin = isOwner || group.only_owner_pins === false
     const options: Array<{ label: string; act: () => void; destructive?: boolean }> = []
-    if (isOwner) options.push({ label: post.pinned ? 'Ta bort fästningen' : 'Fäst inlägget', act: togglePin })
+    if (canPin) options.push({ label: post.pinned ? 'Ta bort fästningen' : 'Fäst inlägget', act: togglePin })
     if (post.author_id !== me) options.push({ label: 'Anmäl inlägget', act: report })
     if (canDelete) options.push({ label: 'Radera inlägget', act: remove, destructive: true })
     if (options.length === 0) return

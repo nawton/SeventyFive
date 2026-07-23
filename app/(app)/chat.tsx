@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Image,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Modal, Dimensions,
+  ActionSheetIOS,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -15,8 +16,11 @@ import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { Ionicons } from '@/components/Icon'
 import { compressImage } from '@/lib/image'
 import {
-  getThread, sendMessage, markThreadRead, subscribeToMessages, type DirectMessage,
+  getThread, sendMessage, markThreadRead, subscribeToMessages, deleteMessage,
+  type DirectMessage,
 } from '@/services/messages'
+import { blockUser } from '@/services/blocks'
+import { promptReport } from '@/lib/report'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
 
 // =============================================================================
@@ -86,6 +90,59 @@ export default function ChatScreen() {
     }
   }
 
+  /** ⋯ i headern: anmäl eller blockera — rapportvägen ska finnas där
+      innehållet visas */
+  function chatMenu() {
+    if (!otherId) return
+    const report = () => promptReport('user', otherId, `Anmäl ${otherName}`)
+    const block = () => Alert.alert(
+      `Blockera ${otherName}?`,
+      'Ni kan inte längre se varandra, följa varandra eller skicka meddelanden.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Blockera', style: 'destructive', onPress: () => {
+          blockUser(otherId).then(() => router.back()).catch(() =>
+            Alert.alert('Kunde inte blockera', 'Kontrollera anslutningen och försök igen.'))
+        } },
+      ],
+    )
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Avbryt', 'Anmäl användaren', 'Blockera'],
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: 2,
+        },
+        i => { if (i === 1) report(); else if (i === 2) block() },
+      )
+    } else {
+      Alert.alert(otherName, undefined, [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Anmäl användaren', onPress: report },
+        { text: 'Blockera', onPress: block },
+      ])
+    }
+  }
+
+  /** Långtryck på egen bubbla raderar meddelandet */
+  function messageMenu(m: DirectMessage) {
+    if (m.sender_id !== me) return
+    const remove = () => deleteMessage(m.id)
+      .then(() => { if (me) load(me).catch(() => {}) })
+      .catch(() => {})
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Avbryt', 'Radera meddelandet'], cancelButtonIndex: 0, destructiveButtonIndex: 1 },
+        i => { if (i === 1) remove() },
+      )
+    } else {
+      Alert.alert('Meddelande', undefined, [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Radera meddelandet', onPress: remove },
+      ])
+    }
+  }
+
   // Inverterad lista vill ha nyast först
   const inverted = [...messages].reverse()
 
@@ -102,7 +159,8 @@ export default function ChatScreen() {
           <FeedAvatar url={otherAvatar} fallback={otherName.charAt(0).toUpperCase()} size={32} />
           <Text style={s.headerTitle} numberOfLines={1}>{otherName}</Text>
         </TouchableOpacity>
-        <View style={{ width: 40 }} />
+        <GlassCircleButton icon="ellipsis-horizontal" size={40} iconColor={TEXT_PRIMARY}
+          onPress={chatMenu} fallbackStyle={s.iconFallback} />
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -117,10 +175,14 @@ export default function ChatScreen() {
             const own = item.sender_id === me
             return (
               <View style={[s.bubbleRow, own && { justifyContent: 'flex-end' }]}>
-                <View style={[
-                  s.bubble,
-                  own ? { backgroundColor: T.ACCENT } : { backgroundColor: CARD },
-                ]}>
+                <TouchableOpacity
+                  activeOpacity={own ? 0.85 : 1}
+                  onLongPress={() => messageMenu(item)}
+                  delayLongPress={350}
+                  style={[
+                    s.bubble,
+                    own ? { backgroundColor: T.ACCENT } : { backgroundColor: CARD },
+                  ]}>
                   {!!item.image_url && (
                     <TouchableOpacity activeOpacity={0.85} onPress={() => setViewerUrl(item.image_url)}>
                       <Image source={{ uri: item.image_url }} style={s.bubbleImage} />
@@ -134,7 +196,7 @@ export default function ChatScreen() {
                   <Text style={[s.bubbleTime, own && { color: light ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)' }]}>
                     {new Date(item.created_at).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
                   </Text>
-                </View>
+                </TouchableOpacity>
               </View>
             )
           }}

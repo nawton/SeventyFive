@@ -98,6 +98,12 @@ export async function sendMessage(recipientId: string, body: string, imageUri?: 
   if (error) throw error
 }
 
+/** Avsändaren raderar sitt eget meddelande (RLS) */
+export async function deleteMessage(id: string): Promise<void> {
+  const { error } = await supabase.from('direct_messages').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function markThreadRead(otherId: string): Promise<void> {
   await supabase.rpc('mark_messages_read', { other: otherId })
 }

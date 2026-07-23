@@ -57,7 +57,9 @@ Deno.serve(async (req) => {
       userId: record.owner_id as string,
       makeBody: String(record.post_key ?? '').startsWith('gym-')
         ? (n => `${n} gillade ditt gympass`)
-        : (n => `${n} gillade ditt pass`),
+        : String(record.post_key ?? '').startsWith('grp-')
+          ? (n => `${n} gillade ditt inlägg`)
+          : (n => `${n} gillade ditt pass`),
     })
   } else if (table === 'post_comments') {
     senderId = record.author_id as string

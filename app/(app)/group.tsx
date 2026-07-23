@@ -322,7 +322,7 @@ export default function GroupScreen() {
   }
 
   /** Optimistisk inställningsändring — backas vid fel */
-  async function applySetting(patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites' | 'hidden' | 'only_owner_posts'>>) {
+  async function applySetting(patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites' | 'hidden' | 'only_owner_posts' | 'only_owner_pins'>>) {
     if (!group) return
     Haptics.selectionAsync()
     const prev = group
@@ -690,6 +690,20 @@ export default function GroupScreen() {
                   onValueChange={v => applySetting({ only_owner_posts: v })}
                   trackColor={{ false: BORDER, true: ACCENT }}
                   testID="setOwnerPosts"
+                />
+              </View>
+              <View style={[s.settingRow, s.rowDivider]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.settingTitle}>Endast du kan fästa inlägg</Text>
+                  <Text style={s.settingBody}>
+                    Avstängt låter alla medlemmar fästa ett inlägg överst i flödet.
+                  </Text>
+                </View>
+                <Switch
+                  value={group?.only_owner_pins !== false}
+                  onValueChange={v => applySetting({ only_owner_pins: v })}
+                  trackColor={{ false: BORDER, true: ACCENT }}
+                  testID="setOwnerPins"
                 />
               </View>
             </View>

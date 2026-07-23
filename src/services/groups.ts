@@ -29,6 +29,8 @@ export interface Group {
   hidden: boolean
   /** Bara ägaren får skriva inlägg — upprätthålls i RLS */
   only_owner_posts: boolean
+  /** Bara ägaren får fästa inlägg — upprätthålls i pin-RPC:n */
+  only_owner_pins: boolean
   created_at: string
 }
 
@@ -141,7 +143,7 @@ export async function getMyGroups(userId: string): Promise<Array<Group & { membe
 /** Ägarens snabbinställningar — RLS släpper bara igenom ägaren */
 export async function updateGroupSettings(
   groupId: string,
-  patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites' | 'hidden' | 'only_owner_posts'>>,
+  patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites' | 'hidden' | 'only_owner_posts' | 'only_owner_pins'>>,
 ): Promise<Group> {
   const { data, error } = await supabase
     .from('groups')

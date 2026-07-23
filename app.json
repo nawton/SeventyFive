@@ -52,7 +52,8 @@
         {
           "cameraPermission": "Vi använder kameran för att skanna gruppers QR-koder."
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true
