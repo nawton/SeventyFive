@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActionSheetIOS, Platform, Share,
-  Modal, Dimensions, Switch,
+  Modal, Dimensions, Switch, ActivityIndicator,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
@@ -14,16 +14,16 @@ import {
 } from '@/components/FeedWorkoutCard'
 import { GroupEditSheet } from '@/components/GroupEditSheet'
 import { GroupInviteSheet } from '@/components/GroupInviteSheet'
-import { fetchGroupFeedPage, type FeedPage } from '@/services/feed'
+import { fetchGroupFeedPage, FEED_PAGE_SIZE, type FeedPage } from '@/services/feed'
 import { getFeedSocial, likePost, unlikePost, type PostSocial } from '@/services/social'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { promptReport, postReportMenu } from '@/lib/report'
 import {
-  getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember,
+  getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember, banMember,
   deleteGroup, acceptGroupInvite, updateGroupSettings, transferGroupOwnership,
-  type Group, type GroupMember,
+  getGroupLeaderboard, type Group, type GroupMember, type GroupLeaderboardRow,
 } from '@/services/groups'
 import {
   BG, CARD, BORDER, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome, accentAlpha,
@@ -62,6 +62,10 @@ export default function GroupScreen() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [cardioRows, setCardioRows] = useState<FeedPage['cardio']>([])
   const [strengthRows, setStrengthRows] = useState<FeedPage['strength']>([])
+  const [oldest, setOldest] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [board, setBoard] = useState<GroupLeaderboardRow[]>([])
   const [social, setSocial] = useState<Record<string, PostSocial>>({})
   const [selected, setSelected] = useState<FeedPost | null>(null)
   const [unit, setUnit] = useState<UnitSystem>('metric')
@@ -72,21 +76,44 @@ export default function GroupScreen() {
     if (!session?.user) return
     setMe(session.user.id)
     getUnitSystem().then(setUnit).catch(() => {})
-    const [g, m, feed] = await Promise.all([
+    // Topplistans vecka börjar på måndagen
+    const weekStart = new Date()
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7))
+    weekStart.setHours(0, 0, 0, 0)
+    const [g, m, feed, lb] = await Promise.all([
       getGroup(groupId),
       getGroupMembers(groupId),
       fetchGroupFeedPage(groupId),
+      getGroupLeaderboard(groupId, weekStart.toISOString()),
     ])
     setGroup(g)
     setMembers(m)
     setCardioRows(feed.cardio)
     setStrengthRows(feed.strength)
+    setOldest(feed.oldest)
+    setHasMore(feed.count === FEED_PAGE_SIZE)
+    setBoard(lb)
   }, [groupId])
+
+  async function loadMore() {
+    if (!groupId || !oldest || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const page = await fetchGroupFeedPage(groupId, oldest)
+      setCardioRows(prev => [...prev, ...page.cardio])
+      setStrengthRows(prev => [...prev, ...page.strength])
+      setOldest(page.oldest)
+      setHasMore(page.count === FEED_PAGE_SIZE)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   useFocusEffect(useCallback(() => { load().catch(() => {}) }, [load]))
 
   const accepted = members.filter(m => m.status === 'accepted')
   const pending = members.filter(m => m.status === 'pending')
+  const banned = members.filter(m => m.status === 'banned')
   const mine = members.find(m => m.id === me)
   const isOwner = group?.owner_id === me
   // Privata gruppers medlemmar syns bara för medlemmar (RLS döljer raderna
@@ -110,49 +137,30 @@ export default function GroupScreen() {
     return mergePosts([...cardioPosts, ...gymPosts])
   }, [cardioRows, strengthRows, members])
 
-  // Veckans topplista ur flödesraderna: km för cardiogrupper, pass för gym,
-  // pass (+km) för Alla sporter. Veckan börjar på måndagen.
+  // Veckans topplista summeras i databasen (hela veckan, inte bara
+  // flödessidan): km för cardiogrupper, pass för gym och Alla sporter
   const leaderboard = useMemo(() => {
     if (!group?.show_leaderboard) return []
-    const start = new Date()
-    start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
-    start.setHours(0, 0, 0, 0)
-    const by = new Map<string, { id: string; km: number; cardioPasses: number; gymDays: Set<string> }>()
-    const rowFor = (id: string) => {
-      let row = by.get(id)
-      if (!row) { row = { id, km: 0, cardioPasses: 0, gymDays: new Set() }; by.set(id, row) }
-      return row
-    }
-    for (const r of cardioRows) {
-      if (new Date(r.workout.created_at) < start) continue
-      const row = rowFor(r.userId)
-      row.km += r.workout.data.distance_km
-      row.cardioPasses += 1
-    }
-    for (const r of strengthRows) {
-      if (new Date(r.workout.created_at) < start) continue
-      rowFor(r.userId).gymDays.add(r.workout.data.workout_date ?? r.workout.created_at.split('T')[0])
-    }
     const cardioSport = ['running', 'cycling', 'walking'].includes(group.sport)
-    return Array.from(by.values())
+    return board
       .map(e => {
-        const passes = e.cardioPasses + e.gymDays.size
+        const passes = e.cardio_passes + e.gym_days
         const km = Math.round(e.km * 10) / 10
         return {
-          id: e.id,
+          id: e.user_id,
           score: cardioSport ? e.km : passes,
           value: cardioSport
             ? `${km.toFixed(1).replace('.', ',')} km`
             : `${passes} pass`,
           meta: cardioSport
-            ? `${passes} ${passes === 1 ? 'pass' : 'pass'}`
+            ? `${passes} pass`
             : km > 0 ? `${km.toFixed(1).replace('.', ',')} km` : '',
         }
       })
       .filter(e => e.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 10)
-  }, [cardioRows, strengthRows, group])
+  }, [board, group])
 
   const postIdsKey = posts.map(p => p.id).join(',')
   useEffect(() => {
@@ -289,7 +297,7 @@ export default function GroupScreen() {
   }
 
   /** Optimistisk inställningsändring — backas vid fel */
-  async function applySetting(patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites'>>) {
+  async function applySetting(patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites' | 'hidden'>>) {
     if (!group) return
     Haptics.selectionAsync()
     const prev = group
@@ -303,29 +311,37 @@ export default function GroupScreen() {
     }
   }
 
-  /** ⋯ på en medlemsrad: anmäl, och skaparen kan ta bort medlemmen */
+  /** ⋯ på en medlemsrad: anmäl; skaparen kan ta bort eller spärra */
   function memberMenu(m: GroupMember) {
     if (!group) return
     const canRemove = isOwner && m.role !== 'owner'
     const report = () => promptReport('user', m.id, `Anmäl ${m.name ?? 'medlemmen'}`)
     const remove = () => removeMember(group.id, m.id).then(load).catch(() => {})
+    const ban = () => banMember(group.id, m.id).then(load).catch(() => {})
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
           title: m.name ?? 'Medlem',
           options: canRemove
-            ? ['Avbryt', 'Anmäl medlemmen', 'Ta bort ur gruppen']
+            ? ['Avbryt', 'Anmäl medlemmen', 'Ta bort ur gruppen', 'Ta bort och spärra']
             : ['Avbryt', 'Anmäl medlemmen'],
           cancelButtonIndex: 0,
-          destructiveButtonIndex: canRemove ? 2 : undefined,
+          destructiveButtonIndex: canRemove ? 3 : undefined,
         },
-        i => { if (i === 1) report(); else if (i === 2 && canRemove) remove() },
+        i => {
+          if (i === 1) report()
+          else if (i === 2 && canRemove) remove()
+          else if (i === 3 && canRemove) ban()
+        },
       )
     } else {
       Alert.alert(m.name ?? 'Medlem', undefined, [
         { text: 'Avbryt', style: 'cancel' },
         { text: 'Anmäl medlemmen', onPress: report },
-        ...(canRemove ? [{ text: 'Ta bort ur gruppen', onPress: remove }] : []),
+        ...(canRemove ? [
+          { text: 'Ta bort ur gruppen', onPress: remove },
+          { text: 'Ta bort och spärra', onPress: ban },
+        ] : []),
       ])
     }
   }
@@ -417,7 +433,7 @@ export default function GroupScreen() {
             )}
           </ScrollView>
 
-          {mine?.status !== 'accepted' && (
+          {(!mine || mine.status === 'pending' || mine.status === 'invited') && (
             <TouchableOpacity
               style={[s.joinBtn, { borderColor: joinActive ? T.ACCENT : pillEdge }]}
               onPress={handleJoin}
@@ -428,7 +444,10 @@ export default function GroupScreen() {
               <Text style={[s.joinText, joinActive && { color: T.ACCENT }]}>{joinLabel}</Text>
             </TouchableOpacity>
           )}
-          {mine && !isOwner && mine.status !== 'pending' && (
+          {mine?.status === 'banned' && (
+            <Text style={s.bannedText}>Du har spärrats från den här gruppen av skaparen.</Text>
+          )}
+          {mine && !isOwner && (mine.status === 'accepted' || mine.status === 'invited') && (
             <TouchableOpacity onPress={declineOrLeave} hitSlop={8}>
               <Text style={s.leave}>{mine.status === 'invited' ? 'Avböj inbjudan' : 'Lämna gruppen'}</Text>
             </TouchableOpacity>
@@ -467,9 +486,11 @@ export default function GroupScreen() {
         <Text style={s.sectionLabel}>SENASTE PASS</Text>
         {mine?.status !== 'accepted' ? (
           <Text style={s.feedEmpty}>
-            {group?.is_private
-              ? 'Gå med i gruppen för att se medlemmarnas pass.'
-              : 'Gå med i gruppen så ser du medlemmarnas pass här.'}
+            {mine?.status === 'banned'
+              ? 'Du kan inte se innehållet i den här gruppen.'
+              : group?.is_private
+                ? 'Gå med i gruppen för att se medlemmarnas pass.'
+                : 'Gå med i gruppen så ser du medlemmarnas pass här.'}
           </Text>
         ) : group && !group.show_feed ? (
           <Text style={s.feedEmpty}>
@@ -500,6 +521,14 @@ export default function GroupScreen() {
                   : undefined}
               />
             ))}
+            {hasMore && (
+              <TouchableOpacity style={[s.moreBtn, { borderColor: pillEdge }]}
+                onPress={loadMore} disabled={loadingMore} activeOpacity={0.8} testID="loadMore">
+                {loadingMore
+                  ? <ActivityIndicator size="small" color={TEXT_SECONDARY} />
+                  : <Text style={s.moreText}>Visa fler pass</Text>}
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -579,6 +608,21 @@ export default function GroupScreen() {
                   onValueChange={v => applySetting({ allow_member_invites: v })}
                   trackColor={{ false: BORDER, true: ACCENT }}
                   testID="setInvites"
+                />
+              </View>
+              <View style={[s.settingRow, s.rowDivider]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.settingTitle}>Dold grupp</Text>
+                  <Text style={s.settingBody}>
+                    Syns inte i sökningen — nya medlemmar hittar gruppen via
+                    QR-koden eller en inbjudan.
+                  </Text>
+                </View>
+                <Switch
+                  value={!!group?.hidden}
+                  onValueChange={v => applySetting({ hidden: v })}
+                  trackColor={{ false: BORDER, true: ACCENT }}
+                  testID="setHidden"
                 />
               </View>
             </View>
@@ -717,6 +761,25 @@ export default function GroupScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Spärrade — bara skaparen ser och kan häva spärren */}
+            {isOwner && banned.length > 0 && (
+              <>
+                <Text style={s.sectionLabel}>SPÄRRADE</Text>
+                <View style={[s.card, chrome]}>
+                  {banned.map((m, i) => (
+                    <View key={m.id} style={[s.memberRow, i > 0 && s.rowDivider]}>
+                      <FeedAvatar url={m.avatar_url} fallback={(m.name ?? '?').charAt(0).toUpperCase()} size={44} />
+                      <Text style={s.memberName} numberOfLines={1}>{m.name ?? 'Namnlös'}</Text>
+                      <TouchableOpacity style={[s.pill, { borderColor: pillEdge }]} testID={`unban-${m.id}`}
+                        onPress={() => removeMember(group!.id, m.id).then(load).catch(() => {})}>
+                        <Text style={s.pillText}>Ta bort spärr</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
           </ScrollView>
         </SafeScreen>
       </Modal>
@@ -815,6 +878,12 @@ const s = StyleSheet.create({
   },
   joinText: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
   leave: { color: RED, fontSize: 13, fontWeight: '600', marginTop: 8 },
+  bannedText: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 10, textAlign: 'center' },
+  moreBtn: {
+    borderWidth: 1.5, borderRadius: 999, paddingVertical: 12,
+    alignItems: 'center', marginTop: 2,
+  },
+  moreText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
 
   sectionLabel: {
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',

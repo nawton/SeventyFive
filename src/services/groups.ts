@@ -25,6 +25,8 @@ export interface Group {
   show_leaderboard: boolean
   /** Avstängt = bara ägaren får bjuda in — upprätthålls i RLS */
   allow_member_invites: boolean
+  /** Dold: syns inte i sökningen, nås via QR-kod/inbjudan (RLS) */
+  hidden: boolean
   created_at: string
 }
 
@@ -33,7 +35,7 @@ export interface GroupMember {
   name: string | null
   avatar_url: string | null
   role: 'owner' | 'member'
-  status: 'pending' | 'accepted' | 'invited'
+  status: 'pending' | 'accepted' | 'invited' | 'banned'
 }
 
 type MiniProfile = { id: string; name: string | null; avatar_url: string | null }
@@ -133,7 +135,7 @@ export async function getMyGroups(userId: string): Promise<Array<Group & { membe
 /** Ägarens snabbinställningar — RLS släpper bara igenom ägaren */
 export async function updateGroupSettings(
   groupId: string,
-  patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites'>>,
+  patch: Partial<Pick<Group, 'is_private' | 'show_feed' | 'show_leaderboard' | 'allow_member_invites' | 'hidden'>>,
 ): Promise<Group> {
   const { data, error } = await supabase
     .from('groups')
@@ -168,9 +170,11 @@ export async function searchGroups(query: string): Promise<Array<Group & { membe
   return rows.map((g, i) => ({ ...g, memberCount: counts[i] }))
 }
 
+/** Uppslag via id (QR/djuplänk) — definer-RPC:n hittar även dolda grupper */
 export async function getGroup(groupId: string): Promise<Group | null> {
-  const { data } = await supabase.from('groups').select('*').eq('id', groupId).maybeSingle()
-  return (data as Group) ?? null
+  const { data } = await supabase.rpc('get_group_by_id', { gid: groupId })
+  const row = Array.isArray(data) ? data[0] : data
+  return (row as Group) ?? null
 }
 
 /** Medlemmar med namn/avatar via follow_profiles-RPC:n (profiles-RLS är egna rader) */
@@ -207,19 +211,12 @@ export async function joinGroup(groupId: string, userId: string, isPrivate: bool
   if (error) throw error
 }
 
-/** Bjud in flera på en gång — de som redan är med hoppas över tyst.
-    invited_by krävs av RLS och bär avsändaren i pushnotisen. */
+/** Bjud in flera på en gång via definer-RPC:n: den som redan väntar på
+    godkännande blir medlem direkt (inbjudan ÄR ett ja), spärrade och
+    befintliga medlemmar hoppas över tyst. */
 export async function inviteToGroup(groupId: string, userIds: string[]): Promise<void> {
   if (userIds.length === 0) return
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) throw new Error('inte inloggad')
-  const rows = userIds.map(id => ({
-    group_id: groupId, user_id: id, role: 'member', status: 'invited',
-    invited_by: session.user.id,
-  }))
-  const { error } = await supabase
-    .from('group_members')
-    .upsert(rows, { onConflict: 'group_id,user_id', ignoreDuplicates: true })
+  const { error } = await supabase.rpc('invite_to_group', { gid: groupId, uids: userIds })
   if (error) throw error
 }
 
@@ -292,6 +289,62 @@ export async function approveMember(groupId: string, userId: string): Promise<vo
 
 export async function removeMember(groupId: string, userId: string): Promise<void> {
   return leaveGroup(groupId, userId)
+}
+
+/** Spärra: raden blir kvar som 'banned' och blockerar återinträde.
+    Ägaren tar bort spärren genom att radera raden (removeMember). */
+export async function banMember(groupId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('group_members')
+    .update({ status: 'banned', role: 'member' })
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+export interface GroupLeaderboardRow {
+  user_id: string
+  km: number
+  cardio_passes: number
+  gym_days: number
+}
+
+/** Veckotopplistan summeras i databasen — hela perioden, inte bara
+    flödessidans senaste rader */
+export async function getGroupLeaderboard(groupId: string, sinceIso: string): Promise<GroupLeaderboardRow[]> {
+  const { data, error } = await supabase.rpc('get_group_leaderboard', {
+    gid: groupId,
+    since: sinceIso,
+  })
+  if (error || !data) return []
+  return (data as Array<Record<string, unknown>>).map(r => ({
+    user_id: String(r.user_id),
+    km: Number(r.km ?? 0),
+    cardio_passes: Number(r.cardio_passes ?? 0),
+    gym_days: Number(r.gym_days ?? 0),
+  }))
+}
+
+/** Antalet grupphändelser som väntar på svar — till klock-badgen och
+    hemskärmens pulsrad */
+export async function getGroupNotificationCount(userId: string): Promise<number> {
+  const [inv, owned] = await Promise.all([
+    supabase.from('group_members')
+      .select('group_id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'invited'),
+    supabase.from('groups').select('id').eq('owner_id', userId),
+  ])
+  let pending = 0
+  const ids = ((owned.data ?? []) as Array<{ id: string }>).map(g => g.id)
+  if (ids.length > 0) {
+    const { count } = await supabase.from('group_members')
+      .select('group_id', { count: 'exact', head: true })
+      .in('group_id', ids)
+      .eq('status', 'pending')
+    pending = count ?? 0
+  }
+  return (inv.count ?? 0) + pending
 }
 
 /** Överlåt gruppen till en accepterad medlem — RPC:n byter ägare och roller i ett svep */

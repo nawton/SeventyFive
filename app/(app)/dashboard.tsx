@@ -56,6 +56,7 @@ import { getWorkoutSessions, getCompletedSessionIds, sessionActiveOn, type Worko
 import { getStreak } from '@/services/dailyLog'
 import { getSocialNotificationCount } from '@/services/social'
 import { getIncomingRequestCount } from '@/services/follows'
+import { getGroupNotificationCount } from '@/services/groups'
 import { getNotifSeenAt, getRaceDate } from '@/lib/prefs'
 import { isoDate, todayMidnight } from '@/lib/scheduleDates'
 import { weekdayOf } from '@/lib/date'
@@ -217,6 +218,7 @@ export default function DashboardScreen() {
   const [streak, setStreak]               = useState(0)
   const [pulseCount, setPulseCount]       = useState(0)
   const [pulseRequests, setPulseRequests] = useState(0)
+  const [pulseGroups, setPulseGroups]     = useState(0)
   const chrome = useCardChrome()
 
   // Add-rule sheet (UI, animation och gest bor i AddRuleSheet-komponenten)
@@ -333,10 +335,12 @@ export default function DashboardScreen() {
         getStreak(active.id),
         getNotifSeenAt().then(seen => getSocialNotificationCount(seen)),
         getIncomingRequestCount(),
-      ]).then(([sess, done, race, st, social, reqs]) => {
+        getGroupNotificationCount(user.id),
+      ]).then(([sess, done, race, st, social, reqs, grp]) => {
         if (st.status === 'fulfilled') setStreak(st.value)
         if (social.status === 'fulfilled') setPulseCount(social.value)
         if (reqs.status === 'fulfilled') setPulseRequests(reqs.value)
+        if (grp.status === 'fulfilled') setPulseGroups(grp.value)
         if (sess.status !== 'fulfilled') return
         const all = sess.value
         setHasAnySchedule(all.some(x => x.weekdays.length > 0 && !x.name.startsWith('SKIP:')))
@@ -696,13 +700,15 @@ export default function DashboardScreen() {
         </Animated.View>
 
         {/* ── Social puls — visas bara när något faktiskt hänt ── */}
-        {(pulseCount > 0 || pulseRequests > 0) && (
+        {(pulseCount > 0 || pulseRequests > 0 || pulseGroups > 0) && (
           <TouchableOpacity style={s.pulseRow} onPress={() => router.push('/(app)/notifications')} activeOpacity={0.8}>
             <Ionicons name="notifications" size={16} color={ACCENT} />
             <Text style={s.pulseText} numberOfLines={1}>
-              {pulseCount > 0 ? `${pulseCount} ${pulseCount === 1 ? 'ny händelse' : 'nya händelser'}` : ''}
-              {pulseCount > 0 && pulseRequests > 0 ? ' · ' : ''}
-              {pulseRequests > 0 ? `${pulseRequests} ${pulseRequests === 1 ? 'vänförfrågan' : 'vänförfrågningar'}` : ''}
+              {[
+                pulseCount > 0 ? `${pulseCount} ${pulseCount === 1 ? 'ny händelse' : 'nya händelser'}` : '',
+                pulseRequests > 0 ? `${pulseRequests} ${pulseRequests === 1 ? 'vänförfrågan' : 'vänförfrågningar'}` : '',
+                pulseGroups > 0 ? `${pulseGroups} ${pulseGroups === 1 ? 'gruppnotis' : 'gruppnotiser'}` : '',
+              ].filter(Boolean).join(' · ')}
             </Text>
             <Ionicons name="chevron-forward" size={15} color={TEXT_SECONDARY} />
           </TouchableOpacity>

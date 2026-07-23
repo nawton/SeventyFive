@@ -27,6 +27,7 @@ import {
   getFollowCounts, getIncomingRequestCount, subscribeToFollows, type FollowCounts,
 } from '@/services/follows'
 import { getSocialNotificationCount, subscribeToSocial } from '@/services/social'
+import { getGroupNotificationCount } from '@/services/groups'
 import { getNotifSeenAt } from '@/lib/prefs'
 import { strengthToPosts } from '@/components/FeedWorkoutCard'
 import { AthleteOverview } from '@/components/AthleteOverview'
@@ -76,6 +77,7 @@ export default function ProfileScreen() {
   const [counts, setCounts]         = useState<FollowCounts>({ followers: 0, following: 0 })
   const [requestCount, setRequestCount] = useState(0)
   const [socialCount, setSocialCount] = useState(0)
+  const [groupCount, setGroupCount] = useState(0)
   const [streak, setStreak]         = useState(0)
   const [unit, setUnit]             = useState<UnitSystem>('metric')
   const [loading, setLoading]       = useState(true)
@@ -100,6 +102,7 @@ export default function ProfileScreen() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) return
       const uid = session.user.id
+      getGroupNotificationCount(uid).then(setGroupCount).catch(() => {})
       unsubscribe = subscribeToFollows(uid, () => {
         getFollowCounts(uid).then(setCounts).catch(() => {})
         getIncomingRequestCount().then(setRequestCount).catch(() => {})
@@ -409,10 +412,10 @@ export default function ProfileScreen() {
               fallbackStyle={s.bellButton}
             />
             {/* Röd badge: väntande förfrågningar + osedda gillanden/kommentarer */}
-            {requestCount + socialCount > 0 && (
+            {requestCount + socialCount + groupCount > 0 && (
               <View style={s.bellBadge} pointerEvents="none" testID="bellBadge">
                 <Text style={s.bellBadgeText}>
-                  {requestCount + socialCount > 9 ? '9+' : requestCount + socialCount}
+                  {requestCount + socialCount + groupCount > 9 ? '9+' : requestCount + socialCount + groupCount}
                 </Text>
               </View>
             )}
