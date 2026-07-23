@@ -4,7 +4,7 @@ import {
   TouchableWithoutFeedback, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native'
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS } from 'react-native-reanimated'
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS, Easing } from 'react-native-reanimated'
 import * as ImagePicker from 'expo-image-picker'
 import * as Haptics from 'expo-haptics'
 import { SafeScreen } from '@/components/SafeScreen'
@@ -89,7 +89,8 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
     Haptics.selectionAsync()
     sheetY.value = SHEET_OFF
     setSportOpen(true)
-    sheetY.value = withSpring(0, { damping: 22, stiffness: 240 })
+    // Ease-out utan studs — arket bromsar mjukt in på plats
+    sheetY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) })
   }
 
   function toggleTag(tag: string) {
