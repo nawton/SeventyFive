@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
-import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARD_BORDER } from '@/lib/theme'
+import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARD_BORDER, useCardChrome } from '@/lib/theme'
 import { MedalBadge } from '@/components/MedalBadge'
 import { getAchievementSummary, type AchievementSummary } from '@/services/achievementSummary'
 import { getActiveChallenge } from '@/services/challenge'
@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 // =============================================================================
 
 export function RecordsCard() {
+  const chrome = useCardChrome()
   const [summary, setSummary] = useState<AchievementSummary | null>(null)
 
   useFocusEffect(useCallback(() => {
@@ -57,7 +58,6 @@ const s = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     backgroundColor: CARD, borderRadius: 18,
-    borderWidth: 1, borderColor: CARD_BORDER,
     paddingVertical: 18, paddingHorizontal: 16,
   },
   medalStack: { width: 96, height: 56, justifyContent: 'center' },

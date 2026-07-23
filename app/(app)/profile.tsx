@@ -516,7 +516,7 @@ const s = StyleSheet.create({
   },
   gridImageMissing: {
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: 'rgba(128,128,128,0.25)',
   },
   gridBadge: {
     position: 'absolute', bottom: 5, left: 5,

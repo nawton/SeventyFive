@@ -401,7 +401,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 14, paddingHorizontal: 16,
   },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.18)' },
   rowLabel: { color: TEXT_PRIMARY, fontSize: 15 },
   rowHint: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 3, lineHeight: 16 },
 
@@ -414,7 +414,7 @@ const s = StyleSheet.create({
   fiveKInput: {
     width: 64, paddingVertical: 9,
     backgroundColor: BG, borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER,
+    borderWidth: 1, borderColor: 'rgba(128,128,128,0.30)',
     color: TEXT_PRIMARY, fontSize: 20, fontFamily: NUM_FONT,
     textAlign: 'center', fontVariant: ['tabular-nums'],
   },

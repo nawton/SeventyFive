@@ -108,6 +108,7 @@ function DayCard({
     <TouchableOpacity
       style={[
         s.dayCard,
+        { borderColor: light ? 'transparent' : '#2C2C2E' },
         hasSession && { backgroundColor: activeBg, borderColor: activeBorder },
         isToday   && { borderColor: todayBorder },
       ]}
@@ -459,7 +460,6 @@ const s = StyleSheet.create({
     backgroundColor: CARD,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: CARD_BORDER,
     padding: 14,
     gap: 6,
     justifyContent: 'space-between',
