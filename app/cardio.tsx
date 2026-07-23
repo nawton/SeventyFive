@@ -1751,8 +1751,11 @@ export default function CardioScreen() {
             )}
 
             {voicePage === 'voice' && (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.voiceHint}>Tryck på en röst för att välja och provlyssna.</Text>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16, gap: 10, paddingBottom: 40 }}
+              >
+                <Text style={[styles.voiceHint, { marginBottom: 2 }]}>Tryck på en röst för att välja och provlyssna.</Text>
                 {coachVoices.map(v => {
                   const active = v.identifier === coachVoiceId
                   const quality = voiceQualityLabel(v)
@@ -1791,16 +1794,16 @@ export default function CardioScreen() {
                     <Ionicons name="cloud-download-outline" size={19} color={CARDIO_ACCENT} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.voiceRowLabel}>Hämta fler röster</Text>
+                    <Text style={styles.voiceRowLabel}>Hämta Alva (Premium)</Text>
                     <Text style={styles.voiceRowValue}>
-                      Uppläst innehåll → Röster → Svenska → Alva
+                      Öppnar Inställningar — gå till Hjälpmedel{'\n'}→ Uppläst innehåll → Röster → Svenska
                     </Text>
                   </View>
-                  <Ionicons name="arrow-forward" size={17} color={CARDIO_ACCENT} />
+                  <Ionicons name="open-outline" size={18} color={CARDIO_ACCENT} />
                 </TouchableOpacity>
                 <Text style={styles.voiceHint}>
-                  Ladda ner Alva (Premium) där, kom tillbaka hit och välj den —
-                  det är den mjukaste svenska rösten.
+                  Ladda ner rösten där, kom tillbaka hit och välj den — det är
+                  den mjukaste svenska rösten.
                 </Text>
               </ScrollView>
             )}

@@ -37,9 +37,11 @@ export function voiceQualityLabel(v: CoachVoice): string {
 /** Direkt till iOS röstinställningar — privata schemat funkar på de flesta
     versioner; faller tillbaka till appens inställningar */
 export function openVoiceSettings(): void {
-  Linking.openURL('App-Prefs:ACCESSIBILITY&path=SPEECH').catch(() => {
-    Linking.openURL('app-settings:').catch(() => {})
-  })
+  // Djuplänkar till undersidor i Inställningar är privata och opålitliga —
+  // sikta på Hjälpmedel, fall tillbaka till Inställningar-roten
+  Linking.openURL('App-Prefs:root=ACCESSIBILITY').catch(() =>
+    Linking.openURL('App-Prefs:').catch(() =>
+      Linking.openURL('app-settings:').catch(() => {})))
 }
 
 let cached: CoachVoice[] | null = null
