@@ -8,7 +8,7 @@ jest.mock('@/lib/supabase', () => ({
     from: jest.fn(),
     auth: {
       getSession: jest.fn().mockResolvedValue({
-        data: { session: { user: { id: 'u1', email: 'anton@example.com' } } },
+        data: { session: { user: { id: 'u1', email: 'erik@example.com' } } },
       }),
     },
   },
@@ -27,7 +27,7 @@ jest.mock('expo-router', () => ({
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }))
 
 const PROFILE = {
-  name: 'Anton Wretenberg', avatar_url: null,
+  name: 'Erik Larsson', avatar_url: null,
   birth_date: '2004-01-09', gender: 'Man', weight_kg: 75.5, height_cm: 182,
 }
 
@@ -39,13 +39,13 @@ beforeEach(() => {
 describe('Profilinställningar', () => {
   it('visar alla rader med värden från profilen', async () => {
     render(<AccountScreen />)
-    expect(await screen.findByDisplayValue('Anton')).toBeOnTheScreen()
-    expect(screen.getByDisplayValue('Wretenberg')).toBeOnTheScreen()
+    expect(await screen.findByDisplayValue('Erik')).toBeOnTheScreen()
+    expect(screen.getByDisplayValue('Larsson')).toBeOnTheScreen()
     expect(screen.getByText('2004-01-09')).toBeOnTheScreen()
     expect(screen.getByText('Man')).toBeOnTheScreen()
     expect(screen.getByText('75,5 kg')).toBeOnTheScreen()
     expect(screen.getByText('182 cm')).toBeOnTheScreen()
-    expect(screen.getByText('anton@example.com')).toBeOnTheScreen()
+    expect(screen.getByText('erik@example.com')).toBeOnTheScreen()
   })
 
   it('tom profil: "Lägg till"/"Ej specificerad" och Språk är låst', async () => {
@@ -62,11 +62,11 @@ describe('Profilinställningar', () => {
   it('checkbocken i headern sparar namnen och stänger sidan', async () => {
     const { router } = require('expo-router')
     render(<AccountScreen />)
-    const input = await screen.findByDisplayValue('Anton')
+    const input = await screen.findByDisplayValue('Erik')
     fireEvent.changeText(input, 'Tony')
     fireEvent.press(screen.getByText('glassbtn:checkmark'))
     await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Wretenberg' }))
+      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Larsson' }))
     expect(router.back).toHaveBeenCalled()
   })
 
@@ -105,38 +105,38 @@ describe('Profilinställningar', () => {
 
   it('namnen redigeras direkt i raden — returknappen sparar ihop dem', async () => {
     render(<AccountScreen />)
-    const input = await screen.findByDisplayValue('Anton')
+    const input = await screen.findByDisplayValue('Erik')
     fireEvent.changeText(input, 'Tony')
     fireEvent(input, 'submitEditing')
     await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Wretenberg' }))
+      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Larsson' }))
   })
 
   it('blur sparar också — man ska inte kunna tappa en namnändring', async () => {
     render(<AccountScreen />)
-    const input = await screen.findByDisplayValue('Wretenberg')
+    const input = await screen.findByDisplayValue('Larsson')
     fireEvent.changeText(input, 'Berg')
     fireEvent(input, 'blur')
     await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Anton Berg' }))
+      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Erik Berg' }))
   })
 
   it('Done-pillen över tangentbordet sparar förnamnet', async () => {
     render(<AccountScreen />)
-    const input = await screen.findByDisplayValue('Anton')
+    const input = await screen.findByDisplayValue('Erik')
     fireEvent.changeText(input, 'Tony')
     fireEvent.press(screen.getByTestId('firstNameDone'))
     await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Wretenberg' }))
+      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Tony Larsson' }))
   })
 
   it('efternamnet har en egen Done-pill (delad accessory tappas av iOS)', async () => {
     render(<AccountScreen />)
-    const input = await screen.findByDisplayValue('Wretenberg')
+    const input = await screen.findByDisplayValue('Larsson')
     fireEvent.changeText(input, 'Berg')
     fireEvent.press(screen.getByTestId('lastNameDone'))
     await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Anton Berg' }))
+      expect(updateProfile).toHaveBeenCalledWith('u1', { name: 'Erik Berg' }))
   })
 
   it('födelsedatumshjulet: Klar sparar valt datum', async () => {

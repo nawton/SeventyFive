@@ -5,7 +5,7 @@ jest.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: jest.fn().mockResolvedValue({
-        data: { session: { user: { id: 'u1', email: 'anton@example.com' } } },
+        data: { session: { user: { id: 'u1', email: 'erik@example.com' } } },
       }),
     },
   },
@@ -57,7 +57,7 @@ const {
 beforeEach(() => {
   jest.clearAllMocks()
   mockParams = {
-    postKey: 'w1', ownerId: 'u2', ownerName: 'Alva Wretenberg', ownerAvatar: '',
+    postKey: 'w1', ownerId: 'u2', ownerName: 'Anna Andersson', ownerAvatar: '',
     kind: 'cardio', title: 'Löpning på eftermiddagen',
     createdAt: '2026-07-21T16:00:00.000Z', meta: '6,05 km',
   }
@@ -70,7 +70,7 @@ beforeEach(() => {
   ])
   ;(getComments as jest.Mock).mockResolvedValue([
     {
-      id: 'c1', authorId: 'u3', authorName: 'Johan Wretenberg', authorAvatar: null,
+      id: 'c1', authorId: 'u3', authorName: 'Johan Larsson', authorAvatar: null,
       body: 'Du är bra igång Alva!', createdAt: '2026-07-21T18:00:00.000Z',
       likes: 0, likedByMe: false,
     },
@@ -81,10 +81,10 @@ describe('Diskussion', () => {
   it('visar titel, meta, gillanden och kommentarstråden', async () => {
     render(<PostScreen />)
     expect(await screen.findByText('Löpning på eftermiddagen')).toBeOnTheScreen()
-    expect(screen.getByText(/Alva Wretenberg/)).toBeOnTheScreen()
+    expect(screen.getByText(/Anna Andersson/)).toBeOnTheScreen()
     expect(screen.getByText(/6,05 km/)).toBeOnTheScreen()
     expect(await screen.findByText('2')).toBeOnTheScreen()          // gillaräknare
-    expect(await screen.findByText('Johan Wretenberg')).toBeOnTheScreen()
+    expect(await screen.findByText('Johan Larsson')).toBeOnTheScreen()
     expect(screen.getByText('Du är bra igång Alva!')).toBeOnTheScreen()
   })
 
@@ -102,7 +102,7 @@ describe('Diskussion', () => {
     const alertSpy = jest.spyOn(Alert, 'alert')
     ;(getComments as jest.Mock).mockResolvedValue([
       {
-        id: 'c2', authorId: 'u1', authorName: 'Anton', authorAvatar: null,
+        id: 'c2', authorId: 'u1', authorName: 'Erik', authorAvatar: null,
         body: 'Min egen kommentar', createdAt: '2026-07-21T19:00:00.000Z',
         likes: 0, likedByMe: false,
       },
@@ -123,7 +123,7 @@ describe('Diskussion', () => {
     const { reportContent } = require('@/services/reports')
     const alertSpy = jest.spyOn(Alert, 'alert')
     render(<PostScreen />)
-    await screen.findByText('Johan Wretenberg')
+    await screen.findByText('Johan Larsson')
     fireEvent(screen.getByTestId('comment-c1'), 'longPress')
     expect(alertSpy).toHaveBeenCalled()
     const buttons = alertSpy.mock.calls[0][2] as Array<{ text: string; onPress?: () => void }>
@@ -135,7 +135,7 @@ describe('Diskussion', () => {
   it('hjärtat på en kommentar gillar och räknar upp', async () => {
     const { likeComment } = require('@/services/social')
     render(<PostScreen />)
-    await screen.findByText('Johan Wretenberg')
+    await screen.findByText('Johan Larsson')
     fireEvent.press(screen.getByTestId('commentLike-c1'))
     expect(likeComment).toHaveBeenCalledWith('c1')
     expect(screen.getByText('1 gillamarkering')).toBeOnTheScreen()
@@ -152,17 +152,17 @@ describe('Diskussion', () => {
   it('gillamarkeringstexten öppnar gillarlistan', async () => {
     const { getCommentLikers } = require('@/services/social')
     ;(getCommentLikers as jest.Mock).mockResolvedValue([
-      { id: 'u3', name: 'Johan Wretenberg', avatar_url: null },
+      { id: 'u3', name: 'Johan Larsson', avatar_url: null },
     ])
     ;(getComments as jest.Mock).mockResolvedValue([
       {
-        id: 'c1', authorId: 'u3', authorName: 'Johan Wretenberg', authorAvatar: null,
+        id: 'c1', authorId: 'u3', authorName: 'Johan Larsson', authorAvatar: null,
         body: 'Du är bra igång Alva!', createdAt: '2026-07-21T18:00:00.000Z',
         likes: 1, likedByMe: false,
       },
     ])
     render(<PostScreen />)
-    await screen.findByText('Johan Wretenberg')
+    await screen.findByText('Johan Larsson')
     fireEvent.press(screen.getByTestId('commentLikers-c1'))
     expect(getCommentLikers).toHaveBeenCalledWith('c1')
     expect(await screen.findByTestId('likersClose')).toBeOnTheScreen()   // sheeten är öppen
@@ -171,11 +171,11 @@ describe('Diskussion', () => {
   it('tryck på en kommentar öppnar personens profil', async () => {
     const { router } = require('expo-router')
     render(<PostScreen />)
-    await screen.findByText('Johan Wretenberg')
+    await screen.findByText('Johan Larsson')
     fireEvent.press(screen.getByTestId('comment-c1'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/athlete',
-      params: { userId: 'u3', name: 'Johan Wretenberg', avatar: '' },
+      params: { userId: 'u3', name: 'Johan Larsson', avatar: '' },
     })
   })
 

@@ -5,13 +5,13 @@ jest.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: jest.fn().mockResolvedValue({
-        data: { session: { user: { id: 'u1', email: 'anton@example.com' } } },
+        data: { session: { user: { id: 'u1', email: 'erik@example.com' } } },
       }),
     },
   },
 }))
 jest.mock('@/services/profile', () => ({
-  getProfile: jest.fn().mockResolvedValue({ name: 'Anton Wretenberg', avatar_url: null }),
+  getProfile: jest.fn().mockResolvedValue({ name: 'Erik Larsson', avatar_url: null }),
 }))
 jest.mock('@/services/feed', () => ({
   fetchUserWorkouts: jest.fn().mockResolvedValue({ cardio: [], strength: [] }),
@@ -66,7 +66,7 @@ beforeEach(() => {
 describe('Aktiviteter', () => {
   it('listar passen som flödeskort med statistik', async () => {
     render(<ActivitiesScreen />)
-    expect(await screen.findByText('Anton Wretenberg')).toBeOnTheScreen()
+    expect(await screen.findByText('Erik Larsson')).toBeOnTheScreen()
     expect(screen.getByText(/Löpning, /)).toBeOnTheScreen()
     expect(screen.getByText('5,01')).toBeOnTheScreen()
     expect(screen.getByText('45:09')).toBeOnTheScreen()
@@ -75,7 +75,7 @@ describe('Aktiviteter', () => {
 
   it('tryck på ett kort öppnar passdetaljvyn', async () => {
     render(<ActivitiesScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByTestId('post-w1'))
     expect(screen.getByText('summary:Morgonrunda')).toBeOnTheScreen()
   })
@@ -95,7 +95,7 @@ describe('Aktiviteter', () => {
       }],
     })
     render(<ActivitiesScreen />)
-    await screen.findAllByText('Anton Wretenberg')     // löprunda + gympass
+    await screen.findAllByText('Erik Larsson')     // löprunda + gympass
     expect(screen.getByText('5,01')).toBeOnTheScreen()
     expect(screen.getByText(/Gympass, /)).toBeOnTheScreen()
 
@@ -109,9 +109,9 @@ describe('Aktiviteter', () => {
   })
 
   it('annans pass: betyget är skrivskyddat i detaljvyn', async () => {
-    mockParams = { userId: 'u9', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u9', name: 'Kalle', avatar: '' }
     render(<ActivitiesScreen />)
-    await screen.findByText('Nawid')
+    await screen.findByText('Kalle')
     fireEvent.press(screen.getByTestId('post-w1'))
     expect(screen.getByText('summary:Morgonrunda:readonly')).toBeOnTheScreen()
   })

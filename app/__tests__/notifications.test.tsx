@@ -5,7 +5,7 @@ jest.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: jest.fn().mockResolvedValue({
-        data: { session: { user: { id: 'u1', email: 'anton@example.com' } } },
+        data: { session: { user: { id: 'u1', email: 'erik@example.com' } } },
       }),
     },
   },
@@ -54,21 +54,21 @@ describe('Notiser', () => {
 
   it('vänförfrågningar listas och Godkänn sparar', async () => {
     ;(getIncomingRequests as jest.Mock).mockResolvedValue([
-      { id: 'u2', name: 'Nawid', avatar_url: '🔥' },
+      { id: 'u2', name: 'Kalle', avatar_url: '🔥' },
     ])
     render(<NotificationsScreen />)
-    expect(await screen.findByText('Nawid')).toBeOnTheScreen()
+    expect(await screen.findByText('Kalle')).toBeOnTheScreen()
     expect(screen.getByText('vill följa dig och se din statistik')).toBeOnTheScreen()
     fireEvent.press(screen.getByTestId('accept-u2'))
     expect(acceptFollower).toHaveBeenCalledWith('u2')
-    expect(screen.queryByText('Nawid')).not.toBeOnTheScreen()   // raden försvinner direkt
+    expect(screen.queryByText('Kalle')).not.toBeOnTheScreen()   // raden försvinner direkt
   })
 
   it('gillanden och kommentarer listas under Aktivitet', async () => {
     ;(getSocialNotifications as jest.Mock).mockResolvedValue([
       {
         kind: 'like', postKey: 'w1',
-        from: { id: 'u2', name: 'Nawid', avatar_url: '🔥' },
+        from: { id: 'u2', name: 'Kalle', avatar_url: '🔥' },
         body: null, createdAt: '2026-07-22T08:00:00.000Z',
       },
       {
@@ -86,12 +86,12 @@ describe('Notiser', () => {
 
   it('Avböj tar bort förfrågan', async () => {
     ;(getIncomingRequests as jest.Mock).mockResolvedValue([
-      { id: 'u2', name: 'Nawid', avatar_url: null },
+      { id: 'u2', name: 'Kalle', avatar_url: null },
     ])
     render(<NotificationsScreen />)
-    await screen.findByText('Nawid')
+    await screen.findByText('Kalle')
     fireEvent.press(screen.getByTestId('decline-u2'))
     expect(declineFollower).toHaveBeenCalledWith('u2')
-    expect(screen.queryByText('Nawid')).not.toBeOnTheScreen()
+    expect(screen.queryByText('Kalle')).not.toBeOnTheScreen()
   })
 })

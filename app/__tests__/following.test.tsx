@@ -5,13 +5,13 @@ jest.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: jest.fn().mockResolvedValue({
-        data: { session: { user: { id: 'u1', email: 'anton@example.com' } } },
+        data: { session: { user: { id: 'u1', email: 'erik@example.com' } } },
       }),
     },
   },
 }))
 jest.mock('@/services/profile', () => ({
-  getProfile: jest.fn().mockResolvedValue({ name: 'Anton Wretenberg', avatar_url: null }),
+  getProfile: jest.fn().mockResolvedValue({ name: 'Erik Larsson', avatar_url: null }),
 }))
 jest.mock('@/services/follows', () => ({
   getFollowLists: jest.fn().mockResolvedValue({ followers: [], following: [] }),
@@ -36,7 +36,7 @@ jest.mock('expo-haptics', () => ({
 
 const { getFollowLists, follow, unfollow } = require('@/services/follows')
 
-const NAWID = { id: 'u2', name: 'Nawid', avatar_url: '🔥' }
+const NAWID = { id: 'u2', name: 'Kalle', avatar_url: '🔥' }
 const SARA  = { id: 'u3', name: 'Sara', avatar_url: null }
 
 beforeEach(() => {
@@ -48,7 +48,7 @@ beforeEach(() => {
 describe('Följare/Följer', () => {
   it('tomma listor: nollräknare och tomlägen per flik', async () => {
     render(<FollowingScreen />)
-    expect(await screen.findByText('Anton Wretenberg')).toBeOnTheScreen()
+    expect(await screen.findByText('Erik Larsson')).toBeOnTheScreen()
     expect(screen.getByText('0 Följare')).toBeOnTheScreen()
     expect(screen.getByText('0 Följer')).toBeOnTheScreen()
     expect(screen.getByText('Du följer ingen ännu')).toBeOnTheScreen()
@@ -58,7 +58,7 @@ describe('Följare/Följer', () => {
 
   it('dra-för-att-uppdatera laddar om listorna', async () => {
     render(<FollowingScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     expect(getFollowLists).toHaveBeenCalledTimes(1)
     // Någon hann följa sedan sidan laddades — draget hämtar in det
     ;(getFollowLists as jest.Mock).mockResolvedValue({ followers: [SARA], following: [] })
@@ -77,11 +77,11 @@ describe('Följare/Följer', () => {
       following: [NAWID],
     })
     render(<FollowingScreen />)
-    expect(await screen.findByText('Nawid')).toBeOnTheScreen()   // Följer-fliken är default
+    expect(await screen.findByText('Kalle')).toBeOnTheScreen()   // Följer-fliken är default
     expect(screen.getByText('1 Följare')).toBeOnTheScreen()
     expect(screen.getByText('1 Följer')).toBeOnTheScreen()
 
-    fireEvent.press(screen.getByTestId('follow-u2'))             // avfölj Nawid
+    fireEvent.press(screen.getByTestId('follow-u2'))             // avfölj Kalle
     expect(unfollow).toHaveBeenCalledWith('u2')
     expect(screen.getByText('Följ')).toBeOnTheScreen()           // pillen vände direkt
 
@@ -97,18 +97,18 @@ describe('Följare/Följer', () => {
     ;(getFollowLists as jest.Mock).mockResolvedValue({ followers: [SARA], following: [NAWID] })
     render(<FollowingScreen />)
     expect(await screen.findByText('Sara')).toBeOnTheScreen()       // följare-fliken direkt
-    expect(screen.queryByText('Nawid')).not.toBeOnTheScreen()
+    expect(screen.queryByText('Kalle')).not.toBeOnTheScreen()
   })
 
   it('tryck på en rad öppnar personens profil', async () => {
     const { router } = require('expo-router')
     ;(getFollowLists as jest.Mock).mockResolvedValue({ followers: [], following: [NAWID] })
     render(<FollowingScreen />)
-    await screen.findByText('Nawid')
-    fireEvent.press(screen.getByText('Nawid'))
+    await screen.findByText('Kalle')
+    fireEvent.press(screen.getByText('Kalle'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/athlete',
-      params: { userId: 'u2', name: 'Nawid', avatar: '🔥' },
+      params: { userId: 'u2', name: 'Kalle', avatar: '🔥' },
     })
   })
 })

@@ -39,25 +39,25 @@ describe('Sök användare', () => {
 
   it('söker efter debounce och listar träffar', async () => {
     ;(searchProfiles as jest.Mock).mockResolvedValue([
-      { id: 'u2', name: 'Nawid', avatar_url: '🔥' },
+      { id: 'u2', name: 'Kalle', avatar_url: '🔥' },
       { id: 'u3', name: 'Nadja', avatar_url: null },
     ])
     render(<SearchUsersScreen />)
     fireEvent.changeText(screen.getByTestId('searchInput'), 'Na')
-    expect(await screen.findByText('Nawid')).toBeOnTheScreen()
+    expect(await screen.findByText('Kalle')).toBeOnTheScreen()
     expect(screen.getByText('Nadja')).toBeOnTheScreen()
     expect(searchProfiles).toHaveBeenCalledWith('Na')
   })
 
   it('träffarna visar följstatus och kan följas direkt', async () => {
     ;(searchProfiles as jest.Mock).mockResolvedValue([
-      { id: 'u2', name: 'Nawid', avatar_url: '🔥' },
+      { id: 'u2', name: 'Kalle', avatar_url: '🔥' },
       { id: 'u3', name: 'Sara', avatar_url: null },
     ])
     ;(getFollowStatuses as jest.Mock).mockResolvedValue({ u2: 'accepted', u3: 'none' })
     render(<SearchUsersScreen />)
     fireEvent.changeText(screen.getByTestId('searchInput'), 'a b')
-    expect(await screen.findByText('Följer')).toBeOnTheScreen()   // Nawid följs redan
+    expect(await screen.findByText('Följer')).toBeOnTheScreen()   // Kalle följs redan
     expect(screen.getByText('Följ')).toBeOnTheScreen()            // Sara följs inte
     fireEvent.press(screen.getByTestId('follow-u3'))              // skicka förfrågan
     expect(follow).toHaveBeenCalledWith('u3')
@@ -66,7 +66,7 @@ describe('Sök användare', () => {
 
   it('Följer-pillen avföljer direkt', async () => {
     ;(searchProfiles as jest.Mock).mockResolvedValue([
-      { id: 'u2', name: 'Nawid', avatar_url: '🔥' },
+      { id: 'u2', name: 'Kalle', avatar_url: '🔥' },
     ])
     ;(getFollowStatuses as jest.Mock).mockResolvedValue({ u2: 'accepted' })
     render(<SearchUsersScreen />)
@@ -80,15 +80,15 @@ describe('Sök användare', () => {
   it('tryck på en träff öppnar personens profil', async () => {
     const { router } = require('expo-router')
     ;(searchProfiles as jest.Mock).mockResolvedValue([
-      { id: 'u2', name: 'Nawid', avatar_url: '🔥' },
+      { id: 'u2', name: 'Kalle', avatar_url: '🔥' },
     ])
     render(<SearchUsersScreen />)
     fireEvent.changeText(screen.getByTestId('searchInput'), 'Na')
-    await screen.findByText('Nawid')
+    await screen.findByText('Kalle')
     fireEvent.press(screen.getByTestId('hit-u2'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/athlete',
-      params: { userId: 'u2', name: 'Nawid', avatar: '🔥' },
+      params: { userId: 'u2', name: 'Kalle', avatar: '🔥' },
     })
   })
 

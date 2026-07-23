@@ -6,7 +6,7 @@ jest.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: jest.fn().mockResolvedValue({
-        data: { session: { user: { id: 'u1', email: 'anton@example.com' } } },
+        data: { session: { user: { id: 'u1', email: 'erik@example.com' } } },
       }),
     },
   },
@@ -33,7 +33,7 @@ const { getBlockedUsers, unblockUser } = require('@/services/blocks')
 beforeEach(() => {
   jest.clearAllMocks()
   ;(getProfile as jest.Mock).mockResolvedValue({
-    name: 'Anton', avatar_url: null,
+    name: 'Erik', avatar_url: null,
     is_public: false, searchable: true, activity_visibility: 'followers',
     trim_route_meters: 0, hide_route_maps: false,
   })
@@ -113,13 +113,13 @@ describe('Integritetsinställningar', () => {
 
   it('blockerade konton listas och kan avblockeras', async () => {
     ;(getBlockedUsers as jest.Mock).mockResolvedValue([
-      { id: 'u2', name: 'Nawid', avatar_url: '🔥' },
+      { id: 'u2', name: 'Kalle', avatar_url: '🔥' },
     ])
     render(<PrivacyScreen />)
     fireEvent.press(await screen.findByTestId('privacy-blocked'))
-    expect(await screen.findByText('Nawid')).toBeOnTheScreen()
+    expect(await screen.findByText('Kalle')).toBeOnTheScreen()
     fireEvent.press(screen.getByTestId('unblock-u2'))
     expect(unblockUser).toHaveBeenCalledWith('u2')
-    expect(screen.queryByText('Nawid')).not.toBeOnTheScreen()
+    expect(screen.queryByText('Kalle')).not.toBeOnTheScreen()
   })
 })

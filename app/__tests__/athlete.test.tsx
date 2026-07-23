@@ -6,13 +6,13 @@ jest.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: jest.fn().mockResolvedValue({
-        data: { session: { user: { id: 'u1', email: 'anton@example.com' } } },
+        data: { session: { user: { id: 'u1', email: 'erik@example.com' } } },
       }),
     },
   },
 }))
 jest.mock('@/services/profile', () => ({
-  getProfile: jest.fn().mockResolvedValue({ name: 'Anton Wretenberg', avatar_url: '💪' }),
+  getProfile: jest.fn().mockResolvedValue({ name: 'Erik Larsson', avatar_url: '💪' }),
 }))
 jest.mock('@/services/cardioWorkouts', () => ({
   getCardioWorkouts: jest.fn().mockResolvedValue([]),
@@ -110,7 +110,7 @@ describe('Atletprofil', () => {
   it('egna profilen: streak istället för Totalt km, ingen statistiksektion', async () => {
     const { router } = require('expo-router')
     render(<AthleteScreen />)
-    expect(await screen.findByText('Anton Wretenberg')).toBeOnTheScreen()
+    expect(await screen.findByText('Erik Larsson')).toBeOnTheScreen()
     expect(await screen.findByText('Streak')).toBeOnTheScreen()
     expect(within(screen.getByTestId('streakCounter')).getByText('4')).toBeOnTheScreen()
     expect(screen.queryByText('Totalt km')).not.toBeOnTheScreen()
@@ -125,7 +125,7 @@ describe('Atletprofil', () => {
   it('vald punkt i grafen styr veckosektionen — på en godkänd väns profil', async () => {
     const { getFollowStatus } = require('@/services/follows')
     ;(getFollowStatus as jest.Mock).mockResolvedValue('accepted')
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     render(<AthleteScreen />)
     expect(await screen.findByText('5,50 km')).toBeOnTheScreen()  // innevarande vecka
     fireEvent.press(screen.getByTestId('chartFirstPoint'))        // äldsta veckan, 11 veckor bakåt
@@ -139,7 +139,7 @@ describe('Atletprofil', () => {
   it('typ-chips byter statistiken — på en godkänd väns profil', async () => {
     const { getFollowStatus } = require('@/services/follows')
     ;(getFollowStatus as jest.Mock).mockResolvedValue('accepted')
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     render(<AthleteScreen />)
     await screen.findByText('Den här veckan')
     fireEvent.press(screen.getByText('Cykling'))
@@ -150,20 +150,20 @@ describe('Atletprofil', () => {
     const { router } = require('expo-router')
     const { getFollowStatus } = require('@/services/follows')
     ;(getFollowStatus as jest.Mock).mockResolvedValue('accepted')
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     render(<AthleteScreen />)
     expect(await screen.findByText('2 pass')).toBeOnTheScreen()
     fireEvent.press(screen.getByTestId('athleteActivities'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/activities',
-      params: { userId: 'u2', name: 'Nawid', avatar: '' },
+      params: { userId: 'u2', name: 'Kalle', avatar: '' },
     })
   })
 
   it('egna räknarna öppnar Följare/Följer-listorna på rätt flik', async () => {
     const { router } = require('expo-router')
     render(<AthleteScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByTestId('followersCounter'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/following', params: { tab: 'followers' },
@@ -176,16 +176,16 @@ describe('Atletprofil', () => {
 
   it('andras räknare är inte tryckbara — listorna är ens egna', async () => {
     const { router } = require('expo-router')
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     render(<AthleteScreen />)
-    await screen.findByText('Nawid')
+    await screen.findByText('Kalle')
     fireEvent.press(screen.getByTestId('followersCounter'))
     expect(router.push).not.toHaveBeenCalled()
   })
 
   it('egna profilen har ingen följ-knapp — man kan inte följa sig själv', async () => {
     render(<AthleteScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     expect(screen.queryByTestId('athleteFollow')).not.toBeOnTheScreen()
   })
 
@@ -194,9 +194,9 @@ describe('Atletprofil', () => {
     ;(getFollowStatus as jest.Mock)
       .mockResolvedValueOnce('none')       // första laddningen
       .mockResolvedValue('accepted')       // servertriggern godkände direkt
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     render(<AthleteScreen />)
-    await screen.findByText('Nawid')
+    await screen.findByText('Kalle')
     fireEvent.press(screen.getByTestId('athleteFollow'))
     expect(follow).toHaveBeenCalledWith('u2')
     expect(await screen.findByText('Den här veckan')).toBeOnTheScreen()
@@ -208,22 +208,22 @@ describe('Atletprofil', () => {
     ;(getFollowStatus as jest.Mock)
       .mockResolvedValueOnce('none')       // första laddningen
       .mockResolvedValue('pending')        // privat profil — väntar
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     render(<AthleteScreen />)
-    await screen.findByText('Nawid')
+    await screen.findByText('Kalle')
     fireEvent.press(screen.getByTestId('athleteFollow'))
     expect(follow).toHaveBeenCalledWith('u2')
     expect(within(screen.getByTestId('athleteFollow')).getByText('Förfrågan skickad')).toBeOnTheScreen()
-    expect(screen.getByText('Väntar på godkännande — när Nawid godkänner din förfrågan ser du statistiken här.')).toBeOnTheScreen()
+    expect(screen.getByText('Väntar på godkännande — när Kalle godkänner din förfrågan ser du statistiken här.')).toBeOnTheScreen()
     fireEvent.press(screen.getByTestId('athleteFollow'))     // ångra förfrågan
     expect(unfollow).toHaveBeenCalledWith('u2')
     expect(within(screen.getByTestId('athleteFollow')).getByText('Följ')).toBeOnTheScreen()
   })
 
   it('annan användares profil utan godkännande: privat och låst', async () => {
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '🔥' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '🔥' }
     render(<AthleteScreen />)
-    expect(await screen.findByText('Nawid')).toBeOnTheScreen()
+    expect(await screen.findByText('Kalle')).toBeOnTheScreen()
     expect(screen.getByText('Privat profil')).toBeOnTheScreen()
     expect(screen.getByText('Statistiken är privat')).toBeOnTheScreen()
     expect(screen.queryByText('Den här veckan')).not.toBeOnTheScreen()
@@ -233,7 +233,7 @@ describe('Atletprofil', () => {
   it('godkänd vänförfrågan låser upp statistiken', async () => {
     const { getFollowStatus } = require('@/services/follows')
     ;(getFollowStatus as jest.Mock).mockResolvedValue('accepted')
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '🔥' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '🔥' }
     render(<AthleteScreen />)
     expect(await screen.findByText('Den här veckan')).toBeOnTheScreen()
     expect(screen.queryByText('Statistiken är privat')).not.toBeOnTheScreen()
@@ -241,19 +241,19 @@ describe('Atletprofil', () => {
   })
 
   it('profilbyte: nästa persons namn visas — inte första besökta', async () => {
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     const { rerender } = render(<AthleteScreen />)
-    expect(await screen.findByText('Nawid')).toBeOnTheScreen()
+    expect(await screen.findByText('Kalle')).toBeOnTheScreen()
     mockParams = { userId: 'u3', name: 'Sara', avatar: '' }
     rerender(<AthleteScreen />)
     expect(await screen.findByText('Sara')).toBeOnTheScreen()
-    expect(screen.queryByText('Nawid')).not.toBeOnTheScreen()
+    expect(screen.queryByText('Kalle')).not.toBeOnTheScreen()
   })
 
   it('annan användares profil börjar som Följ, inte Följer', async () => {
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     render(<AthleteScreen />)
-    await screen.findByText('Nawid')
+    await screen.findByText('Kalle')
     expect(await screen.findByText('Följ')).toBeOnTheScreen()
   })
 
@@ -262,9 +262,9 @@ describe('Atletprofil', () => {
     const { blockUser } = require('@/services/blocks')
     const { reportContent } = require('@/services/reports')
     const alertSpy = jest.spyOn(Alert, 'alert')
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     render(<AthleteScreen />)
-    await screen.findByText('Nawid')
+    await screen.findByText('Kalle')
     fireEvent.press(screen.getByText('glassbtn:ellipsis-horizontal'))
     // Menyn: rapportera + blockera
     const menu = alertSpy.mock.calls[0][2] as Array<{ text: string; onPress?: () => void }>
@@ -283,7 +283,7 @@ describe('Atletprofil', () => {
   it('blockerad profil: knappen avblockerar direkt', async () => {
     const { isBlocked, unblockUser } = require('@/services/blocks')
     ;(isBlocked as jest.Mock).mockResolvedValue(true)
-    mockParams = { userId: 'u2', name: 'Nawid', avatar: '' }
+    mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     render(<AthleteScreen />)
     expect(await screen.findByText('Blockerad')).toBeOnTheScreen()
     fireEvent.press(screen.getByTestId('athleteFollow'))

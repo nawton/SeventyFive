@@ -9,7 +9,7 @@ jest.mock('@/lib/supabase', () => ({
   },
 }))
 jest.mock('@/services/profile', () => ({
-  getProfile: jest.fn().mockResolvedValue({ name: 'Anton Wretenberg', avatar_url: null }),
+  getProfile: jest.fn().mockResolvedValue({ name: 'Erik Larsson', avatar_url: null }),
 }))
 jest.mock('@/services/subscription', () => {
   const actual = jest.requireActual('@/services/subscription')
@@ -41,7 +41,7 @@ describe('premium — paywallen', () => {
   it('visar rubrik, personlig hälsning, fördelar och båda planerna', async () => {
     render(<PremiumScreen />)
     expect(await screen.findByText(/Lås upp din/)).toBeOnTheScreen()
-    expect(screen.getByText('Anton, kom igång idag')).toBeOnTheScreen()
+    expect(screen.getByText('Erik, kom igång idag')).toBeOnTheScreen()
     expect(screen.getByText(/Intervallguidning med röst/)).toBeOnTheScreen()
     expect(screen.getByText('Årligen')).toBeOnTheScreen()
     expect(screen.getByText('Månadsvis')).toBeOnTheScreen()

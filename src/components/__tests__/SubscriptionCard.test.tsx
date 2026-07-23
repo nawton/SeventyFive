@@ -33,8 +33,8 @@ beforeEach(() => {
 
 describe('SubscriptionCard (premium-bannern)', () => {
   it('gratis: personlig pitch + PRENUMERERA, tryck leder till /premium', async () => {
-    render(<SubscriptionCard name="Anton Wretenberg" />)
-    expect(await screen.findByText('Anton, skaffa Premium')).toBeOnTheScreen()
+    render(<SubscriptionCard name="Erik Larsson" />)
+    expect(await screen.findByText('Erik, skaffa Premium')).toBeOnTheScreen()
     expect(screen.getByText('PRENUMERERA')).toBeOnTheScreen()
     fireEvent.press(screen.getByText('PRENUMERERA'))
     expect(router.push).toHaveBeenCalledWith('/premium')
@@ -49,7 +49,7 @@ describe('SubscriptionCard (premium-bannern)', () => {
     ;(getSubscription as jest.Mock).mockResolvedValue({
       status: 'active', price_id: 'p', current_period_end: '2099-08-18T00:00:00Z', cancel_at_period_end: false,
     })
-    render(<SubscriptionCard name="Anton" />)
+    render(<SubscriptionCard name="Erik" />)
     expect(await screen.findByText(/förnyas 18 augusti/)).toBeOnTheScreen()
     expect(screen.getByText('HANTERA')).toBeOnTheScreen()
   })

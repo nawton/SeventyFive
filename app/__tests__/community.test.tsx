@@ -5,13 +5,13 @@ jest.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: jest.fn().mockResolvedValue({
-        data: { session: { user: { id: 'u1', email: 'anton@example.com' } } },
+        data: { session: { user: { id: 'u1', email: 'erik@example.com' } } },
       }),
     },
   },
 }))
 jest.mock('@/services/profile', () => ({
-  getProfile: jest.fn().mockResolvedValue({ name: 'Anton Wretenberg', avatar_url: '💪' }),
+  getProfile: jest.fn().mockResolvedValue({ name: 'Erik Larsson', avatar_url: '💪' }),
 }))
 jest.mock('@/services/feed', () => ({
   FEED_PAGE_SIZE: 60,
@@ -124,7 +124,7 @@ beforeEach(() => {
 describe('Community', () => {
   it('visar flödeskort med namn, typ, statistik och gilla-knapp', async () => {
     render(<CommunityScreen />)
-    expect(await screen.findByText('Anton Wretenberg')).toBeOnTheScreen()
+    expect(await screen.findByText('Erik Larsson')).toBeOnTheScreen()
     expect(screen.getByText(/Löpning, /)).toBeOnTheScreen()
     expect(screen.getByText('5,01')).toBeOnTheScreen()
     expect(screen.getByText('45:09')).toBeOnTheScreen()   // fmtTime(2709)
@@ -139,7 +139,7 @@ describe('Community', () => {
     const { router } = require('expo-router')
     ;(getFollowLists as jest.Mock).mockResolvedValue({
       followers: [],
-      following: [{ id: 'u2', name: 'Nawid', avatar_url: '🔥' }],
+      following: [{ id: 'u2', name: 'Kalle', avatar_url: '🔥' }],
     })
     ;(fetchFeedPage as jest.Mock).mockResolvedValue({
       cardio: [
@@ -151,14 +151,14 @@ describe('Community', () => {
       oldest: FRIEND_RUN.created_at,
     })
     render(<CommunityScreen />)
-    expect(await screen.findByText('Nawid')).toBeOnTheScreen()
-    expect(screen.getByText('Anton Wretenberg')).toBeOnTheScreen()
+    expect(await screen.findByText('Kalle')).toBeOnTheScreen()
+    expect(screen.getByText('Erik Larsson')).toBeOnTheScreen()
     expect(screen.getByText('8,20')).toBeOnTheScreen()          // vännens distans
     // Vännens avatar leder till DERAS profil
     fireEvent.press(screen.getByTestId('avatar-w2'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/athlete',
-      params: { userId: 'u2', name: 'Nawid', avatar: '🔥' },
+      params: { userId: 'u2', name: 'Kalle', avatar: '🔥' },
     })
     // Vännens pass öppnas med skrivskyddat betyg
     fireEvent.press(screen.getByTestId('post-w2'))
@@ -171,7 +171,7 @@ describe('Community', () => {
       w1: { likes: 2, likedByMe: false, comments: 1 },
     })
     render(<CommunityScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     expect(await screen.findByText('2')).toBeOnTheScreen()      // gillaräknare
     fireEvent.press(screen.getByTestId('like-w1'))
     expect(likePost).toHaveBeenCalledWith('w1', 'u1')
@@ -184,14 +184,14 @@ describe('Community', () => {
   it('pratbubblan öppnar inläggets diskussionssida', async () => {
     const { router } = require('expo-router')
     render(<CommunityScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByTestId('comments-w1'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/post',
       params: {
         postKey: 'w1',
         ownerId: 'u1',
-        ownerName: 'Anton Wretenberg',
+        ownerName: 'Erik Larsson',
         ownerAvatar: '💪',
         kind: 'cardio',
         title: 'Löpning',
@@ -209,7 +209,7 @@ describe('Community', () => {
       oldest: RUN.created_at,
     })
     render(<CommunityScreen />)
-    await screen.findAllByText('Anton Wretenberg')   // löprundan + gympasset
+    await screen.findAllByText('Erik Larsson')   // löprundan + gympasset
     expect(screen.getByText(/Gympass, /)).toBeOnTheScreen()
     expect(screen.getByText('övningar')).toBeOnTheScreen()
     expect(screen.getByText('3')).toBeOnTheScreen()            // 2 + 1 set
@@ -226,7 +226,7 @@ describe('Community', () => {
       oldest: RUN.created_at,
     })
     render(<CommunityScreen />)
-    await screen.findAllByText('Anton Wretenberg')
+    await screen.findAllByText('Erik Larsson')
     fireEvent.press(screen.getByText('Gym'))
     expect(screen.queryByText('5,01')).not.toBeOnTheScreen()
     expect(screen.getByText(/Gympass, /)).toBeOnTheScreen()
@@ -240,7 +240,7 @@ describe('Community', () => {
 
   it('tryck på kortet öppnar samma passdetaljvy som statistiken', async () => {
     render(<CommunityScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByTestId('post-w1'))
     expect(screen.getByText('summary:Löpning')).toBeOnTheScreen()
   })
@@ -248,7 +248,7 @@ describe('Community', () => {
   it('egna avataren leder direkt till profilfliken', async () => {
     const { router } = require('expo-router')
     render(<CommunityScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByTestId('avatar-w1'))
     expect(router.push).toHaveBeenCalledWith('/(app)/profile')
   })
@@ -256,7 +256,7 @@ describe('Community', () => {
   it('följer-knappen leder till Följer-sidan', async () => {
     const { router } = require('expo-router')
     render(<CommunityScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByText('glassbtn:people-outline'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/following',
@@ -267,7 +267,7 @@ describe('Community', () => {
   it('Grupper-segmentet listar mina grupper och öppnar gruppsidan', async () => {
     const { router } = require('expo-router')
     render(<CommunityScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByText('Grupper'))
     expect(await screen.findByText('Löparligan')).toBeOnTheScreen()
     expect(screen.getByText('3 medlemmar')).toBeOnTheScreen()
@@ -280,7 +280,7 @@ describe('Community', () => {
 
   it('Skapa grupp öppnar skaparguiden', async () => {
     render(<CommunityScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByText('Grupper'))
     fireEvent.press(await screen.findByTestId('createGroup'))
     expect(screen.getByText('wizard:open')).toBeOnTheScreen()
@@ -288,7 +288,7 @@ describe('Community', () => {
 
   it('Sök grupper öppnar sökvyn med QR-skanning', async () => {
     render(<CommunityScreen />)
-    await screen.findByText('Anton Wretenberg')
+    await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByText('Grupper'))
     fireEvent.press(await screen.findByTestId('searchGroups'))
     expect(screen.getByText('Hitta grupper')).toBeOnTheScreen()

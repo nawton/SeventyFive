@@ -24,11 +24,11 @@ describe('GroupPosts', () => {
   it('visar inlägg med avsändare och text', async () => {
     ;(getGroupPosts as jest.Mock).mockResolvedValue([{
       id: 'p1', group_id: 'g1', author_id: 'u2', body: 'Grymt jobbat allihop!',
-      created_at: new Date().toISOString(), authorName: 'Alva Wretenberg', authorAvatar: null,
+      created_at: new Date().toISOString(), authorName: 'Anna Andersson', authorAvatar: null,
     }])
     render(<GroupPosts group={group} me="u1" isOwner={false} />)
     expect(await screen.findByText('Grymt jobbat allihop!')).toBeOnTheScreen()
-    expect(screen.getByText('Alva Wretenberg')).toBeOnTheScreen()
+    expect(screen.getByText('Anna Andersson')).toBeOnTheScreen()
   })
 
   it('composern publicerar och tömmer utkastet', async () => {
