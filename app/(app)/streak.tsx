@@ -5,9 +5,11 @@ import {
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
-import Svg, {
-  Path, Circle, Defs, G, LinearGradient as SvgLinearGradient, RadialGradient, Stop,
-} from 'react-native-svg'
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
+import Animated, {
+  useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS, Easing,
+} from 'react-native-reanimated'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge } from '@/services/challenge'
 import { getStreak, getWeekStatuses, getDayDetail, type TaskItem } from '@/services/dailyLog'
@@ -31,78 +33,24 @@ export function visibleMilestones(streak: number): number[] {
   return MILESTONES.slice(start, start + 4)
 }
 
-/** Fyruddig gnistra */
-function Sparkle({ x, y, r, fill }: { x: number; y: number; r: number; fill: string }) {
-  const w = r * 0.3
-  return (
-    <Path
-      d={`M ${x} ${y - r} L ${x + w} ${y - w} L ${x + r} ${y} L ${x + w} ${y + w}
-          L ${x} ${y + r} L ${x - w} ${y + w} L ${x - r} ${y} L ${x - w} ${y - w} Z`}
-      fill={fill}
-    />
-  )
-}
-
-/** Glödande låga som i förlagan: stor mjuk radiell glöd, tunn dubbelring,
-    rund fyllig låga med krulltoppar och krämvit innerlåga, plus gnistor */
+/** Riktig eld: Apples renderade flamma med en stor mjuk glöd bakom —
+    inga ringar (accentfärgen gjorde dem blå i ljust läge) */
 function Flame({ size = 250 }: { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 100 100">
-      <Defs>
-        <RadialGradient id="glow" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#FF8A1E" stopOpacity={0.45} />
-          <Stop offset="45%" stopColor="#FF8A1E" stopOpacity={0.20} />
-          <Stop offset="75%" stopColor="#FF8A1E" stopOpacity={0.07} />
-          <Stop offset="100%" stopColor="#FF8A1E" stopOpacity={0} />
-        </RadialGradient>
-        <SvgLinearGradient id="outer" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor="#FFC94D" />
-          <Stop offset="55%" stopColor="#FF9E1B" />
-          <Stop offset="100%" stopColor="#F26B00" />
-        </SvgLinearGradient>
-        <SvgLinearGradient id="inner" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor="#FFF7DE" />
-          <Stop offset="100%" stopColor="#FFD35C" />
-        </SvgLinearGradient>
-      </Defs>
-
-      {/* Glöden fyller hela ytan, ringarna svävar runt lågan */}
-      <Circle cx={50} cy={50} r={50} fill="url(#glow)" />
-      <Circle cx={50} cy={50} r={39} fill="none" stroke={ACCENT} strokeOpacity={0.30} strokeWidth={1.3} />
-      <Circle cx={50} cy={50} r={44} fill="none" stroke={ACCENT} strokeOpacity={0.10} strokeWidth={1} />
-
-      {/* Lågan — rund och fyllig med krull åt båda håll, skalad in i ringen */}
-      <G transform="translate(15, 17) scale(0.7)">
-        <Path
-          d="M50 12
-             C 50 12, 57 22, 57 31
-             C 57 36, 54 39, 51 41
-             C 56 42, 64 38, 63 26
-             C 71 34, 76 44, 76 54
-             C 76 68, 64 78, 50 78
-             C 36 78, 24 68, 24 54
-             C 24 44, 30 35, 37 27
-             C 37 38, 43 43, 47 40
-             C 43 33, 45 21, 50 12 Z"
-          fill="url(#outer)"
-        />
-        <Path
-          d="M50 78
-             C 43 78, 38 73, 38 66
-             C 38 59, 44 55, 47 49
-             C 49 54, 56 57, 58 63
-             C 60 70, 57 78, 50 78 Z"
-          fill="url(#inner)"
-        />
-      </G>
-
-      {/* Gnistor — stjärnor och prickar som i förlagan */}
-      <Sparkle x={30} y={24} r={3.2} fill="#FFE49A" />
-      <Sparkle x={71} y={18} r={2.2} fill="#FFD37A" />
-      <Circle cx={76} cy={34} r={1.2} fill="#FFB84D" />
-      <Circle cx={24} cy={42} r={1.0} fill="#FFB84D" />
-      <Circle cx={66} cy={26} r={0.9} fill="#FFD37A" />
-    </Svg>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
+        <Defs>
+          <RadialGradient id="glow" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="#FF8A1E" stopOpacity={0.42} />
+            <Stop offset="45%" stopColor="#FF8A1E" stopOpacity={0.18} />
+            <Stop offset="75%" stopColor="#FF8A1E" stopOpacity={0.06} />
+            <Stop offset="100%" stopColor="#FF8A1E" stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={50} cy={50} r={50} fill="url(#glow)" />
+      </Svg>
+      <Text style={{ fontSize: size * 0.42, lineHeight: size * 0.52 }}>🔥</Text>
+    </View>
   )
 }
 
@@ -136,11 +84,38 @@ export default function StreakScreen() {
     return () => { alive = false }
   }, []))
 
+  // Dagpopupen har appens dragfysik: glider in med ease-out (bakgrunden
+  // mörknar direkt), följer fingret, fjädrar tillbaka under tröskeln och
+  // stängs förbi den. Färgerna bor på den inre vyn — Reanimated kraschar
+  // på dynamiska färger i animerade noder.
+  const SHEET_OFF = 620
+  const sheetY = useSharedValue(SHEET_OFF)
+  const dismissDay = useCallback(() => setDayOpen(null), [])
+  const closeDay = useCallback(() => {
+    sheetY.value = withTiming(SHEET_OFF, { duration: 190 }, () => {
+      runOnJS(dismissDay)()
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dismissDay])
+  const dayPan = Gesture.Pan()
+    .activeOffsetY([-12, 12])
+    .onUpdate(e => {
+      // Uppåt: gummibandsmotstånd; nedåt: följ fingret
+      sheetY.value = e.translationY > 0 ? e.translationY : e.translationY * 0.15
+    })
+    .onEnd(e => {
+      if (e.translationY > 110 || e.velocityY > 800) runOnJS(closeDay)()
+      else sheetY.value = withSpring(0, { damping: 20, stiffness: 260 })
+    })
+  const sheetAnim = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }))
+
   function openDay(date: string) {
     if (!challengeId) return
     setDayOpen(date)
     setDayTasks(null)
     setDayStatus(null)
+    sheetY.value = SHEET_OFF
+    sheetY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) })
     getDayDetail(challengeId, date)
       .then(d => { setDayTasks(d.tasks); setDayStatus(d.status) })
       .catch(() => setDayTasks([]))
@@ -258,8 +233,11 @@ export default function StreakScreen() {
       </ScrollView>
 
       {/* Dagvyn: vad som klarades och missades den tryckta dagen */}
-      <Modal visible={!!dayOpen} transparent animationType="fade" onRequestClose={() => setDayOpen(null)}>
-        <TouchableOpacity style={s.dayBackdrop} activeOpacity={1} onPress={() => setDayOpen(null)}>
+      <Modal visible={!!dayOpen} transparent animationType="none" onRequestClose={closeDay}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+        <TouchableOpacity style={s.dayBackdrop} activeOpacity={1} onPress={closeDay}>
+          <GestureDetector gesture={dayPan}>
+          <Animated.View style={sheetAnim}>
           <View style={[s.dayCard, chrome]} onStartShouldSetResponder={() => true}>
             <View style={s.grabber} />
             <Text style={s.dayTitle}>
@@ -294,7 +272,10 @@ export default function StreakScreen() {
               </View>
             )}
           </View>
+          </Animated.View>
+          </GestureDetector>
         </TouchableOpacity>
+        </GestureHandlerRootView>
       </Modal>
     </SafeScreen>
   )
