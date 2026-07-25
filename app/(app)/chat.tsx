@@ -19,7 +19,8 @@ import { Ionicons } from '@/components/Icon'
 import { compressImage } from '@/lib/image'
 import {
   getThread, sendMessage, markThreadRead, subscribeToMessages, deleteMessage,
-  type DirectMessage,
+  getMessageReactions, setReaction, removeReaction,
+  type DirectMessage, type MessageReaction,
 } from '@/services/messages'
 import { blockUser } from '@/services/blocks'
 import { promptReport } from '@/lib/report'
@@ -46,11 +47,15 @@ export default function ChatScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [viewerUrl, setViewerUrl] = useState<string | null>(null)
+  const [reactions, setReactions] = useState<Record<string, MessageReaction[]>>({})
+  const [reactFor, setReactFor] = useState<DirectMessage | null>(null)
   const listRef = useRef<FlatList<DirectMessage>>(null)
 
   const load = useCallback(async (uid: string) => {
     if (!otherId) return
-    setMessages(await getThread(uid, otherId))
+    const thread = await getThread(uid, otherId)
+    setMessages(thread)
+    getMessageReactions(thread.map(m => m.id)).then(setReactions).catch(() => {})
     markThreadRead(otherId).catch(() => {})
   }, [otherId])
 
@@ -140,23 +145,47 @@ export default function ChatScreen() {
     }
   }
 
-  /** Långtryck på egen bubbla raderar meddelandet */
-  function messageMenu(m: DirectMessage) {
-    if (m.sender_id !== me) return
-    const remove = () => deleteMessage(m.id)
+  /** Långtryck öppnar reaktionsväljaren (+ radera för egna meddelanden) */
+  const REACTION_EMOJIS = ['❤️', '👍', '👎', '😂', '😮', '🔥']
+
+  function openReactions(m: DirectMessage) {
+    if (m.id.startsWith('temp-')) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    setReactFor(m)
+  }
+
+  function pickReaction(emoji: string) {
+    const m = reactFor
+    if (!m || !me) return
+    setReactFor(null)
+    Haptics.selectionAsync()
+    const mineNow = reactions[m.id]?.find(r => r.user_id === me)
+    // Optimistiskt: samma emoji igen tar bort, annars sätt/byt
+    if (mineNow?.emoji === emoji) {
+      setReactions(prev => ({
+        ...prev,
+        [m.id]: (prev[m.id] ?? []).filter(r => r.user_id !== me),
+      }))
+      removeReaction(m.id).catch(() => { if (me) load(me).catch(() => {}) })
+    } else {
+      setReactions(prev => ({
+        ...prev,
+        [m.id]: [
+          ...(prev[m.id] ?? []).filter(r => r.user_id !== me),
+          { message_id: m.id, user_id: me, emoji },
+        ],
+      }))
+      setReaction(m.id, emoji).catch(() => { if (me) load(me).catch(() => {}) })
+    }
+  }
+
+  function deleteFromSheet() {
+    const m = reactFor
+    if (!m) return
+    setReactFor(null)
+    deleteMessage(m.id)
       .then(() => { if (me) load(me).catch(() => {}) })
       .catch(() => {})
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options: ['Avbryt', 'Radera meddelandet'], cancelButtonIndex: 0, destructiveButtonIndex: 1 },
-        i => { if (i === 1) remove() },
-      )
-    } else {
-      Alert.alert('Meddelande', undefined, [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Radera meddelandet', onPress: remove },
-      ])
-    }
   }
 
   // Tiderna ligger gömda utanför högerkanten (som i Meddelanden): dra
@@ -202,27 +231,35 @@ export default function ChatScreen() {
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
             const own = item.sender_id === me
+            const reacts = reactions[item.id] ?? []
             return (
               <Animated.View style={[s.bubbleRow, own && { justifyContent: 'flex-end' }, rowAnim]}>
-                <TouchableOpacity
-                  activeOpacity={own ? 0.85 : 1}
-                  onLongPress={() => messageMenu(item)}
-                  delayLongPress={350}
-                  style={[
-                    s.bubble,
-                    own ? { backgroundColor: T.ACCENT } : { backgroundColor: CARD },
-                  ]}>
-                  {!!item.image_url && (
-                    <TouchableOpacity activeOpacity={0.85} onPress={() => setViewerUrl(item.image_url)}>
-                      <Image source={{ uri: item.image_url }} style={s.bubbleImage} />
-                    </TouchableOpacity>
+                <View style={{ maxWidth: '78%', alignItems: own ? 'flex-end' : 'flex-start' }}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onLongPress={() => openReactions(item)}
+                    delayLongPress={350}
+                    style={[
+                      s.bubble,
+                      own ? { backgroundColor: T.ACCENT } : { backgroundColor: CARD },
+                    ]}>
+                    {!!item.image_url && (
+                      <TouchableOpacity activeOpacity={0.85} onPress={() => setViewerUrl(item.image_url)}>
+                        <Image source={{ uri: item.image_url }} style={s.bubbleImage} />
+                      </TouchableOpacity>
+                    )}
+                    {!!item.body && (
+                      <Text style={[s.bubbleText, own && { color: light ? '#FFFFFF' : '#000000' }]}>
+                        {item.body}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                  {reacts.length > 0 && (
+                    <View style={[s.reactBadge, { borderColor: light ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.18)' }]}>
+                      <Text style={s.reactBadgeText}>{reacts.map(r => r.emoji).join(' ')}</Text>
+                    </View>
                   )}
-                  {!!item.body && (
-                    <Text style={[s.bubbleText, own && { color: light ? '#FFFFFF' : '#000000' }]}>
-                      {item.body}
-                    </Text>
-                  )}
-                </TouchableOpacity>
+                </View>
                 {/* Tiden gömd utanför kanten — glider fram vid vänsterdrag */}
                 <View style={s.timeReveal} pointerEvents="none">
                   <Text style={s.timeRevealText}>
@@ -276,6 +313,31 @@ export default function ChatScreen() {
         </View>
       </KeyboardAvoidingView>
 
+      {/* Reaktionsväljaren — emojirad + radera för egna meddelanden */}
+      <Modal visible={!!reactFor} transparent animationType="fade" onRequestClose={() => setReactFor(null)}>
+        <TouchableOpacity style={s.reactBackdrop} activeOpacity={1} onPress={() => setReactFor(null)}>
+          <View style={s.reactSheet} onStartShouldSetResponder={() => true}>
+            <View style={s.reactBar}>
+              {REACTION_EMOJIS.map(e => {
+                const isMine = !!reactFor && reactions[reactFor.id]?.some(r => r.user_id === me && r.emoji === e)
+                return (
+                  <TouchableOpacity key={e} onPress={() => pickReaction(e)} hitSlop={6}
+                    style={[s.reactChoice, isMine && { backgroundColor: T.ACCENT + '33' }]}
+                    testID={`react-${e}`}>
+                    <Text style={s.reactChoiceText}>{e}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+            {reactFor?.sender_id === me && (
+              <TouchableOpacity onPress={deleteFromSheet} hitSlop={8} style={s.reactDelete} testID="reactDelete">
+                <Text style={s.reactDeleteText}>Radera meddelandet</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <Modal visible={!!viewerUrl} transparent animationType="fade" onRequestClose={() => setViewerUrl(null)}>
         <TouchableOpacity style={s.viewerBackdrop} activeOpacity={1} onPress={() => setViewerUrl(null)}>
           {viewerUrl && (
@@ -311,6 +373,28 @@ const s = StyleSheet.create({
     width: 64, justifyContent: 'center', alignItems: 'center',
   },
   timeRevealText: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
+
+  reactBadge: {
+    backgroundColor: CARD, borderWidth: 1, borderRadius: 12,
+    paddingHorizontal: 7, paddingVertical: 2, marginTop: -7, zIndex: 1,
+  },
+  reactBadgeText: { fontSize: 12 },
+  reactBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center', justifyContent: 'center', padding: 30,
+  },
+  reactSheet: { alignItems: 'center', gap: 14 },
+  reactBar: {
+    flexDirection: 'row', gap: 4, backgroundColor: CARD,
+    borderRadius: 26, paddingHorizontal: 10, paddingVertical: 8,
+  },
+  reactChoice: { borderRadius: 18, paddingHorizontal: 7, paddingVertical: 4 },
+  reactChoiceText: { fontSize: 26 },
+  reactDelete: {
+    backgroundColor: CARD, borderRadius: 999,
+    paddingHorizontal: 18, paddingVertical: 10,
+  },
+  reactDeleteText: { color: '#FF3B4A', fontSize: 14, fontWeight: '700' },
   // inverterad lista vänder på allt, vänd tillbaka tomläget
   emptyFlip: { transform: [{ scaleY: -1 }], paddingVertical: 40 },
   emptyText: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center' },

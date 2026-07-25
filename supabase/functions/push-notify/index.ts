@@ -94,6 +94,20 @@ Deno.serve(async (req) => {
     })
   }
 
+  else if (table === 'message_reactions') {
+    const msgRes = await fetch(
+      `${supabaseUrl}/rest/v1/direct_messages?id=eq.${record.message_id}&select=sender_id,recipient_id`,
+      { headers },
+    )
+    const msg: { sender_id: string; recipient_id: string } | undefined = (await msgRes.json())?.[0]
+    if (!msg) return json({ skipped: 'no message' })
+    senderId = record.user_id as string
+    recipients.push({
+      userId: msg.sender_id === senderId ? msg.recipient_id : msg.sender_id,
+      makeBody: n => `${n} reagerade med ${record.emoji} på ditt meddelande`,
+    })
+  }
+
   else if (table === 'group_posts') {
     // Nytt inlägg → medlemmarna enligt sin notisnivå (alla/bara skaparens/av)
     const gid = record.group_id as string

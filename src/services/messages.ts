@@ -98,6 +98,47 @@ export async function sendMessage(recipientId: string, body: string, imageUri?: 
   if (error) throw error
 }
 
+export interface MessageReaction {
+  message_id: string
+  user_id: string
+  emoji: string
+}
+
+/** Trådens reaktioner, grupperade per meddelande */
+export async function getMessageReactions(messageIds: string[]): Promise<Record<string, MessageReaction[]>> {
+  if (messageIds.length === 0) return {}
+  const { data, error } = await supabase
+    .from('message_reactions')
+    .select('message_id, user_id, emoji')
+    .in('message_id', messageIds)
+  if (error || !data) return {}
+  const map: Record<string, MessageReaction[]> = {}
+  for (const r of data as MessageReaction[]) {
+    (map[r.message_id] ??= []).push(r)
+  }
+  return map
+}
+
+/** Sätt/byt sin reaktion — en per person och meddelande */
+export async function setReaction(messageId: string, emoji: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) throw new Error('inte inloggad')
+  const { error } = await supabase.from('message_reactions').upsert(
+    { message_id: messageId, user_id: session.user.id, emoji },
+    { onConflict: 'message_id,user_id' },
+  )
+  if (error) throw error
+}
+
+export async function removeReaction(messageId: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return
+  await supabase.from('message_reactions')
+    .delete()
+    .eq('message_id', messageId)
+    .eq('user_id', session.user.id)
+}
+
 /** Avsändaren raderar sitt eget meddelande (RLS) */
 export async function deleteMessage(id: string): Promise<void> {
   const { error } = await supabase.from('direct_messages').delete().eq('id', id)
@@ -125,6 +166,10 @@ export function subscribeToMessages(me: string, onChange: () => void): () => voi
       .channel(`dm-${me}`)
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `recipient_id=eq.${me}` },
+        onChange)
+      // Reaktioner i mina trådar — RLS avgör vilka händelser som når mig
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'message_reactions' },
         onChange)
       .subscribe()
     return () => { supabase.removeChannel(channel).catch(() => {}) }
