@@ -7,7 +7,7 @@ import {
 import { SafeScreen } from '@/components/SafeScreen'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -167,7 +167,8 @@ export default function ChatScreen() {
     .activeOffsetX(-15)
     .failOffsetY([-12, 12])
     .onUpdate(e => { dragX.value = Math.max(-72, Math.min(0, e.translationX)) })
-    .onEnd(() => { dragX.value = withSpring(0, { damping: 20, stiffness: 260 }) })
+    // Ease-out utan studs — glider mjukt tillbaka till helskärm
+    .onEnd(() => { dragX.value = withTiming(0, { duration: 220, easing: Easing.out(Easing.cubic) }) })
   const rowAnim = useAnimatedStyle(() => ({ transform: [{ translateX: dragX.value }] }))
 
   // Inverterad lista vill ha nyast först
@@ -303,9 +304,11 @@ const s = StyleSheet.create({
   bubble: { maxWidth: '78%', borderRadius: 16, paddingHorizontal: 13, paddingVertical: 9 },
   bubbleText: { color: TEXT_PRIMARY, fontSize: 15, lineHeight: 21 },
   bubbleImage: { width: 210, height: 160, borderRadius: 10, marginBottom: 5 },
+  // right -80 lägger hela rutan bortom skärmkanten (listans padding är 16),
+  // så ingen tidssiffra skymtar förrän man faktiskt drar
   timeReveal: {
-    position: 'absolute', right: -66, top: 0, bottom: 0,
-    width: 60, justifyContent: 'center',
+    position: 'absolute', right: -80, top: 0, bottom: 0,
+    width: 64, justifyContent: 'center', alignItems: 'center',
   },
   timeRevealText: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
   // inverterad lista vänder på allt, vänd tillbaka tomläget
