@@ -13,11 +13,13 @@ const REASONS = ['Spam eller vilseledande', 'Stötande innehåll', 'Trakasserier
 async function submit(targetType: ReportTarget, targetId: string, reason: string): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.user) throw new Error('inte inloggad')
+  // Kolumnnamnen kommer från 20260722000011 (target_kind/details) — den
+  // tabellen fanns före anmälningsflödena här och är den som gäller
   const { error } = await supabase.from('reports').insert({
     reporter_id: session.user.id,
-    target_type: targetType,
+    target_kind: targetType,
     target_id: targetId,
-    reason,
+    details: reason,
   })
   if (error) throw error
 }

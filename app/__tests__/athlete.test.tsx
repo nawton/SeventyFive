@@ -257,27 +257,16 @@ describe('Atletprofil', () => {
     expect(await screen.findByText('Följ')).toBeOnTheScreen()
   })
 
-  it('⋯-menyn rapporterar och blockerar (med bekräftelse)', async () => {
-    const { Alert } = require('react-native')
-    const { blockUser } = require('@/services/blocks')
-    const { reportContent } = require('@/services/reports')
-    const alertSpy = jest.spyOn(Alert, 'alert')
+  it('⋯ öppnar alternativsidan i stället för en popup', async () => {
+    const { router } = require('expo-router')
     mockParams = { userId: 'u2', name: 'Kalle', avatar: '' }
     render(<AthleteScreen />)
     await screen.findByText('Kalle')
     fireEvent.press(screen.getByText('glassbtn:ellipsis-horizontal'))
-    // Menyn: rapportera + blockera
-    const menu = alertSpy.mock.calls[0][2] as Array<{ text: string; onPress?: () => void }>
-    expect(menu.map(b => b.text)).toEqual(['Rapportera användaren', 'Blockera användaren', 'Avbryt'])
-    await act(async () => { menu[0].onPress?.() })
-    expect(reportContent).toHaveBeenCalledWith('user', 'u2')
-    // Blockera → bekräftelsedialog → blockerad
-    act(() => { menu[1].onPress?.() })
-    const confirm = alertSpy.mock.calls.at(-1)?.[2] as Array<{ text: string; onPress?: () => void }>
-    act(() => { confirm.find(b => b.text === 'Blockera')?.onPress?.() })
-    expect(blockUser).toHaveBeenCalledWith('u2')
-    expect(within(screen.getByTestId('athleteFollow')).getByText('Avblockera')).toBeOnTheScreen()
-    expect(screen.getByText('Blockerad')).toBeOnTheScreen()
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/(app)/athlete-options',
+      params: { userId: 'u2', name: 'Kalle', avatar: '' },
+    })
   })
 
   it('blockerad profil: knappen avblockerar direkt', async () => {

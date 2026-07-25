@@ -197,6 +197,7 @@ export default function AppLayout() {
       <Tabs.Screen name="chats" options={{ href: null }} />
       <Tabs.Screen name="chat" options={{ href: null }} />
       <Tabs.Screen name="privacy-policy" options={{ href: null }} />
+      <Tabs.Screen name="athlete-options" options={{ href: null }} />
       <Tabs.Screen name="post" options={{ href: null }} />
       <Tabs.Screen name="privacy" options={{ href: null }} />
       <Tabs.Screen name="anpassning" options={{ href: null }} />

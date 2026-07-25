@@ -34,6 +34,18 @@ export async function unblockUser(targetId: string): Promise<void> {
   if (error) throw error
 }
 
+/** Har JAG blockerat personen? Till alternativsidan på andras profiler */
+export async function isBlockedByMe(targetId: string): Promise<boolean> {
+  const uid = await ownId()
+  if (!uid) return false
+  const { count } = await supabase
+    .from('blocks')
+    .select('blocked_id', { count: 'exact', head: true })
+    .eq('blocker_id', uid)
+    .eq('blocked_id', targetId)
+  return (count ?? 0) > 0
+}
+
 /** Alla jag blockerat, med namn/avatar — till listan i integritets-
     inställningarna */
 export async function getBlockedUsers(): Promise<FollowProfile[]> {

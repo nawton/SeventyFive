@@ -15,7 +15,6 @@ import {
   type FollowCounts, type FollowStatus,
 } from '@/services/follows'
 import { blockUser, unblockUser, isBlocked } from '@/services/blocks'
-import { reportContent } from '@/services/reports'
 import { strengthToPosts } from '@/components/FeedWorkoutCard'
 import { AthleteOverview } from '@/components/AthleteOverview'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -123,22 +122,13 @@ export default function AthleteScreen() {
   }, [otherId, paramName, paramAvatar]))
 
   // ⋯-menyn: rapportera användaren och blockera/avblockera
+  // ⋯ öppnar alternativsidan — inställningsspråk i stället för trång popup
   function openProfileMenu() {
     if (!otherId) return
-    Alert.alert(name || 'Profil', undefined, [
-      {
-        text: 'Rapportera användaren',
-        onPress: () => {
-          reportContent('user', otherId)
-            .then(() => Alert.alert('Tack', 'Rapporten är mottagen och granskas av teamet.'))
-            .catch(() => {})
-        },
-      },
-      blocked
-        ? { text: 'Avblockera', onPress: handleBlockToggle }
-        : { text: 'Blockera användaren', style: 'destructive', onPress: handleBlockToggle },
-      { text: 'Avbryt', style: 'cancel' },
-    ])
+    router.push({
+      pathname: '/(app)/athlete-options',
+      params: { userId: otherId, name, avatar: avatarUrl ?? '' },
+    } as never)
   }
 
   // Avblockera direkt från knappen; blockera via ⋯-menyn med bekräftelse
