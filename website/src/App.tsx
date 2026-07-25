@@ -4,6 +4,9 @@ import Home from './pages/Home'
 import Privacy from './pages/Privacy'
 import Support from './pages/Support'
 import GetApp from './pages/GetApp'
+import Features from './pages/Features'
+import Activities from './pages/Activities'
+import Subscription from './pages/Subscription'
 
 /** Klientrouting behåller skrollpositionen — nollställ vid sidbyte */
 function ScrollToTop() {
@@ -18,9 +21,11 @@ export default function App() {
       <ScrollToTop />
       <header className="nav">
         <Link to="/" className="brand">Seventy<span>Five</span></Link>
+        {/* Policy och support bor i sidfoten, navbaren säljer appen */}
         <nav className="navLinks">
-          <NavLink to="/integritetspolicy">Integritetspolicy</NavLink>
-          <NavLink to="/support">Support</NavLink>
+          <NavLink to="/funktioner">Funktioner</NavLink>
+          <NavLink to="/aktiviteter">Aktiviteter</NavLink>
+          <NavLink to="/prenumeration">Prenumeration</NavLink>
         </nav>
         {/* Båda leder till Skaffa appen-sidan tills App Store-länken finns */}
         <div className="navActions">
@@ -31,6 +36,9 @@ export default function App() {
 
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/funktioner" element={<Features />} />
+        <Route path="/aktiviteter" element={<Activities />} />
+        <Route path="/prenumeration" element={<Subscription />} />
         <Route path="/integritetspolicy" element={<Privacy />} />
         <Route path="/support" element={<Support />} />
         <Route path="/app" element={<GetApp />} />
