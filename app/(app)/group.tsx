@@ -86,28 +86,33 @@ export default function GroupScreen() {
 
   const load = useCallback(async () => {
     if (!groupId) return
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) return
-    setMe(session.user.id)
-    getUnitSystem().then(setUnit).catch(() => {})
-    // Topplistans vecka börjar på måndagen
-    const weekStart = new Date()
-    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7))
-    weekStart.setHours(0, 0, 0, 0)
-    const [g, m, feed, lb] = await Promise.all([
-      getGroup(groupId),
-      getGroupMembers(groupId),
-      fetchGroupFeedPage(groupId),
-      getGroupLeaderboard(groupId, weekStart.toISOString()),
-    ])
-    setGroup(g)
-    setMembers(m)
-    setCardioRows(feed.cardio)
-    setStrengthRows(feed.strength)
-    setOldest(feed.oldest)
-    setHasMore(feed.count === FEED_PAGE_SIZE)
-    setBoard(lb)
-    setLoaded(true)
+    // finally-blocket garanterar att spinnern alltid släpper — även när ett
+    // anrop fallerar (dålig uppkoppling); då visas försök-igen-läget i stället
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      setMe(session.user.id)
+      getUnitSystem().then(setUnit).catch(() => {})
+      // Topplistans vecka börjar på måndagen
+      const weekStart = new Date()
+      weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7))
+      weekStart.setHours(0, 0, 0, 0)
+      const [g, m, feed, lb] = await Promise.all([
+        getGroup(groupId),
+        getGroupMembers(groupId),
+        fetchGroupFeedPage(groupId),
+        getGroupLeaderboard(groupId, weekStart.toISOString()),
+      ])
+      setGroup(g)
+      setMembers(m)
+      setCardioRows(feed.cardio)
+      setStrengthRows(feed.strength)
+      setOldest(feed.oldest)
+      setHasMore(feed.count === FEED_PAGE_SIZE)
+      setBoard(lb)
+    } finally {
+      setLoaded(true)
+    }
   }, [groupId])
 
   async function loadMore() {
@@ -466,7 +471,7 @@ export default function GroupScreen() {
 
           {/* Åtgärdscirklar som i förlagan — centrerade när de får plats,
               skrollbara i sidled när de blir fler */}
-          {loaded && <ScrollView
+          {loaded && group && <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={s.actionsScroll}
@@ -489,7 +494,7 @@ export default function GroupScreen() {
             )}
           </ScrollView>}
 
-          {loaded && (!mine || mine.status === 'pending' || mine.status === 'invited') && (
+          {loaded && group && (!mine || mine.status === 'pending' || mine.status === 'invited') && (
             <TouchableOpacity
               style={[s.joinBtn, { borderColor: joinActive ? T.ACCENT : pillEdge }]}
               onPress={handleJoin}
@@ -542,6 +547,18 @@ export default function GroupScreen() {
             Innan medlemskapet är känt: spinner i stället för fel läge. */}
         {!loaded ? (
           <ActivityIndicator style={{ marginTop: 40 }} color={TEXT_SECONDARY} />
+        ) : !group ? (
+          <View style={{ alignItems: 'center', gap: 12, marginTop: 30 }}>
+            <Text style={s.feedEmpty}>Kunde inte ladda gruppen. Kontrollera anslutningen.</Text>
+            <TouchableOpacity
+              style={[s.joinBtn, { borderColor: T.ACCENT, alignSelf: 'auto', paddingHorizontal: 28 }]}
+              activeOpacity={0.8}
+              testID="retryLoad"
+              onPress={() => { setLoaded(false); load().catch(() => {}) }}
+            >
+              <Text style={[s.joinText, { color: T.ACCENT }]}>Försök igen</Text>
+            </TouchableOpacity>
+          </View>
         ) : mine?.status === 'accepted' && group ? (
           <GroupPosts
             group={group}
