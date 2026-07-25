@@ -76,13 +76,27 @@ export default function ChatScreen() {
   async function send() {
     const body = draft.trim()
     if ((!body && !imageUri) || sending || !otherId || !me) return
-    setSending(true)
+    const image = imageUri
     Haptics.selectionAsync()
+    // Optimistiskt: bubblan visas direkt, servern bekräftar i bakgrunden.
+    // Vid fel plockas den bort och utkastet läggs tillbaka.
+    const temp: DirectMessage = {
+      id: `temp-${Date.now()}`,
+      sender_id: me,
+      recipient_id: otherId,
+      body,
+      image_url: image,
+      created_at: new Date().toISOString(),
+      read_at: null,
+    }
+    setDraft(''); setImageUri(null); setSending(true)
+    setMessages(prev => [...prev, temp])
     try {
-      await sendMessage(otherId, body, imageUri)
-      setDraft(''); setImageUri(null)
+      await sendMessage(otherId, body, image)
       await load(me)
     } catch {
+      setMessages(prev => prev.filter(m => m.id !== temp.id))
+      setDraft(body); setImageUri(image)
       Alert.alert('Kunde inte skicka',
         'Ni behöver följa varandra eller vara med i samma grupp för att skicka meddelanden.')
     } finally {
