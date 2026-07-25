@@ -363,7 +363,9 @@ const s = StyleSheet.create({
 
   listContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
   bubbleRow: { flexDirection: 'row' },
-  bubble: { maxWidth: '78%', borderRadius: 16, paddingHorizontal: 13, paddingVertical: 9 },
+  // Bredden begränsas av wrappern i renderItem — procent HÄR också får
+  // Yoga att kollapsa bubblan till en bokstav per rad
+  bubble: { borderRadius: 16, paddingHorizontal: 13, paddingVertical: 9, overflow: 'hidden' },
   bubbleText: { color: TEXT_PRIMARY, fontSize: 15, lineHeight: 21 },
   bubbleImage: { width: 210, height: 160, borderRadius: 10, marginBottom: 5 },
   // right -80 lägger hela rutan bortom skärmkanten (listans padding är 16),
