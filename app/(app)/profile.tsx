@@ -325,7 +325,7 @@ export default function ProfileScreen() {
           <TouchableOpacity style={[s.quickBtn, chrome]} activeOpacity={0.75}
             onPress={() => setMuscleOpen(true)} testID="muscleBtn">
             <Ionicons name="body-outline" size={19} color={ACCENT} />
-            <Text style={s.quickBtnText}>Muskelfördelning</Text>
+            <Text style={s.quickBtnText}>Muskler</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[s.quickBtn, chrome]} activeOpacity={0.75}
             onPress={() => router.push('/records' as never)} testID="recordsBtn">

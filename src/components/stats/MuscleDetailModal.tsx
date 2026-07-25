@@ -146,10 +146,11 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
           <GlassSegment
             value={period}
             options={[
+              // 1 ÅR togs bort: identiskt med Allt tills appen använts över
+              // ett år — en flik som aldrig visar något eget förvirrar bara
               { key: 'sel', label: day ? 'Dag' : 'Vecka' },
               { key: 'm',   label: '1 M' },
               { key: '3m',  label: '3 M' },
-              { key: 'y',   label: '1 ÅR' },
               { key: 'all', label: 'Allt' },
             ]}
             onChange={setPeriod}
