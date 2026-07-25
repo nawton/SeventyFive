@@ -274,7 +274,7 @@ describe('Community', () => {
     fireEvent.press(screen.getByTestId('group-g1'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/group',
-      params: { groupId: 'g1' },
+      params: { groupId: 'g1', name: 'Löparligan', avatar: '' },
     })
   })
 
