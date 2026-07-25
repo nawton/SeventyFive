@@ -338,6 +338,17 @@ export async function getWeekStatuses(challengeId: string): Promise<Record<strin
   return map
 }
 
+/** En annan persons streak — definer-RPC gated av samma synlighet som
+    statistiken; låsta profiler ger 0 */
+export async function getStreakOf(targetId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('get_streak_of', {
+    target: targetId,
+    today: toLocalDateString(),
+  })
+  if (error || typeof data !== 'number') return 0
+  return data
+}
+
 /** En dags status och uppgifter, UTAN att skapa något — streaksidans
     dagvy ska kunna titta på gamla dagar utan bieffekter */
 export async function getDayDetail(challengeId: string, date: string): Promise<{

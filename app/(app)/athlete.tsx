@@ -9,7 +9,7 @@ import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts
 import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
 import { fetchUserWorkouts } from '@/services/feed'
 import { getActiveChallenge } from '@/services/challenge'
-import { getStreak } from '@/services/dailyLog'
+import { getStreak, getStreakOf } from '@/services/dailyLog'
 import {
   getFollowCounts, getFollowStatus, follow, unfollow, subscribeToFollows,
   type FollowCounts, type FollowStatus,
@@ -106,11 +106,18 @@ export default function AthleteScreen() {
       // Gymdagar räknas som pass i aktivitetsknappen — samma gruppering
       // som flödet använder
       setGymCount(strengthToPosts(strength, '', '', null).length)
-      // Streakräknaren (ersätter Totalt km på egna profilen)
-      getActiveChallenge(session.user.id)
-        .then(c => c ? getStreak(c.id) : 0)
-        .then(days => { if (alive) setStreak(days) })
-        .catch(() => {})
+      // Streakräknaren visas på alla profiler: egna via loggen direkt,
+      // andras via definer-RPC:n (låsta profiler ger 0)
+      if (otherId) {
+        getStreakOf(otherId)
+          .then(days => { if (alive) setStreak(days) })
+          .catch(() => {})
+      } else {
+        getActiveChallenge(session.user.id)
+          .then(c => c ? getStreak(c.id) : 0)
+          .then(days => { if (alive) setStreak(days) })
+          .catch(() => {})
+      }
     })
     return () => { alive = false; unsubscribe?.() }
   }, [otherId, paramName, paramAvatar]))
@@ -252,8 +259,8 @@ export default function AthleteScreen() {
           onPressFollows={isOwn
             ? tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)
             : undefined}
-          streak={isOwn ? streak : undefined}
-          onPressStreak={() => router.push('/(app)/streak' as never)}
+          streak={streak}
+          onPressStreak={isOwn ? () => router.push('/(app)/streak' as never) : undefined}
         />
       </ScrollView>
     </SafeScreen>

@@ -311,7 +311,7 @@ const s = StyleSheet.create({
   },
   iconBtnFallback: { backgroundColor: CARD },
   title: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
-  scroll: { paddingHorizontal: 20, paddingBottom: 40, alignItems: 'center' },
+  scroll: { paddingHorizontal: 20, paddingBottom: 96, alignItems: 'center' },
 
   flameWrap: { marginTop: 4, marginBottom: -14 },
   streakNumber: { color: TEXT_PRIMARY, fontSize: 64, fontFamily: NUM_FONT, lineHeight: 70 },

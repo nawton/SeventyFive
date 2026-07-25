@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { View, Text, StyleSheet, Image, TouchableOpacity, useWindowDimensions } from 'react-native'
+import { View, Text, StyleSheet, Image, TouchableOpacity, useWindowDimensions, Modal } from 'react-native'
 import { Ionicons } from '@/components/Icon'
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
@@ -131,10 +131,7 @@ export function AthleteOverview({
   } : null
   const { width: screenW } = useWindowDimensions()
   const [type, setType] = useState<CardioType>('running')
-
-  const totalKm = useMemo(
-    () => Math.round(workouts.reduce((sum, w) => sum + w.data.distance_km, 0)),
-    [workouts])
+  const [avatarOpen, setAvatarOpen] = useState(false)
 
   const latestIso = workouts.length > 0 ? workouts[0].created_at : null
 
@@ -174,7 +171,15 @@ export function AthleteOverview({
 
   const hero = (
     <View style={s.profileRow}>
-      <Avatar url={avatarUrl} fallback={name.charAt(0).toUpperCase() || '?'} size={72} />
+      {/* Andras profilbild förstoras vid tryck — egna toppen leder till
+          Redigera profil, så där rör vi inget */}
+      {onPressHero ? (
+        <Avatar url={avatarUrl} fallback={name.charAt(0).toUpperCase() || '?'} size={72} />
+      ) : (
+        <TouchableOpacity onPress={() => setAvatarOpen(true)} activeOpacity={0.8} testID="avatarZoom">
+          <Avatar url={avatarUrl} fallback={name.charAt(0).toUpperCase() || '?'} size={72} />
+        </TouchableOpacity>
+      )}
       <View style={{ flex: 1 }}>
         <Text style={s.name}>{name}</Text>
         <Text style={s.activeMeta}>
@@ -192,27 +197,23 @@ export function AthleteOverview({
       ) : hero}
 
       <View style={s.countersRow}>
-        {isOwn && streak !== undefined ? (
-          <TouchableOpacity
-            style={s.counter}
-            onPress={onPressStreak}
-            disabled={!onPressStreak}
-            activeOpacity={0.6}
-            testID="streakCounter"
-          >
-            <View style={s.streakValueRow}>
-              {/* Flamman är alltid eld — orange oavsett tema */}
-              <Ionicons name="flame" size={18} color={ORANGE} />
-              <Text style={s.counterValue}>{streak}</Text>
-            </View>
-            <Text style={s.counterLabel}>Streak</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={s.counter}>
-            <Text style={s.counterValue}>{statsUnlocked ? totalKm : '–'}</Text>
-            <Text style={s.counterLabel}>Totalt km</Text>
+        {/* Streak på ALLA profiler (ersatte Totalt km) — låsta visar streck */}
+        <TouchableOpacity
+          style={s.counter}
+          onPress={onPressStreak}
+          disabled={!onPressStreak}
+          activeOpacity={0.6}
+          testID="streakCounter"
+        >
+          <View style={s.streakValueRow}>
+            {/* Flamman är alltid eld — orange oavsett tema */}
+            <Ionicons name="flame" size={18} color={ORANGE} />
+            <Text style={s.counterValue}>
+              {isOwn || statsUnlocked ? streak ?? 0 : '–'}
+            </Text>
           </View>
-        )}
+          <Text style={s.counterLabel}>Streak</Text>
+        </TouchableOpacity>
         <View style={s.counterDivider} />
         <TouchableOpacity
           style={s.counter}
@@ -377,12 +378,23 @@ export function AthleteOverview({
           <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
         </TouchableOpacity>
       )}
+
+      {/* Förstorad profilbild — tryck var som helst för att stänga */}
+      <Modal visible={avatarOpen} transparent animationType="fade" onRequestClose={() => setAvatarOpen(false)}>
+        <TouchableOpacity style={s.avatarBackdrop} activeOpacity={1} onPress={() => setAvatarOpen(false)}>
+          <Avatar url={avatarUrl} fallback={name.charAt(0).toUpperCase() || '?'} size={screenW - 88} />
+        </TouchableOpacity>
+      </Modal>
     </View>
   )
 }
 
 const s = StyleSheet.create({
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 6 },
+  avatarBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.85)',
+    alignItems: 'center', justifyContent: 'center',
+  },
   avatar: {
     backgroundColor: accentAlpha('1E'),
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
