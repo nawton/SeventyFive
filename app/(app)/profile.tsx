@@ -315,7 +315,7 @@ export default function ProfileScreen() {
             params: { userId: '', name: '', avatar: '' },
           } as never)}
           onPressHero={() => router.push('/(app)/edit-profile')}
-          onPressFollows={tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)}
+          onPressFollows={tab => router.push({ pathname: '/(app)/following', params: { tab, userId: '', name: '' } } as never)}
           streak={streak}
           onPressStreak={() => router.push('/(app)/streak' as never)}
         />

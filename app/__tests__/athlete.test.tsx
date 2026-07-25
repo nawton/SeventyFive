@@ -166,11 +166,11 @@ describe('Atletprofil', () => {
     await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByTestId('followersCounter'))
     expect(router.push).toHaveBeenCalledWith({
-      pathname: '/(app)/following', params: { tab: 'followers' },
+      pathname: '/(app)/following', params: { tab: 'followers', userId: '', name: '' },
     })
     fireEvent.press(screen.getByTestId('followingCounter'))
     expect(router.push).toHaveBeenCalledWith({
-      pathname: '/(app)/following', params: { tab: 'following' },
+      pathname: '/(app)/following', params: { tab: 'following', userId: '', name: '' },
     })
   })
 

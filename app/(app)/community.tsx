@@ -267,7 +267,8 @@ export default function CommunityScreen() {
           iconColor={TEXT_PRIMARY}
           onPress={() => router.push({
             pathname: '/(app)/following',
-            params: { tab: 'following' },   // skriver över ev. kvarliggande flikparam
+            // Skriver över ev. kvarliggande params (flik + annan persons id)
+            params: { tab: 'following', userId: '', name: '' },
           } as never)}
           fallbackStyle={s.followBtnFallback}
         />

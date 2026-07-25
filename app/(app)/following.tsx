@@ -71,8 +71,11 @@ function PersonRow({ person, pillState, ownId, onToggle }: {
 
 export default function FollowingScreen() {
   // Räknarna på profilen skickar med vilken flik som ska öppnas — synkas
-  // vid varje ändring eftersom skärmen ligger kvar monterad i navigatorn
-  const params = useLocalSearchParams<{ tab?: string }>()
+  // vid varje ändring eftersom skärmen ligger kvar monterad i navigatorn.
+  // userId satt = någon ANNANS listor (nås från deras profil när man följer)
+  const params = useLocalSearchParams<{ tab?: string; userId?: string; name?: string }>()
+  const targetId = typeof params.userId === 'string' && params.userId ? params.userId : null
+  const targetName = typeof params.name === 'string' && params.name ? params.name : null
   const paramTab: Tab = params.tab === 'followers' ? 'followers' : 'following'
   const [tab, setTab] = useState<Tab>(paramTab)
   // Vid fokus (inte bara paramändring) — annars fastnar fliken från förra
@@ -89,12 +92,16 @@ export default function FollowingScreen() {
 
   const aliveRef = useRef(true)
   const loadLists = useCallback(async (uid: string) => {
-    const lists = await getFollowLists(uid)
+    // Andras listor visas, men pillarna speglar alltid MINA relationer
+    const [lists, mine] = await Promise.all([
+      getFollowLists(targetId ?? uid),
+      targetId ? getFollowLists(uid) : Promise.resolve(null),
+    ])
     if (!aliveRef.current) return
     setFollowers(lists.followers)
     setFollowingList(lists.following)
-    setFollowedIds(new Set(lists.following.map(p => p.id)))
-  }, [])
+    setFollowedIds(new Set((mine ? mine.following : lists.following).map(p => p.id)))
+  }, [targetId])
 
   useFocusEffect(useCallback(() => {
     aliveRef.current = true
@@ -103,17 +110,21 @@ export default function FollowingScreen() {
       if (!session?.user || !aliveRef.current) return
       const uid = session.user.id
       setOwnId(uid)
-      getProfile(uid).then(p => {
-        if (!aliveRef.current) return
-        setName(p?.name || session.user.email?.split('@')[0] || '')
-      }).catch(() => {})
+      if (targetId) {
+        setName(targetName ?? '')
+      } else {
+        getProfile(uid).then(p => {
+          if (!aliveRef.current) return
+          setName(p?.name || session.user.email?.split('@')[0] || '')
+        }).catch(() => {})
+      }
 
       loadLists(uid).catch(() => {})
       // Följer någon dig medan sidan är öppen dyker den upp direkt
       unsubscribe = subscribeToFollows(uid, () => { loadLists(uid).catch(() => {}) })
     })
     return () => { aliveRef.current = false; unsubscribe?.() }
-  }, [loadLists]))
+  }, [loadLists, targetId, targetName]))
 
   const { refreshing, onRefresh } = useAppRefresh(
     useCallback(() => (ownId ? loadLists(ownId) : Promise.resolve()), [ownId, loadLists]),

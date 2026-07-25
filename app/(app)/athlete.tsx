@@ -257,8 +257,10 @@ export default function AthleteScreen() {
           } as never)}
           // Listorna visar egna relationer — bara egna räknare är tryckbara
           onPressFollows={isOwn
-            ? tab => router.push({ pathname: '/(app)/following', params: { tab } } as never)
-            : undefined}
+            ? tab => router.push({ pathname: '/(app)/following', params: { tab, userId: '', name: '' } } as never)
+            : followStatus === 'accepted' && !blocked && otherId
+              ? tab => router.push({ pathname: '/(app)/following', params: { tab, userId: otherId, name } } as never)
+              : undefined}
           streak={streak}
           onPressStreak={isOwn ? () => router.push('/(app)/streak' as never) : undefined}
         />

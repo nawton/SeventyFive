@@ -260,7 +260,7 @@ describe('Community', () => {
     fireEvent.press(screen.getByText('glassbtn:people-outline'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(app)/following',
-      params: { tab: 'following' },
+      params: { tab: 'following', userId: '', name: '' },
     })
   })
 
