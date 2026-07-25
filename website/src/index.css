@@ -1,13 +1,14 @@
-/* SeventyFive – appens mörka språk: nära-svart botten, orange accent,
-   Nunito för rubriker. */
+/* SeventyFive – appens LJUSA språk: ljusgrå botten, vita kort med mjuk
+   skugga i stället för ramar, Runkeeper-blå accent. Nunito för rubriker. */
 
 :root {
-  --bg: #0A0A0C;
-  --card: #1C1C1E;
-  --border: #2C2C2E;
-  --text: #FFFFFF;
-  --text2: #9A9AA2;
-  --accent: #FFA817;
+  --bg: #F5F5F7;
+  --card: #FFFFFF;
+  --border: #E5E5EA;
+  --text: #111214;
+  --text2: #75777D;
+  --accent: #3156C4;
+  --shadow: 0 4px 14px rgba(16, 20, 37, 0.07);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -35,12 +36,12 @@ body {
   width: min(1040px, calc(100% - 28px));
   margin: 14px auto 0;
   padding: 13px 24px;
-  background: color-mix(in srgb, var(--card) 72%, transparent);
+  background: color-mix(in srgb, var(--card) 78%, transparent);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border: 1px solid var(--border);
   border-radius: 999px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 26px rgba(16, 20, 37, 0.10);
 }
 
 .brand { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; color: var(--text); text-decoration: none; }
@@ -60,15 +61,15 @@ body {
   font-weight: 800;
   font-size: 14px;
   padding: 9px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.22);
   border-radius: 999px;
   transition: border-color 0.15s, background 0.15s;
 }
-.btnGhost:hover { border-color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.btnGhost:hover { border-color: var(--text); background: rgba(0, 0, 0, 0.04); }
 
 .btnAccent {
   display: inline-block;
-  color: #0A0A0C;
+  color: #FFFFFF;
   background: var(--accent);
   text-decoration: none;
   font-weight: 800;
@@ -128,9 +129,9 @@ h1 {
 
 .feature {
   background: var(--card);
-  border: 1px solid var(--border);
   border-radius: 18px;
   padding: 24px 20px;
+  box-shadow: var(--shadow);
 }
 
 .feature .icon { font-size: 28px; margin-bottom: 10px; }
@@ -152,5 +153,5 @@ footer a:hover { color: var(--text); }
 .doc h1 { font-size: clamp(30px, 5vw, 42px); margin-bottom: 6px; }
 .doc .updated { color: var(--text2); font-size: 14px; margin-bottom: 28px; }
 .doc h2 { font-size: 19px; font-weight: 800; margin: 28px 0 8px; }
-.doc p { color: rgba(255, 255, 255, 0.88); font-size: 15.5px; margin-bottom: 12px; }
+.doc p { color: rgba(17, 18, 20, 0.88); font-size: 15.5px; margin-bottom: 12px; }
 .doc a { color: var(--accent); }
