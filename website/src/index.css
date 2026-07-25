@@ -46,10 +46,45 @@ body {
 .brand { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; color: var(--text); text-decoration: none; }
 .brand span { color: var(--accent); }
 
-.nav nav { display: flex; gap: 22px; }
-.nav nav a { color: var(--text2); text-decoration: none; font-weight: 700; font-size: 14px; }
-.nav nav a:hover { color: var(--text); }
-.nav nav a.active { color: var(--accent); }
+.navLinks { display: flex; gap: 22px; margin-left: auto; }
+.navLinks a { color: var(--text2); text-decoration: none; font-weight: 700; font-size: 14px; }
+.navLinks a:hover { color: var(--text); }
+.navLinks a.active { color: var(--accent); }
+
+/* Logga in + Gå med gratis, som förlagan men i vårt språk */
+.navActions { display: flex; align-items: center; gap: 10px; }
+
+.btnGhost {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 9px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.btnGhost:hover { border-color: var(--text); background: rgba(255, 255, 255, 0.06); }
+
+.btnAccent {
+  display: inline-block;
+  color: #0A0A0C;
+  background: var(--accent);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 10px 19px;
+  border-radius: 999px;
+  transition: filter 0.15s, transform 0.15s;
+}
+.btnAccent:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+/* Smala skärmar: textlänkarna bor i sidfoten, knapparna får plats i pillen */
+@media (max-width: 640px) {
+  .navLinks { display: none; }
+  .btnGhost { padding: 8px 14px; font-size: 13px; }
+  .btnAccent { padding: 9px 15px; font-size: 13px; }
+}
 
 main { flex: 1; width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 clamp(20px, 6vw, 64px); }
 

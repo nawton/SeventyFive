@@ -3,6 +3,7 @@ import { Routes, Route, Link, NavLink, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Privacy from './pages/Privacy'
 import Support from './pages/Support'
+import GetApp from './pages/GetApp'
 
 /** Klientrouting behåller skrollpositionen — nollställ vid sidbyte */
 function ScrollToTop() {
@@ -17,16 +18,22 @@ export default function App() {
       <ScrollToTop />
       <header className="nav">
         <Link to="/" className="brand">Seventy<span>Five</span></Link>
-        <nav>
+        <nav className="navLinks">
           <NavLink to="/integritetspolicy">Integritetspolicy</NavLink>
           <NavLink to="/support">Support</NavLink>
         </nav>
+        {/* Båda leder till Skaffa appen-sidan tills App Store-länken finns */}
+        <div className="navActions">
+          <Link to="/app" className="btnGhost">Logga in</Link>
+          <Link to="/app" className="btnAccent">Gå med gratis</Link>
+        </div>
       </header>
 
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/integritetspolicy" element={<Privacy />} />
         <Route path="/support" element={<Support />} />
+        <Route path="/app" element={<GetApp />} />
         <Route path="*" element={<Home />} />
       </Routes>
 
