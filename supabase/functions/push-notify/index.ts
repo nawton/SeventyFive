@@ -85,6 +85,25 @@ Deno.serve(async (req) => {
     }
   }
 
+  else if (table === 'reports') {
+    // Ny anmälan → alla admins, så granskningen aldrig hänger på panellkoll
+    const adminRes = await fetch(`${supabaseUrl}/rest/v1/admins?select=user_id`, { headers })
+    const admins: Array<{ user_id: string }> = (await adminRes.json()) ?? []
+    if (admins.length === 0) return json({ skipped: 'no admins' })
+    senderId = record.reporter_id as string
+    const kindLabels: Record<string, string> = {
+      user: 'en användare', post: 'ett inlägg', comment: 'en kommentar', group: 'en grupp',
+    }
+    const label = kindLabels[String(record.target_kind)] ?? 'innehåll'
+    const details = String(record.details ?? '').slice(0, 60)
+    for (const a of admins) {
+      recipients.push({
+        userId: a.user_id,
+        makeBody: n => `Anmälan: ${n} anmälde ${label}${details ? ` (”${details}”)` : ''}`,
+      })
+    }
+  }
+
   else if (table === 'direct_messages') {
     senderId = record.sender_id as string
     const excerpt = String(record.body ?? '').slice(0, 80)
