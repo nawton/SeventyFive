@@ -240,6 +240,74 @@ footer {
 footer a { color: var(--text2); }
 footer a:hover { color: var(--text); }
 
+/* Logga in: träningspanel + formulärkort sida vid sida */
+.loginWrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+  padding-top: 40px;
+  padding-bottom: 90px;
+  max-width: 980px;
+}
+
+.loginSide {
+  background: linear-gradient(160deg, var(--accent), #22397F);
+  border-radius: 26px;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  box-shadow: var(--shadow);
+}
+.loginSideInner { padding: clamp(28px, 4vw, 44px); }
+.loginFlame { font-size: 52px; margin-bottom: 10px; }
+.loginSide h2 { font-size: clamp(26px, 3.4vw, 34px); font-weight: 900; line-height: 1.1; margin-bottom: 12px; }
+.loginSide p { color: rgba(255, 255, 255, 0.85); font-size: 15.5px; margin-bottom: 18px; }
+.loginSide ul { list-style: none; display: grid; gap: 8px; }
+.loginSide li { font-weight: 700; font-size: 15px; }
+
+.loginCard {
+  background: var(--card);
+  border-radius: 26px;
+  padding: clamp(28px, 4vw, 44px);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.loginCard h1 { font-size: clamp(28px, 3.6vw, 36px); letter-spacing: -0.5px; margin-bottom: 6px; }
+.loginHint { color: var(--text2); font-size: 15px; margin-bottom: 22px; }
+
+.loginCard form { display: grid; gap: 16px; }
+.loginCard label { display: grid; gap: 6px; font-weight: 800; font-size: 13px; color: var(--text2); }
+.loginCard input {
+  font: inherit;
+  padding: 13px 15px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.loginCard input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.loginBtn { text-align: center; font-size: 15px; padding: 13px 19px; border: none; cursor: pointer; font-family: inherit; }
+button.btnGhost.loginBtn { border: 1px solid rgba(0, 0, 0, 0.22); background: none; margin-top: 10px; }
+.loginBtn:disabled { opacity: 0.5; cursor: default; }
+
+.loginError { color: #D93843; font-weight: 700; font-size: 14px; }
+.loginFoot { color: var(--text2); font-size: 14px; margin-top: 18px; }
+.loginFoot a { color: var(--accent); font-weight: 700; }
+
+@media (max-width: 760px) {
+  .loginWrap { grid-template-columns: 1fr; }
+  .loginSide { order: 2; }
+}
+
 /* Textsidor: policy och support */
 .doc { max-width: 720px; padding-top: 34px; padding-bottom: 80px; }
 .doc h1 { font-size: clamp(30px, 5vw, 42px); margin-bottom: 6px; }

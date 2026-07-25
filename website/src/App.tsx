@@ -7,6 +7,7 @@ import GetApp from './pages/GetApp'
 import Features from './pages/Features'
 import Activities from './pages/Activities'
 import Subscription from './pages/Subscription'
+import Login from './pages/Login'
 
 /** Klientrouting behåller skrollpositionen — nollställ vid sidbyte */
 function ScrollToTop() {
@@ -39,7 +40,7 @@ export default function App() {
         </nav>
         {/* Båda leder till Skaffa appen-sidan tills App Store-länken finns */}
         <div className="navActions">
-          <Link to="/app" className="btnGhost">Logga in</Link>
+          <Link to="/logga-in" className="btnGhost">Logga in</Link>
           <Link to="/app" className="btnAccent">Gå med gratis</Link>
           <button
             type="button"
@@ -65,6 +66,7 @@ export default function App() {
         <div className="menuDivider" />
         <NavLink to="/integritetspolicy">Integritetspolicy</NavLink>
         <NavLink to="/support">Support</NavLink>
+        <NavLink to="/logga-in">Logga in</NavLink>
         <Link to="/app" className="btnAccent menuCta">Gå med gratis</Link>
       </nav>
 
@@ -75,6 +77,7 @@ export default function App() {
         <Route path="/prenumeration" element={<Subscription />} />
         <Route path="/integritetspolicy" element={<Privacy />} />
         <Route path="/support" element={<Support />} />
+        <Route path="/logga-in" element={<Login />} />
         <Route path="/app" element={<GetApp />} />
         <Route path="*" element={<Home />} />
       </Routes>
