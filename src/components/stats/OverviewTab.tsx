@@ -5,7 +5,7 @@ import { View, Text, ScrollView, TouchableOpacity, Modal } from 'react-native'
 import { Ionicons } from '@/components/Icon'
 import type { GestureType } from 'react-native-gesture-handler'
 import Svg, { Circle, Text as SvgText } from 'react-native-svg'
-import { GREEN, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT } from '@/lib/theme'
+import { GREEN, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, useThemeStrings, useCardChrome } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek } from '@/lib/date'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import type { DaySummary } from '@/services/dailyLog'
@@ -91,6 +91,14 @@ export function OverviewTab({
 }) {
   const P = useStatsColors()
   const unitLabel = distanceUnitLabel(unit)
+  // Milstolpekortet: orange ton hör mörka läget till — i ljust blir det ett
+  // vitt kort med mjuk skugga och blå accent som resten av appen
+  const T = useThemeStrings()
+  const chrome = useCardChrome()
+  const msLight = T.TEXT_PRIMARY !== '#FFFFFF'
+  const msCardOverride = msLight ? [{ backgroundColor: '#FFFFFF' }, chrome] : null
+  const msIconOverride = msLight ? { backgroundColor: accentAlpha('14') } : null
+  const msEyebrowColor = msLight ? { color: T.ACCENT } : null
   const [selectedDay, setSelectedDay]           = useState<DaySummary | null>(null)
   const [milestoneOpen, setMilestoneOpen]       = useState(false)
 
@@ -171,10 +179,10 @@ export function OverviewTab({
 
             {/* Milestone — framträdande dag 1–7 */}
             {isEarlyDays && milestone && (
-              <TouchableOpacity style={s.milestone} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)}>
-                <View style={s.msIcon}><Text style={s.msEmoji}>🏔</Text></View>
+              <TouchableOpacity style={[s.milestone, msCardOverride]} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)}>
+                <View style={[s.msIcon, msIconOverride]}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
-                  <Text style={s.msEyebrow}>NÄSTA MILSTOLPE</Text>
+                  <Text style={[s.msEyebrow, msEyebrowColor]}>NÄSTA MILSTOLPE</Text>
                   <Text style={s.msTitle}>{milestone.label}</Text>
                   <Text style={s.msSub}>
                     {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`} · Du är på väg!
@@ -218,10 +226,10 @@ export function OverviewTab({
 
             {/* Milestone — normal position dag 8+ */}
             {!isEarlyDays && milestone && (
-              <TouchableOpacity style={s.milestone} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)}>
-                <View style={s.msIcon}><Text style={s.msEmoji}>🏔</Text></View>
+              <TouchableOpacity style={[s.milestone, msCardOverride]} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)}>
+                <View style={[s.msIcon, msIconOverride]}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
-                  <Text style={s.msEyebrow}>NÄSTA MILSTOLPE</Text>
+                  <Text style={[s.msEyebrow, msEyebrowColor]}>NÄSTA MILSTOLPE</Text>
                   <Text style={s.msTitle}>{milestone.label}</Text>
                   <Text style={s.msSub}>
                     {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`} · Håll ut
