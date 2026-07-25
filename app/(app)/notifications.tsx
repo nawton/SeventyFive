@@ -87,7 +87,7 @@ function GroupRow({ item, onAnswer }: {
       <TouchableOpacity
         style={s.rowPerson}
         activeOpacity={0.7}
-        onPress={() => router.push({ pathname: '/(app)/group', params: { groupId: item.group.id } } as never)}
+        onPress={() => router.push({ pathname: '/(app)/group', params: { groupId: item.group.id, name: item.group.name, avatar: item.group.avatar_url ?? '' } } as never)}
       >
         <FeedAvatar
           url={isRequest ? item.from?.avatar_url ?? null : item.group.avatar_url}

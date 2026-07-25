@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActionSheetIOS, Platform, Share,
   Modal, Dimensions, Switch, ActivityIndicator,
@@ -51,8 +51,11 @@ const NOTIFY_OPTIONS: Array<{ v: GroupNotifyLevel; title: string; body: string }
 ]
 
 export default function GroupScreen() {
-  const params = useLocalSearchParams<{ groupId?: string }>()
+  const params = useLocalSearchParams<{ groupId?: string; name?: string; avatar?: string }>()
   const groupId = typeof params.groupId === 'string' ? params.groupId : null
+  // Namn/bild från listan man kom ifrån — toppen ritas direkt medan resten laddar
+  const paramName = typeof params.name === 'string' && params.name ? params.name : null
+  const paramAvatar = typeof params.avatar === 'string' && params.avatar ? params.avatar : null
   const T = useThemeStrings()
   const chrome = useCardChrome()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
@@ -62,6 +65,9 @@ export default function GroupScreen() {
   const [me, setMe] = useState<string | null>(null)
   const [group, setGroup] = useState<Group | null>(null)
   const [members, setMembers] = useState<GroupMember[]>([])
+  // Medlemskapsberoende UI (gå med-knapp, flöde) ritas först när vi VET —
+  // annars blinkar "inte medlem"-läget förbi för medlemmar
+  const [loaded, setLoaded] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [imageOpen, setImageOpen] = useState(false)
@@ -101,6 +107,7 @@ export default function GroupScreen() {
     setOldest(feed.oldest)
     setHasMore(feed.count === FEED_PAGE_SIZE)
     setBoard(lb)
+    setLoaded(true)
   }, [groupId])
 
   async function loadMore() {
@@ -117,7 +124,21 @@ export default function GroupScreen() {
     }
   }
 
-  useFocusEffect(useCallback(() => { load().catch(() => {}) }, [load]))
+  // Skärmen återanvänds mellan grupper — byts id:t nollställs allt så
+  // förra gruppens innehåll aldrig skymtar
+  const prevGroupId = useRef(groupId)
+  useFocusEffect(useCallback(() => {
+    if (prevGroupId.current !== groupId) {
+      prevGroupId.current = groupId
+      setLoaded(false)
+      setGroup(null)
+      setMembers([])
+      setCardioRows([])
+      setStrengthRows([])
+      setBoard([])
+    }
+    load().catch(() => {})
+  }, [load, groupId]))
 
   const accepted = members.filter(m => m.status === 'accepted')
   const pending = members.filter(m => m.status === 'pending')
@@ -398,7 +419,7 @@ export default function GroupScreen() {
       <View style={s.header}>
         <GlassCircleButton icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
           onPress={() => router.back()} fallbackStyle={s.iconFallback} />
-        <Text style={s.headerTitle} numberOfLines={1}>{group?.name ?? 'Grupp'}</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>{group?.name ?? paramName ?? 'Grupp'}</Text>
         <GlassCircleButton icon="ellipsis-horizontal" size={40} iconColor={TEXT_PRIMARY}
           onPress={openMenu} fallbackStyle={s.iconFallback} />
       </View>
@@ -406,15 +427,16 @@ export default function GroupScreen() {
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
           <TouchableOpacity onPress={() => setImageOpen(true)} activeOpacity={0.75} testID="groupAvatar">
-            <FeedAvatar url={group?.avatar_url ?? null} fallback={(group?.name ?? '?').charAt(0).toUpperCase()} size={92} />
+            <FeedAvatar url={group?.avatar_url ?? paramAvatar}
+              fallback={((group?.name ?? paramName) ?? '?').charAt(0).toUpperCase()} size={92} />
           </TouchableOpacity>
-          <Text style={s.name}>{group?.name ?? ''}</Text>
+          <Text style={s.name}>{group?.name ?? paramName ?? ''}</Text>
           <View style={s.metaRow}>
             <View style={s.metaItem}>
               <Ionicons name={SPORT_ICONS[group?.sport ?? 'all']} size={14} color={TEXT_SECONDARY} />
               <Text style={s.meta}>{SPORT_LABELS[group?.sport ?? 'all']}</Text>
             </View>
-            {membersVisible && (
+            {loaded && membersVisible && (
               <View style={s.metaItem}>
                 <Ionicons name="people-outline" size={14} color={TEXT_SECONDARY} />
                 <Text style={s.meta}>{accepted.length} {accepted.length === 1 ? 'medlem' : 'medlemmar'}</Text>
@@ -444,7 +466,7 @@ export default function GroupScreen() {
 
           {/* Åtgärdscirklar som i förlagan — centrerade när de får plats,
               skrollbara i sidled när de blir fler */}
-          <ScrollView
+          {loaded && <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={s.actionsScroll}
@@ -465,9 +487,9 @@ export default function GroupScreen() {
                 onPress={() => { Haptics.selectionAsync(); setMembersOpen(true) }}
                 testID="groupMembers" />
             )}
-          </ScrollView>
+          </ScrollView>}
 
-          {(!mine || mine.status === 'pending' || mine.status === 'invited') && (
+          {loaded && (!mine || mine.status === 'pending' || mine.status === 'invited') && (
             <TouchableOpacity
               style={[s.joinBtn, { borderColor: joinActive ? T.ACCENT : pillEdge }]}
               onPress={handleJoin}
@@ -516,8 +538,11 @@ export default function GroupScreen() {
           </>
         )}
 
-        {/* Ett blandat flöde: inlägg + pass i tidsordning, fäst inlägg överst */}
-        {mine?.status === 'accepted' && group ? (
+        {/* Ett blandat flöde: inlägg + pass i tidsordning, fäst inlägg överst.
+            Innan medlemskapet är känt: spinner i stället för fel läge. */}
+        {!loaded ? (
+          <ActivityIndicator style={{ marginTop: 40 }} color={TEXT_SECONDARY} />
+        ) : mine?.status === 'accepted' && group ? (
           <GroupPosts
             group={group}
             me={me}

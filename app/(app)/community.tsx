@@ -297,7 +297,7 @@ export default function CommunityScreen() {
               style={[s.groupRow, chrome]}
               activeOpacity={0.75}
               testID={`group-${g.id}`}
-              onPress={() => router.push({ pathname: '/(app)/group', params: { groupId: g.id } } as never)}
+              onPress={() => router.push({ pathname: '/(app)/group', params: { groupId: g.id, name: g.name, avatar: g.avatar_url ?? '' } } as never)}
             >
               <FeedAvatar url={g.avatar_url} fallback={g.name.charAt(0).toUpperCase()} size={48} />
               <View style={{ flex: 1 }}>
@@ -456,7 +456,7 @@ export default function CommunityScreen() {
         onCreated={g => {
           setWizardOpen(false)
           loadGroups().catch(() => {})
-          router.push({ pathname: '/(app)/group', params: { groupId: g.id } } as never)
+          router.push({ pathname: '/(app)/group', params: { groupId: g.id, name: g.name, avatar: g.avatar_url ?? '' } } as never)
         }}
       />
 
@@ -465,7 +465,7 @@ export default function CommunityScreen() {
         onClose={() => setGroupSearchOpen(false)}
         onOpenGroup={g => {
           setGroupSearchOpen(false)
-          router.push({ pathname: '/(app)/group', params: { groupId: g.id } } as never)
+          router.push({ pathname: '/(app)/group', params: { groupId: g.id, name: g.name, avatar: g.avatar_url ?? '' } } as never)
         }}
       />
 
