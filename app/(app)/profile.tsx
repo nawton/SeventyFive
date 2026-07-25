@@ -22,7 +22,9 @@ import { compressImage } from '@/lib/image'
 import { getProfile } from '@/services/profile'
 import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { getCardioWorkouts, type CardioWorkout } from '@/services/cardioWorkouts'
-import { getStrengthWorkouts } from '@/services/strengthWorkouts'
+import { getStrengthWorkouts, type StrengthWorkout } from '@/services/strengthWorkouts'
+import { MuscleDetailModal } from '@/components/stats/MuscleDetailModal'
+import { toLocalDateString, startOfWeek } from '@/lib/date'
 import {
   getFollowCounts, getIncomingRequestCount, subscribeToFollows, type FollowCounts,
 } from '@/services/follows'
@@ -48,7 +50,7 @@ import {
 import { PhotoComposer } from '@/components/PhotoComposer'
 import { PhotoViewer } from '@/components/PhotoViewer'
 import { PhotoCompare } from '@/components/PhotoCompare'
-import { GREEN, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, ACCENT, accentAlpha } from '@/lib/theme'
+import { GREEN, BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, ACCENT, accentAlpha, useCardChrome } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
@@ -74,6 +76,9 @@ export default function ProfileScreen() {
   // Atletvyn: samma data som atletsidan visar (cardio, gymdagar, följen)
   const [workouts, setWorkouts]     = useState<CardioWorkout[]>([])
   const [gymCount, setGymCount]     = useState(0)
+  const [strengthWorkouts, setStrengthWorkouts] = useState<StrengthWorkout[]>([])
+  const [muscleOpen, setMuscleOpen] = useState(false)
+  const chrome = useCardChrome()
   const [counts, setCounts]         = useState<FollowCounts>({ followers: 0, following: 0 })
   const [requestCount, setRequestCount] = useState(0)
   const [socialCount, setSocialCount] = useState(0)
@@ -173,6 +178,7 @@ export default function ProfileScreen() {
         // Gymdagar räknas som pass i aktivitetsknappen — samma gruppering
         // som flödet använder
         setGymCount(strengthToPosts(strength.value, '', '', null).length)
+        setStrengthWorkouts(strength.value)
       }
       if (followCounts.status === 'fulfilled') setCounts(followCounts.value)
       if (pendingCount.status === 'fulfilled') setRequestCount(pendingCount.value)
@@ -313,6 +319,20 @@ export default function ProfileScreen() {
           streak={streak}
           onPressStreak={() => router.push('/(app)/streak' as never)}
         />
+
+        {/* Snabbknappar: muskelfördelningen ur statistiken + personliga rekord */}
+        <View style={s.quickRow}>
+          <TouchableOpacity style={[s.quickBtn, chrome]} activeOpacity={0.75}
+            onPress={() => setMuscleOpen(true)} testID="muscleBtn">
+            <Ionicons name="body-outline" size={19} color={ACCENT} />
+            <Text style={s.quickBtnText}>Muskelfördelning</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.quickBtn, chrome]} activeOpacity={0.75}
+            onPress={() => router.push('/records' as never)} testID="recordsBtn">
+            <Ionicons name="trophy-outline" size={19} color={ACCENT} />
+            <Text style={s.quickBtnText}>Rekord</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={s.sectionHeadRow}>
           <View style={{ flex: 1 }}>
@@ -460,6 +480,18 @@ export default function ProfileScreen() {
         onCancel={() => setComposerUri(null)}
         onSave={handleSavePhoto}
       />
+
+      {/* Muskelfördelningen — samma vy som statistiken använder */}
+      <MuscleDetailModal
+        visible={muscleOpen}
+        onClose={() => setMuscleOpen(false)}
+        userId={userId}
+        workouts={strengthWorkouts}
+        weekStart={toLocalDateString(startOfWeek())}
+        weekLabel="Denna vecka"
+        day={null}
+        dayLabel={null}
+      />
     </SafeScreen>
   )
 }
@@ -501,6 +533,13 @@ const s = StyleSheet.create({
   sectionHead: {
     color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
   },
+  quickRow: { flexDirection: 'row', gap: 10, marginTop: 20, marginBottom: 18 },
+  quickBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 7, backgroundColor: CARD, borderRadius: 14, paddingVertical: 13,
+  },
+  quickBtnText: { color: TEXT_PRIMARY, fontSize: 13.5, fontWeight: '700' },
+
   sectionHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   compareChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
