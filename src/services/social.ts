@@ -32,6 +32,8 @@ export interface SocialNotification {
   from: FollowProfile
   body: string | null    // kommentarens text
   createdAt: string
+  /** Hur många FLER gjort samma sak på samma inlägg — "och 3 andra" */
+  others: number
 }
 
 async function ownId(): Promise<string | null> {
@@ -200,15 +202,19 @@ export async function deleteComment(commentId: string): Promise<void> {
 export async function getSocialNotifications(limit = 30): Promise<SocialNotification[]> {
   const uid = await ownId()
   if (!uid) return []
+  // Bara de senaste 14 dagarna — gamla händelser ska inte ligga kvar för evigt
+  const since = new Date(Date.now() - 14 * 86_400_000).toISOString()
   const [likesRes, commentsRes] = await Promise.all([
     supabase.from('post_likes')
       .select('post_key, liker_id, created_at')
       .eq('owner_id', uid).neq('liker_id', uid)
-      .order('created_at', { ascending: false }).limit(limit),
+      .gte('created_at', since)
+      .order('created_at', { ascending: false }).limit(200),
     supabase.from('post_comments')
       .select('post_key, author_id, body, created_at')
       .eq('owner_id', uid).neq('author_id', uid)
-      .order('created_at', { ascending: false }).limit(limit),
+      .gte('created_at', since)
+      .order('created_at', { ascending: false }).limit(200),
   ])
   const likeRows = likesRes.data ?? []
   const commentRows = commentsRes.data ?? []
@@ -218,20 +224,38 @@ export async function getSocialNotifications(limit = 30): Promise<SocialNotifica
   ])
   const fallback = (id: string): FollowProfile =>
     profiles.get(id) ?? { id, name: null, avatar_url: null }
+
+  // Grupperat per inlägg: EN rad per pass ("Kalle och 3 andra gillade...")
+  // i stället för en rad per gillande — det var det som svämmade över
+  const likeByPost = new Map<string, typeof likeRows>()
+  for (const r of likeRows) {
+    const list = likeByPost.get(r.post_key as string)
+    if (list) list.push(r)
+    else likeByPost.set(r.post_key as string, [r])
+  }
+  const commentByPost = new Map<string, typeof commentRows>()
+  for (const r of commentRows) {
+    const list = commentByPost.get(r.post_key as string)
+    if (list) list.push(r)
+    else commentByPost.set(r.post_key as string, [r])
+  }
+
   const items: SocialNotification[] = [
-    ...likeRows.map(r => ({
+    ...Array.from(likeByPost.entries()).map(([postKey, rows]) => ({
       kind: 'like' as const,
-      postKey: r.post_key as string,
-      from: fallback(r.liker_id as string),
+      postKey,
+      from: fallback(rows[0].liker_id as string),   // senaste gillaren
       body: null,
-      createdAt: r.created_at as string,
+      createdAt: rows[0].created_at as string,
+      others: new Set(rows.map(r => r.liker_id as string)).size - 1,
     })),
-    ...commentRows.map(r => ({
+    ...Array.from(commentByPost.entries()).map(([postKey, rows]) => ({
       kind: 'comment' as const,
-      postKey: r.post_key as string,
-      from: fallback(r.author_id as string),
-      body: r.body as string,
-      createdAt: r.created_at as string,
+      postKey,
+      from: fallback(rows[0].author_id as string),  // senaste kommentaren
+      body: rows[0].body as string,
+      createdAt: rows[0].created_at as string,
+      others: rows.length - 1,
     })),
   ]
   return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit)

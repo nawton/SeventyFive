@@ -16,7 +16,7 @@ import {
   getGroupNotifications, acceptGroupInvite, leaveGroup, approveMember, removeMember,
   type GroupNotification,
 } from '@/services/groups'
-import { setNotifSeenAt } from '@/lib/prefs'
+import { setNotifSeenAt, getNotifSeenAt } from '@/lib/prefs'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useThemeStrings, THEME_DARK } from '@/lib/theme'
@@ -122,9 +122,17 @@ function GroupRow({ item, onAnswer }: {
   )
 }
 
-/** "gillade ditt gympass" / "gillade din löprunda" utifrån inläggsnyckeln */
+/** "gillade ditt gympass/inlägg/pass" utifrån inläggsnyckeln */
 function likeLabel(postKey: string): string {
-  return postKey.startsWith('gym-') ? 'gillade ditt gympass' : 'gillade ditt pass'
+  if (postKey.startsWith('gym-')) return 'gillade ditt gympass'
+  if (postKey.startsWith('grp-')) return 'gillade ditt inlägg'
+  return 'gillade ditt pass'
+}
+
+/** "" / " och 1 annan" / " och 3 andra" — grupperade händelser */
+function othersSuffix(n: number): string {
+  if (n <= 0) return ''
+  return n === 1 ? ' och 1 annan' : ` och ${n} andra`
 }
 
 function timeAgo(iso: string, now = new Date()): string {
@@ -142,6 +150,8 @@ export default function NotificationsScreen() {
   const [groupItems, setGroupItems] = useState<GroupNotification[]>([])
   const [myId, setMyId] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
+  // Förra besökets tidsstämpel — allt äldre visas nedtonat under Tidigare
+  const [prevSeen, setPrevSeen] = useState<string | null>(null)
 
   useFocusEffect(useCallback(() => {
     let alive = true
@@ -165,8 +175,12 @@ export default function NotificationsScreen() {
       })
     }
     loadAll()
-    // Badgen på klockan nollställs — allt som fanns nu räknas som sett
-    setNotifSeenAt(new Date().toISOString()).catch(() => {})
+    // Läs FÖRRA besökets tidsstämpel (delar listan i Nytt/Tidigare) innan
+    // badgen nollställs och allt som finns nu räknas som sett
+    getNotifSeenAt()
+      .then(seen => { if (alive) setPrevSeen(seen) })
+      .catch(() => {})
+      .finally(() => { setNotifSeenAt(new Date().toISOString()).catch(() => {}) })
     // Nya förfrågningar/gillanden/kommentarer dyker upp live
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user || !alive) return
@@ -224,43 +238,61 @@ export default function NotificationsScreen() {
       <FlatList
         data={socialItems}
         keyExtractor={item => `${item.kind}-${item.postKey}-${item.from.id}-${item.createdAt}`}
-        renderItem={({ item }) => (
-          <View style={s.row}>
-            <TouchableOpacity
-              style={s.rowPerson}
-              activeOpacity={0.7}
-              onPress={() => router.push({
-                pathname: '/(app)/athlete',
-                params: { userId: item.from.id, name: item.from.name ?? 'Namnlös', avatar: item.from.avatar_url ?? '' },
-              } as never)}
-            >
-              <FeedAvatar
-                url={item.from.avatar_url}
-                fallback={(item.from.name ?? '?').charAt(0).toUpperCase()}
-                size={44}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={s.rowName} numberOfLines={2}>
-                  <Text style={{ fontWeight: '800' }}>{item.from.name ?? 'Namnlös'}</Text>
-                  {item.kind === 'like'
-                    ? ` ${likeLabel(item.postKey)}`
-                    : ' kommenterade ditt pass'}
-                </Text>
-                {item.kind === 'comment' && !!item.body && (
-                  <Text style={s.rowComment} numberOfLines={2}>”{item.body}”</Text>
-                )}
+        renderItem={({ item, index }) => {
+          // Nytt/Tidigare: allt äldre än förra besöket tonas ner, med en
+          // rubrik vid gränsen — så högen inte känns oläst för evigt
+          const firstEarlierIdx = prevSeen
+            ? socialItems.findIndex(i => i.createdAt <= prevSeen)
+            : -1
+          const hasNew = firstEarlierIdx !== 0
+          const earlier = !!prevSeen && item.createdAt <= prevSeen
+          const showDivider = earlier && hasNew && index === firstEarlierIdx
+          return (
+            <>
+              {showDivider && (
+                <Text style={[s.sectionHead, { marginTop: 16, marginBottom: 2 }]}>Tidigare</Text>
+              )}
+              <View style={[s.row, earlier && hasNew && { opacity: 0.55 }]}>
+                <TouchableOpacity
+                  style={s.rowPerson}
+                  activeOpacity={0.7}
+                  onPress={() => router.push({
+                    pathname: '/(app)/athlete',
+                    params: { userId: item.from.id, name: item.from.name ?? 'Namnlös', avatar: item.from.avatar_url ?? '' },
+                  } as never)}
+                >
+                  <FeedAvatar
+                    url={item.from.avatar_url}
+                    fallback={(item.from.name ?? '?').charAt(0).toUpperCase()}
+                    size={44}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.rowName} numberOfLines={2}>
+                      <Text style={{ fontWeight: '800' }}>{item.from.name ?? 'Namnlös'}</Text>
+                      {othersSuffix(item.others)}
+                      {item.kind === 'like'
+                        ? ` ${likeLabel(item.postKey)}`
+                        : item.postKey.startsWith('grp-')
+                          ? ' kommenterade ditt inlägg'
+                          : ' kommenterade ditt pass'}
+                    </Text>
+                    {item.kind === 'comment' && !!item.body && (
+                      <Text style={s.rowComment} numberOfLines={2}>”{item.body}”</Text>
+                    )}
+                  </View>
+                  <View style={s.rowRight}>
+                    <Ionicons
+                      name={item.kind === 'like' ? 'heart' : 'chatbubble-ellipses'}
+                      size={16}
+                      color={item.kind === 'like' ? '#FF3B4A' : TEXT_SECONDARY}
+                    />
+                    <Text style={s.rowTime}>{timeAgo(item.createdAt)}</Text>
+                  </View>
+                </TouchableOpacity>
               </View>
-              <View style={s.rowRight}>
-                <Ionicons
-                  name={item.kind === 'like' ? 'heart' : 'chatbubble-ellipses'}
-                  size={16}
-                  color={item.kind === 'like' ? '#FF3B4A' : TEXT_SECONDARY}
-                />
-                <Text style={s.rowTime}>{timeAgo(item.createdAt)}</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
+            </>
+          )
+        }}
         ListHeaderComponent={
           <>
             {requests.length > 0 && (
