@@ -41,8 +41,7 @@ export default function PrivacyPolicyScreen() {
         <Section title="Vem ansvarar för dina uppgifter">
           <P>
             SeventyFive drivs av Nawton. Har du frågor om den här policyn eller
-            om dina uppgifter når du oss via supportsidan på vår webbplats.
-            En dedikerad kontaktadress publiceras före lanseringen.
+            om dina uppgifter kan du kontakta oss på support@nawton.net.
           </P>
         </Section>
 
