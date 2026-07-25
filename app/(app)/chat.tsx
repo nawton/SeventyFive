@@ -6,6 +6,8 @@ import {
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -157,6 +159,17 @@ export default function ChatScreen() {
     }
   }
 
+  // Tiderna ligger gömda utanför högerkanten (som i Meddelanden): dra
+  // listan åt vänster så glider de fram, släpp så fjädrar allt tillbaka.
+  // Färgerna bor på barnen — dynamiska färger på animerade noder kraschar.
+  const dragX = useSharedValue(0)
+  const timePan = Gesture.Pan()
+    .activeOffsetX(-15)
+    .failOffsetY([-12, 12])
+    .onUpdate(e => { dragX.value = Math.max(-72, Math.min(0, e.translationX)) })
+    .onEnd(() => { dragX.value = withSpring(0, { damping: 20, stiffness: 260 }) })
+  const rowAnim = useAnimatedStyle(() => ({ transform: [{ translateX: dragX.value }] }))
+
   // Inverterad lista vill ha nyast först
   const inverted = [...messages].reverse()
 
@@ -178,6 +191,7 @@ export default function ChatScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <GestureDetector gesture={timePan}>
         <FlatList
           ref={listRef}
           data={inverted}
@@ -188,7 +202,7 @@ export default function ChatScreen() {
           renderItem={({ item }) => {
             const own = item.sender_id === me
             return (
-              <View style={[s.bubbleRow, own && { justifyContent: 'flex-end' }]}>
+              <Animated.View style={[s.bubbleRow, own && { justifyContent: 'flex-end' }, rowAnim]}>
                 <TouchableOpacity
                   activeOpacity={own ? 0.85 : 1}
                   onLongPress={() => messageMenu(item)}
@@ -207,11 +221,14 @@ export default function ChatScreen() {
                       {item.body}
                     </Text>
                   )}
-                  <Text style={[s.bubbleTime, own && { color: light ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)' }]}>
+                </TouchableOpacity>
+                {/* Tiden gömd utanför kanten — glider fram vid vänsterdrag */}
+                <View style={s.timeReveal} pointerEvents="none">
+                  <Text style={s.timeRevealText}>
                     {new Date(item.created_at).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
                   </Text>
-                </TouchableOpacity>
-              </View>
+                </View>
+              </Animated.View>
             )
           }}
           ListEmptyComponent={
@@ -222,6 +239,7 @@ export default function ChatScreen() {
             </View>
           }
         />
+        </GestureDetector>
 
         {imageUri && (
           <View style={s.attachRow}>
@@ -285,7 +303,11 @@ const s = StyleSheet.create({
   bubble: { maxWidth: '78%', borderRadius: 16, paddingHorizontal: 13, paddingVertical: 9 },
   bubbleText: { color: TEXT_PRIMARY, fontSize: 15, lineHeight: 21 },
   bubbleImage: { width: 210, height: 160, borderRadius: 10, marginBottom: 5 },
-  bubbleTime: { color: TEXT_SECONDARY, fontSize: 10.5, marginTop: 4, alignSelf: 'flex-end' },
+  timeReveal: {
+    position: 'absolute', right: -66, top: 0, bottom: 0,
+    width: 60, justifyContent: 'center',
+  },
+  timeRevealText: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
   // inverterad lista vänder på allt, vänd tillbaka tomläget
   emptyFlip: { transform: [{ scaleY: -1 }], paddingVertical: 40 },
   emptyText: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center' },
