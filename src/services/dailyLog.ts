@@ -338,6 +338,26 @@ export async function getWeekStatuses(challengeId: string): Promise<Record<strin
   return map
 }
 
+/** En dags status och uppgifter, UTAN att skapa något — streaksidans
+    dagvy ska kunna titta på gamla dagar utan bieffekter */
+export async function getDayDetail(challengeId: string, date: string): Promise<{
+  status: string | null
+  tasks: TaskItem[]
+}> {
+  const { data: log } = await supabase
+    .from('daily_logs')
+    .select('id, status')
+    .eq('challenge_id', challengeId)
+    .eq('date', date)
+    .maybeSingle()
+  if (!log) return { status: null, tasks: [] }
+  const { data } = await supabase
+    .from('task_completions')
+    .select('id, completed, task_template_id, details, task_templates(name, description, type, target_value, unit, icon)')
+    .eq('daily_log_id', log.id)
+  return { status: (log.status as string) ?? null, tasks: (data ?? []).map(toTaskItem) }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function toTaskItem(row: any): TaskItem {

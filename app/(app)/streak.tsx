@@ -1,14 +1,16 @@
 import { useCallback, useState } from 'react'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, ActivityIndicator,
+} from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import Svg, {
-  Path, Circle, Defs, LinearGradient as SvgLinearGradient, RadialGradient, Stop,
+  Path, Circle, Defs, G, LinearGradient as SvgLinearGradient, RadialGradient, Stop,
 } from 'react-native-svg'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge } from '@/services/challenge'
-import { getStreak, getWeekStatuses } from '@/services/dailyLog'
+import { getStreak, getWeekStatuses, getDayDetail, type TaskItem } from '@/services/dailyLog'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { BG, CARD, BORDER, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, useThemeStrings, useCardChrome, THEME_DARK } from '@/lib/theme'
@@ -29,60 +31,77 @@ export function visibleMilestones(streak: number): number[] {
   return MILESTONES.slice(start, start + 4)
 }
 
-/** Glödande låga — radiell glöd, ring, ytter- och innerlåga plus gnistor */
-function Flame({ size = 230 }: { size?: number }) {
+/** Fyruddig gnistra */
+function Sparkle({ x, y, r, fill }: { x: number; y: number; r: number; fill: string }) {
+  const w = r * 0.3
+  return (
+    <Path
+      d={`M ${x} ${y - r} L ${x + w} ${y - w} L ${x + r} ${y} L ${x + w} ${y + w}
+          L ${x} ${y + r} L ${x - w} ${y + w} L ${x - r} ${y} L ${x - w} ${y - w} Z`}
+      fill={fill}
+    />
+  )
+}
+
+/** Glödande låga som i förlagan: stor mjuk radiell glöd, tunn dubbelring,
+    rund fyllig låga med krulltoppar och krämvit innerlåga, plus gnistor */
+function Flame({ size = 250 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100">
       <Defs>
-        <RadialGradient id="glow" cx="50%" cy="52%" r="50%">
-          <Stop offset="0%" stopColor={ACCENT} stopOpacity={0.32} />
-          <Stop offset="55%" stopColor={ACCENT} stopOpacity={0.12} />
-          <Stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
+        <RadialGradient id="glow" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor="#FF8A1E" stopOpacity={0.45} />
+          <Stop offset="45%" stopColor="#FF8A1E" stopOpacity={0.20} />
+          <Stop offset="75%" stopColor="#FF8A1E" stopOpacity={0.07} />
+          <Stop offset="100%" stopColor="#FF8A1E" stopOpacity={0} />
         </RadialGradient>
         <SvgLinearGradient id="outer" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor="#FFC24D" />
-          <Stop offset="60%" stopColor="#FF9E1B" />
-          <Stop offset="100%" stopColor="#F57200" />
+          <Stop offset="0%" stopColor="#FFC94D" />
+          <Stop offset="55%" stopColor="#FF9E1B" />
+          <Stop offset="100%" stopColor="#F26B00" />
         </SvgLinearGradient>
         <SvgLinearGradient id="inner" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor="#FFF3C4" />
-          <Stop offset="100%" stopColor="#FFC93C" />
+          <Stop offset="0%" stopColor="#FFF7DE" />
+          <Stop offset="100%" stopColor="#FFD35C" />
         </SvgLinearGradient>
       </Defs>
 
-      {/* Glöd + tunn ring som i förlagan */}
-      <Circle cx={50} cy={52} r={48} fill="url(#glow)" />
-      <Circle cx={50} cy={52} r={38} fill="none" stroke={ACCENT} strokeOpacity={0.28} strokeWidth={1.4} />
+      {/* Glöden fyller hela ytan, ringarna svävar runt lågan */}
+      <Circle cx={50} cy={50} r={50} fill="url(#glow)" />
+      <Circle cx={50} cy={50} r={39} fill="none" stroke={ACCENT} strokeOpacity={0.30} strokeWidth={1.3} />
+      <Circle cx={50} cy={50} r={44} fill="none" stroke={ACCENT} strokeOpacity={0.10} strokeWidth={1} />
 
-      {/* Ytterlågan — droppform med vek topp */}
-      <Path
-        d="M50 22
-           C 52 32, 63 36, 66 46
-           C 68 53, 67 59, 63 64
-           C 64 56, 60 52, 57 50
-           C 59 58, 55 62, 52 66
-           C 49 62, 44 58, 46 50
-           C 41 54, 38 60, 40 66
-           C 34 61, 32 53, 34 46
-           C 37 36, 47 32, 50 22 Z"
-        fill="url(#outer)"
-      />
-      {/* Innerlågan */}
-      <Path
-        d="M50 48
-           C 52 54, 58 56, 57 63
-           C 56 69, 52 72, 50 73
-           C 48 72, 44 69, 43 63
-           C 42 56, 48 54, 50 48 Z"
-        fill="url(#inner)"
-      />
+      {/* Lågan — rund och fyllig med krull åt båda håll, skalad in i ringen */}
+      <G transform="translate(15, 17) scale(0.7)">
+        <Path
+          d="M50 12
+             C 50 12, 57 22, 57 31
+             C 57 36, 54 39, 51 41
+             C 56 42, 64 38, 63 26
+             C 71 34, 76 44, 76 54
+             C 76 68, 64 78, 50 78
+             C 36 78, 24 68, 24 54
+             C 24 44, 30 35, 37 27
+             C 37 38, 43 43, 47 40
+             C 43 33, 45 21, 50 12 Z"
+          fill="url(#outer)"
+        />
+        <Path
+          d="M50 78
+             C 43 78, 38 73, 38 66
+             C 38 59, 44 55, 47 49
+             C 49 54, 56 57, 58 63
+             C 60 70, 57 78, 50 78 Z"
+          fill="url(#inner)"
+        />
+      </G>
 
-      {/* Gnistor */}
-      <Circle cx={31} cy={30} r={1.4} fill="#FFD37A" />
-      <Circle cx={70} cy={26} r={1.1} fill="#FFD37A" />
-      <Circle cx={76} cy={40} r={0.9} fill="#FFB84D" />
-      <Circle cx={26} cy={46} r={0.9} fill="#FFB84D" />
-      <Path d="M64 18 l1.1 2.4 2.4 1.1 -2.4 1.1 -1.1 2.4 -1.1 -2.4 -2.4 -1.1 2.4 -1.1 Z" fill="#FFE49A" />
+      {/* Gnistor — stjärnor och prickar som i förlagan */}
+      <Sparkle x={30} y={24} r={3.2} fill="#FFE49A" />
+      <Sparkle x={71} y={18} r={2.2} fill="#FFD37A" />
+      <Circle cx={76} cy={34} r={1.2} fill="#FFB84D" />
+      <Circle cx={24} cy={42} r={1.0} fill="#FFB84D" />
+      <Circle cx={66} cy={26} r={0.9} fill="#FFD37A" />
     </Svg>
   )
 }
@@ -93,6 +112,11 @@ export default function StreakScreen() {
   const dotEdge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'rgba(0,0,0,0.30)'
   const [streak, setStreak] = useState(0)
   const [weekStatuses, setWeekStatuses] = useState<Record<string, string>>({})
+  const [challengeId, setChallengeId] = useState<string | null>(null)
+  // Dagvyn: tryckt dag + dess uppgifter (null = stängd)
+  const [dayOpen, setDayOpen] = useState<string | null>(null)
+  const [dayTasks, setDayTasks] = useState<TaskItem[] | null>(null)
+  const [dayStatus, setDayStatus] = useState<string | null>(null)
 
   useFocusEffect(useCallback(() => {
     let alive = true
@@ -100,6 +124,7 @@ export default function StreakScreen() {
       if (!session?.user || !alive) return
       const challenge = await getActiveChallenge(session.user.id).catch(() => null)
       if (!challenge || !alive) return
+      setChallengeId(challenge.id)
       const [days, statuses] = await Promise.all([
         getStreak(challenge.id).catch(() => 0),
         getWeekStatuses(challenge.id).catch(() => ({})),
@@ -110,6 +135,16 @@ export default function StreakScreen() {
     })
     return () => { alive = false }
   }, []))
+
+  function openDay(date: string) {
+    if (!challengeId) return
+    setDayOpen(date)
+    setDayTasks(null)
+    setDayStatus(null)
+    getDayDetail(challengeId, date)
+      .then(d => { setDayTasks(d.tasks); setDayStatus(d.status) })
+      .catch(() => setDayTasks([]))
+  }
 
   // Veckoremsan: M T O T F L S med status per dag
   const monday = startOfWeek()
@@ -166,7 +201,14 @@ export default function StreakScreen() {
           </View>
           <View style={s.weekRow}>
             {week.map(d => (
-              <View key={d.key} style={s.weekSlot}>
+              <TouchableOpacity
+                key={d.key}
+                style={s.weekSlot}
+                disabled={d.isFuture}
+                activeOpacity={0.6}
+                onPress={() => openDay(d.key)}
+                testID={`day-${d.key}`}
+              >
                 {d.status === 'completed' ? (
                   <View style={[s.dayDot, { backgroundColor: T.ACCENT, borderColor: T.ACCENT }]}>
                     <Ionicons name="checkmark" size={14} color="#000" />
@@ -180,7 +222,7 @@ export default function StreakScreen() {
                 ) : (
                   <View style={[s.dayDot, { borderColor: d.isToday ? T.ACCENT : dotEdge }]} />
                 )}
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -214,11 +256,73 @@ export default function StreakScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Dagvyn: vad som klarades och missades den tryckta dagen */}
+      <Modal visible={!!dayOpen} transparent animationType="fade" onRequestClose={() => setDayOpen(null)}>
+        <TouchableOpacity style={s.dayBackdrop} activeOpacity={1} onPress={() => setDayOpen(null)}>
+          <View style={[s.dayCard, chrome]} onStartShouldSetResponder={() => true}>
+            <View style={s.grabber} />
+            <Text style={s.dayTitle}>
+              {dayOpen ? new Date(`${dayOpen}T12:00:00`).toLocaleDateString('sv-SE', {
+                weekday: 'long', day: 'numeric', month: 'long',
+              }).replace(/^./, c => c.toUpperCase()) : ''}
+            </Text>
+            {dayStatus === 'completed' && <Text style={[s.dayStatusText, { color: GREEN }]}>Dagen klarad</Text>}
+            {dayStatus === 'failed' && <Text style={[s.dayStatusText, { color: RED }]}>Dagen missad</Text>}
+
+            {dayTasks === null ? (
+              <ActivityIndicator style={{ marginVertical: 24 }} color={TEXT_SECONDARY} />
+            ) : dayTasks.length === 0 ? (
+              <Text style={s.dayEmpty}>
+                Ingen data för den här dagen, du hade inte öppnat appen då.
+              </Text>
+            ) : (
+              <View style={{ marginTop: 6 }}>
+                {dayTasks.map((t, i) => (
+                  <View key={t.completionId} style={[s.dayTaskRow, i > 0 && s.dayTaskDivider]}>
+                    <Ionicons
+                      name={t.completed ? 'checkmark-circle' : 'close-circle'}
+                      size={20}
+                      color={t.completed ? GREEN : RED}
+                    />
+                    <Text style={[s.dayTaskName, !t.completed && s.dayTaskMissed]} numberOfLines={1}>
+                      {t.name}
+                    </Text>
+                    {!t.completed && <Text style={s.dayTaskTag}>Missad</Text>}
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeScreen>
   )
 }
 
 const s = StyleSheet.create({
+  dayBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  dayCard: {
+    backgroundColor: CARD, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 22, paddingTop: 10, paddingBottom: 42,
+  },
+  grabber: {
+    width: 40, height: 5, borderRadius: 3,
+    backgroundColor: 'rgba(128,128,128,0.45)',
+    alignSelf: 'center', marginBottom: 12,
+  },
+  dayTitle: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800' },
+  dayStatusText: { fontSize: 13, fontWeight: '700', marginTop: 3 },
+  dayEmpty: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 20, marginVertical: 18 },
+  dayTaskRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
+  dayTaskDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.25)' },
+  dayTaskName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  dayTaskMissed: { color: TEXT_SECONDARY },
+  dayTaskTag: { color: RED, fontSize: 12, fontWeight: '700' },
+
   screen: { flex: 1, backgroundColor: BG },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
