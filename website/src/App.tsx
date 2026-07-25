@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, Link, NavLink, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Privacy from './pages/Privacy'
@@ -16,6 +16,16 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const { pathname } = useLocation()
+
+  // Menyn stänger sig själv vid sidbyte, och låser skrollen medan den är öppen
+  useEffect(() => { setMenuOpen(false) }, [pathname])
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [menuOpen])
+
   return (
     <>
       <ScrollToTop />
@@ -31,8 +41,32 @@ export default function App() {
         <div className="navActions">
           <Link to="/app" className="btnGhost">Logga in</Link>
           <Link to="/app" className="btnAccent">Gå med gratis</Link>
+          <button
+            type="button"
+            className={`burger${menuOpen ? ' open' : ''}`}
+            aria-label={menuOpen ? 'Stäng menyn' : 'Öppna menyn'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(v => !v)}
+          >
+            <span /><span /><span />
+          </button>
         </div>
       </header>
+
+      {/* Mobilmenyn: alltid monterad så stängningen också animeras */}
+      <div
+        className={`menuBackdrop${menuOpen ? ' open' : ''}`}
+        onClick={() => setMenuOpen(false)}
+      />
+      <nav className={`mobileMenu${menuOpen ? ' open' : ''}`} aria-hidden={!menuOpen}>
+        <NavLink to="/funktioner">Funktioner</NavLink>
+        <NavLink to="/aktiviteter">Aktiviteter</NavLink>
+        <NavLink to="/prenumeration">Prenumeration</NavLink>
+        <div className="menuDivider" />
+        <NavLink to="/integritetspolicy">Integritetspolicy</NavLink>
+        <NavLink to="/support">Support</NavLink>
+        <Link to="/app" className="btnAccent menuCta">Gå med gratis</Link>
+      </nav>
 
       <Routes>
         <Route path="/" element={<Home />} />
