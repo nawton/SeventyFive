@@ -177,10 +177,6 @@ export const DayPage = React.memo(function DayPage({
                       <Ionicons name="moon-outline" size={40} color={BORDER} />
                       <Text style={styles.restTitle}>Vilodag</Text>
                       <Text style={styles.restText}>Inget pass schemalagt {isToday ? 'idag' : WEEKDAYS[weekday - 1].toLowerCase()}</Text>
-                      <TouchableOpacity style={styles.restAddBtn} onPress={() => api.openEditor(null)} activeOpacity={0.8}>
-                        <Ionicons name="add" size={14} color={ACCENT} />
-                        <Text style={styles.restAddText}>Lägg till pass</Text>
-                      </TouchableOpacity>
                     </View>
                   ) : scheduledSessions.map(s => {
                     const isCompleted = completed.has(s.id)
@@ -350,13 +346,8 @@ const styles = StyleSheet.create({
   },
   emptyBtnText: { color: '#000', fontSize: 14, fontWeight: '700' },
 
+  // Vilodagen är ren — pass läggs till via Logga pass-knappen eller Nytt pass
   restState:  { alignItems: 'center', paddingVertical: 48, gap: 6 },
   restTitle:  { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '700', marginTop: 8 },
   restText:   { color: TEXT_SECONDARY, fontSize: 14 },
-  restAddBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 12, backgroundColor: accentAlpha('1E'),
-    borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9,
-  },
-  restAddText: { color: ACCENT, fontSize: 14, fontWeight: '600' },
 })
