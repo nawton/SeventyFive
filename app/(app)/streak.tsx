@@ -6,6 +6,7 @@ import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg'
+import { StreakFlame } from '@/components/StreakFlame'
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS, Easing,
@@ -33,7 +34,7 @@ export function visibleMilestones(streak: number): number[] {
   return MILESTONES.slice(start, start + 4)
 }
 
-/** Riktig eld: Apples renderade flamma med en stor mjuk glöd bakom —
+/** Egen flerlagrad flamma med en stor mjuk glöd bakom —
     inga ringar (accentfärgen gjorde dem blå i ljust läge) */
 function Flame({ size = 250 }: { size?: number }) {
   return (
@@ -49,7 +50,7 @@ function Flame({ size = 250 }: { size?: number }) {
         </Defs>
         <Circle cx={50} cy={50} r={50} fill="url(#glow)" />
       </Svg>
-      <Text style={{ fontSize: size * 0.42, lineHeight: size * 0.52 }}>🔥</Text>
+      <StreakFlame size={size * 0.4} />
     </View>
   )
 }
