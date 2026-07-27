@@ -36,6 +36,7 @@ export function installTables(
     const chain: Record<string, unknown> = {}
     const methods = [
       'select', 'eq', 'neq', 'in', 'gt', 'gte', 'lt', 'lte', 'is', 'or',
+      'ilike', 'like', 'contains', 'not',
       'order', 'limit', 'insert', 'update', 'delete', 'upsert',
     ]
     for (const m of methods) {
