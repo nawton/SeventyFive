@@ -73,12 +73,12 @@ export type WizardResult = {
   raceDate:      string | null
 }
 
-// MaterialCommunityIcons — egna motiv för wizarden så den inte återanvänder
-// samma Ionicons som resten av appen
+// MaterialCommunityIcons — tempot i motiven trappas upp med erfarenheten:
+// gå → springa → springa fort
 const EXPERIENCE_OPTIONS: Array<{ key: RunExperience; label: string; sub: string; icon: string }> = [
-  { key: 'beginner',     label: 'Nybörjare',    sub: 'Ny till löpning eller springer sporadiskt',      icon: 'sprout' },
+  { key: 'beginner',     label: 'Nybörjare',    sub: 'Ny till löpning eller springer sporadiskt',      icon: 'walk' },
   { key: 'intermediate', label: 'Van motionär', sub: 'Springer regelbundet, 1–2 pass i veckan',        icon: 'run' },
-  { key: 'advanced',     label: 'Erfaren',      sub: 'Tränar strukturerad löpning flera gånger i veckan', icon: 'podium-gold' },
+  { key: 'advanced',     label: 'Erfaren',      sub: 'Tränar strukturerad löpning flera gånger i veckan', icon: 'run-fast' },
 ]
 
 const WEEKDAY_OPTIONS = [
@@ -367,19 +367,19 @@ export function ScheduleWizard({
               <Text style={s.stepTitle}>Hur van löpare{'\n'}är du?</Text>
               <Text style={s.stepSub}>Startnivå och ökningstakt anpassas efter din erfarenhet.</Text>
 
-              {EXPERIENCE_OPTIONS.map(opt => {
+              {EXPERIENCE_OPTIONS.map((opt, level) => {
                 const selected = runExperience === opt.key
                 return (
                   <TouchableOpacity
                     key={opt.key}
-                    style={[s.optCard, selected && s.optCardActive]}
+                    style={[s.expCard, selected && s.expCardActive]}
                     onPress={() => setRunExperience(opt.key)}
                     activeOpacity={0.8}
                   >
-                    <View style={[s.optIcon, selected && s.optIconActive]}>
+                    <View style={[s.expIcon, selected && s.expIconActive]}>
                       <MaterialCommunityIcons
                         name={opt.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
-                        size={26}
+                        size={30}
                         color={selected ? ACCENT : TEXT_SECONDARY}
                       />
                     </View>
@@ -387,7 +387,19 @@ export function ScheduleWizard({
                       <Text style={[s.optTitle, selected && { color: ACCENT }]}>{opt.label}</Text>
                       <Text style={s.optSub}>{opt.sub}</Text>
                     </View>
-                    {selected && <Ionicons name="checkmark-circle" size={22} color={ACCENT} />}
+                    {/* Nivåstaplar — fylls i takt med erfarenheten */}
+                    <View style={s.expBars}>
+                      {[0, 1, 2].map(b => (
+                        <View
+                          key={b}
+                          style={[
+                            s.expBar,
+                            { height: 12 + b * 6 },
+                            b <= level && { backgroundColor: selected ? ACCENT : TEXT_SECONDARY },
+                          ]}
+                        />
+                      ))}
+                    </View>
                   </TouchableOpacity>
                 )
               })}
@@ -801,6 +813,21 @@ const s = StyleSheet.create({
   optIconActive: { backgroundColor: 'rgba(255,149,0,0.15)' },
   optTitle:      { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginBottom: 2 },
   optSub:        { color: TEXT_SECONDARY, fontSize: 13 },
+
+  // Erfarenhet — trappstegskort: ikonens tempo och nivåstaplarna trappas upp
+  expCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: CARD, borderRadius: 18, padding: 18,
+    borderWidth: 1.5, borderColor: CARD_BORDER,
+  },
+  expCardActive: { backgroundColor: accentAlpha('16'), borderColor: ACCENT },
+  expIcon: {
+    width: 56, height: 56, borderRadius: 16,
+    backgroundColor: BORDER, alignItems: 'center', justifyContent: 'center',
+  },
+  expIconActive: { backgroundColor: 'rgba(255,149,0,0.15)' },
+  expBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 24, marginRight: 2 },
+  expBar:  { width: 6, borderRadius: 3, backgroundColor: BORDER },
 
   // 5 km-testet — samma kortspråk som resten av appen, siffror i Nunito
   testTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
