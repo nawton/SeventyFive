@@ -42,6 +42,8 @@ const ORANGE_SOFT = 'rgba(255,168,23,0.14)'
 const BLUE  = '#3FA7FF'
 const GREEN = '#66BB6A'
 
+const DAY_ITEM_W = 54
+
 const SLIDES = ['valkommen', 'utmaningen', 'schemat', 'statistiken', 'community'] as const
 type SlideKey = typeof SLIDES[number]
 
@@ -246,7 +248,8 @@ export default function Welcome() {
   const [index, setIndex] = useState(0)
   const dirRef = useRef<1 | -1>(1)
   const [dayModalVisible, setDayModalVisible] = useState(false)
-  const [selectedDay, setSelectedDay] = useState<number | null>(null)
+  const [selectedDay, setSelectedDay] = useState(1)
+  const dayScrollRef = useRef<ScrollView>(null)
 
   const slideKey = SLIDES[index]
   const isLast = index === SLIDES.length - 1
@@ -260,9 +263,18 @@ export default function Welcome() {
   const go = (dir: 1 | -1) => goTo(index + dir, dir)
 
   function confirmDay() {
-    if (!selectedDay) return
     setDayModalVisible(false)
     router.push({ pathname: '/(auth)/login', params: { startDay: String(selectedDay) } })
+  }
+
+  // Hjulet och siffran hålls i synk: knapparna och tryck scrollar hjulet dit
+  function setDay(day: number, scroll = true) {
+    const clamped = Math.min(74, Math.max(1, day))
+    if (clamped !== selectedDay) {
+      Haptics.selectionAsync()
+      setSelectedDay(clamped)
+    }
+    if (scroll) dayScrollRef.current?.scrollTo({ x: (clamped - 1) * DAY_ITEM_W, animated: true })
   }
 
   return (
@@ -365,40 +377,65 @@ export default function Welcome() {
         onRequestClose={() => setDayModalVisible(false)}
       >
         <View style={s.modalOverlay}>
-          <View style={s.sheet}>
+          <View style={[s.sheet, { paddingBottom: 24 + insets.bottom }]}>
             <View style={s.sheetHandle} />
             <Text style={s.sheetTitle}>Vilken dag är du på?</Text>
-            <Text style={s.sheetSub}>Välj din nuvarande dag i utmaningen</Text>
+            <Text style={s.sheetSub}>Dra i hjulet eller stega dig fram</Text>
 
+            {/* Stora dagsiffran med finjustering */}
+            <View style={s.dayReadout}>
+              <TouchableOpacity style={s.stepBtn} onPress={() => setDay(selectedDay - 1)}
+                activeOpacity={0.7} testID="dayMinus">
+                <Ionicons name="remove" size={22} color={OFFWHITE} />
+              </TouchableOpacity>
+              <View style={s.dayCenter}>
+                <Text style={s.dayWord}>DAG</Text>
+                <Text style={s.dayBigNum}>{selectedDay}</Text>
+                <Text style={s.dayOf}>av 75</Text>
+              </View>
+              <TouchableOpacity style={s.stepBtn} onPress={() => setDay(selectedDay + 1)}
+                activeOpacity={0.7} testID="dayPlus">
+                <Ionicons name="add" size={22} color={OFFWHITE} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={s.dayProgress}>
+              <View style={[s.dayProgressFill, { width: `${(selectedDay / 75) * 100}%` }]} />
+            </View>
+
+            {/* Linjalhjulet: snappar per dag, mitten är vald */}
             <ScrollView
-              style={{ maxHeight: 260 }}
-              contentContainerStyle={s.dayGrid}
-              showsVerticalScrollIndicator={false}
+              ref={dayScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={DAY_ITEM_W}
+              decelerationRate="fast"
+              contentContainerStyle={{ paddingHorizontal: (width - 40 - DAY_ITEM_W) / 2 }}
+              scrollEventThrottle={16}
+              onScroll={e => {
+                const i = Math.min(73, Math.max(0, Math.round(e.nativeEvent.contentOffset.x / DAY_ITEM_W)))
+                if (i + 1 !== selectedDay) setDay(i + 1, false)
+              }}
+              style={s.wheel}
             >
               {Array.from({ length: 74 }, (_, i) => i + 1).map(day => (
-                <TouchableOpacity
-                  key={day}
-                  style={[s.dayBtn, selectedDay === day && s.dayBtnActive]}
-                  onPress={() => setSelectedDay(day)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[s.dayBtnText, selectedDay === day && s.dayBtnTextActive]}>
-                    {day}
-                  </Text>
-                </TouchableOpacity>
+                <Pressable key={day} style={s.wheelItem} onPress={() => setDay(day)}>
+                  <View style={[s.wheelCircle, selectedDay === day && s.wheelCircleActive]}>
+                    <Text style={[s.wheelNum, selectedDay === day && s.wheelNumActive]}>{day}</Text>
+                  </View>
+                </Pressable>
               ))}
             </ScrollView>
 
             <View style={s.sheetFooter}>
-              <TouchableOpacity
-                style={[s.confirmBtn, !selectedDay && s.confirmBtnDisabled]}
-                onPress={confirmDay}
-                disabled={!selectedDay}
-                activeOpacity={0.85}
-              >
-                <Text style={s.confirmBtnText}>
-                  {selectedDay ? `Fortsätt från dag ${selectedDay}` : 'Välj en dag'}
-                </Text>
+              <TouchableOpacity onPress={confirmDay} activeOpacity={0.85}>
+                <LinearGradient
+                  colors={[ORANGE, ORANGE_DEEP]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  style={s.confirmBtn}
+                >
+                  <Text style={s.confirmBtnText}>Fortsätt från dag {selectedDay}</Text>
+                </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity style={s.cancelBtn} onPress={() => setDayModalVisible(false)}>
                 <Text style={s.cancelBtnText}>Avbryt</Text>
@@ -483,25 +520,50 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(128,128,128,0.45)', alignSelf: 'center', marginBottom: 20,
   },
   sheetTitle: { color: OFFWHITE, fontSize: 20, fontWeight: '700', textAlign: 'center' },
-  sheetSub:   { color: MUTED, fontSize: 13, textAlign: 'center', marginTop: 4, marginBottom: 16 },
+  sheetSub:   { color: MUTED, fontSize: 13, textAlign: 'center', marginTop: 4, marginBottom: 18 },
 
-  dayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 8 },
-  dayBtn: {
-    width: (width - 40 - 8 * 6) / 7,
-    aspectRatio: 1, borderRadius: 10,
+  // Dagväljaren: stor siffra + stegknappar + linjalhjul
+  dayReadout: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 26,
+  },
+  stepBtn: {
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: EDGE,
     alignItems: 'center', justifyContent: 'center',
   },
-  dayBtnActive:     { backgroundColor: ORANGE_SOFT },
-  dayBtnText:       { color: MUTED, fontSize: 13, fontWeight: '600' },
-  dayBtnTextActive: { color: ORANGE, fontWeight: '700' },
-
-  sheetFooter: { gap: 10, marginTop: 16 },
-  confirmBtn: {
-    backgroundColor: ORANGE, borderRadius: 999,
-    paddingVertical: 15, alignItems: 'center',
+  dayCenter: { alignItems: 'center' },
+  dayWord: {
+    color: MUTED, fontSize: 11, fontWeight: '800', letterSpacing: 2.5,
   },
-  confirmBtnDisabled: { opacity: 0.35 },
+  dayBigNum: {
+    color: ORANGE, fontFamily: NUM_FONT, fontSize: 64, lineHeight: 70,
+  },
+  dayOf: { color: MUTED, fontSize: 13, fontWeight: '600', marginTop: -4 },
+
+  dayProgress: {
+    height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden', marginTop: 16, marginHorizontal: 6,
+  },
+  dayProgressFill: { height: '100%', borderRadius: 3, backgroundColor: ORANGE },
+
+  wheel: { marginTop: 16, marginHorizontal: -20, flexGrow: 0 },
+  wheelItem: { width: DAY_ITEM_W, alignItems: 'center', paddingVertical: 4 },
+  wheelCircle: {
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  wheelCircleActive: { backgroundColor: ORANGE_SOFT, borderWidth: 1.5, borderColor: ORANGE },
+  wheelNum:       { color: 'rgba(244,245,250,0.4)', fontSize: 15, fontFamily: NUM_FONT },
+  wheelNumActive: { color: ORANGE, fontSize: 17 },
+
+  sheetFooter: { gap: 10, marginTop: 20 },
+  confirmBtn: {
+    borderRadius: 999, paddingVertical: 15, alignItems: 'center',
+    shadowColor: ORANGE, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25, shadowRadius: 12,
+  },
   confirmBtnText: { color: '#0A1120', fontSize: 15, fontWeight: '800' },
   cancelBtn: {
     borderRadius: 999, paddingVertical: 13, alignItems: 'center',
