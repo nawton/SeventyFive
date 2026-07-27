@@ -110,7 +110,7 @@ BEGIN
       )), day_date + TIME '18:05');
     ELSIF wd = 4 THEN
       -- Cykeltur varje torsdag
-      dist := ROUND((13 + wfac * 1.8 + (d % 2) * 2)::numeric, 2);
+      dist := ROUND((7 + wfac * 0.6 + (d % 2) * 1.4)::numeric, 2);
       INSERT INTO user_workouts (user_id, name, is_favorite, exercises, created_at)
       VALUES (uid, 'Cykling', FALSE, jsonb_build_array(jsonb_build_object(
         'category', 'cardio', 'type', 'cycling',
@@ -152,6 +152,16 @@ BEGIN
         (5, 4, 'Plankan',    jsonb_build_array(jsonb_build_object('reps', 60, 'weight_kg', 0), jsonb_build_object('reps', 45, 'weight_kg', 0)))
       ) AS ex(gday, ord, exercise_name, sets)
       WHERE ex.gday = wd;
+
+      -- Lunchpromenad samma dagar: ger distans alla veckodagar så
+      -- veckografen sicksackar naturligt i stället för att nolla
+      INSERT INTO user_workouts (user_id, name, is_favorite, exercises, created_at)
+      VALUES (uid, 'Promenad', FALSE, jsonb_build_array(jsonb_build_object(
+        'category', 'cardio', 'type', 'walking',
+        'distance_km', ROUND((2.1 + (d % 4) * 0.6)::numeric, 2),
+        'duration_seconds', ROUND((2.1 + (d % 4) * 0.6) * 700),
+        'calories', ROUND((2.1 + (d % 4) * 0.6) * 52), 'route', route_malar, 'effort', 1 + (d % 2)
+      )), day_date + TIME '12:10');
     END IF;
   END LOOP;
 
