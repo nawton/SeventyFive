@@ -56,6 +56,7 @@ import { SessionFullscreen } from '@/components/SessionFullscreen'
 import { getCardioWorkoutsForDate, getWorkoutsForDate, getStrengthWorkouts, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
 import { CollapsibleCalendar } from '@/components/CollapsibleCalendar'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
+import { ScheduleIntroSheet } from '@/components/ScheduleIntroSheet'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { BG, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, CARDIO_BLUE, ACCENT, accentAlpha } from '@/lib/theme'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
@@ -138,6 +139,13 @@ export default function SchemaScreen() {
     setPlanEndDismissedKey(planEnd.key)
     AsyncStorage.setItem('planEndDismissed', planEnd.key).catch(() => {})
   }
+
+  // Schemaintrot stängs för alltid, oavsett väg ut (dra, knapp eller guiden)
+  function dismissScheduleIntro() {
+    setWizardBannerDismissed(true)
+    AsyncStorage.setItem('wizardBannerDismissed', '1').catch(() => {})
+  }
+  const hasSchedule = sessions.some(s => s.weekdays.length > 0 && !s.name.startsWith('SKIP:'))
 
   // Guidat flöde från engångsmålen: landa på sidan, öppna sedan schemaguiden
   const { action } = useLocalSearchParams<{ action?: string }>()
@@ -438,38 +446,6 @@ export default function SchemaScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      {/* "Skapa ditt schema" banner — visas bara om man varken har ett schema
-          eller klickat bort den (wizarden nås alltid via inställningarna) */}
-      {wizardBannerDismissed === false && !sessions.some(s => s.weekdays.length > 0 && !s.name.startsWith('SKIP:')) && (
-        <TouchableOpacity
-          style={styles.wizardBanner}
-          onPress={() => {
-            setWizardBannerDismissed(true)
-            AsyncStorage.setItem('wizardBannerDismissed', '1').catch(() => {})
-            setWizardVisible(true)
-          }}
-          activeOpacity={0.85}
-        >
-          <View style={styles.wizardBannerIcon}>
-            <Ionicons name="calendar" size={22} color="#000" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.wizardBannerTitle}>Skapa ditt schema</Text>
-            <Text style={styles.wizardBannerSub}>Kom igång med ett anpassat träningsprogram</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.wizardBannerClose}
-            onPress={() => {
-              setWizardBannerDismissed(true)
-              AsyncStorage.setItem('wizardBannerDismissed', '1').catch(() => {})
-            }}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="close" size={16} color="#000" />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
-
       {/* Löpplanen är klar/snart klar — skapa nästa utifrån var man är nu */}
       {showPlanEndBanner && (
         <TouchableOpacity
@@ -676,6 +652,17 @@ export default function SchemaScreen() {
         }}
       />
 
+      {/* Slide-up när schemat saknas — dras ner eller trycks bort för alltid,
+          wizarden nås alltid via inställningarna */}
+      <ScheduleIntroSheet
+        visible={wizardBannerDismissed === false && !hasSchedule && !wizardVisible}
+        onCreate={() => {
+          dismissScheduleIntro()
+          setWizardVisible(true)
+        }}
+        onDismiss={dismissScheduleIntro}
+      />
+
       {/* ── Logga pass — idag och bakåt (missade pass), inte framtida dagar ── */}
       {selectedDate.getTime() <= todayMidnight().getTime() && (
         <View style={styles.recordWrap} pointerEvents="box-none">
@@ -708,25 +695,7 @@ const styles = StyleSheet.create({
   },
   recordBtnText: { color: '#000', fontSize: 15, fontWeight: '700' },
 
-  wizardBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    marginHorizontal: 16, marginBottom: 10,
-    backgroundColor: ACCENT, borderRadius: 16, padding: 14,
-  },
-  wizardBannerClose: {
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  wizardBannerIcon: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  wizardBannerTitle: { color: '#000', fontSize: 15, fontWeight: '800' },
-  wizardBannerSub:   { color: 'rgba(0,0,0,0.6)', fontSize: 12, marginTop: 1 },
-
-  // Plan-slut — samma bannerform som schemaguiden men i cardio-blått
+  // Plan-slut — banner i cardio-blått (schemaintrot är numera en slide-up)
   planEndBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     marginHorizontal: 16, marginBottom: 10,
