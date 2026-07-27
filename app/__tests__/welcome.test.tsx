@@ -11,58 +11,59 @@ function next(times = 1) {
 
 beforeEach(() => jest.clearAllMocks())
 
-describe('Welcome — immersiva onboardingen', () => {
-  it('startar på brand-sliden med Fortsätt men utan kontoknappar', () => {
+describe('Welcome — onboardingen', () => {
+  it('sida 1: välkomnar med bildcollage, utan tillbaka- eller kontoknappar', () => {
     render(<Welcome />)
-    expect(screen.getByText('SeventyFive')).toBeOnTheScreen()
-    expect(screen.getByText('75')).toBeOnTheScreen()
-    expect(screen.getByText('75 dagar. 5 uppgifter. Inga undantag.')).toBeOnTheScreen()
+    expect(screen.getByText('Välkommen till SeventyFive')).toBeOnTheScreen()
+    expect(screen.getByText('Din resa börjar här.')).toBeOnTheScreen()
+    // Bildplatserna är märkta med sina motiv tills riktiga foton läggs in
+    expect(screen.getByText(/Löpning i morgonljus/)).toBeOnTheScreen()
     expect(screen.getByTestId('welcomeContinue')).toBeOnTheScreen()
+    expect(screen.queryByTestId('welcomeBack')).toBeNull()
     expect(screen.queryByTestId('welcomeRegister')).toBeNull()
   })
 
-  it('höger sida och Fortsätt bläddrar framåt, vänster bakåt', () => {
+  it('Nästa, tryckhalvorna och tillbaka-knappen navigerar', () => {
     render(<Welcome />)
-    next()
-    expect(screen.getByText('Fem uppgifter,\nvarje dag')).toBeOnTheScreen()
-
     fireEvent.press(screen.getByTestId('welcomeContinue'))
-    expect(screen.getByText('Ditt schema,\ndina pass')).toBeOnTheScreen()
+    expect(screen.getByText('Vad är en 75 challenge?')).toBeOnTheScreen()
+    expect(screen.getByText('Dagliga uppgifter')).toBeOnTheScreen()
+
+    next()
+    expect(screen.getByText('Planera ditt schema och dina pass')).toBeOnTheScreen()
+
+    fireEvent.press(screen.getByTestId('welcomeBack'))
+    expect(screen.getByText('Vad är en 75 challenge?')).toBeOnTheScreen()
 
     fireEvent.press(screen.getByTestId('storyPrev'))
-    expect(screen.getByText('Fem uppgifter,\nvarje dag')).toBeOnTheScreen()
-
-    // Bakåt från första sliden stannar kvar
-    fireEvent.press(screen.getByTestId('storyPrev'))
-    fireEvent.press(screen.getByTestId('storyPrev'))
-    expect(screen.getByText('SeventyFive')).toBeOnTheScreen()
+    expect(screen.getByText('Välkommen till SeventyFive')).toBeOnTheScreen()
   })
 
-  it('alla fem slides nås i ordning med sina heroes, sista stannar', () => {
+  it('schemat och statistiken visar sina mockups', () => {
     render(<Welcome />)
-    next(3)
-    expect(screen.getByText('Följ dina\nframsteg')).toBeOnTheScreen()
-    expect(screen.getByText('Platina')).toBeOnTheScreen()
-    expect(screen.getByText('18 av 26')).toBeOnTheScreen()
-    next()
-    expect(screen.getByText('Kör\ntillsammans')).toBeOnTheScreen()
-    expect(screen.getByText('Team Sthlm · 8 medlemmar')).toBeOnTheScreen()
+    next(2)
+    expect(screen.getByText('Onsdag')).toBeOnTheScreen()
+    expect(screen.getByText('Underkropp')).toBeOnTheScreen()
+    expect(screen.getByText('IDAG')).toBeOnTheScreen()
 
-    // Framåt på sista sliden gör ingenting, och Fortsätt är utbytt
     next()
-    expect(screen.getByText('Kör\ntillsammans')).toBeOnTheScreen()
+    expect(screen.getByText('Följ dina pass och se din utveckling')).toBeOnTheScreen()
+    expect(screen.getByText('12 dagar i rad')).toBeOnTheScreen()
+    expect(screen.getByText('Veckans pass')).toBeOnTheScreen()
+  })
+
+  it('Hoppa över går direkt till sista sidan med kontoknapparna', () => {
+    render(<Welcome />)
+    fireEvent.press(screen.getByTestId('welcomeSkip'))
+    expect(screen.getByText('Utvecklas tillsammans med andra')).toBeOnTheScreen()
+    expect(screen.getByText('Löpargruppen')).toBeOnTheScreen()
+    expect(screen.queryByTestId('welcomeSkip')).toBeNull()
     expect(screen.queryByTestId('welcomeContinue')).toBeNull()
-  })
-
-  it('sista sliden leder till registrering respektive inloggning', () => {
-    render(<Welcome />)
-    next(4)
 
     fireEvent.press(screen.getByTestId('welcomeRegister'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(auth)/login', params: { mode: 'register' },
     })
-
     fireEvent.press(screen.getByTestId('welcomeLogin'))
     expect(router.push).toHaveBeenCalledWith('/(auth)/login')
   })

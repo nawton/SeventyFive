@@ -7,179 +7,252 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
+  Image,
   Dimensions,
-  type ColorValue,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { LinearGradient } from 'expo-linear-gradient'
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
-import { ACCENT, CARDIO_BLUE, NUM_FONT, accentAlpha } from '@/lib/theme'
+import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
+import { NUM_FONT } from '@/lib/theme'
+import { ONBOARDING_IMAGES } from '@/lib/onboardingImages'
 
 const { width } = Dimensions.get('window')
 
 // =============================================================================
-// VÄLKOMST — immersiv onboarding i fem slides: mörk atmosfär, glödande
-// hero i mitten, centrerad text, prickar och en stor Fortsätt-pill.
-// Höger halva = nästa, vänster = föregående, knappen funkar också.
-// Sista sliden byter till Skapa konto (gradient) och Logga in.
+// ONBOARDING — fem sidor som välkomnar, förklarar utmaningen, schemat,
+// statistiken och communityn. Mörk marinblå bas, varm orange accent,
+// organiska former och bildplatser för riktiga träningsfoton (sida 1).
+// Navigering: Nästa-knapp, tillbaka på steg 2–5, Hoppa över, samt tryck
+// på höger/vänster halva. Knapparna bor i en egen bottensektion och
+// täcker aldrig innehållet.
 // =============================================================================
 
-const BG_DARK = '#0A0A0C'
-const HERO = Math.min(width - 100, 290)
+const NAVY      = '#0A1120'
+const NAVY_TOP  = '#101A2E'
+const CARD_NAVY = '#141E33'
+const EDGE      = 'rgba(255,255,255,0.08)'
+const OFFWHITE  = '#F4F5FA'
+const MUTED     = 'rgba(244,245,250,0.62)'
+const ORANGE      = '#FFA817'
+const ORANGE_DEEP = '#FF7A1A'
+const ORANGE_SOFT = 'rgba(255,168,23,0.14)'
+const BLUE  = '#3FA7FF'
+const GREEN = '#66BB6A'
 
-const TASK_ICONS = [
-  { icon: 'barbell-outline',    color: '#FFA817' },
-  { icon: 'restaurant-outline', color: '#66BB6A' },
-  { icon: 'water-outline',      color: '#00BCD4' },
-  { icon: 'book-outline',       color: '#AB47BC' },
-  { icon: 'camera-outline',     color: '#EC407A' },
-] as const
-
-const SLIDES = ['brand', 'tasks', 'training', 'progress', 'community'] as const
+const SLIDES = ['valkommen', 'utmaningen', 'schemat', 'statistiken', 'community'] as const
 type SlideKey = typeof SLIDES[number]
 
-const COPY: Record<SlideKey, { title: string; sub: string }> = {
-  brand:     { title: '', sub: '75 dagar. 5 uppgifter. Inga undantag.' },
-  tasks:     { title: 'Fem uppgifter,\nvarje dag', sub: 'Bocka av dagens uppgifter och håll serien vid liv i 75 dagar.' },
-  training:  { title: 'Ditt schema,\ndina pass', sub: 'Schemaguiden bygger veckans pass och löpplanen trappas upp mot ditt lopp.' },
-  progress:  { title: 'Följ dina\nframsteg', sub: 'Formkurva, rekord och 26 medaljer. Klättra från Brons till Diamant.' },
-  community: { title: 'Kör\ntillsammans', sub: 'Grupper, vänner och pepp på varje pass. Allt är roligare tillsammans.' },
+const COPY: Record<SlideKey, { title: string; body: string }> = {
+  valkommen: {
+    title: 'Välkommen till SeventyFive',
+    body: 'Bygg disciplin, skapa bättre vanor och utvecklas en dag i taget under 75 dagar.',
+  },
+  utmaningen: {
+    title: 'Vad är en 75 challenge?',
+    body: 'Dagliga vanor under 75 dagar som bygger disciplin. Det handlar inte bara om träning, utan om struktur, fokus och personlig utveckling.',
+  },
+  schemat: {
+    title: 'Planera ditt schema och dina pass',
+    body: 'Skapa struktur i din vecka med träningspass och tydliga rutiner. Se ditt schema, följ dina pass och håll dig på rätt väg varje dag.',
+  },
+  statistiken: {
+    title: 'Följ dina pass och se din utveckling',
+    body: 'Logga träningen, följ din aktivitet och få tydlig statistik som håller motivationen uppe.',
+  },
+  community: {
+    title: 'Utvecklas tillsammans med andra',
+    body: 'Gå med i grupper, dela din resa och håll motivationen uppe tillsammans med andra som genomför sin challenge.',
+  },
 }
 
-// ─── Glöden bakom varje hero: mjuka koncentriska cirklar ─────────────────────
+// ─── Sida 1: collage med bildplatser för riktiga träningsfoton ───────────────
 
-function Glow({ color = ACCENT }: { color?: ColorValue }) {
+function PhotoTile({ imageKey, label, icon, style }: {
+  imageKey: string
+  label: string
+  icon: React.ComponentProps<typeof Ionicons>['name']
+  style: object
+}) {
+  const src = ONBOARDING_IMAGES[imageKey]
+  if (src) {
+    return <Image source={src} style={[v.photo, style]} resizeMode="cover" />
+  }
   return (
-    <>
-      <View style={[g.circle, { width: HERO, height: HERO, borderRadius: HERO / 2, backgroundColor: color, opacity: 0.05 }]} />
-      <View style={[g.circle, { width: HERO * 0.68, height: HERO * 0.68, borderRadius: HERO * 0.34, backgroundColor: color, opacity: 0.08 }]} />
-      <View style={[g.circle, { width: HERO * 0.4, height: HERO * 0.4, borderRadius: HERO * 0.2, backgroundColor: color, opacity: 0.11 }]} />
-    </>
-  )
-}
-
-// ─── Heroes ──────────────────────────────────────────────────────────────────
-
-function BrandHero() {
-  return (
-    <View style={g.hero}>
-      <Glow />
-      <Text style={g.brandNum}>75</Text>
-      <View style={g.brandRow}>
-        <Text style={g.brandName}>SeventyFive</Text>
-        <Text style={g.brandBy}>by Nawton</Text>
-      </View>
+    <View style={[v.photo, v.photoPlaceholder, style]}>
+      <Ionicons name={icon} size={22} color={ORANGE} />
+      <Text style={v.photoLabel}>Bildplats:{'\n'}{label}</Text>
     </View>
   )
 }
 
-/** Uppgiftsikonerna i omloppsbana runt en glödande flamma */
-function TasksHero() {
-  const c = HERO / 2
-  const spots = [
-    { x: 0, y: -104 }, { x: 100, y: -32 }, { x: 62, y: 85 },
-    { x: -62, y: 85 }, { x: -100, y: -32 },
-  ]
+function WelcomeCollage() {
   return (
-    <View style={g.hero}>
-      <Glow />
-      <View style={g.orbitCenter}>
-        <Ionicons name="flame" size={30} color={ACCENT} />
-      </View>
-      {TASK_ICONS.map((t, i) => (
-        <View
-          key={t.icon}
-          style={[g.orbitBubble, {
-            left: c + spots[i].x - 24, top: c + spots[i].y - 24,
-            backgroundColor: '#141417', borderColor: t.color + '55',
-          }]}
-        >
-          <Ionicons name={t.icon} size={20} color={t.color} />
+    <View style={v.collage}>
+      <PhotoTile imageKey="heroRun" icon="sunny-outline" label="Löpning i morgonljus"
+        style={{ width: '58%', height: 240, borderRadius: 30 }} />
+      <PhotoTile imageKey="heroGym" icon="barbell-outline" label="Fokuserat gympass"
+        style={{ position: 'absolute', right: 0, top: 16, width: '44%', height: 138, borderRadius: 26 }} />
+      <PhotoTile imageKey="heroWalk" icon="walk-outline" label="Promenad med träningsväska"
+        style={{ position: 'absolute', right: 12, bottom: -18, width: '40%', height: 110, borderRadius: 24 }} />
+    </View>
+  )
+}
+
+// ─── Sida 2: utmaningen — dagskort + vanechips ───────────────────────────────
+
+const HABITS = [
+  { icon: 'checkbox-outline',      label: 'Dagliga uppgifter' },
+  { icon: 'repeat-outline',        label: 'Bättre rutiner' },
+  { icon: 'barbell-outline',       label: 'Träning och rörelse' },
+  { icon: 'water-outline',         label: 'Vatten och återhämtning' },
+  { icon: 'flame-outline',         label: 'Fokus på kontinuitet' },
+  { icon: 'trending-up-outline',   label: 'Framsteg dag för dag' },
+] as const
+
+function ChallengeVisual() {
+  return (
+    <View style={{ gap: 12 }}>
+      <View style={v.mockCard}>
+        <View style={v.mockHead}>
+          <View>
+            <Text style={v.mockLabel}>DAGENS UPPGIFTER</Text>
+            <Text style={v.mockTitle}>Dag <Text style={v.mockNum}>12</Text> av 75</Text>
+          </View>
+          <View style={v.ringBadge}><Text style={v.ringBadgeText}>3/5</Text></View>
         </View>
-      ))}
-    </View>
-  )
-}
-
-/** Stigande staplar mot toppen, flaggan på sista */
-function TrainingHero() {
-  const bars = [0.16, 0.3, 0.24, 0.46, 0.62, 0.54, 0.86]
-  return (
-    <View style={g.hero}>
-      <Glow />
-      <View style={g.barsRow}>
-        {bars.map((h, i) => {
-          const last = i === bars.length - 1
-          return (
-            <View key={i} style={g.barCol}>
-              {last && (
-                <View style={g.flagWrap}>
-                  <Ionicons name="flag" size={17} color="#000" />
-                </View>
-              )}
-              <View style={[g.bar, { height: 24 + h * 130 }, last && { backgroundColor: ACCENT }]} />
+        <View style={v.mockBar}><View style={[v.mockBarFill, { width: '60%' }]} /></View>
+        {['Träna 45 minuter', 'Drick 3 liter vatten', 'Läs 10 sidor'].map((t, i) => (
+          <View key={t} style={v.mockRow}>
+            <View style={[v.tick, i < 2 && v.tickOn]}>
+              {i < 2 && <Ionicons name="checkmark" size={11} color="#0A1120" />}
             </View>
-          )
-        })}
+            <Text style={[v.mockRowText, i < 2 && v.mockRowDone]}>{t}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={v.chipWrap}>
+        {HABITS.map(h => (
+          <View key={h.label} style={v.habitChip}>
+            <Ionicons name={h.icon} size={14} color={ORANGE} />
+            <Text style={v.habitChipText}>{h.label}</Text>
+          </View>
+        ))}
       </View>
     </View>
   )
 }
 
-/** Glödande pokal med svävande statistikchips */
-function ProgressHero() {
-  return (
-    <View style={g.hero}>
-      <Glow />
-      <View style={g.trophyWrap}>
-        <Ionicons name="trophy" size={52} color={ACCENT} />
-      </View>
-      <View style={[g.chip, { top: 18, left: 0 }]}>
-        <Ionicons name="medal-outline" size={13} color="#FFD54F" />
-        <Text style={g.chipText}>18 av 26</Text>
-      </View>
-      <View style={[g.chip, { top: 52, right: -6 }]}>
-        <Ionicons name="shield-outline" size={13} color="#CFE4F5" />
-        <Text style={g.chipText}>Platina</Text>
-      </View>
-      <View style={[g.chip, { bottom: 26, left: 14 }]}>
-        <Ionicons name="trending-up-outline" size={13} color={CARDIO_BLUE} />
-        <Text style={g.chipText}>Nytt PR 100 kg</Text>
-      </View>
-    </View>
-  )
-}
+// ─── Sida 3: veckoschemat ────────────────────────────────────────────────────
 
-/** Vänkretsen: avatarer runt ett glödande hjärta */
-function CommunityHero() {
+const WEEK = [
+  { day: 'Måndag',  pass: 'Överkropp',       color: ORANGE, icon: 'barbell-outline' },
+  { day: 'Tisdag',  pass: 'Löpning 6 km',    color: BLUE,   icon: 'navigate-outline' },
+  { day: 'Onsdag',  pass: 'Underkropp',      color: ORANGE, icon: 'barbell-outline', active: true },
+  { day: 'Torsdag', pass: 'Promenad',        color: GREEN,  icon: 'walk-outline' },
+  { day: 'Fredag',  pass: 'Push-pass',       color: ORANGE, icon: 'barbell-outline' },
+  { day: 'Lördag',  pass: 'Cykling',         color: BLUE,   icon: 'bicycle-outline' },
+  { day: 'Söndag',  pass: 'Vila och stretch', color: 'rgba(244,245,250,0.4)', icon: 'moon-outline' },
+] as const
+
+function ScheduleVisual() {
   return (
-    <View style={g.hero}>
-      <Glow color="#FF3B4A" />
-      <View style={g.heartWrap}>
-        <Ionicons name="heart" size={40} color="#FF3B4A" />
-      </View>
-      {[
-        { label: 'E', color: '#FFA817',   x: -92, y: -58 },
-        { label: 'H', color: CARDIO_BLUE, x: 92,  y: -46 },
-        { label: 'V', color: '#66BB6A',   x: -66, y: 82 },
-        { label: 'A', color: '#AB47BC',   x: 76,  y: 76 },
-      ].map(p => (
-        <View
-          key={p.label}
-          style={[g.orbitBubble, {
-            left: HERO / 2 + p.x - 24, top: HERO / 2 + p.y - 24,
-            backgroundColor: p.color + '22', borderColor: p.color + '66',
-          }]}
-        >
-          <Text style={[g.avatarLetter, { color: p.color }]}>{p.label}</Text>
+    <View style={v.mockCard}>
+      <Text style={v.mockLabel}>DIN VECKA</Text>
+      {WEEK.map(w => (
+        <View key={w.day} style={[v.weekRow, 'active' in w && w.active && v.weekRowActive]}>
+          <Text style={[v.weekDay, 'active' in w && w.active && { color: ORANGE }]}>{w.day}</Text>
+          <View style={[v.weekIcon, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+            <Ionicons name={w.icon} size={13} color={w.color} />
+          </View>
+          <Text style={v.weekPass}>{w.pass}</Text>
+          {'active' in w && w.active && <Text style={v.weekToday}>IDAG</Text>}
         </View>
       ))}
-      <View style={[g.chip, { bottom: 4, alignSelf: 'center' }]}>
-        <Ionicons name="people-outline" size={13} color="#66BB6A" />
-        <Text style={g.chipText}>Team Sthlm · 8 medlemmar</Text>
+    </View>
+  )
+}
+
+// ─── Sida 4: statistiken ─────────────────────────────────────────────────────
+
+function StatsVisual() {
+  const bars = [0.3, 0.52, 0.4, 0.66, 0.5, 0.8, 0.92]
+  return (
+    <View style={{ gap: 12 }}>
+      <View style={v.mockCard}>
+        <View style={v.mockHead}>
+          <View>
+            <Text style={v.mockLabel}>DIN AKTIVITET</Text>
+            <Text style={v.mockTitle}>Dag <Text style={v.mockNum}>42</Text> av 75</Text>
+          </View>
+          <View style={v.streakBadge}>
+            <Ionicons name="flame" size={13} color={ORANGE} />
+            <Text style={v.streakText}>12 dagar i rad</Text>
+          </View>
+        </View>
+        <View style={v.chartRow}>
+          {bars.map((h, i) => (
+            <View key={i} style={v.chartCol}>
+              <View style={[v.chartBar, { height: 12 + h * 74 }, i === bars.length - 1 && { backgroundColor: ORANGE }]} />
+            </View>
+          ))}
+        </View>
+      </View>
+      <View style={v.statRow}>
+        {[
+          { label: 'Veckans pass', value: '5' },
+          { label: 'Streak', value: '12' },
+          { label: 'Progress', value: '56 %' },
+        ].map(c => (
+          <View key={c.label} style={v.statCard}>
+            <Text style={v.statValue}>{c.value}</Text>
+            <Text style={v.statLabel}>{c.label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+}
+
+// ─── Sida 5: communityn ──────────────────────────────────────────────────────
+
+const GROUPS = [
+  { name: '75 Challenge Nybörjare', members: '128 medlemmar', color: ORANGE, letter: '75' },
+  { name: 'Löpargruppen',           members: '64 medlemmar',  color: BLUE,   letter: 'L' },
+  { name: 'Sommardisciplin',        members: '32 medlemmar',  color: GREEN,  letter: 'S' },
+] as const
+
+function CommunityVisual() {
+  return (
+    <View style={{ gap: 12 }}>
+      <View style={[v.mockCard, { gap: 12 }]}>
+        <Text style={v.mockLabel}>GRUPPER</Text>
+        {GROUPS.map(gr => (
+          <View key={gr.name} style={v.groupRow}>
+            <View style={[v.groupAvatar, { backgroundColor: gr.color + '22' }]}>
+              <Text style={[v.groupLetter, { color: gr.color }]}>{gr.letter}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={v.groupName}>{gr.name}</Text>
+              <Text style={v.groupMeta}>{gr.members}</Text>
+            </View>
+            <View style={v.joinPill}><Text style={v.joinPillText}>Gå med</Text></View>
+          </View>
+        ))}
+      </View>
+      <View style={v.mockCard}>
+        <View style={v.groupRow}>
+          <View style={[v.groupAvatar, { backgroundColor: ORANGE_SOFT }]}>
+            <Text style={[v.groupLetter, { color: ORANGE }]}>E</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={v.groupName}>Elin Berg delade ett pass</Text>
+            <Text style={v.groupMeta}>Löpning · 7,03 km · 5:12 /km</Text>
+          </View>
+          <Ionicons name="heart" size={16} color="#FF3B4A" />
+        </View>
       </View>
     </View>
   )
@@ -197,13 +270,13 @@ export default function Welcome() {
   const slideKey = SLIDES[index]
   const isLast = index === SLIDES.length - 1
 
-  function go(dir: 1 | -1) {
-    const next = Math.min(SLIDES.length - 1, Math.max(0, index + dir))
-    if (next === index) return
+  function goTo(next: number, dir: 1 | -1) {
+    if (next === index || next < 0 || next > SLIDES.length - 1) return
     dirRef.current = dir
     Haptics.selectionAsync()
     setIndex(next)
   }
+  const go = (dir: 1 | -1) => goTo(index + dir, dir)
 
   function confirmDay() {
     if (!selectedDay) return
@@ -213,44 +286,59 @@ export default function Welcome() {
 
   return (
     <View style={s.screen}>
-      {/* Svag atmosfär uppifrån */}
-      <LinearGradient
-        colors={['#151312', BG_DARK]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
+      {/* Marinblå bas med organiska former: mjuk gradient + tonade blobbar */}
+      <LinearGradient colors={[NAVY_TOP, NAVY]} style={StyleSheet.absoluteFill} pointerEvents="none" />
+      <View style={s.blobOrange} pointerEvents="none" />
+      <View style={s.blobBlue} pointerEvents="none" />
 
-      {/* Fingertoppsnavigering: hela ytan är tryckbar */}
+      {/* Tryck på halvorna bläddrar, som ett komplement till knapparna */}
       <View style={s.tapRow}>
         <Pressable style={s.tapZone} onPress={() => go(-1)} testID="storyPrev" />
         <Pressable style={s.tapZone} onPress={() => go(1)} testID="storyNext" />
       </View>
 
-      {/* Innehållet: hero i mitten, centrerad text under */}
-      <View style={[s.content, { paddingTop: insets.top + 24 }]} pointerEvents="none">
-        <Animated.View key={slideKey} entering={FadeIn.duration(320)} style={s.heroArea}>
-          {slideKey === 'brand' && <BrandHero />}
-          {slideKey === 'tasks' && <TasksHero />}
-          {slideKey === 'training' && <TrainingHero />}
-          {slideKey === 'progress' && <ProgressHero />}
-          {slideKey === 'community' && <CommunityHero />}
+      {/* Topprad: tillbaka på steg 2–5, Hoppa över fram till sista sidan */}
+      <View style={[s.topBar, { marginTop: insets.top + 6 }]}>
+        {index > 0 ? (
+          <TouchableOpacity style={s.backBtn} onPress={() => go(-1)} activeOpacity={0.7} testID="welcomeBack">
+            <Ionicons name="chevron-back" size={20} color={OFFWHITE} />
+          </TouchableOpacity>
+        ) : <View style={{ width: 38 }} />}
+        {!isLast ? (
+          <TouchableOpacity onPress={() => goTo(SLIDES.length - 1, 1)} activeOpacity={0.7} hitSlop={10} testID="welcomeSkip">
+            <Text style={s.skipText}>Hoppa över</Text>
+          </TouchableOpacity>
+        ) : <View style={{ width: 38 }} />}
+      </View>
+
+      {/* Innehållet: visual + rubrik + text. Släpper igenom tryck till halvorna */}
+      <View style={s.content} pointerEvents="none">
+        <Animated.View key={`v-${slideKey}`} entering={FadeInUp.duration(340)} style={s.visualArea}>
+          {slideKey === 'valkommen' && <WelcomeCollage />}
+          {slideKey === 'utmaningen' && <ChallengeVisual />}
+          {slideKey === 'schemat' && <ScheduleVisual />}
+          {slideKey === 'statistiken' && <StatsVisual />}
+          {slideKey === 'community' && <CommunityVisual />}
         </Animated.View>
 
-        <Animated.View key={`t-${slideKey}`} entering={FadeInDown.duration(320)} style={s.textArea}>
-          {slideKey !== 'brand' && <Text style={s.title}>{COPY[slideKey].title}</Text>}
-          <Text style={s.sub}>{COPY[slideKey].sub}</Text>
+        <Animated.View key={`t-${slideKey}`} entering={FadeInDown.duration(340)} style={s.textArea}>
+          <Text style={s.title}>{COPY[slideKey].title}</Text>
+          <Text style={s.body}>{COPY[slideKey].body}</Text>
+          {slideKey === 'valkommen' && <Text style={s.tagline}>Din resa börjar här.</Text>}
+          {slideKey === 'community' && (
+            <Text style={s.support}>Skapa grupper, följ andras framsteg och bygg motivation tillsammans.</Text>
+          )}
         </Animated.View>
+      </View>
 
-        {/* Prickarna */}
+      {/* Prickar + knappar i en egen bottensektion — täcker aldrig innehållet */}
+      <View style={[s.bottom, { paddingBottom: 16 + insets.bottom }]}>
         <View style={s.dotsRow}>
           {SLIDES.map((k, i) => (
             <View key={k} style={[s.dot, i === index && s.dotActive]} />
           ))}
         </View>
-      </View>
 
-      {/* Knapparna — ovanpå tryckzonerna */}
-      <View style={[s.ctas, { bottom: 18 + insets.bottom }]}>
         {isLast ? (
           <Animated.View entering={FadeIn.duration(300)} style={{ gap: 10 }}>
             <TouchableOpacity
@@ -259,37 +347,35 @@ export default function Welcome() {
               testID="welcomeRegister"
             >
               <LinearGradient
-                colors={['#FFB84D', '#FF7A1A']}
+                colors={[ORANGE, ORANGE_DEEP]}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={s.pill}
+                style={s.primaryBtn}
               >
-                <Text style={s.pillTextDark}>Skapa konto</Text>
+                <Text style={s.primaryText}>Registrera dig</Text>
               </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.pill, s.pillGhost]}
+              style={s.outlineBtn}
               onPress={() => router.push('/(auth)/login')}
               activeOpacity={0.8}
               testID="welcomeLogin"
             >
-              <Text style={s.pillTextLight}>Logga in</Text>
+              <Text style={s.outlineText}>Logga in</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={s.tertiaryBtn}
-              onPress={() => setDayModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={s.tertiaryText}>Jag har redan börjat, välj dag</Text>
+            <TouchableOpacity style={s.dayLink} onPress={() => setDayModalVisible(true)} activeOpacity={0.7}>
+              <Text style={s.dayLinkText}>Jag har redan börjat, välj dag</Text>
             </TouchableOpacity>
           </Animated.View>
         ) : (
-          <TouchableOpacity
-            style={[s.pill, s.pillWhite]}
-            onPress={() => go(1)}
-            activeOpacity={0.85}
-            testID="welcomeContinue"
-          >
-            <Text style={s.pillTextDark}>Fortsätt</Text>
+          <TouchableOpacity onPress={() => go(1)} activeOpacity={0.85} testID="welcomeContinue">
+            <LinearGradient
+              colors={[ORANGE, ORANGE_DEEP]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={s.primaryBtn}
+            >
+              <Text style={s.primaryText}>Nästa</Text>
+              <Ionicons name="arrow-forward" size={17} color="#0A1120" />
+            </LinearGradient>
           </TouchableOpacity>
         )}
       </View>
@@ -351,41 +437,68 @@ export default function Welcome() {
 // ─── Skärmens styles ─────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG_DARK },
+  screen: { flex: 1, backgroundColor: NAVY },
+
+  // Organiska bakgrundsformer — stora mjuka tonade cirklar utanför kanterna
+  blobOrange: {
+    position: 'absolute', top: -140, right: -120,
+    width: 340, height: 340, borderRadius: 170,
+    backgroundColor: ORANGE, opacity: 0.07,
+  },
+  blobBlue: {
+    position: 'absolute', bottom: 60, left: -150,
+    width: 380, height: 380, borderRadius: 190,
+    backgroundColor: BLUE, opacity: 0.05,
+  },
 
   tapRow:  { ...StyleSheet.absoluteFillObject, flexDirection: 'row' },
   tapZone: { flex: 1 },
 
-  content: { flex: 1, alignItems: 'center', paddingHorizontal: 34, paddingBottom: 150 },
-  heroArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  textArea: { alignItems: 'center', gap: 10, minHeight: 132 },
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, height: 40,
+  },
+  backBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  skipText: { color: MUTED, fontSize: 14, fontWeight: '600' },
+
+  content: { flex: 1, paddingHorizontal: 26, justifyContent: 'center', gap: 24 },
+  visualArea: { justifyContent: 'center' },
+  textArea:   { gap: 10 },
 
   title: {
-    color: '#FFFFFF', fontSize: 30, fontWeight: '800',
-    letterSpacing: -0.5, lineHeight: 36, textAlign: 'center',
+    color: OFFWHITE, fontSize: 28, fontWeight: '800',
+    letterSpacing: -0.4, lineHeight: 34,
   },
-  sub: {
-    color: 'rgba(255,255,255,0.55)', fontSize: 14, lineHeight: 21,
-    textAlign: 'center', maxWidth: 300,
-  },
+  body:    { color: MUTED, fontSize: 15, lineHeight: 23 },
+  tagline: { color: ORANGE, fontSize: 15, fontWeight: '700', marginTop: 2 },
+  support: { color: 'rgba(244,245,250,0.45)', fontSize: 13, lineHeight: 19 },
 
-  dotsRow: { flexDirection: 'row', gap: 7, marginTop: 18 },
+  bottom: { paddingHorizontal: 26, paddingTop: 8, gap: 16 },
+  dotsRow: { flexDirection: 'row', gap: 7, justifyContent: 'center' },
   dot: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: 'rgba(244,245,250,0.22)',
   },
-  dotActive: { width: 18, backgroundColor: ACCENT },
+  dotActive: { width: 22, backgroundColor: ORANGE },
 
-  ctas: { position: 'absolute', left: 26, right: 26 },
-  pill: {
-    borderRadius: 999, paddingVertical: 17, alignItems: 'center', justifyContent: 'center',
+  primaryBtn: {
+    borderRadius: 999, paddingVertical: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    shadowColor: ORANGE, shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.28, shadowRadius: 14,
   },
-  pillWhite: { backgroundColor: '#F4F4F6' },
-  pillGhost: { backgroundColor: 'rgba(255,255,255,0.09)' },
-  pillTextDark:  { color: '#000', fontSize: 16, fontWeight: '700' },
-  pillTextLight: { color: '#FFF', fontSize: 15, fontWeight: '600' },
-  tertiaryBtn:  { paddingVertical: 4, alignItems: 'center' },
-  tertiaryText: { color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: '500' },
+  primaryText: { color: '#0A1120', fontSize: 16, fontWeight: '800' },
+  outlineBtn: {
+    borderRadius: 999, paddingVertical: 15, alignItems: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(244,245,250,0.25)',
+  },
+  outlineText: { color: OFFWHITE, fontSize: 15, fontWeight: '700' },
+  dayLink: { alignItems: 'center', paddingVertical: 3 },
+  dayLinkText: { color: 'rgba(244,245,250,0.35)', fontSize: 12, fontWeight: '500' },
 
   // Dagväljaren
   modalOverlay: {
@@ -393,7 +506,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
   sheet: {
-    backgroundColor: '#1B1B1E',
+    backgroundColor: '#111A2C',
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingTop: 12, paddingHorizontal: 20, paddingBottom: 36,
   },
@@ -401,8 +514,8 @@ const s = StyleSheet.create({
     width: 40, height: 5, borderRadius: 3,
     backgroundColor: 'rgba(128,128,128,0.45)', alignSelf: 'center', marginBottom: 20,
   },
-  sheetTitle: { color: '#FFF', fontSize: 20, fontWeight: '700', textAlign: 'center' },
-  sheetSub:   { color: '#666', fontSize: 13, textAlign: 'center', marginTop: 4, marginBottom: 16 },
+  sheetTitle: { color: OFFWHITE, fontSize: 20, fontWeight: '700', textAlign: 'center' },
+  sheetSub:   { color: MUTED, fontSize: 13, textAlign: 'center', marginTop: 4, marginBottom: 16 },
 
   dayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 8 },
   dayBtn: {
@@ -411,78 +524,123 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center',
   },
-  dayBtnActive:     { backgroundColor: accentAlpha('26') },
-  dayBtnText:       { color: '#888', fontSize: 13, fontWeight: '600' },
-  dayBtnTextActive: { color: ACCENT, fontWeight: '700' },
+  dayBtnActive:     { backgroundColor: ORANGE_SOFT },
+  dayBtnText:       { color: MUTED, fontSize: 13, fontWeight: '600' },
+  dayBtnTextActive: { color: ORANGE, fontWeight: '700' },
 
   sheetFooter: { gap: 10, marginTop: 16 },
   confirmBtn: {
-    backgroundColor: ACCENT, borderRadius: 14,
+    backgroundColor: ORANGE, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center',
   },
   confirmBtnDisabled: { opacity: 0.35 },
-  confirmBtnText: { color: '#000', fontSize: 15, fontWeight: '700' },
+  confirmBtnText: { color: '#0A1120', fontSize: 15, fontWeight: '800' },
   cancelBtn: {
     borderRadius: 14, paddingVertical: 13, alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
-  cancelBtnText: { color: '#666', fontSize: 14 },
+  cancelBtnText: { color: MUTED, fontSize: 14 },
 })
 
-// ─── Hero-styles ─────────────────────────────────────────────────────────────
+// ─── Visuella delarnas styles ────────────────────────────────────────────────
 
-const g = StyleSheet.create({
-  hero: {
-    width: HERO, height: HERO,
+const v = StyleSheet.create({
+  // Sida 1: collaget
+  collage: { height: 262, marginBottom: 6 },
+  photo:   { backgroundColor: CARD_NAVY },
+  photoPlaceholder: {
+    borderWidth: 1.5, borderColor: 'rgba(255,168,23,0.35)', borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', gap: 8, padding: 14,
+  },
+  photoLabel: {
+    color: MUTED, fontSize: 11, lineHeight: 15, fontWeight: '600', textAlign: 'center',
+  },
+
+  // Mockkorten — stora rundade kort med mjuka kanter
+  mockCard: {
+    backgroundColor: CARD_NAVY, borderRadius: 26, padding: 18, gap: 10,
+    borderWidth: 1, borderColor: EDGE,
+  },
+  mockHead:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  mockLabel: { color: MUTED, fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
+  mockTitle: { color: OFFWHITE, fontSize: 19, fontWeight: '800', marginTop: 2 },
+  mockNum:   { color: ORANGE, fontFamily: NUM_FONT, fontSize: 19 },
+
+  ringBadge: {
+    width: 44, height: 44, borderRadius: 22,
+    borderWidth: 2.5, borderColor: ORANGE,
     alignItems: 'center', justifyContent: 'center',
   },
-  circle: { position: 'absolute' },
+  ringBadgeText: { color: OFFWHITE, fontFamily: NUM_FONT, fontSize: 13 },
 
-  brandNum: {
-    color: ACCENT, fontFamily: NUM_FONT, fontSize: 108, lineHeight: 116,
-    textShadowColor: accentAlpha('66'), textShadowRadius: 24, textShadowOffset: { width: 0, height: 0 },
-  },
-  brandRow:  { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 2 },
-  brandName: { color: '#FFFFFF', fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
-  brandBy:   { color: ACCENT, fontSize: 12, fontWeight: '600' },
+  mockBar:     { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
+  mockBarFill: { flex: 1, borderRadius: 3, backgroundColor: ORANGE },
 
-  orbitCenter: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: '#141417', borderWidth: 1, borderColor: accentAlpha('55'),
+  mockRow:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  tick: {
+    width: 20, height: 20, borderRadius: 10,
+    borderWidth: 1.5, borderColor: 'rgba(244,245,250,0.25)',
     alignItems: 'center', justifyContent: 'center',
   },
-  orbitBubble: {
-    position: 'absolute', width: 48, height: 48, borderRadius: 24,
-    borderWidth: 1, alignItems: 'center', justifyContent: 'center',
-  },
-  avatarLetter: { fontSize: 17, fontWeight: '800' },
+  tickOn:      { backgroundColor: ORANGE, borderColor: ORANGE },
+  mockRowText: { color: OFFWHITE, fontSize: 14, fontWeight: '600' },
+  mockRowDone: { color: MUTED, textDecorationLine: 'line-through' },
 
-  barsRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 9, height: HERO * 0.72 },
-  barCol:  { alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
-  bar: {
-    width: 22, borderRadius: 7,
-    backgroundColor: 'rgba(255,255,255,0.13)',
+  chipWrap:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  habitChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999,
+    paddingHorizontal: 12, paddingVertical: 7,
   },
-  flagWrap: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: ACCENT,
+  habitChipText: { color: OFFWHITE, fontSize: 12, fontWeight: '600' },
+
+  // Sida 3: veckan
+  weekRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 7, paddingHorizontal: 10, borderRadius: 14,
+  },
+  weekRowActive: { backgroundColor: ORANGE_SOFT },
+  weekDay:  { color: MUTED, fontSize: 12, fontWeight: '700', width: 64 },
+  weekIcon: {
+    width: 26, height: 26, borderRadius: 8,
     alignItems: 'center', justifyContent: 'center',
   },
+  weekPass:  { color: OFFWHITE, fontSize: 14, fontWeight: '600', flex: 1 },
+  weekToday: { color: ORANGE, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
 
-  trophyWrap: {
-    width: 108, height: 108, borderRadius: 54,
-    backgroundColor: '#141417', borderWidth: 1, borderColor: accentAlpha('55'),
+  // Sida 4: statistiken
+  chartRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 92, marginTop: 4 },
+  chartCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  chartBar: { width: '100%', borderRadius: 6, backgroundColor: 'rgba(63,167,255,0.35)' },
+
+  streakBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: ORANGE_SOFT, borderRadius: 999,
+    paddingHorizontal: 11, paddingVertical: 6,
+  },
+  streakText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
+
+  statRow:  { flexDirection: 'row', gap: 10 },
+  statCard: {
+    flex: 1, backgroundColor: CARD_NAVY, borderRadius: 20,
+    borderWidth: 1, borderColor: EDGE,
+    paddingVertical: 14, alignItems: 'center', gap: 2,
+  },
+  statValue: { color: OFFWHITE, fontFamily: NUM_FONT, fontSize: 20 },
+  statLabel: { color: MUTED, fontSize: 11, fontWeight: '600' },
+
+  // Sida 5: communityn
+  groupRow:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  groupAvatar: {
+    width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
   },
-  heartWrap: {
-    width: 92, height: 92, borderRadius: 46,
-    backgroundColor: '#141417', borderWidth: 1, borderColor: 'rgba(255,59,74,0.4)',
-    alignItems: 'center', justifyContent: 'center',
+  groupLetter: { fontSize: 14, fontWeight: '800' },
+  groupName:   { color: OFFWHITE, fontSize: 14, fontWeight: '700' },
+  groupMeta:   { color: MUTED, fontSize: 12, marginTop: 1 },
+  joinPill: {
+    backgroundColor: ORANGE_SOFT, borderRadius: 999,
+    paddingHorizontal: 13, paddingVertical: 7,
   },
-
-  chip: {
-    position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(20,20,23,0.92)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6,
-  },
-  chipText: { color: '#EDEDEF', fontSize: 12, fontWeight: '600' },
+  joinPillText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
 })
