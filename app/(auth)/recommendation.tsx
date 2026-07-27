@@ -73,13 +73,16 @@ const LEVELS: Record<Level, LevelConfig> = {
 
 const LEVEL_ORDER: Level[] = ['normal', 'hard', 'extreme']
 
-// Kompakt jämförelse — samma ordning som LEVEL_ORDER
+// Kompakt jämförelse — samma innehåll som hemsidans Jämför nivåerna-tabell
 const COMPARE: Array<{ label: string; values: [string, string, string] }> = [
-  { label: 'Pass',       values: ['1 per dag', '2 per dag', '2 per dag, ett ute'] },
-  { label: 'Kost',       values: ['Kostplan', 'Noll fuskmat', 'Strikt, inga undantag'] },
-  { label: 'Vatten',     values: ['3 liter', '4 liter', '4 liter'] },
-  { label: 'Läsning',    values: ['10 sidor', '10 sidor', '20 sidor'] },
-  { label: 'Kall dusch', values: ['Nej', 'Nej', 'Varje morgon'] },
+  { label: 'Dagliga uppgifter',      values: ['4 st', '5 st', '6 st'] },
+  { label: 'Träningskrav',           values: ['4 pass/vecka', '1 pass/dag, ett utomhus', '2 pass/dag'] },
+  { label: 'Vattenmål',              values: ['2 liter', '3 liter', '4 liter'] },
+  { label: 'Läsning',                values: ['Valfritt', '10 sidor/dag', '10 sidor/dag'] },
+  { label: 'Progressbilder',         values: ['Valfritt', 'Varje dag', 'Varje dag'] },
+  { label: 'Återhämtning',           values: ['3 vilodagar/vecka', 'Lätta pass räknas', 'Inga vilodagar'] },
+  { label: 'Flexibilitet',           values: ['Hög', 'Låg', 'Ingen'] },
+  { label: 'Omstart vid missad dag', values: ['Nej, 1 dags marginal/vecka', 'Ja, från dag 1', 'Ja, från dag 1'] },
 ]
 
 function getRecommendedLevel(pressure: string): Level {
@@ -392,9 +395,10 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   compareLabelCell: {
-    width: 74,
+    width: 86,
     color: TEXT_SECONDARY,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: '600',
   },
   compareHead: {

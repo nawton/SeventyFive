@@ -29,7 +29,12 @@ describe('RecommendationScreen', () => {
     expect(screen.getByText(/det bästa valet/)).toBeOnTheScreen()
     expect(screen.getByText('REKOMMENDERAD')).toBeOnTheScreen()
     expect(screen.getByText('Jämför nivåerna')).toBeOnTheScreen()
-    expect(screen.getByText('2 per dag, ett ute')).toBeOnTheScreen()
+    // Exakt samma stats som hemsidans jämförelsetabell
+    expect(screen.getByText('4 pass/vecka')).toBeOnTheScreen()
+    expect(screen.getByText('1 pass/dag, ett utomhus')).toBeOnTheScreen()
+    expect(screen.getByText('2 pass/dag')).toBeOnTheScreen()
+    expect(screen.getByText('Nej, 1 dags marginal/vecka')).toBeOnTheScreen()
+    expect(screen.getByText('Inga vilodagar')).toBeOnTheScreen()
     // Vald nivå (Normal) visar sina regler, de andra är hopfällda
     expect(screen.getByText('1 träningspass per dag (45 min)')).toBeOnTheScreen()
     expect(screen.queryByText('Kall dusch varje morgon')).toBeNull()
