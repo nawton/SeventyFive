@@ -22,14 +22,13 @@ import { AppTextInput } from '@/components/AppTextInput'
 type Mode = 'login' | 'register'
 
 // Samma palett som onboardingen — sidorna ska kännas som ett flöde
-const NAVY      = '#0A1120'
-const NAVY_TOP  = '#101A2E'
+const NAVY      = '#070C16'
+const NAVY_TOP  = '#0B1322'
 const EDGE      = 'rgba(255,255,255,0.08)'
 const OFFWHITE  = '#F4F5FA'
 const MUTED     = 'rgba(244,245,250,0.62)'
 const ORANGE      = '#FFA817'
 const ORANGE_DEEP = '#FF7A1A'
-const BLUE = '#3FA7FF'
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets()
@@ -140,10 +139,8 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* Samma marinblå bas och organiska former som onboardingen */}
+      {/* Samma mörka marinblå bas som onboardingen */}
       <LinearGradient colors={[NAVY_TOP, NAVY]} style={StyleSheet.absoluteFill} pointerEvents="none" />
-      <View style={styles.blobOrange} pointerEvents="none" />
-      <View style={styles.blobBlue} pointerEvents="none" />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -280,17 +277,6 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: NAVY },
-
-  blobOrange: {
-    position: 'absolute', top: -140, right: -120,
-    width: 340, height: 340, borderRadius: 170,
-    backgroundColor: ORANGE, opacity: 0.07,
-  },
-  blobBlue: {
-    position: 'absolute', bottom: 60, left: -150,
-    width: 380, height: 380, borderRadius: 190,
-    backgroundColor: BLUE, opacity: 0.05,
-  },
 
   topBar: { paddingHorizontal: 20, height: 40, justifyContent: 'center' },
   backBtn: {

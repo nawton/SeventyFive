@@ -30,9 +30,9 @@ const { width } = Dimensions.get('window')
 // täcker aldrig innehållet.
 // =============================================================================
 
-const NAVY      = '#0A1120'
-const NAVY_TOP  = '#101A2E'
-const CARD_NAVY = '#141E33'
+const NAVY      = '#070C16'
+const NAVY_TOP  = '#0B1322'
+const CARD_NAVY = '#111A2C'
 const EDGE      = 'rgba(255,255,255,0.08)'
 const OFFWHITE  = '#F4F5FA'
 const MUTED     = 'rgba(244,245,250,0.62)'
@@ -267,10 +267,8 @@ export default function Welcome() {
 
   return (
     <View style={s.screen}>
-      {/* Marinblå bas med organiska former: mjuk gradient + tonade blobbar */}
+      {/* Mörk marinblå bas med mjuk gradient uppifrån */}
       <LinearGradient colors={[NAVY_TOP, NAVY]} style={StyleSheet.absoluteFill} pointerEvents="none" />
-      <View style={s.blobOrange} pointerEvents="none" />
-      <View style={s.blobBlue} pointerEvents="none" />
 
       {/* Tryck på halvorna bläddrar, som ett komplement till knapparna */}
       <View style={s.tapRow}>
@@ -417,18 +415,6 @@ export default function Welcome() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: NAVY },
-
-  // Organiska bakgrundsformer — stora mjuka tonade cirklar utanför kanterna
-  blobOrange: {
-    position: 'absolute', top: -140, right: -120,
-    width: 340, height: 340, borderRadius: 170,
-    backgroundColor: ORANGE, opacity: 0.07,
-  },
-  blobBlue: {
-    position: 'absolute', bottom: 60, left: -150,
-    width: 380, height: 380, borderRadius: 190,
-    backgroundColor: BLUE, opacity: 0.05,
-  },
 
   tapRow:  { ...StyleSheet.absoluteFillObject, flexDirection: 'row' },
   tapZone: { flex: 1 },
