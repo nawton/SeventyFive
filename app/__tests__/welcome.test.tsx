@@ -12,12 +12,11 @@ function next(times = 1) {
 beforeEach(() => jest.clearAllMocks())
 
 describe('Welcome — onboardingen', () => {
-  it('sida 1: välkomnar med bildcollage, utan tillbaka- eller kontoknappar', () => {
+  it('sida 1: välkomnar med brandmarket, utan tillbaka- eller kontoknappar', () => {
     render(<Welcome />)
     expect(screen.getByText('Välkommen till SeventyFive')).toBeOnTheScreen()
     expect(screen.getByText('Din resa börjar här.')).toBeOnTheScreen()
-    // Bildplatserna är märkta med sina motiv tills riktiga foton läggs in
-    expect(screen.getByText(/Löpning i morgonljus/)).toBeOnTheScreen()
+    expect(screen.getByText('75')).toBeOnTheScreen()
     expect(screen.getByTestId('welcomeContinue')).toBeOnTheScreen()
     expect(screen.queryByTestId('welcomeBack')).toBeNull()
     expect(screen.queryByTestId('welcomeRegister')).toBeNull()

@@ -22,8 +22,8 @@ import { AppTextInput } from '@/components/AppTextInput'
 type Mode = 'login' | 'register'
 
 // Samma palett som onboardingen — sidorna ska kännas som ett flöde
-const NAVY      = '#070C16'
-const NAVY_TOP  = '#0B1322'
+const NAVY      = '#05080F'
+const NAVY_TOP  = '#080D18'
 const EDGE      = 'rgba(255,255,255,0.08)'
 const OFFWHITE  = '#F4F5FA'
 const MUTED     = 'rgba(244,245,250,0.62)'
@@ -264,8 +264,8 @@ export default function LoginScreen() {
             <TouchableOpacity style={styles.switchPill} onPress={switchMode}>
               <Text style={styles.switchPillText}>
                 {mode === 'login'
-                  ? 'Inget konto? Registrera dig'
-                  : 'Har du ett konto? Logga in'}
+                  ? <>Inget konto? <Text style={styles.switchPillAction}>Registrera dig</Text></>
+                  : <>Har du ett konto? <Text style={styles.switchPillAction}>Logga in</Text></>}
               </Text>
             </TouchableOpacity>
           </View>
@@ -329,10 +329,12 @@ const styles = StyleSheet.create({
 
   links: { gap: 12, alignItems: 'center' },
   switchButton: { alignItems: 'center' },
-  switchText:   { color: MUTED, fontSize: 14 },
+  switchText:   { color: 'rgba(244,245,250,0.8)', fontSize: 14, fontWeight: '600' },
   switchPill: {
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999,
-    paddingHorizontal: 16, paddingVertical: 10,
+    borderWidth: 1, borderColor: EDGE,
+    paddingHorizontal: 18, paddingVertical: 11,
   },
-  switchPillText: { color: OFFWHITE, fontSize: 13, fontWeight: '600' },
+  switchPillText:   { color: MUTED, fontSize: 14, fontWeight: '600' },
+  switchPillAction: { color: ORANGE, fontWeight: '800' },
 })

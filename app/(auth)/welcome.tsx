@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
-  Image,
   Dimensions,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -17,22 +16,20 @@ import * as Haptics from 'expo-haptics'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
 import { NUM_FONT } from '@/lib/theme'
-import { ONBOARDING_IMAGES } from '@/lib/onboardingImages'
 
 const { width } = Dimensions.get('window')
 
 // =============================================================================
 // ONBOARDING — fem sidor som välkomnar, förklarar utmaningen, schemat,
-// statistiken och communityn. Mörk marinblå bas, varm orange accent,
-// organiska former och bildplatser för riktiga träningsfoton (sida 1).
+// statistiken och communityn. Mörk marinblå bas och varm orange accent.
 // Navigering: Nästa-knapp, tillbaka på steg 2–5, Hoppa över, samt tryck
 // på höger/vänster halva. Knapparna bor i en egen bottensektion och
 // täcker aldrig innehållet.
 // =============================================================================
 
-const NAVY      = '#070C16'
-const NAVY_TOP  = '#0B1322'
-const CARD_NAVY = '#111A2C'
+const NAVY      = '#05080F'
+const NAVY_TOP  = '#080D18'
+const CARD_NAVY = '#0D1524'
 const EDGE      = 'rgba(255,255,255,0.08)'
 const OFFWHITE  = '#F4F5FA'
 const MUTED     = 'rgba(244,245,250,0.62)'
@@ -68,39 +65,6 @@ const COPY: Record<SlideKey, { title: string; body: string }> = {
     title: 'Utvecklas tillsammans med andra',
     body: 'Gå med i grupper, dela din resa och håll motivationen uppe tillsammans.',
   },
-}
-
-// ─── Sida 1: collage med bildplatser för riktiga träningsfoton ───────────────
-
-function PhotoTile({ imageKey, label, icon, style }: {
-  imageKey: string
-  label: string
-  icon: React.ComponentProps<typeof Ionicons>['name']
-  style: object
-}) {
-  const src = ONBOARDING_IMAGES[imageKey]
-  if (src) {
-    return <Image source={src} style={[v.photo, style]} resizeMode="cover" />
-  }
-  return (
-    <View style={[v.photo, v.photoPlaceholder, style]}>
-      <Ionicons name={icon} size={22} color={ORANGE} />
-      <Text style={v.photoLabel}>Bildplats:{'\n'}{label}</Text>
-    </View>
-  )
-}
-
-function WelcomeCollage() {
-  return (
-    <View style={v.collage}>
-      <PhotoTile imageKey="heroRun" icon="sunny-outline" label="Löpning i morgonljus"
-        style={{ width: '58%', height: 240, borderRadius: 30 }} />
-      <PhotoTile imageKey="heroGym" icon="barbell-outline" label="Fokuserat gympass"
-        style={{ position: 'absolute', right: 0, top: 16, width: '44%', height: 138, borderRadius: 26 }} />
-      <PhotoTile imageKey="heroWalk" icon="walk-outline" label="Promenad med träningsväska"
-        style={{ position: 'absolute', right: 12, bottom: -18, width: '40%', height: 110, borderRadius: 24 }} />
-    </View>
-  )
 }
 
 // ─── Sida 2: utmaningen — dagskortet med alla fem uppgifterna ────────────────
@@ -305,7 +269,11 @@ export default function Welcome() {
       {/* Innehållet: visual + rubrik + text. Släpper igenom tryck till halvorna */}
       <View style={s.content} pointerEvents="none">
         <Animated.View key={`v-${slideKey}`} entering={FadeInUp.duration(340)} style={s.visualArea}>
-          {slideKey === 'valkommen' && <WelcomeCollage />}
+          {slideKey === 'valkommen' && (
+            <View style={v.brandMark}>
+              <Text style={v.brandMarkText}>75</Text>
+            </View>
+          )}
           {slideKey === 'utmaningen' && <ChallengeVisual />}
           {slideKey === 'schemat' && <ScheduleVisual />}
           {slideKey === 'statistiken' && <StatsVisual />}
@@ -575,16 +543,13 @@ const s = StyleSheet.create({
 // ─── Visuella delarnas styles ────────────────────────────────────────────────
 
 const v = StyleSheet.create({
-  // Sida 1: collaget
-  collage: { height: 262, marginBottom: 6 },
-  photo:   { backgroundColor: CARD_NAVY },
-  photoPlaceholder: {
-    borderWidth: 1.5, borderColor: 'rgba(255,168,23,0.35)', borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center', gap: 8, padding: 14,
+  // Sida 1: brandmarket — ren typografi tills riktiga foton läggs in
+  brandMark: {
+    width: 148, height: 148, borderRadius: 74, alignSelf: 'center',
+    backgroundColor: ORANGE_SOFT, borderWidth: 1.5, borderColor: 'rgba(255,168,23,0.35)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
   },
-  photoLabel: {
-    color: MUTED, fontSize: 11, lineHeight: 15, fontWeight: '600', textAlign: 'center',
-  },
+  brandMarkText: { color: ORANGE, fontFamily: NUM_FONT, fontSize: 64 },
 
   // Mockkorten — stora rundade kort med mjuka kanter
   mockCard: {
