@@ -11,44 +11,47 @@ function next(times = 1) {
 
 beforeEach(() => jest.clearAllMocks())
 
-describe('Welcome — story-bläddringen', () => {
-  it('startar på brand-sliden utan inloggningsknappar', () => {
+describe('Welcome — immersiva onboardingen', () => {
+  it('startar på brand-sliden med Fortsätt men utan kontoknappar', () => {
     render(<Welcome />)
     expect(screen.getByText('SeventyFive')).toBeOnTheScreen()
+    expect(screen.getByText('75')).toBeOnTheScreen()
     expect(screen.getByText('75 dagar. 5 uppgifter. Inga undantag.')).toBeOnTheScreen()
+    expect(screen.getByTestId('welcomeContinue')).toBeOnTheScreen()
     expect(screen.queryByTestId('welcomeRegister')).toBeNull()
   })
 
-  it('höger sida bläddrar framåt, vänster bakåt', () => {
+  it('höger sida och Fortsätt bläddrar framåt, vänster bakåt', () => {
     render(<Welcome />)
     next()
-    expect(screen.getByText('Fem uppgifter, varje dag')).toBeOnTheScreen()
-    expect(screen.getByText('Läs 10 sidor')).toBeOnTheScreen()
+    expect(screen.getByText('Fem uppgifter,\nvarje dag')).toBeOnTheScreen()
+
+    fireEvent.press(screen.getByTestId('welcomeContinue'))
+    expect(screen.getByText('Ditt schema,\ndina pass')).toBeOnTheScreen()
 
     fireEvent.press(screen.getByTestId('storyPrev'))
-    expect(screen.getByText('75 dagar. 5 uppgifter. Inga undantag.')).toBeOnTheScreen()
+    expect(screen.getByText('Fem uppgifter,\nvarje dag')).toBeOnTheScreen()
 
     // Bakåt från första sliden stannar kvar
+    fireEvent.press(screen.getByTestId('storyPrev'))
     fireEvent.press(screen.getByTestId('storyPrev'))
     expect(screen.getByText('SeventyFive')).toBeOnTheScreen()
   })
 
-  it('alla fem slides nås i ordning med sina mockkort, sista stannar', () => {
+  it('alla fem slides nås i ordning med sina heroes, sista stannar', () => {
     render(<Welcome />)
-    next(2)
-    expect(screen.getByText('Ditt schema, dina pass')).toBeOnTheScreen()
-    expect(screen.getByText('Bröst & Triceps')).toBeOnTheScreen()
-    expect(screen.getByText('Bänkpress')).toBeOnTheScreen()
-    next()
-    expect(screen.getByText('Följ dina framsteg')).toBeOnTheScreen()
+    next(3)
+    expect(screen.getByText('Följ dina\nframsteg')).toBeOnTheScreen()
     expect(screen.getByText('Platina')).toBeOnTheScreen()
+    expect(screen.getByText('18 av 26')).toBeOnTheScreen()
     next()
-    expect(screen.getByText('Kör tillsammans')).toBeOnTheScreen()
-    expect(screen.getByText('Elin Berg')).toBeOnTheScreen()
+    expect(screen.getByText('Kör\ntillsammans')).toBeOnTheScreen()
+    expect(screen.getByText('Team Sthlm · 8 medlemmar')).toBeOnTheScreen()
 
-    // Framåt på sista sliden gör ingenting
+    // Framåt på sista sliden gör ingenting, och Fortsätt är utbytt
     next()
-    expect(screen.getByText('Kör tillsammans')).toBeOnTheScreen()
+    expect(screen.getByText('Kör\ntillsammans')).toBeOnTheScreen()
+    expect(screen.queryByTestId('welcomeContinue')).toBeNull()
   })
 
   it('sista sliden leder till registrering respektive inloggning', () => {
