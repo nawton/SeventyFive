@@ -91,8 +91,11 @@ export default function SchemaScreen() {
   const [logSheetOpen, setLogSheetOpen]     = useState(false)
   const [fullscreenTarget, setFullscreenTarget] = useState<{ session: WorkoutSession; date: string } | null>(null)
   const [wizardVisible, setWizardVisible]   = useState(false)
-  // null = inte inläst än (rendera inte bannern förrän vi vet, undviker blink)
-  const [wizardBannerDismissed, setWizardBannerDismissed] = useState<boolean | null>(null)
+  // null = inte inläst än (rendera inte intro-sheeten förrän vi vet, undviker blink).
+  // Sätts BARA av "Nej tack, visa inte igen" — enda permanenta vägen bort.
+  const [introNeverShow, setIntroNeverShow] = useState<boolean | null>(null)
+  // Nedsvept eller bortklickad för stunden — kommer tillbaka vid nästa besök
+  const [introSnoozed, setIntroSnoozed] = useState(false)
   // Vilket plan-slut användaren klickat bort — ny plan nollställer skylten
   const [planEndDismissedKey, setPlanEndDismissedKey] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl]           = useState<string | null>(null)
@@ -113,9 +116,9 @@ export default function SchemaScreen() {
   useEffect(() => { userIdRef.current = userId }, [userId])
 
   useEffect(() => {
-    AsyncStorage.getItem('wizardBannerDismissed')
-      .then(v => setWizardBannerDismissed(v === '1'))
-      .catch(() => setWizardBannerDismissed(false))
+    AsyncStorage.getItem('scheduleIntroNeverShow')
+      .then(v => setIntroNeverShow(v === '1'))
+      .catch(() => setIntroNeverShow(false))
     AsyncStorage.getItem('planEndDismissed')
       .then(setPlanEndDismissedKey)
       .catch(() => {})
@@ -140,10 +143,10 @@ export default function SchemaScreen() {
     AsyncStorage.setItem('planEndDismissed', planEnd.key).catch(() => {})
   }
 
-  // Schemaintrot stängs för alltid, oavsett väg ut (dra, knapp eller guiden)
-  function dismissScheduleIntro() {
-    setWizardBannerDismissed(true)
-    AsyncStorage.setItem('wizardBannerDismissed', '1').catch(() => {})
+  // Enda permanenta vägen bort — allt annat visar skylten igen nästa besök
+  function neverShowScheduleIntro() {
+    setIntroNeverShow(true)
+    AsyncStorage.setItem('scheduleIntroNeverShow', '1').catch(() => {})
   }
   const hasSchedule = sessions.some(s => s.weekdays.length > 0 && !s.name.startsWith('SKIP:'))
 
@@ -224,6 +227,8 @@ export default function SchemaScreen() {
     if (uid) loadData(uid)
     getUnitSystem().then(setUnit).catch(() => {})
     getRaceDate().then(setRaceDateState).catch(() => {})
+    // Nedsvept intro kommer tillbaka varje gång man kliver in utan schema
+    setIntroSnoozed(false)
   }, []))
 
   useEffect(() => {
@@ -652,15 +657,17 @@ export default function SchemaScreen() {
         }}
       />
 
-      {/* Slide-up när schemat saknas — dras ner eller trycks bort för alltid,
-          wizarden nås alltid via inställningarna */}
+      {/* Slide-up så länge schemat saknas. Dra ner eller tryck utanför =
+          borta för stunden, tillbaka nästa besök. Bara "Nej tack, visa inte
+          igen" tystar den för alltid. */}
       <ScheduleIntroSheet
-        visible={wizardBannerDismissed === false && !hasSchedule && !wizardVisible}
+        visible={introNeverShow === false && !introSnoozed && !hasSchedule && !wizardVisible}
         onCreate={() => {
-          dismissScheduleIntro()
+          setIntroSnoozed(true)
           setWizardVisible(true)
         }}
-        onDismiss={dismissScheduleIntro}
+        onClose={() => setIntroSnoozed(true)}
+        onNeverShow={neverShowScheduleIntro}
       />
 
       {/* ── Logga pass — idag och bakåt (missade pass), inte framtida dagar ── */}

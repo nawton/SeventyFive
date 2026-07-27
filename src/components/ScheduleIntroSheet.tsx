@@ -9,20 +9,23 @@ import { Ionicons } from '@/components/Icon'
 import { TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
 
 // =============================================================================
-// SCHEMAINTRO — slide-up som visas på träningssidan när man saknar schema.
-// Dras ner, trycks bort eller startar guiden. Alla vägar ut är permanenta:
-// skylten kommer aldrig tillbaka (wizarden nås alltid via inställningarna).
+// SCHEMAINTRO — slide-up som visas på träningssidan så länge schema saknas.
+// Dra ner eller tryck utanför stänger bara för stunden — skylten kommer
+// tillbaka nästa besök. Enda permanenta vägen bort är "Nej tack, visa inte
+// igen"-knappen (wizarden nås alltid via inställningarna).
 // =============================================================================
 
 const SPRING = { damping: 20, stiffness: 220, mass: 0.8 } as const
 const SLIDE = 440
 
-export function ScheduleIntroSheet({ visible, onCreate, onDismiss }: {
+export function ScheduleIntroSheet({ visible, onCreate, onClose, onNeverShow }: {
   visible: boolean
-  /** Öppna schemaguiden — skylten räknas som klickad och visas inte igen */
+  /** Öppna schemaguiden */
   onCreate: () => void
-  /** Stäng för alltid, inga fler påminnelser */
-  onDismiss: () => void
+  /** Dra ner eller tryck utanför — stängd för stunden, tillbaka nästa besök */
+  onClose: () => void
+  /** "Nej tack, visa inte igen" — tystad för alltid */
+  onNeverShow: () => void
 }) {
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
@@ -44,7 +47,7 @@ export function ScheduleIntroSheet({ visible, onCreate, onDismiss }: {
     .onEnd(e => {
       if (e.translationY > 90 || e.velocityY > 600) {
         ty.value = withTiming(SLIDE, { duration: 200 }, finished => {
-          if (finished) runOnJS(onDismiss)()
+          if (finished) runOnJS(onClose)()
         })
       } else {
         ty.value = withSpring(0, SPRING)
@@ -58,9 +61,9 @@ export function ScheduleIntroSheet({ visible, onCreate, onDismiss }: {
   if (!visible) return null
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <GestureHandlerRootView style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <Pressable style={s.backdrop} onPress={onDismiss} testID="scheduleIntroBackdrop" />
+        <Pressable style={s.backdrop} onPress={onClose} testID="scheduleIntroBackdrop" />
         <GestureDetector gesture={pan}>
           <Animated.View style={[
             s.sheet,
@@ -86,10 +89,10 @@ export function ScheduleIntroSheet({ visible, onCreate, onDismiss }: {
               <Text style={[s.createText, { color: light ? '#FFFFFF' : '#000000' }]}>Skapa schema</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={onDismiss}
+              onPress={onNeverShow}
               hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
               activeOpacity={0.7}
-              testID="scheduleIntroDismiss"
+              testID="scheduleIntroNeverShow"
             >
               <Text style={s.dismissText}>Nej tack, visa inte igen</Text>
             </TouchableOpacity>

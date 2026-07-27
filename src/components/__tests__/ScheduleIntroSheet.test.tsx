@@ -1,36 +1,48 @@
 import { render, screen, fireEvent } from '@testing-library/react-native'
 import { ScheduleIntroSheet } from '../ScheduleIntroSheet'
 
+function mount(over: Partial<React.ComponentProps<typeof ScheduleIntroSheet>> = {}) {
+  const props = {
+    visible: true,
+    onCreate: jest.fn(),
+    onClose: jest.fn(),
+    onNeverShow: jest.fn(),
+    ...over,
+  }
+  const view = render(<ScheduleIntroSheet {...props} />)
+  return { ...props, view }
+}
+
 describe('ScheduleIntroSheet', () => {
-  it('dold när schemat finns eller skylten redan stängts', () => {
-    const view = render(
-      <ScheduleIntroSheet visible={false} onCreate={jest.fn()} onDismiss={jest.fn()} />,
-    )
+  it('dold när schemat finns eller skylten är tystad', () => {
+    const { view } = mount({ visible: false })
     expect(view.toJSON()).toBeNull()
   })
 
   it('visar rubriken, förklaringen och båda vägarna vidare', () => {
-    render(<ScheduleIntroSheet visible onCreate={jest.fn()} onDismiss={jest.fn()} />)
+    mount()
     expect(screen.getByText('Skapa ditt schema')).toBeOnTheScreen()
     expect(screen.getByText('Skapa schema')).toBeOnTheScreen()
     expect(screen.getByText('Nej tack, visa inte igen')).toBeOnTheScreen()
   })
 
   it('skapa-knappen startar guiden', () => {
-    const onCreate = jest.fn()
-    render(<ScheduleIntroSheet visible onCreate={onCreate} onDismiss={jest.fn()} />)
+    const { onCreate } = mount()
     fireEvent.press(screen.getByTestId('scheduleIntroCreate'))
     expect(onCreate).toHaveBeenCalled()
   })
 
-  it('nej tack och bakgrunden stänger för alltid', () => {
-    const onDismiss = jest.fn()
-    render(<ScheduleIntroSheet visible onCreate={jest.fn()} onDismiss={onDismiss} />)
-
-    fireEvent.press(screen.getByTestId('scheduleIntroDismiss'))
-    expect(onDismiss).toHaveBeenCalledTimes(1)
-
+  it('bakgrunden stänger bara för stunden, aldrig för alltid', () => {
+    const { onClose, onNeverShow } = mount()
     fireEvent.press(screen.getByTestId('scheduleIntroBackdrop'))
-    expect(onDismiss).toHaveBeenCalledTimes(2)
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onNeverShow).not.toHaveBeenCalled()
+  })
+
+  it('bara Nej tack-knappen tystar skylten för alltid', () => {
+    const { onClose, onNeverShow } = mount()
+    fireEvent.press(screen.getByTestId('scheduleIntroNeverShow'))
+    expect(onNeverShow).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

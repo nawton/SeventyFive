@@ -205,8 +205,8 @@ export default function GeneralScreen() {
           onPress: async () => {
             try {
               const count = await deleteRepeatingSessions(userId)
-              // Visa "Skapa ditt schema"-bannern på schemasidan igen
-              await AsyncStorage.removeItem('wizardBannerDismissed').catch(() => {})
+              // Visa schemaintrot på schemasidan igen, även om det tystats
+              await AsyncStorage.removeItem('scheduleIntroNeverShow').catch(() => {})
               Alert.alert(
                 'Schema nollställt',
                 `${count} pass togs bort. Vill du skapa ett nytt schema direkt?`,
