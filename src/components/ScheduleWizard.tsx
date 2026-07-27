@@ -9,7 +9,17 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Ionicons } from '@/components/Icon'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, useThemeStrings, CARD_BORDER } from '@/lib/theme'
+import { NUM_FONT, useThemeStrings } from '@/lib/theme'
+
+// Samma marinblå palett som onboardingen — guiden är en del av samma resa
+const BG            = '#05080F'
+const CARD          = 'rgba(255,255,255,0.05)'
+const CARD_BORDER   = 'rgba(255,255,255,0.08)'
+const BORDER        = 'rgba(255,255,255,0.10)'
+const TEXT_PRIMARY  = '#F4F5FA'
+const TEXT_SECONDARY = 'rgba(244,245,250,0.62)'
+const ACCENT        = '#FFA817'
+const accentAlpha   = (alpha: string) => `#FFA817${alpha}`
 import { toLocalDateString } from '@/lib/date'
 import { RUN_SESSION_INFO, plannedRunTypes, type RunExperience } from '@/services/scheduleGenerator'
 import type { Slug } from '@/lib/muscles'
@@ -961,8 +971,8 @@ const s = StyleSheet.create({
   },
   nextBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ACCENT, borderRadius: 16, paddingVertical: 17,
+    backgroundColor: ACCENT, borderRadius: 999, paddingVertical: 17,
   },
   nextBtnDisabled: { opacity: 0.35 },
-  nextBtnText:     { color: '#000', fontSize: 17, fontWeight: '800' },
+  nextBtnText:     { color: BG, fontSize: 17, fontWeight: '800' },
 })
