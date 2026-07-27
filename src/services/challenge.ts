@@ -48,14 +48,74 @@ export async function acceptChallenge(
   })
   if (quizError) throw quizError
 
-  const { error: challengeError } = await supabase.from('user_challenges').insert({
-    user_id: userId,
-    level_id: levelId,
-    start_date,
-    current_day: clampedStartDay,
-    status: 'active',
-  })
+  const { data: challenge, error: challengeError } = await supabase
+    .from('user_challenges')
+    .insert({
+      user_id: userId,
+      level_id: levelId,
+      start_date,
+      current_day: clampedStartDay,
+      status: 'active',
+    })
+    .select('id')
+    .single()
   if (challengeError) throw challengeError
+
+  // Hoppar man in mitt i utmaningen räknas dagarna fram till startdagen som
+  // klarade: gröna i kalendern, ifyllda checkar och noll missade dagar
+  if (clampedStartDay > 1 && challenge) {
+    await backfillCompletedDays(userId, challenge.id, levelId, startDate, clampedStartDay)
+  }
+}
+
+/** Skapar klarade dagsloggar med avbockade uppgifter för dag 1 … startDay-1. */
+async function backfillCompletedDays(
+  userId: string,
+  challengeId: string,
+  levelId: string,
+  dayOneDate: Date,
+  startDay: number,
+): Promise<void> {
+  const now = new Date().toISOString()
+  const logs = Array.from({ length: startDay - 1 }, (_, i) => {
+    const d = new Date(dayOneDate)
+    d.setDate(d.getDate() + i)
+    return {
+      challenge_id: challengeId,
+      user_id: userId,
+      day_number: i + 1,
+      date: toLocalDateString(d),
+      status: 'completed',
+      completed_at: now,
+    }
+  })
+
+  const { data: created, error: logError } = await supabase
+    .from('daily_logs')
+    .insert(logs)
+    .select('id')
+  if (logError) throw logError
+
+  // Nivåns uppgiftsmallar — is('user_id', null) håller andras egna regler ute
+  const { data: templates, error: tplError } = await supabase
+    .from('task_templates')
+    .select('id')
+    .eq('level_id', levelId)
+    .is('user_id', null)
+  if (tplError) throw tplError
+
+  const completions = (created ?? []).flatMap(log =>
+    (templates ?? []).map(t => ({
+      daily_log_id: log.id,
+      task_template_id: t.id,
+      completed: true,
+      completed_at: now,
+    }))
+  )
+  if (completions.length === 0) return
+
+  const { error: compError } = await supabase.from('task_completions').insert(completions)
+  if (compError) throw compError
 }
 
 export async function getActiveChallenge(userId: string): Promise<UserChallengeWithLevel | null> {
