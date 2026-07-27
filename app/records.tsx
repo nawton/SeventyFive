@@ -22,7 +22,7 @@ import { router } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge } from '@/services/challenge'
-import { countCompletedDays, getStreak } from '@/services/dailyLog'
+import { countCompletedDaysAllTime, getBestStreakAllTime } from '@/services/dailyLog'
 import Svg, { Polyline, Circle as SvgCircle, Line as SvgLine } from 'react-native-svg'
 import { getCardioWorkouts, getStrengthWorkouts, type StrengthWorkout, type CardioWorkout } from '@/services/workouts'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
@@ -233,12 +233,12 @@ export default function RecordsScreen() {
         const customRules = challenge
           ? await getCustomRules(uid, challenge.id).catch(() => [])
           : []
-        const [completedDays, streak] = challenge
-          ? await Promise.all([
-              countCompletedDays(challenge.id).catch(() => 0),
-              getStreak(challenge.id).catch(() => 0),
-            ])
-          : [0, 0]
+        // All-time över alla utmaningar — en fail nollar bara streaken,
+        // aldrig klarade dagar, medaljer eller poäng
+        const [completedDays, streak] = await Promise.all([
+          countCompletedDaysAllTime(uid).catch(() => 0),
+          getBestStreakAllTime(uid).catch(() => 0),
+        ])
 
         setRecords(prs)
         getUnitSystem().then(setUnit)

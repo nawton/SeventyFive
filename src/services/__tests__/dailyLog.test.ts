@@ -2,6 +2,7 @@ import {
   getOrCreateTodayLog, getOrCreateTaskCompletions, setTaskCompleted,
   setTaskProgress, markDayCompleted, markDayPending, markDayFailed,
   getMissedDayNumbers, acknowledgeMissedDays, countCompletedDays,
+  countCompletedDaysAllTime, getBestStreakAllTime,
   getAllDays, getStreak, getWeekStatuses, getStreakOf, getDayDetail,
   getTasksForDay,
 } from '../dailyLog'
@@ -244,6 +245,55 @@ describe('streak', () => {
     expect(await getStreakOf('u2')).toBe(0)
     rpcMock.mockResolvedValue({ data: 5, error: { message: 'nej' } })
     expect(await getStreakOf('u2')).toBe(0)
+  })
+})
+
+// Statistiken överlever en fail: all-time-funktionerna räknar över ALLA
+// utmaningar, så en omstart bara nollar streaken — aldrig medaljunderlaget
+describe('all-time-statistik över utmaningsgränser', () => {
+  it('countCompletedDaysAllTime räknar på användaren, inte utmaningen', async () => {
+    const calls = installTables(fromMock, { daily_logs: { data: null, count: 53 } })
+    expect(await countCompletedDaysAllTime('u1')).toBe(53)
+    // Filtrerar på user_id + completed — utmaningens id är medvetet inte med
+    expect(argsOf(calls, 'daily_logs', 'eq')).toEqual([
+      ['user_id', 'u1'], ['status', 'completed'],
+    ])
+  })
+
+  it('getBestStreakAllTime hittar längsta sviten även när den slutar i en fail', async () => {
+    installTables(fromMock, { daily_logs: { data: [
+      { date: '2026-07-01', status: 'completed' },
+      { date: '2026-07-02', status: 'completed' },
+      { date: '2026-07-03', status: 'completed' },
+      { date: '2026-07-04', status: 'failed' },      // utmaningen failade här
+      { date: '2026-07-05', status: 'completed' },   // ny utmaning, ny svit
+      { date: '2026-07-06', status: 'completed' },
+    ] } })
+    expect(await getBestStreakAllTime('u1')).toBe(3)
+  })
+
+  it('dubbelloggar på samma datum (failad gammal + ny utmaning) bryter inte sviten', async () => {
+    installTables(fromMock, { daily_logs: { data: [
+      { date: '2026-07-01', status: 'completed' },
+      { date: '2026-07-02', status: 'failed' },      // gamla utmaningens sista dag
+      { date: '2026-07-02', status: 'completed' },   // nya utmaningens dag 1, samma datum
+      { date: '2026-07-03', status: 'completed' },
+    ] } })
+    expect(await getBestStreakAllTime('u1')).toBe(3)
+  })
+
+  it('luckor i kalendern nollar sviten, tomt ger noll', async () => {
+    installTables(fromMock, { daily_logs: { data: [
+      { date: '2026-07-01', status: 'completed' },
+      { date: '2026-07-02', status: 'completed' },
+      { date: '2026-07-10', status: 'completed' },
+      { date: '2026-07-11', status: 'completed' },
+      { date: '2026-07-12', status: 'completed' },
+    ] } })
+    expect(await getBestStreakAllTime('u1')).toBe(3)
+
+    installTables(fromMock, { daily_logs: { data: [] } })
+    expect(await getBestStreakAllTime('u1')).toBe(0)
   })
 })
 

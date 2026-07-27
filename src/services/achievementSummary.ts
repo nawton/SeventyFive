@@ -2,7 +2,7 @@ import { computeAchievements } from '@/lib/achievements'
 import { getCardioWorkouts, getStrengthWorkouts } from '@/services/workouts'
 import { getCompletedSessionsHistory } from '@/services/workoutSchedule'
 import { getPersonalRecords } from '@/services/personalRecords'
-import { countCompletedDays, getStreak } from '@/services/dailyLog'
+import { countCompletedDaysAllTime, getBestStreakAllTime } from '@/services/dailyLog'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 
 // Kompakt sammanfattning av medaljer och rekord — för profilens
@@ -15,22 +15,18 @@ export interface AchievementSummary {
   recordCount: number
 }
 
-export async function getAchievementSummary(
-  userId: string,
-  challengeId: string | null,
-): Promise<AchievementSummary> {
+export async function getAchievementSummary(userId: string): Promise<AchievementSummary> {
   const [cardio, strength, sessionHistory, prs] = await Promise.all([
     getCardioWorkouts(userId, 500).catch(() => []),
     getStrengthWorkouts(userId, 500).catch(() => []),
     getCompletedSessionsHistory(userId).catch(() => []),
     getPersonalRecords(userId).catch(() => []),
   ])
-  const [completedDays, streak] = challengeId
-    ? await Promise.all([
-        countCompletedDays(challengeId).catch(() => 0),
-        getStreak(challengeId).catch(() => 0),
-      ])
-    : [0, 0]
+  // All-time över alla utmaningar — en failad utmaning backar aldrig medaljerna
+  const [completedDays, streak] = await Promise.all([
+    countCompletedDaysAllTime(userId).catch(() => 0),
+    getBestStreakAllTime(userId).catch(() => 0),
+  ])
 
   let longestKm = 0
   let bestPaceSec = Infinity

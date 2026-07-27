@@ -261,6 +261,47 @@ export async function countCompletedDays(challengeId: string): Promise<number> {
   return count ?? 0
 }
 
+/**
+ * Klarade dagar över ALLA utmaningar, även failade. Medaljer och poäng
+ * räknas härifrån så en fail bara nollar streaken, aldrig statistiken.
+ */
+export async function countCompletedDaysAllTime(userId: string): Promise<number> {
+  const { count } = await supabase
+    .from('daily_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+  return count ?? 0
+}
+
+/**
+ * Längsta sviten av klarade dagar någonsin, över alla utmaningar.
+ * Streakmedaljerna ska aldrig låsas igen för att utmaningen startats om.
+ */
+export async function getBestStreakAllTime(userId: string): Promise<number> {
+  const { data } = await supabase
+    .from('daily_logs')
+    .select('date, status')
+    .eq('user_id', userId)
+    .order('date', { ascending: true })
+
+  let best = 0
+  let run = 0
+  let prev: Date | null = null
+  for (const row of data ?? []) {
+    if (row.status !== 'completed') continue
+    const d = parseLocalDate(row.date)
+    // Math.round tål DST-dygn (23/25 timmar); 0 = dubbellogg på samma datum
+    // (gammal failad utmaning + ny på samma dag) och ska inte bryta sviten
+    const diffDays = prev ? Math.round((d.getTime() - prev.getTime()) / 86400000) : null
+    if (diffDays === 0) continue
+    run = diffDays === 1 ? run + 1 : 1
+    prev = d
+    if (run > best) best = run
+  }
+  return best
+}
+
 export interface DaySummary {
   dayNumber: number
   status: 'completed' | 'failed' | 'pending' | 'future'

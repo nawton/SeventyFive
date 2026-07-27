@@ -5,7 +5,6 @@ import { Ionicons } from '@/components/Icon'
 import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARD_BORDER, useCardChrome } from '@/lib/theme'
 import { MedalBadge } from '@/components/MedalBadge'
 import { getAchievementSummary, type AchievementSummary } from '@/services/achievementSummary'
-import { getActiveChallenge } from '@/services/challenge'
 import { supabase } from '@/lib/supabase'
 
 // =============================================================================
@@ -20,10 +19,9 @@ export function RecordsCard() {
 
   useFocusEffect(useCallback(() => {
     let alive = true
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) return
-      const challenge = await getActiveChallenge(session.user.id).catch(() => null)
-      getAchievementSummary(session.user.id, challenge?.id ?? null)
+      getAchievementSummary(session.user.id)
         .then(s => { if (alive) setSummary(s) })
         .catch(() => {})
     })

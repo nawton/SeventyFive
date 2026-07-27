@@ -175,6 +175,21 @@ describe('restartChallenge', () => {
     expect(argsOf(calls, 'user_challenges', 'update')[0][0]).toMatchObject({ failed_on_day: 75 })
   })
 
+  it('en fail rör BARA utmaningstabellen: pass, rundor och loggar lämnas orörda', async () => {
+    const calls = installTables(fromMock, { user_challenges: { data: null } })
+    await restartChallenge(challenge)
+
+    // Enda tabellen som anropas är user_challenges — ingen radering någonstans
+    expect(new Set(fromMock.mock.calls.map(c => c[0]))).toEqual(new Set(['user_challenges']))
+    expect(calls.user_workouts).toBeUndefined()
+    expect(calls.daily_logs).toBeUndefined()
+    expect(calls.workout_sessions).toBeUndefined()
+    expect(calls.workout_completions).toBeUndefined()
+    expect(calls.progress_photos).toBeUndefined()
+    expect(argsOf(calls, 'user_challenges', 'delete')).toHaveLength(0)
+    expect(argsOf(calls, 'user_challenges', 'delete', 1)).toHaveLength(0)
+  })
+
   it('startar ingen ny utmaning om fail-uppdateringen felar', async () => {
     const calls = installTables(fromMock, {
       user_challenges: { data: null, error: { message: 'stopp' } },

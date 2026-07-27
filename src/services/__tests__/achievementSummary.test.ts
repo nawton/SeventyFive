@@ -3,7 +3,7 @@ import { computeAchievements } from '@/lib/achievements'
 import { getCardioWorkouts, getStrengthWorkouts } from '@/services/workouts'
 import { getCompletedSessionsHistory } from '@/services/workoutSchedule'
 import { getPersonalRecords } from '@/services/personalRecords'
-import { countCompletedDays, getStreak } from '@/services/dailyLog'
+import { countCompletedDaysAllTime, getBestStreakAllTime } from '@/services/dailyLog'
 
 jest.mock('@/services/workouts', () => ({
   getCardioWorkouts: jest.fn(),
@@ -11,14 +11,14 @@ jest.mock('@/services/workouts', () => ({
 }))
 jest.mock('@/services/workoutSchedule', () => ({ getCompletedSessionsHistory: jest.fn() }))
 jest.mock('@/services/personalRecords', () => ({ getPersonalRecords: jest.fn() }))
-jest.mock('@/services/dailyLog', () => ({ countCompletedDays: jest.fn(), getStreak: jest.fn() }))
+jest.mock('@/services/dailyLog', () => ({ countCompletedDaysAllTime: jest.fn(), getBestStreakAllTime: jest.fn() }))
 
 const cardioMock = getCardioWorkouts as jest.Mock
 const strengthMock = getStrengthWorkouts as jest.Mock
 const historyMock = getCompletedSessionsHistory as jest.Mock
 const prsMock = getPersonalRecords as jest.Mock
-const daysMock = countCompletedDays as jest.Mock
-const streakMock = getStreak as jest.Mock
+const daysMock = countCompletedDaysAllTime as jest.Mock
+const streakMock = getBestStreakAllTime as jest.Mock
 
 function run(km: number, sec: number, created: string, splits?: Array<{ label: string; paceSec: number }>) {
   return {
@@ -55,7 +55,7 @@ describe('getAchievementSummary', () => {
       prs: [{}, {}],
     })
 
-    const summary = await getAchievementSummary('u1', 'c1')
+    const summary = await getAchievementSummary('u1')
 
     const expectedInput = {
       completedDays: 10, streak: 3,
@@ -69,24 +69,31 @@ describe('getAchievementSummary', () => {
 
     // 2 styrkerekord + längsta rundan, bästa tempot, snabbaste splitten, största veckan
     expect(summary.recordCount).toBe(2 + 4)
-    expect(daysMock).toHaveBeenCalledWith('c1')
-    expect(streakMock).toHaveBeenCalledWith('c1')
+    // All-time på ANVÄNDAREN — statistiken överlever en failad utmaning
+    expect(daysMock).toHaveBeenCalledWith('u1')
+    expect(streakMock).toHaveBeenCalledWith('u1')
   })
 
   it('bara riktiga km- och mi-splittar räknas som splitrekord', async () => {
     setup({ cardio: [run(0, 0, '2026-07-20T09:00:00', [{ label: 'Intervall 1', paceSec: 100 }])] })
-    expect((await getAchievementSummary('u1', null)).recordCount).toBe(0)
+    expect((await getAchievementSummary('u1')).recordCount).toBe(0)
 
     setup({ cardio: [run(0, 0, '2026-07-20T09:00:00', [{ label: '1 km', paceSec: 290 }])] })
-    expect((await getAchievementSummary('u1', null)).recordCount).toBe(1)
+    expect((await getAchievementSummary('u1')).recordCount).toBe(1)
   })
 
-  it('utan aktiv utmaning hoppas dagräkningen över', async () => {
+  it('räknar all-time även utan aktiv utmaning: en omstart backar aldrig medaljerna', async () => {
     setup()
-    const summary = await getAchievementSummary('u1', null)
-    expect(daysMock).not.toHaveBeenCalled()
-    expect(streakMock).not.toHaveBeenCalled()
-    expect(summary).toEqual({ medalsUnlocked: 0, medalsTotal: 26, recordCount: 0 })
+    daysMock.mockResolvedValue(25)   // klarade dagar från TIDIGARE (failade) utmaningar
+    streakMock.mockResolvedValue(7)
+    const summary = await getAchievementSummary('u1')
+    // day1+day10+day25 och streak3+streak7 hålls upplåsta av historiken
+    const expected = computeAchievements({
+      completedDays: 25, streak: 7, totalWorkouts: 0, totalCardio: 0, totalKm: 0,
+      prCount: 0, longestRunKm: 0, bestPace3kSec: Infinity, biggestWeekKm: 0,
+    }).filter(m => m.unlocked).length
+    expect(summary.medalsUnlocked).toBe(expected)
+    expect(summary.medalsUnlocked).toBeGreaterThanOrEqual(5)
   })
 
   it('tål att varje delkälla felar: allt landar på noll istället för att krascha', async () => {
@@ -97,7 +104,7 @@ describe('getAchievementSummary', () => {
     daysMock.mockRejectedValue(new Error('nät'))
     streakMock.mockRejectedValue(new Error('nät'))
 
-    expect(await getAchievementSummary('u1', 'c1')).toEqual({
+    expect(await getAchievementSummary('u1')).toEqual({
       medalsUnlocked: 0, medalsTotal: 26, recordCount: 0,
     })
   })
