@@ -7,21 +7,25 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
+  ImageBackground,
   Dimensions,
 } from 'react-native'
-import { SafeScreen } from '@/components/SafeScreen'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
-import Animated, { FadeInLeft, FadeInRight, FadeInUp } from 'react-native-reanimated'
-import { BG, CARD, ACCENT, accentAlpha } from '@/lib/theme'
+import { LinearGradient } from 'expo-linear-gradient'
+import Animated, { FadeIn, FadeInLeft, FadeInRight, FadeInUp } from 'react-native-reanimated'
+import { CARD, ACCENT, accentAlpha } from '@/lib/theme'
+import { ONBOARDING_IMAGES } from '@/lib/onboardingImages'
 
 const { width } = Dimensions.get('window')
 
 // =============================================================================
-// VÄLKOMST — story-bläddring i fem slides som presenterar appen.
-// Tryck på höger halva = nästa, vänster halva = föregående. Sista sliden
-// har Skapa konto/Logga in, plus dagväljaren för den som redan börjat.
+// VÄLKOMST — story i fem slides med helskärmsbilder (Runna-känsla).
+// Tryck på höger halva = nästa, vänster = föregående. Texten ligger
+// förankrad i botten ovanpå en mörk gradient; egna foton släpps i
+// assets/onboarding/ (se src/lib/onboardingImages.ts), tills dess gradient.
 // =============================================================================
 
 const TASKS = [
@@ -32,58 +36,59 @@ const TASKS = [
   { icon: 'camera-outline',     color: '#EC407A', label: 'Ta ett framstegsfoto' },
 ] as const
 
-type Bubble = { icon: React.ComponentProps<typeof Ionicons>['name']; color: string }
-
 const SLIDES: Array<{
   key: string
+  kicker: string
   title: string
   body: string
-  bubbles?: Bubble[]
+  /** Gradient-fallback tills en riktig bild lagts i assets/onboarding/ */
+  gradient: [string, string, string]
+  watermark: React.ComponentProps<typeof Ionicons>['name']
 }> = [
   {
     key: 'brand',
-    title: '',   // brand-sliden ritar sin egen rubrik
+    kicker: '75 DAGAR · 5 UPPGIFTER · INGA UNDANTAG',
+    title: '',   // brand-sliden ritar wordmarket själv
     body: 'Utmaningen som förändrar din disciplin, ditt mindset och din kropp, en dag i taget.',
+    gradient: ['#241303', '#140B04', '#0B0B0D'],
+    watermark: 'flame',
   },
   {
     key: 'tasks',
+    kicker: 'UTMANINGEN',
     title: 'Fem uppgifter,\nvarje dag',
     body: 'Bocka av dagens uppgifter och håll serien vid liv i 75 dagar. Missar du en dag börjar du om.',
+    gradient: ['#0A1F12', '#081209', '#0B0B0D'],
+    watermark: 'checkmark-done',
   },
   {
     key: 'training',
+    kicker: 'TRÄNING & LÖPNING',
     title: 'Träna efter\ndin plan',
     body: 'Schemaguiden bygger veckans pass efter dina mål, och löpplanen trappas upp mot ditt lopp. Rundorna spåras med GPS.',
-    bubbles: [
-      { icon: 'barbell-outline',  color: '#FFA817' },
-      { icon: 'navigate-outline', color: '#3FA7FF' },
-      { icon: 'map-outline',      color: '#66BB6A' },
-    ],
+    gradient: ['#06182B', '#050F1A', '#0B0B0D'],
+    watermark: 'barbell',
   },
   {
     key: 'progress',
+    kicker: 'FRAMSTEG',
     title: 'Se framstegen\nsvart på vitt',
     body: 'Grafer, muskelkarta, personliga rekord och 26 medaljer att låsa upp. Samla poäng och klättra från brons till diamant.',
-    bubbles: [
-      { icon: 'stats-chart-outline', color: '#3FA7FF' },
-      { icon: 'body-outline',        color: '#FFA817' },
-      { icon: 'medal-outline',       color: '#FFD54F' },
-      { icon: 'trophy-outline',      color: '#B45CFF' },
-    ],
+    gradient: ['#1C0F2B', '#110A18', '#0B0B0D'],
+    watermark: 'stats-chart',
   },
   {
     key: 'community',
+    kicker: 'COMMUNITY',
     title: 'Kör\ntillsammans',
     body: 'Skapa grupper, följ dina vänner och peppa varandras pass med gillanden och kommentarer. Allt är roligare när fler kör.',
-    bubbles: [
-      { icon: 'people-outline',     color: '#66BB6A' },
-      { icon: 'heart-outline',      color: '#FF3B4A' },
-      { icon: 'chatbubble-outline', color: '#00BCD4' },
-    ],
+    gradient: ['#03201F', '#031312', '#0B0B0D'],
+    watermark: 'people',
   },
 ]
 
 export default function Welcome() {
+  const insets = useSafeAreaInsets()
   const [index, setIndex] = useState(0)
   const dirRef = useRef<1 | -1>(1)
   const [dayModalVisible, setDayModalVisible] = useState(false)
@@ -91,6 +96,7 @@ export default function Welcome() {
 
   const isLast = index === SLIDES.length - 1
   const slide = SLIDES[index]
+  const photo = ONBOARDING_IMAGES[slide.key]
 
   function go(dir: 1 | -1) {
     const next = Math.min(SLIDES.length - 1, Math.max(0, index + dir))
@@ -107,15 +113,33 @@ export default function Welcome() {
   }
 
   return (
-    <SafeScreen style={s.screen}>
-      {/* Fingertoppsnavigering som stories: hela ytan är tryckbar */}
+    <View style={s.screen}>
+
+      {/* ── Bakgrund: foto när det finns, annars slidens gradient ── */}
+      <Animated.View key={`bg-${slide.key}`} entering={FadeIn.duration(350)} style={StyleSheet.absoluteFill}>
+        {photo ? (
+          <ImageBackground source={photo} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        ) : (
+          <LinearGradient colors={slide.gradient} style={StyleSheet.absoluteFill}>
+            <Ionicons name={slide.watermark} size={380} color="rgba(255,255,255,0.045)" style={s.watermark} />
+          </LinearGradient>
+        )}
+        {/* Mörk toning nedåt så texten alltid går att läsa, även på foton */}
+        <LinearGradient
+          colors={['rgba(11,11,13,0)', 'rgba(11,11,13,0.55)', 'rgba(11,11,13,0.96)']}
+          locations={[0.30, 0.62, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+
+      {/* ── Fingertoppsnavigering som stories: hela ytan är tryckbar ── */}
       <View style={s.tapRow}>
         <Pressable style={s.tapZone} onPress={() => go(-1)} testID="storyPrev" />
         <Pressable style={s.tapZone} onPress={() => go(1)} testID="storyNext" />
       </View>
 
-      {/* Fem segment som fylls i takt med bläddringen */}
-      <View style={s.progressRow} pointerEvents="none">
+      {/* ── Story-progress ── */}
+      <View style={[s.progressRow, { paddingTop: insets.top + 10 }]} pointerEvents="none">
         {SLIDES.map((sl, i) => (
           <View key={sl.key} style={s.progressTrack}>
             {i <= index && <View style={s.progressFill} />}
@@ -123,62 +147,60 @@ export default function Welcome() {
         ))}
       </View>
 
-      {/* Slidens innehåll släpper igenom tryck till zonerna under */}
-      <View style={[s.content, isLast && { paddingBottom: 210 }]} pointerEvents="none">
+      {/* ── Textblocket förankrat i botten, Runna-stil ── */}
+      <View
+        style={[s.content, { paddingBottom: (isLast ? 196 : 56) + insets.bottom }]}
+        pointerEvents="none"
+      >
         <Animated.View
           key={slide.key}
-          entering={(dirRef.current === 1 ? FadeInRight : FadeInLeft).duration(260)}
+          entering={(dirRef.current === 1 ? FadeInRight : FadeInLeft).duration(280)}
           style={s.slide}
         >
+          <Text style={s.kicker}>{slide.kicker}</Text>
+
           {slide.key === 'brand' ? (
-            <>
-              <View style={s.titleRow}>
-                <Text style={s.appName}>SeventyFive</Text>
-                <Text style={s.byNawton}>by Nawton</Text>
-              </View>
-              <Text style={s.tagline}>75 dagar. 5 uppgifter. Inga undantag.</Text>
-              <Text style={s.body}>{slide.body}</Text>
-              <View style={s.bubbleRow}>
-                {TASKS.map(t => (
-                  <View key={t.icon} style={[s.bubble, { backgroundColor: t.color + '1A' }]}>
-                    <Ionicons name={t.icon} size={22} color={t.color} />
-                  </View>
-                ))}
-              </View>
-              <Text style={s.hint}>Tryck på höger sida för att bläddra</Text>
-            </>
+            <View style={s.titleRow}>
+              <Text style={s.appName}>SeventyFive</Text>
+              <Text style={s.byNawton}>by Nawton</Text>
+            </View>
           ) : (
-            <>
-              {slide.key === 'tasks' ? (
-                <View style={s.taskList}>
-                  {TASKS.map(t => (
-                    <View key={t.icon} style={s.taskRow}>
-                      <View style={[s.bubble, { backgroundColor: t.color + '1A' }]}>
-                        <Ionicons name={t.icon} size={22} color={t.color} />
-                      </View>
-                      <Text style={s.taskLabel}>{t.label}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <View style={s.bubbleRow}>
-                  {slide.bubbles?.map(b => (
-                    <View key={b.icon} style={[s.bubbleBig, { backgroundColor: b.color + '1A' }]}>
-                      <Ionicons name={b.icon} size={30} color={b.color} />
-                    </View>
-                  ))}
-                </View>
-              )}
-              <Text style={s.slideTitle}>{slide.title}</Text>
-              <Text style={s.body}>{slide.body}</Text>
-            </>
+            <Text style={s.slideTitle}>{slide.title}</Text>
           )}
+
+          <Text style={s.body}>{slide.body}</Text>
+
+          {slide.key === 'tasks' && (
+            <View style={s.chipColumn}>
+              {TASKS.map(t => (
+                <View key={t.icon} style={s.chip}>
+                  <Ionicons name={t.icon} size={16} color={t.color} />
+                  <Text style={s.chipText}>{t.label}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {slide.key === 'brand' && (
+            <View style={s.iconStrip}>
+              {TASKS.map(t => (
+                <View key={t.icon} style={[s.bubble, { backgroundColor: t.color + '26' }]}>
+                  <Ionicons name={t.icon} size={20} color={t.color} />
+                </View>
+              ))}
+            </View>
+          )}
+
+          {index === 0 && <Text style={s.hint}>Tryck på höger sida för att bläddra</Text>}
         </Animated.View>
       </View>
 
-      {/* Sista sliden: vägarna in — ovanpå tryckzonerna */}
+      {/* ── Sista sliden: vägarna in, ovanpå tryckzonerna ── */}
       {isLast && (
-        <Animated.View entering={FadeInUp.duration(300)} style={s.ctas}>
+        <Animated.View
+          entering={FadeInUp.duration(300)}
+          style={[s.ctas, { bottom: 24 + insets.bottom }]}
+        >
           <TouchableOpacity
             style={s.primaryBtn}
             onPress={() => router.push({ pathname: '/(auth)/login', params: { mode: 'register' } })}
@@ -256,12 +278,17 @@ export default function Welcome() {
           </View>
         </View>
       </Modal>
-    </SafeScreen>
+    </View>
   )
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
+  screen: { flex: 1, backgroundColor: '#0B0B0D' },
+
+  watermark: {
+    position: 'absolute', right: -90, top: '16%',
+    transform: [{ rotate: '-8deg' }],
+  },
 
   // Tryckzoner — under innehållet, hela skärmen
   tapRow:  { ...StyleSheet.absoluteFillObject, flexDirection: 'row' },
@@ -269,70 +296,68 @@ const s = StyleSheet.create({
 
   // Story-progress
   progressRow: {
-    flexDirection: 'row', gap: 6,
-    paddingHorizontal: 20, paddingTop: 10,
+    flexDirection: 'row', gap: 6, paddingHorizontal: 20,
   },
   progressTrack: {
     flex: 1, height: 3, borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.14)', overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.18)', overflow: 'hidden',
   },
-  progressFill: { flex: 1, borderRadius: 2, backgroundColor: ACCENT },
+  progressFill: { flex: 1, borderRadius: 2, backgroundColor: '#FFFFFF' },
 
-  content: {
-    flex: 1, paddingHorizontal: 28,
-    justifyContent: 'center', paddingBottom: 60,
+  // Textblocket i botten
+  content: { flex: 1, paddingHorizontal: 26, justifyContent: 'flex-end' },
+  slide:   { gap: 14 },
+
+  kicker: {
+    color: ACCENT, fontSize: 12, fontWeight: '800', letterSpacing: 1.6,
   },
-  slide: { gap: 18 },
 
   // Brand-sliden
-  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' },
   appName: {
-    color: '#FFFFFF', fontSize: 42, fontWeight: '800',
-    letterSpacing: -1, lineHeight: 44,
+    color: '#FFFFFF', fontSize: 44, fontWeight: '800',
+    letterSpacing: -1, lineHeight: 48,
   },
-  byNawton: { color: ACCENT, fontSize: 13, fontWeight: '600', letterSpacing: 0.3, paddingBottom: 6 },
-  tagline:  { color: '#8A8A8E', fontSize: 15, fontWeight: '600' },
-  hint:     { color: '#555', fontSize: 12, marginTop: 10 },
+  byNawton: { color: ACCENT, fontSize: 13, fontWeight: '600', letterSpacing: 0.3, paddingBottom: 8 },
+  hint:     { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 6 },
 
-  // Innehållsslides
   slideTitle: {
-    color: '#FFFFFF', fontSize: 34, fontWeight: '800',
-    letterSpacing: -0.5, lineHeight: 40,
+    color: '#FFFFFF', fontSize: 38, fontWeight: '800',
+    letterSpacing: -0.5, lineHeight: 43,
   },
-  body: { color: '#9A9AA0', fontSize: 15, lineHeight: 23 },
+  body: { color: 'rgba(255,255,255,0.72)', fontSize: 15, lineHeight: 23 },
 
-  bubbleRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  // Uppgiftschips på slide 2 — kompakta pills istället för lista
+  chipColumn: { gap: 8, marginTop: 4, alignItems: 'flex-start' },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 999,
+    paddingHorizontal: 13, paddingVertical: 7,
+  },
+  chipText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+
+  iconStrip: { flexDirection: 'row', gap: 10, marginTop: 4 },
   bubble: {
-    width: 48, height: 48, borderRadius: 14,
+    width: 44, height: 44, borderRadius: 13,
     alignItems: 'center', justifyContent: 'center',
   },
-  bubbleBig: {
-    width: 62, height: 62, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-  },
-
-  taskList: { gap: 12, marginBottom: 6 },
-  taskRow:  { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  taskLabel: { color: '#EDEDEF', fontSize: 16, fontWeight: '600' },
 
   // CTA-lagret på sista sliden
-  ctas: {
-    position: 'absolute', left: 28, right: 28, bottom: 36, gap: 12,
-  },
+  ctas: { position: 'absolute', left: 26, right: 26, gap: 10 },
   primaryBtn: {
     backgroundColor: ACCENT, borderRadius: 14, paddingVertical: 16,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     shadowColor: ACCENT, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3, shadowRadius: 14,
+    shadowOpacity: 0.35, shadowRadius: 14,
   },
   primaryBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
   secondaryBtn: {
     borderRadius: 14, paddingVertical: 15, alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   secondaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
   tertiaryBtn: { paddingVertical: 6, alignItems: 'center' },
-  tertiaryBtnText: { color: '#666', fontSize: 13, fontWeight: '500' },
+  tertiaryBtnText: { color: 'rgba(255,255,255,0.45)', fontSize: 13, fontWeight: '500' },
 
   // Dagväljaren
   modalOverlay: {

@@ -15,7 +15,7 @@ describe('Welcome — story-bläddringen', () => {
   it('startar på brand-sliden utan inloggningsknappar', () => {
     render(<Welcome />)
     expect(screen.getByText('SeventyFive')).toBeOnTheScreen()
-    expect(screen.getByText('75 dagar. 5 uppgifter. Inga undantag.')).toBeOnTheScreen()
+    expect(screen.getByText('75 DAGAR · 5 UPPGIFTER · INGA UNDANTAG')).toBeOnTheScreen()
     expect(screen.queryByTestId('welcomeRegister')).toBeNull()
   })
 
