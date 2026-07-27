@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native'
-import { SafeScreen } from '@/components/SafeScreen'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { acceptChallenge as saveChallenge } from '@/services/challenge'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
+import { OnboardingStep, ONB } from '@/components/OnboardingStep'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -142,17 +141,35 @@ export default function RecommendationScreen() {
   }
 
   return (
-    <SafeScreen style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.stepLabel}>Steg 3 av 4</Text>
-        <Text style={styles.title}>Välj din nivå</Text>
-        <Text style={styles.subtitle}>
-          Nivåerna skiljer sig mycket åt. Läs igenom vad som krävs innan du bestämmer dig.
-        </Text>
-
+    <OnboardingStep
+      step={3}
+      title="Välj din nivå"
+      subtitle="Nivåerna skiljer sig mycket åt. Läs igenom vad som krävs innan du bestämmer dig."
+      onBack={() => router.back()}
+      scroll
+      footer={
+        <>
+          <TouchableOpacity
+            style={[styles.acceptButton, { backgroundColor: level.color }, loading && { opacity: 0.5 }]}
+            onPress={handleAccept}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading
+              ? <ActivityIndicator color={ONB.NAVY} />
+              : <Text style={styles.acceptButtonText}>Acceptera utmaningen: {level.name}</Text>
+            }
+          </TouchableOpacity>
+          <Text style={styles.disclaimer}>
+            {params.startDay ? `Du startar på dag ${params.startDay}. ` : 'Dag 1 börjar idag. '}
+            {level.missText}
+          </Text>
+        </>
+      }
+    >
         {/* Rådet: Normal passar de flesta */}
         <View style={styles.adviceBox}>
-          <Ionicons name="information-circle" size={19} color={ACCENT} />
+          <Ionicons name="information-circle" size={19} color={ONB.ORANGE} />
           <Text style={styles.adviceText}>
             För de flesta är <Text style={styles.adviceStrong}>Normal</Text> det bästa valet.
             Välj Hard eller Extreme bara om du redan tränar mycket och är väldigt
@@ -232,90 +249,39 @@ export default function RecommendationScreen() {
             </View>
           ))}
         </View>
-      </ScrollView>
-
-      {/* Acceptera */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.acceptButton, { backgroundColor: level.color }, loading && { opacity: 0.5 }]}
-          onPress={handleAccept}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          {loading
-            ? <ActivityIndicator color="#000" />
-            : <Text style={styles.acceptButtonText}>Acceptera utmaningen: {level.name}</Text>
-          }
-        </TouchableOpacity>
-        <Text style={styles.disclaimer}>
-          {params.startDay ? `Du startar på dag ${params.startDay}. ` : 'Dag 1 börjar idag. '}
-          {level.missText}
-        </Text>
-      </View>
-
-    </SafeScreen>
+    </OnboardingStep>
   )
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  scroll: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
-    gap: 12,
-  },
-  stepLabel: {
-    color: ACCENT,
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: TEXT_PRIMARY,
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    color: TEXT_SECONDARY,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-
   adviceBox: {
     flexDirection: 'row',
     gap: 10,
-    backgroundColor: accentAlpha('12'),
+    backgroundColor: 'rgba(255,168,23,0.08)',
     borderWidth: 1,
-    borderColor: accentAlpha('40'),
+    borderColor: 'rgba(255,168,23,0.30)',
     borderRadius: 14,
     padding: 14,
     marginBottom: 4,
   },
   adviceText: {
     flex: 1,
-    color: TEXT_PRIMARY,
+    color: ONB.OFFWHITE,
     fontSize: 13,
     lineHeight: 19,
   },
   adviceStrong: {
-    color: ACCENT,
+    color: ONB.ORANGE,
     fontWeight: '800',
   },
 
   levelCard: {
-    backgroundColor: CARD,
-    borderRadius: 16,
+    backgroundColor: ONB.CARD,
+    borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: BORDER,
+    borderColor: ONB.EDGE,
     padding: 16,
     gap: 14,
   },
@@ -329,7 +295,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   tagline: {
-    color: TEXT_SECONDARY,
+    color: ONB.MUTED,
     fontSize: 13,
     marginTop: 2,
   },
@@ -338,7 +304,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: BORDER,
+    borderColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -352,20 +318,22 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   ruleText: {
-    color: TEXT_PRIMARY,
+    color: ONB.OFFWHITE,
     fontSize: 14,
     flex: 1,
   },
 
   compareCard: {
-    backgroundColor: CARD,
+    backgroundColor: ONB.CARD,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: ONB.EDGE,
     padding: 18,
     gap: 16,
     marginTop: 4,
   },
   compareTitle: {
-    color: TEXT_PRIMARY,
+    color: ONB.OFFWHITE,
     fontSize: 17,
     fontWeight: '800',
   },
@@ -386,11 +354,11 @@ const styles = StyleSheet.create({
   compareBlock: {
     gap: 7,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: BORDER,
+    borderTopColor: 'rgba(255,255,255,0.14)',
     paddingTop: 13,
   },
   compareLabel: {
-    color: TEXT_SECONDARY,
+    color: ONB.MUTED,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.9,
@@ -402,35 +370,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   compareValue: {
-    color: TEXT_SECONDARY,
+    color: ONB.MUTED,
     fontSize: 13,
     lineHeight: 18,
   },
   compareValueActive: {
-    color: TEXT_PRIMARY,
+    color: ONB.OFFWHITE,
     fontWeight: '600',
   },
 
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 32,
-    gap: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: BORDER,
-  },
   acceptButton: {
-    borderRadius: 14,
+    borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',
   },
   acceptButtonText: {
-    color: '#000000',
+    color: ONB.NAVY,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   disclaimer: {
-    color: TEXT_SECONDARY,
+    color: ONB.MUTED,
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 18,

@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { SafeScreen } from '@/components/SafeScreen'
 import { router, useLocalSearchParams } from 'expo-router'
+import { Ionicons } from '@/components/Icon'
+import { LinearGradient } from 'expo-linear-gradient'
+import { OnboardingStep, ONB } from '@/components/OnboardingStep'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -14,6 +16,7 @@ interface Question {
 interface Option {
   value: string
   label: string
+  icon: React.ComponentProps<typeof Ionicons>['name']
 }
 
 export interface QuizAnswers {
@@ -30,25 +33,23 @@ const QUESTIONS: Question[] = [
     id: 'why',
     question: 'Vad är ditt varför?',
     options: [
-      { value: 'prove', label: 'Bevisa något för mig själv' },
-      { value: 'body', label: 'Förändra min kropp' },
-      { value: 'habits', label: 'Bryta dåliga vanor' },
-      { value: 'mental', label: 'Bygga mental styrka' },
+      { value: 'prove', label: 'Bevisa något för mig själv', icon: 'flag-outline' },
+      { value: 'body', label: 'Förändra min kropp', icon: 'body-outline' },
+      { value: 'habits', label: 'Bryta dåliga vanor', icon: 'repeat-outline' },
+      { value: 'mental', label: 'Bygga mental styrka', icon: 'flash-outline' },
     ],
   },
   {
     id: 'goal',
     question: 'Vad är ditt huvudmål?',
     options: [
-      { value: 'weight', label: 'Gå ner i vikt' },
-      { value: 'muscle', label: 'Bygga muskler' },
-      { value: 'energy', label: 'Få mer energi och fokus' },
-      { value: 'routines', label: 'Skapa bättre rutiner' },
+      { value: 'weight', label: 'Gå ner i vikt', icon: 'trending-down-outline' },
+      { value: 'muscle', label: 'Bygga muskler', icon: 'barbell-outline' },
+      { value: 'energy', label: 'Få mer energi och fokus', icon: 'sunny-outline' },
+      { value: 'routines', label: 'Skapa bättre rutiner', icon: 'calendar-outline' },
     ],
   },
 ]
-
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -60,10 +61,6 @@ export default function QuizScreen() {
   const current = QUESTIONS[step]
   const selected = answers[current.id as keyof QuizAnswers]
   const isLast = step === QUESTIONS.length - 1
-
-  function selectOption(value: string) {
-    setAnswers((prev) => ({ ...prev, [current.id]: value }))
-  }
 
   function handleNext() {
     if (!selected) return
@@ -77,190 +74,114 @@ export default function QuizScreen() {
     }
   }
 
-  function handleBack() {
-    if (step === 0) router.back()
-    else setStep((s) => s - 1)
-  }
-
   return (
-    <SafeScreen style={styles.screen}>
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backText}>←</Text>
+    <OnboardingStep
+      step={step + 1}
+      title={current.question}
+      subtitle="Ditt svar hjälper oss att forma din utmaning."
+      // Steg 1 kan inte backa — kontot är redan skapat, välkomstsidan är passerad
+      onBack={step > 0 ? () => setStep((s) => s - 1) : undefined}
+      footer={
+        <TouchableOpacity onPress={handleNext} disabled={!selected} activeOpacity={0.85}>
+          <LinearGradient
+            colors={[ONB.ORANGE, ONB.ORANGE_DEEP]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={[s.nextButton, !selected && { opacity: 0.35 }]}
+          >
+            <Text style={s.nextButtonText}>{isLast ? 'Välj nivå' : 'Nästa'}</Text>
+            <Ionicons name="arrow-forward" size={17} color={ONB.NAVY} />
+          </LinearGradient>
         </TouchableOpacity>
-        <View style={styles.progressDots}>
-          {QUESTIONS.map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, i <= step && styles.dotActive]}
-            />
-          ))}
-        </View>
-        <View style={styles.backButton} />
-      </View>
-
-      {/* Question */}
-      <View style={styles.body}>
-        <Text style={styles.stepLabel}>Steg {step + 1} av 4</Text>
-        <Text style={styles.question}>{current.question}</Text>
-
-        <View style={styles.options}>
-          {current.options.map((option) => {
-            const isSelected = selected === option.value
-            return (
-              <TouchableOpacity
-                key={option.value}
-                style={[styles.option, isSelected && styles.optionSelected]}
-                onPress={() => selectOption(option.value)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.radio, isSelected && styles.radioSelected]}>
-                  {isSelected && <View style={styles.radioDot} />}
-                </View>
-                <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
-        </View>
-      </View>
-
-      {/* Next button */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.nextButton, !selected && styles.nextButtonDisabled]}
-          onPress={handleNext}
-          disabled={!selected}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.nextButtonText}>
-            {isLast ? 'Välj nivå' : 'Nästa'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-    </SafeScreen>
+      }
+    >
+      {current.options.map((option) => {
+        const isSelected = selected === option.value
+        return (
+          <TouchableOpacity
+            key={option.value}
+            style={[s.option, isSelected && s.optionSelected]}
+            onPress={() => setAnswers((prev) => ({ ...prev, [current.id]: option.value }))}
+            activeOpacity={0.8}
+          >
+            <View style={[s.optionIcon, isSelected && { backgroundColor: 'rgba(255,168,23,0.16)' }]}>
+              <Ionicons name={option.icon} size={20} color={isSelected ? ONB.ORANGE : ONB.MUTED} />
+            </View>
+            <Text style={[s.optionLabel, isSelected && s.optionLabelSelected]}>
+              {option.label}
+            </Text>
+            <View style={[s.radio, isSelected && s.radioSelected]}>
+              {isSelected && <Ionicons name="checkmark" size={13} color={ONB.NAVY} />}
+            </View>
+          </TouchableOpacity>
+        )
+      })}
+    </OnboardingStep>
   )
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: {
-    color: TEXT_PRIMARY,
-    fontSize: 22,
-  },
-  progressDots: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: BORDER,
-  },
-  dotActive: {
-    backgroundColor: ACCENT,
-  },
-  body: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    gap: 24,
-  },
-  stepLabel: {
-    color: ACCENT,
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  question: {
-    color: TEXT_PRIMARY,
-    fontSize: 28,
-    fontWeight: '700',
-    lineHeight: 36,
-  },
-  options: {
-    gap: 12,
-    marginTop: 8,
-  },
+const s = StyleSheet.create({
   option: {
-    backgroundColor: CARD,
-    borderRadius: 14,
-    padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+    backgroundColor: ONB.CARD,
+    borderWidth: 1.5,
+    borderColor: ONB.EDGE,
+    borderRadius: 18,
+    padding: 16,
   },
   optionSelected: {
-    backgroundColor: accentAlpha('16'),
+    borderColor: ONB.ORANGE,
+    backgroundColor: 'rgba(255,168,23,0.08)',
+  },
+  optionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionLabel: {
+    color: ONB.MUTED,
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
+  },
+  optionLabelSelected: {
+    color: ONB.OFFWHITE,
+    fontWeight: '700',
   },
   radio: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: BORDER,
+    borderColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioSelected: {
-    borderColor: ACCENT,
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: ACCENT,
-  },
-  optionLabel: {
-    color: TEXT_SECONDARY,
-    fontSize: 16,
-    flex: 1,
-  },
-  optionLabelSelected: {
-    color: TEXT_PRIMARY,
-    fontWeight: '600',
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+    borderColor: ONB.ORANGE,
+    backgroundColor: ONB.ORANGE,
   },
   nextButton: {
-    backgroundColor: ACCENT,
-    borderRadius: 14,
+    borderRadius: 999,
     paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  nextButtonDisabled: {
-    opacity: 0.3,
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: ONB.ORANGE,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
   },
   nextButtonText: {
-    color: '#000000',
+    color: ONB.NAVY,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 })
