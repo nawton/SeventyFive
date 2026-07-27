@@ -35,6 +35,7 @@ import {
   calculateDaysSinceStart,
   restartChallenge,
   completeChallenge,
+  levelDisplayName,
 } from '@/services/challenge'
 import { getProfile } from '@/services/profile'
 import {
@@ -308,7 +309,7 @@ export default function DashboardScreen() {
       const active = await getActiveChallenge(user.id)
       if (!active) { router.replace('/(auth)/quiz'); return }
       setChallenge(active)
-      setLevelName(active.challenge_levels?.display_name ?? '')
+      setLevelName(levelDisplayName(active))
 
       // Utmaningen är slut — markera som klarad och fira
       if (calculateDaysSinceStart(active.start_date) > 75) {

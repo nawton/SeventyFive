@@ -118,6 +118,23 @@ async function backfillCompletedDays(
   if (compError) throw compError
 }
 
+const LEVEL_NAMES: Record<string, string> = {
+  normal: 'Normal',
+  hard: 'Hard',
+  extreme: 'Extreme',
+}
+
+/**
+ * Nivånamnet som visas i appen. Härleds från slugen så gamla databasnamn
+ * (Nawton Flow/Hard/Extreme) aldrig läcker ut i UI:t, oavsett om
+ * namnbytesmigrationen körts eller inte.
+ */
+export function levelDisplayName(challenge: UserChallengeWithLevel | null): string {
+  const level = challenge?.challenge_levels
+  if (!level) return ''
+  return LEVEL_NAMES[level.slug] ?? (level.display_name ?? '').replace(/^Nawton\s+/i, '')
+}
+
 export async function getActiveChallenge(userId: string): Promise<UserChallengeWithLevel | null> {
   const { data } = await supabase
     .from('user_challenges')

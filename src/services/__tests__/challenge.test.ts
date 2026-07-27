@@ -1,11 +1,11 @@
 import {
   acceptChallenge, getActiveChallenge, calculateDaysSinceStart,
-  calculateCurrentDay, restartChallenge, completeChallenge,
+  calculateCurrentDay, restartChallenge, completeChallenge, levelDisplayName,
 } from '../challenge'
 import { supabase } from '@/lib/supabase'
 import { toLocalDateString } from '@/lib/date'
 import { installTables, argsOf } from '@/testUtils/supabaseChain'
-import type { UserChallenge } from '@/types/database'
+import type { UserChallenge, UserChallengeWithLevel } from '@/types/database'
 
 jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn() } }))
 
@@ -196,6 +196,23 @@ describe('restartChallenge', () => {
     })
     await expect(restartChallenge(challenge)).rejects.toMatchObject({ message: 'stopp' })
     expect(calls.user_challenges).toHaveLength(1)
+  })
+})
+
+describe('levelDisplayName', () => {
+  const withLevel = (slug: string, display_name: string) =>
+    ({ challenge_levels: { slug, display_name } } as unknown as UserChallengeWithLevel)
+
+  it('visar rena nivånamn oavsett vad databasen råkar heta', () => {
+    expect(levelDisplayName(withLevel('normal', 'Nawton Flow'))).toBe('Normal')
+    expect(levelDisplayName(withLevel('hard', 'Nawton Hard'))).toBe('Hard')
+    expect(levelDisplayName(withLevel('extreme', 'Nawton Extreme'))).toBe('Extreme')
+  })
+
+  it('okänd slug faller tillbaka på databasnamnet, rensat från Nawton', () => {
+    expect(levelDisplayName(withLevel('custom', 'Nawton Special'))).toBe('Special')
+    expect(levelDisplayName(withLevel('custom', 'Vinter 75'))).toBe('Vinter 75')
+    expect(levelDisplayName(null)).toBe('')
   })
 })
 

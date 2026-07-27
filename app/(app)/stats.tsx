@@ -14,7 +14,7 @@ import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType 
 import * as Haptics from 'expo-haptics'
 import { useFocusEffect } from 'expo-router'
 import { supabase } from '@/lib/supabase'
-import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
+import { getActiveChallenge, calculateCurrentDay, levelDisplayName } from '@/services/challenge'
 import { getAllDays, getStreak, type DaySummary } from '@/services/dailyLog'
 import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type StrengthWorkout } from '@/services/workouts'
 import { getCompletedSessionsHistory, deleteCompletion, type CompletedSessionItem } from '@/services/workoutSchedule'
@@ -195,7 +195,7 @@ export default function StatsScreen() {
       setStartDate(challenge.start_date)
       const day = calculateCurrentDay(challenge.start_date)
       setCurrentDay(day)
-      setLevelName(challenge.challenge_levels?.display_name ?? '')
+      setLevelName(levelDisplayName(challenge))
       const [allDays, streakVal] = await Promise.all([
         getAllDays(challenge.id, day),
         getStreak(challenge.id),

@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '@/lib/supabase'
 import { scheduleDailyReminders, cancelDailyReminders, areRemindersActive } from '@/services/notifications'
 import { registerPushToken } from '@/services/pushTokens'
-import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
+import { getActiveChallenge, calculateCurrentDay, levelDisplayName } from '@/services/challenge'
 import { deleteRepeatingSessions } from '@/services/workoutSchedule'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
@@ -94,7 +94,7 @@ export default function GeneralScreen() {
       const challenge = await getActiveChallenge(session.user.id).catch(() => null)
       if (challenge) {
         setCurrentDay(calculateCurrentDay(challenge.start_date))
-        setLevelName(challenge.challenge_levels?.display_name ?? '')
+        setLevelName(levelDisplayName(challenge))
         setStartDate(formatDate(challenge.start_date))
       }
       // expo-notifications fungerar inte i Expo Go (SDK 53+)
