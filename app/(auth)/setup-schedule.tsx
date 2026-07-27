@@ -1,23 +1,51 @@
 import { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native'
-import { SafeScreen } from '@/components/SafeScreen'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
+import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '@/lib/supabase'
 import { ScheduleWizard, type WizardResult } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 
+// =============================================================================
 // Sista onboarding-steget: bygg veckoschemat med samma wizard som i appen.
-// Ersätter den gamla "Bygg din dag"-skärmen vars tider aldrig användes.
+// Samma mörka marinblå tema som inloggningen och välkomstflödet.
+// =============================================================================
+
+const NAVY      = '#05080F'
+const NAVY_TOP  = '#080D18'
+const EDGE      = 'rgba(255,255,255,0.08)'
+const OFFWHITE  = '#F4F5FA'
+const MUTED     = 'rgba(244,245,250,0.62)'
+const ORANGE      = '#FFA817'
+const ORANGE_DEEP = '#FF7A1A'
+const BLUE  = '#3FA7FF'
+const GREEN = '#66BB6A'
 
 const FEATURES = [
-  { icon: 'flag-outline',     text: 'Välj mål: löpning eller muskelbygge' },
-  { icon: 'calendar-outline', text: 'Passen läggs ut på dina träningsdagar' },
-  { icon: 'create-outline',   text: 'Färdiga pass med övningar, set och reps' },
-] as const
+  {
+    icon: 'trophy-outline' as const,
+    color: ORANGE,
+    title: 'Välj ditt mål',
+    text: 'Löpning mot ett lopp eller muskelbygge på gymmet',
+  },
+  {
+    icon: 'calendar-outline' as const,
+    color: BLUE,
+    title: 'Veckan planeras åt dig',
+    text: 'Passen läggs ut på de dagar du vill träna',
+  },
+  {
+    icon: 'checkmark-done-outline' as const,
+    color: GREEN,
+    title: 'Färdiga pass',
+    text: 'Övningar, set och reps klara att köra, ändra när du vill',
+  },
+]
 
 export default function SetupScheduleScreen() {
+  const insets = useSafeAreaInsets()
   const [wizardVisible, setWizardVisible] = useState(false)
 
   async function handleWizardFinish(result: WizardResult) {
@@ -34,11 +62,12 @@ export default function SetupScheduleScreen() {
   }
 
   return (
-    <SafeScreen style={styles.screen}>
-      <View style={styles.container}>
+    <View style={styles.screen}>
+      <LinearGradient colors={[NAVY_TOP, NAVY]} style={StyleSheet.absoluteFill} pointerEvents="none" />
 
+      <View style={[styles.container, { paddingTop: insets.top + 36 }]}>
         <View style={styles.header}>
-          <Text style={styles.stepLabel}>STEG 5 AV 5</Text>
+          <Text style={styles.stepLabel}>STEG 4 AV 4</Text>
           <Text style={styles.title}>Ditt träningsschema</Text>
           <Text style={styles.subtitle}>
             Svara på några snabba frågor så bygger vi ett veckoschema med färdiga
@@ -46,32 +75,37 @@ export default function SetupScheduleScreen() {
           </Text>
         </View>
 
-        <View style={styles.card}>
-          {FEATURES.map((f, i) => (
-            <View key={i} style={[styles.featureRow, i > 0 && styles.featureRowBorder]}>
-              <View style={styles.featureIcon}>
-                <Ionicons name={f.icon} size={17} color={ACCENT} />
+        <View style={styles.features}>
+          {FEATURES.map(f => (
+            <View key={f.icon} style={styles.featureCard}>
+              <View style={[styles.featureIcon, { backgroundColor: f.color + '1A' }]}>
+                <Ionicons name={f.icon} size={22} color={f.color} />
               </View>
-              <Text style={styles.featureText}>{f.text}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featureTitle}>{f.title}</Text>
+                <Text style={styles.featureText}>{f.text}</Text>
+              </View>
             </View>
           ))}
         </View>
-
       </View>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => setWizardVisible(true)}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.primaryButtonText}>Bygg mitt schema</Text>
-          <Ionicons name="arrow-forward" size={17} color="#000" />
+      <View style={[styles.footer, { paddingBottom: 18 + insets.bottom }]}>
+        <TouchableOpacity onPress={() => setWizardVisible(true)} activeOpacity={0.85}>
+          <LinearGradient
+            colors={[ORANGE, ORANGE_DEEP]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={styles.primaryButton}
+          >
+            <Text style={styles.primaryButtonText}>Bygg mitt schema</Text>
+            <Ionicons name="arrow-forward" size={17} color={NAVY} />
+          </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.skipButton}
           onPress={() => router.replace('/(app)/dashboard')}
+          activeOpacity={0.7}
         >
           <Text style={styles.skipText}>Hoppa över, ställ in senare</Text>
         </TouchableOpacity>
@@ -82,95 +116,97 @@ export default function SetupScheduleScreen() {
         onClose={() => setWizardVisible(false)}
         onFinish={handleWizardFinish}
       />
-    </SafeScreen>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
-  },
+  screen: { flex: 1, backgroundColor: NAVY },
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    gap: 28,
+    paddingHorizontal: 26,
+    gap: 26,
   },
-  header: {
-    gap: 8,
-  },
+  header: { gap: 8 },
   stepLabel: {
-    color: ACCENT,
-    fontSize: 11,
-    fontWeight: '700',
+    color: ORANGE,
+    fontSize: 12,
+    fontWeight: '800',
     letterSpacing: 2,
   },
   title: {
-    color: TEXT_PRIMARY,
-    fontSize: 32,
+    color: OFFWHITE,
+    fontSize: 30,
     fontWeight: '800',
-    lineHeight: 36,
+    letterSpacing: -0.4,
   },
   subtitle: {
-    color: TEXT_SECONDARY,
+    color: MUTED,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
   },
-  card: {
-    backgroundColor: CARD,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  featureRow: {
+
+  features: { gap: 12 },
+  featureCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  featureRowBorder: {
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
+    gap: 14,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: EDGE,
+    borderRadius: 18,
+    padding: 16,
   },
   featureIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: accentAlpha('18'),
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  featureText: {
-    color: TEXT_PRIMARY,
+  featureTitle: {
+    color: OFFWHITE,
     fontSize: 15,
-    flex: 1,
+    fontWeight: '700',
   },
+  featureText: {
+    color: MUTED,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+
   footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-    gap: 12,
+    paddingHorizontal: 26,
+    gap: 10,
   },
   primaryButton: {
-    backgroundColor: ACCENT,
-    borderRadius: 14,
+    borderRadius: 999,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
   },
   primaryButtonText: {
-    color: '#000',
+    color: NAVY,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   skipButton: {
-    alignItems: 'center',
-    paddingVertical: 4,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   skipText: {
-    color: TEXT_SECONDARY,
-    fontSize: 14,
+    color: MUTED,
+    fontSize: 13,
+    fontWeight: '600',
   },
 })
