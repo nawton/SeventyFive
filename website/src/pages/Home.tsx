@@ -62,6 +62,51 @@ const LEVELS = [
   },
 ]
 
+const LEVEL_DETAILS: Record<string, { label: string; rows: Array<[string, string]>; cta: string }> = {
+  normal: {
+    label: 'Normal',
+    cta: 'Börja med Normal',
+    rows: [
+      ['Dagliga uppgifter', '4 om dagen'],
+      ['Träningskrav', '4 pass i veckan'],
+      ['Vattenmål', '2 liter om dagen'],
+      ['Läsning', 'Valfritt'],
+      ['Progressbilder', 'Valfritt'],
+      ['Återhämtning', '3 vilodagar i veckan'],
+      ['Flexibilitet', 'Hög'],
+      ['Missad dag', '1 dags marginal per vecka'],
+    ],
+  },
+  hard: {
+    label: 'Hard',
+    cta: 'Börja med Hard',
+    rows: [
+      ['Dagliga uppgifter', '5 om dagen'],
+      ['Träningskrav', '1 pass om dagen, ett utomhus'],
+      ['Vattenmål', '3 liter om dagen'],
+      ['Läsning', '10 sidor om dagen'],
+      ['Progressbilder', 'Varje dag'],
+      ['Återhämtning', 'Lätta pass räknas'],
+      ['Flexibilitet', 'Låg'],
+      ['Missad dag', 'Omstart från dag 1'],
+    ],
+  },
+  extreme: {
+    label: 'Extreme',
+    cta: 'Börja med Extreme',
+    rows: [
+      ['Dagliga uppgifter', '6 om dagen'],
+      ['Träningskrav', '2 pass om dagen'],
+      ['Vattenmål', '4 liter om dagen'],
+      ['Läsning', '10 sidor om dagen'],
+      ['Progressbilder', 'Varje dag'],
+      ['Återhämtning', 'Inga vilodagar'],
+      ['Flexibilitet', 'Ingen'],
+      ['Missad dag', 'Omstart från dag 1'],
+    ],
+  },
+}
+
 function Wave({ fill, flip }: { fill: string; flip?: boolean }) {
   return (
     <svg viewBox="0 0 1440 70" preserveAspectRatio="none" className="wave">
@@ -405,6 +450,32 @@ export default function Home() {
                 </Reveal>
               )
             })}
+          </div>
+          {/* Detaljpanelen följer vald nivå, klicket på ett kort byter innehåll */}
+          <div key={level} style={{ animation: 'lvlIn 0.35s cubic-bezier(0.22, 1, 0.36, 1)' }}>
+            <div className="softCard" style={{ marginTop: 26, borderRadius: 28, padding: 'clamp(24px, 3vw, 36px)', boxShadow: 'var(--shadow-md)', display: 'flex', flexWrap: 'wrap', gap: 'clamp(24px, 4vw, 48px)', alignItems: 'center' }}>
+              <div style={{ flex: '1 1 380px' }}>
+                <h3 style={{ fontWeight: 800, fontSize: 22, marginBottom: 16 }}>
+                  Så ser resan ut på <span className={level === 'extreme' ? 'gradOrange' : 'gradBlue'}>{LEVEL_DETAILS[level].label}</span>
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px 24px' }}>
+                  {LEVEL_DETAILS[level].rows.map(([k, v]) => (
+                    <div key={k} style={{ borderBottom: '1px solid var(--line)', paddingBottom: 9 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--mut)' }}>{k}</div>
+                      <div style={{ fontSize: 15, fontWeight: 600 }}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ flex: '0 1 240px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <Link to="/app" className={level === 'extreme' ? 'btnOrangeLg' : 'btnBlue'} style={{ justifyContent: 'center', fontSize: 16, padding: '15px 26px' }}>
+                  {LEVEL_DETAILS[level].cta}
+                </Link>
+                <Link to="/challenges#jamfor" style={{ textAlign: 'center', fontWeight: 600, fontSize: 14.5 }}>
+                  Jämför nivåerna i detalj
+                </Link>
+              </div>
+            </div>
           </div>
           <Reveal>
             <p style={{ textAlign: 'center', color: 'var(--mut)', fontSize: 14.5, margin: '36px 0 0' }}>
