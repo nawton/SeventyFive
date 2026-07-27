@@ -141,9 +141,6 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
   const isComplete = total > 0 && completed === total
   const T = useThemeStrings()
   const ringColor  = isComplete ? '#3BE862' : T.ACCENT
-  // Glöden bakom ringen hör mörka läget till — i ljust blir den en smetig
-  // gradientfläck på det vita kortet
-  const ringGlowOff = T.TEXT_PRIMARY !== '#FFFFFF'
 
   useEffect(() => {
     progress.value = withTiming(
@@ -157,7 +154,7 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
   }))
 
   return (
-    <View style={[s.ringWrap, { shadowColor: ringColor }, ringGlowOff && { shadowOpacity: 0 }]}>
+    <View style={s.ringWrap}>
       <Svg
         width={R_SIZE}
         height={R_SIZE}
@@ -1079,13 +1076,10 @@ const s = StyleSheet.create({
   // Hero right
   heroRight: { paddingLeft: 10 },
 
-  // Ring
+  // Ring — ingen glöd, herokortets glöd runt omkring räcker
   ringWrap: {
     width: R_SIZE, height: R_SIZE,
     alignItems: 'center', justifyContent: 'center',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.55,
-    shadowRadius: 18,
   },
   ringCenter: {
     position: 'absolute',
