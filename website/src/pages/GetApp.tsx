@@ -18,7 +18,7 @@ export default function GetApp() {
       </p>
       <p>
         <a
-          className="btnAccent"
+          className="btnCta"
           href="mailto:support@nawton.net?subject=Jag%20vill%20bli%20testpilot%20f%C3%B6r%20SeventyFive"
         >
           Bli testpilot

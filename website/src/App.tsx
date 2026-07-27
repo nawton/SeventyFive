@@ -1,92 +1,56 @@
-import { useEffect, useState } from 'react'
-import { Routes, Route, Link, NavLink, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Routes, Route, useLocation } from 'react-router-dom'
+import { SiteNav } from './components/SiteNav'
+import { SiteFooter } from './components/SiteFooter'
 import Home from './pages/Home'
+import AppPage from './pages/AppPage'
+import Traning from './pages/Traning'
+import Challenges from './pages/Challenges'
+import ProgressPage from './pages/ProgressPage'
+import Community from './pages/Community'
+import About from './pages/About'
+import GpsDemo from './pages/GpsDemo'
+import Login from './pages/Login'
 import Privacy from './pages/Privacy'
 import Support from './pages/Support'
 import GetApp from './pages/GetApp'
-import Features from './pages/Features'
-import Activities from './pages/Activities'
-import Subscription from './pages/Subscription'
-import Login from './pages/Login'
 
-/** Klientrouting behåller skrollpositionen — nollställ vid sidbyte */
-function ScrollToTop() {
-  const { pathname } = useLocation()
-  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+/** Sidbyte skrollar till toppen, ankarlänkar (#daglig m.fl.) till sitt mål */
+function ScrollManager() {
+  const { pathname, hash } = useLocation()
+  useEffect(() => {
+    if (hash) {
+      const t = window.setTimeout(() => {
+        document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' })
+      }, 60)
+      return () => window.clearTimeout(t)
+    }
+    window.scrollTo(0, 0)
+  }, [pathname, hash])
   return null
 }
 
 export default function App() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const { pathname } = useLocation()
-
-  // Menyn stänger sig själv vid sidbyte, och låser skrollen medan den är öppen
-  useEffect(() => { setMenuOpen(false) }, [pathname])
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [menuOpen])
-
   return (
     <>
-      <ScrollToTop />
-      <header className="nav">
-        <Link to="/" className="brand">Seventy<span>Five</span></Link>
-        {/* Policy och support bor i sidfoten, navbaren säljer appen */}
-        <nav className="navLinks">
-          <NavLink to="/funktioner">Funktioner</NavLink>
-          <NavLink to="/aktiviteter">Aktiviteter</NavLink>
-          <NavLink to="/prenumeration">Prenumeration</NavLink>
-        </nav>
-        {/* Båda leder till Skaffa appen-sidan tills App Store-länken finns */}
-        <div className="navActions">
-          <Link to="/logga-in" className="btnGhost">Logga in</Link>
-          <Link to="/app" className="btnAccent">Gå med gratis</Link>
-          <button
-            type="button"
-            className={`burger${menuOpen ? ' open' : ''}`}
-            aria-label={menuOpen ? 'Stäng menyn' : 'Öppna menyn'}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(v => !v)}
-          >
-            <span /><span /><span />
-          </button>
-        </div>
-      </header>
-
-      {/* Mobilmenyn: alltid monterad så stängningen också animeras */}
-      <div
-        className={`menuBackdrop${menuOpen ? ' open' : ''}`}
-        onClick={() => setMenuOpen(false)}
-      />
-      <nav className={`mobileMenu${menuOpen ? ' open' : ''}`} aria-hidden={!menuOpen}>
-        <NavLink to="/funktioner">Funktioner</NavLink>
-        <NavLink to="/aktiviteter">Aktiviteter</NavLink>
-        <NavLink to="/prenumeration">Prenumeration</NavLink>
-        <div className="menuDivider" />
-        <NavLink to="/integritetspolicy">Integritetspolicy</NavLink>
-        <NavLink to="/support">Support</NavLink>
-        <NavLink to="/logga-in">Logga in</NavLink>
-        <Link to="/app" className="btnAccent menuCta">Gå med gratis</Link>
-      </nav>
-
+      <ScrollManager />
+      <SiteNav />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/funktioner" element={<Features />} />
-        <Route path="/aktiviteter" element={<Activities />} />
-        <Route path="/prenumeration" element={<Subscription />} />
+        <Route path="/appen" element={<AppPage />} />
+        <Route path="/traning" element={<Traning />} />
+        <Route path="/challenges" element={<Challenges />} />
+        <Route path="/progress" element={<ProgressPage />} />
+        <Route path="/community" element={<Community />} />
+        <Route path="/om" element={<About />} />
+        <Route path="/gps-demo" element={<GpsDemo />} />
+        <Route path="/logga-in" element={<Login />} />
         <Route path="/integritetspolicy" element={<Privacy />} />
         <Route path="/support" element={<Support />} />
-        <Route path="/logga-in" element={<Login />} />
         <Route path="/app" element={<GetApp />} />
         <Route path="*" element={<Home />} />
       </Routes>
-
-      <footer>
-        <p>
-          © 2026 Nawton · <Link to="/integritetspolicy">Integritetspolicy</Link> · <Link to="/support">Support</Link>
-        </p>
-      </footer>
+      <SiteFooter />
     </>
   )
 }

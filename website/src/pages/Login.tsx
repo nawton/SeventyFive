@@ -84,8 +84,8 @@ export default function Login() {
               Du är inloggad. Själva träningen, utmaningen och flödet bor i
               appen på din iPhone, webben är än så länge bara skyltfönstret.
             </p>
-            <Link to="/app" className="btnAccent loginBtn">Skaffa appen</Link>
-            <button type="button" className="btnGhost loginBtn" onClick={handleSignOut}>
+            <Link to="/app" className="loginBtn">Skaffa appen</Link>
+            <button type="button" className="loginBtn loginBtnGhost" onClick={handleSignOut}>
               Logga ut
             </button>
           </>
@@ -120,7 +120,7 @@ export default function Login() {
                 />
               </label>
               {error && <p className="loginError">{error}</p>}
-              <button type="submit" className="btnAccent loginBtn" disabled={busy || !supabase}>
+              <button type="submit" className="loginBtn" disabled={busy || !supabase}>
                 {busy ? 'Loggar in…' : 'Logga in'}
               </button>
             </form>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SeventyFive – GPS-demo</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<style>
+html,body{margin:0;height:100%;font-family:system-ui,-apple-system,sans-serif}
+#map{height:100%;width:100%}
+.panel{position:absolute;top:14px;left:14px;z-index:1100;background:rgba(16,27,69,0.93);color:#fff;border-radius:18px;padding:13px 18px;display:flex;gap:24px;box-shadow:0 12px 34px rgba(16,27,69,0.35)}
+.panel .stat{display:flex;flex-direction:column;gap:2px}
+.panel .label{font-size:10.5px;letter-spacing:1.2px;color:#9DA9D6;font-weight:600}
+.panel .val{font-size:21px;font-weight:800;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+.panel .val small{font-size:12px;font-weight:600;color:#9DA9D6;margin-left:3px}
+#replay{position:absolute;bottom:22px;left:14px;z-index:1100;background:linear-gradient(140deg,#FF9D68,#F2652A);color:#14100B;border:none;border-radius:999px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 10px 28px rgba(242,101,42,0.4);transition:transform 0.2s ease}
+#replay:hover{transform:translateY(-2px)}
+.hint{position:absolute;bottom:22px;right:14px;z-index:1100;background:rgba(255,255,255,0.92);color:#4B5468;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:500;box-shadow:0 6px 18px rgba(20,25,45,0.15)}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="panel">
+  <div class="stat"><span class="label">DISTANS</span><span class="val" id="dist">0,00<small>km</small></span></div>
+  <div class="stat"><span class="label">TID</span><span class="val" id="time">0:00</span></div>
+  <div class="stat"><span class="label">TEMPO</span><span class="val" id="pace">5:32<small>/km</small></span></div>
+</div>
+<button id="replay">Spela upp rundan</button>
+<div class="hint">Klicka på kartan för att zooma med scroll</div>
+<script>
+// Exempelrunda i Stockholm (Djurgården runt)
+const route = [
+  [59.3324,18.0953],[59.3306,18.0993],[59.3288,18.1040],[59.3270,18.1096],
+  [59.3256,18.1160],[59.3247,18.1230],[59.3252,18.1300],[59.3268,18.1340],
+  [59.3288,18.1305],[59.3300,18.1240],[59.3312,18.1170],[59.3322,18.1100],
+  [59.3330,18.1030],[59.3324,18.0953]
+];
+const map = L.map('map', { scrollWheelZoom: false });
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+map.fitBounds(L.latLngBounds(route), { padding: [50, 50] });
+map.on('click', () => map.scrollWheelZoom.enable());
+
+L.polyline(route, { color: '#2B4BD7', weight: 4, opacity: 0.18 }).addTo(map);
+const drawn = L.polyline([route[0]], { color: '#2B4BD7', weight: 5, opacity: 0.95 }).addTo(map);
+L.circleMarker(route[0], { radius: 6, color: '#fff', weight: 2.5, fillColor: '#101B45', fillOpacity: 1 }).addTo(map).bindTooltip('Start');
+const runner = L.circleMarker(route[0], { radius: 8, color: '#fff', weight: 3, fillColor: '#F2652A', fillOpacity: 1 }).addTo(map);
+
+// Kumulativa avstånd längs rundan
+const cum = [0];
+for (let i = 1; i < route.length; i++) cum.push(cum[i-1] + L.latLng(route[i-1]).distanceTo(L.latLng(route[i])));
+const total = cum[cum.length-1];
+const PACE = 332; // sek per km (5:32)
+const DUR = 13000, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+const fmtTime = s => Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
+
+function setProgress(p) {
+  const d = total * p;
+  let i = 1; while (i < cum.length - 1 && cum[i] < d) i++;
+  const f = (d - cum[i-1]) / (cum[i] - cum[i-1] || 1);
+  const a = route[i-1], b = route[i];
+  const pos = [a[0] + (b[0]-a[0])*f, a[1] + (b[1]-a[1])*f];
+  drawn.setLatLngs(route.slice(0, i).concat([pos]));
+  runner.setLatLng(pos);
+  $('dist').innerHTML = (d/1000).toFixed(2).replace('.', ',') + '<small>km</small>';
+  $('time').textContent = fmtTime(d/1000 * PACE);
+}
+let raf;
+function play() {
+  cancelAnimationFrame(raf);
+  if (reduce) { setProgress(1); return; }
+  const t0 = performance.now();
+  const tick = t => {
+    const p = Math.min(1, (t - t0) / DUR);
+    setProgress(0.5 - 0.5 * Math.cos(p * Math.PI)); // mjuk in/ut
+    if (p < 1) raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+$('replay').addEventListener('click', play);
+play();
+</script>
+</body>
+</html>
