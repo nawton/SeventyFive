@@ -1,0 +1,67 @@
+import {
+  getMusclesForName, bestSideForMuscles, getExerciseMuscleGroup,
+  SLUG_LABELS, SLUG_TO_GROUP, MUSCLE_GROUPS_6, type Slug,
+} from '../muscles'
+
+describe('getMusclesForName', () => {
+  it('känner igen svenska och engelska övningsnamn', () => {
+    expect(getMusclesForName('Bänkpress')).toEqual(expect.arrayContaining(['chest', 'triceps', 'deltoids']))
+    expect(getMusclesForName('Incline bench press')).toContain('chest')
+    expect(getMusclesForName('Knäböj')).toEqual(expect.arrayContaining(['quadriceps', 'gluteal', 'hamstring']))
+    expect(getMusclesForName('Rumänsk marklyft')).toContain('lower-back')
+    expect(getMusclesForName('Hammer curl')).toEqual(expect.arrayContaining(['biceps', 'forearm']))
+  })
+
+  it('slår ihop träffar utan dubbletter och ger tomt för okända namn', () => {
+    // "Marklyft med rodd" träffar både marklyft- och rodd-raden
+    const slugs = getMusclesForName('Marklyft med rodd')
+    expect(slugs).toContain('lower-back')
+    expect(slugs).toContain('upper-back')
+    expect(new Set(slugs).size).toBe(slugs.length)
+
+    expect(getMusclesForName('Yoga nidra')).toEqual([])
+  })
+
+  it('är skiftlägesokänslig', () => {
+    expect(getMusclesForName('BÄNKPRESS')).toContain('chest')
+  })
+})
+
+describe('bestSideForMuscles', () => {
+  it('väljer baksidan bara när majoriteten av musklerna sitter där', () => {
+    expect(bestSideForMuscles(['lower-back', 'hamstring', 'gluteal', 'trapezius'] as Slug[])).toBe('back')
+    expect(bestSideForMuscles(['chest', 'triceps', 'deltoids'] as Slug[])).toBe('front')
+    // Jämnt: hälften bak räcker inte, framsidan vinner
+    expect(bestSideForMuscles(['chest', 'hamstring'] as Slug[])).toBe('front')
+    expect(bestSideForMuscles([] as Slug[])).toBe('front')
+  })
+})
+
+describe('getExerciseMuscleGroup', () => {
+  it('mappar övningar till väljargruppen', () => {
+    expect(getExerciseMuscleGroup('Bänkpress')).toBe('chest')
+    expect(getExerciseMuscleGroup('Knäböj')).toBe('legs')
+    expect(getExerciseMuscleGroup('Bicepscurl')).toBe('arms')
+    expect(getExerciseMuscleGroup('Plankan')).toBe('core')
+    expect(getExerciseMuscleGroup('Burpees')).toBe('all')   // okänd → all
+  })
+})
+
+describe('datakonsistens', () => {
+  it('alla slugs i grupperna och mappningen har svenska etiketter', () => {
+    for (const slug of Object.keys(SLUG_TO_GROUP)) {
+      expect(SLUG_LABELS[slug as Slug]).toBeTruthy()
+    }
+    for (const group of MUSCLE_GROUPS_6) {
+      for (const slug of group.slugs) {
+        expect(SLUG_LABELS[slug]).toBeTruthy()
+      }
+    }
+  })
+
+  it('sexgruppsindelningen täcker sex olika grupper utan överlapp', () => {
+    const all = MUSCLE_GROUPS_6.flatMap(g => g.slugs)
+    expect(new Set(all).size).toBe(all.length)
+    expect(MUSCLE_GROUPS_6.map(g => g.label)).toEqual(['Bröst', 'Rygg', 'Ben', 'Axlar', 'Armar', 'Mage'])
+  })
+})

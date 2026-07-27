@@ -1,0 +1,288 @@
+import {
+  getOrCreateTodayLog, getOrCreateTaskCompletions, setTaskCompleted,
+  setTaskProgress, markDayCompleted, markDayPending, markDayFailed,
+  getMissedDayNumbers, acknowledgeMissedDays, countCompletedDays,
+  getAllDays, getStreak, getWeekStatuses, getStreakOf, getDayDetail,
+  getTasksForDay,
+} from '../dailyLog'
+import { toLocalDateString } from '@/lib/date'
+import { supabase } from '@/lib/supabase'
+import { installTables, argsOf } from '@/testUtils/supabaseChain'
+import type { UserChallenge } from '@/types/database'
+
+jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn(), rpc: jest.fn() } }))
+
+const fromMock = supabase.from as jest.Mock
+const rpcMock = supabase.rpc as jest.Mock
+
+const daysAgo = (n: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return toLocalDateString(d)
+}
+
+const RAW_TASK = {
+  id: 'c1', completed: true, task_template_id: 't1',
+  details: { glasses: 3 },
+  task_templates: { name: 'Vatten', description: null, type: 'water', target_value: 3, unit: 'liter', icon: null },
+}
+
+beforeEach(() => jest.clearAllMocks())
+
+describe('getOrCreateTodayLog', () => {
+  it('återanvänder dagens logg om den finns', async () => {
+    installTables(fromMock, { daily_logs: { data: { id: 'dl1' } } })
+    expect(await getOrCreateTodayLog('ch1', 'u1', 42)).toEqual({ id: 'dl1' })
+  })
+
+  it('skapar en pending-logg första gången', async () => {
+    const calls = installTables(fromMock, {
+      daily_logs: [{ data: null }, { data: { id: 'ny' }, error: null }],
+    })
+    expect(await getOrCreateTodayLog('ch1', 'u1', 42)).toEqual({ id: 'ny' })
+    expect(argsOf(calls, 'daily_logs', 'insert', 1)[0][0]).toEqual({
+      challenge_id: 'ch1', user_id: 'u1', day_number: 42,
+      date: toLocalDateString(), status: 'pending',
+    })
+  })
+})
+
+describe('getOrCreateTaskCompletions', () => {
+  it('befintliga bockar mappas till uppgifter', async () => {
+    installTables(fromMock, { task_completions: { data: [RAW_TASK] } })
+    const tasks = await getOrCreateTaskCompletions('dl1', 'lvl1')
+    expect(tasks[0]).toEqual({
+      completionId: 'c1', templateId: 't1', name: 'Vatten', description: null,
+      type: 'water', completed: true, targetValue: 3, unit: 'liter',
+      details: { glasses: 3 }, icon: null,
+    })
+  })
+
+  it('ett läsfel får ALDRIG tolkas som första besöket', async () => {
+    installTables(fromMock, { task_completions: { data: null, error: { message: 'nere' } } })
+    await expect(getOrCreateTaskCompletions('dl1', 'lvl1')).rejects.toBeTruthy()
+  })
+
+  it('första besöket seedar nivåns mallar plus egna regler, utan dubbletter', async () => {
+    const calls = installTables(fromMock, {
+      task_completions: [{ data: [] }, { data: [RAW_TASK], error: null }],
+      task_templates: [
+        { data: [{ id: 't1' }, { id: 't2' }] },       // nivåns mallar
+        { data: [{ id: 't2' }, { id: 't3' }] },       // egna regler, t2 är dubblett
+      ],
+    })
+    await getOrCreateTaskCompletions('dl1', 'lvl1', 'u1', 'ch1')
+    const rows = argsOf(calls, 'task_completions', 'insert', 1)[0][0] as Array<{ task_template_id: string }>
+    expect(rows.map(r => r.task_template_id)).toEqual(['t1', 't2', 't3'])
+    // Nivåmallarna filtreras på user_id null så andras regler inte läcker in
+    expect(argsOf(calls, 'task_templates', 'is', 0)[0]).toEqual(['user_id', null])
+  })
+
+  it('krockar inserten (dubbelbesök) läses raderna om i stället', async () => {
+    installTables(fromMock, {
+      task_completions: [
+        { data: [] },
+        { data: null, error: { code: '23505' } },
+        { data: [RAW_TASK] },
+      ],
+      task_templates: { data: [{ id: 't1' }] },
+    })
+    const tasks = await getOrCreateTaskCompletions('dl1', 'lvl1')
+    expect(tasks).toHaveLength(1)
+  })
+
+  it('inga mallar ger tom dag', async () => {
+    installTables(fromMock, {
+      task_completions: { data: [] },
+      task_templates: { data: [] },
+    })
+    expect(await getOrCreateTaskCompletions('dl1', 'lvl1')).toEqual([])
+  })
+})
+
+describe('avbockning och dagstatus', () => {
+  it('setTaskCompleted stämplar tiden vid klar och nollar vid ånger', async () => {
+    let calls = installTables(fromMock, { task_completions: { error: null } })
+    await setTaskCompleted('c1', true)
+    let patch = argsOf(calls, 'task_completions', 'update')[0][0] as { completed_at: string | null }
+    expect(patch.completed_at).toEqual(expect.any(String))
+
+    calls = installTables(fromMock, { task_completions: { error: null } })
+    await setTaskCompleted('c1', false)
+    patch = argsOf(calls, 'task_completions', 'update')[0][0] as { completed_at: string | null }
+    expect(patch.completed_at).toBeNull()
+  })
+
+  it('setTaskProgress sparar detaljerna ihop med status', async () => {
+    const calls = installTables(fromMock, { task_completions: { error: null } })
+    await setTaskProgress('c1', { glasses: 2 }, false)
+    expect(argsOf(calls, 'task_completions', 'update')[0][0]).toMatchObject({
+      details: { glasses: 2 }, completed: false, completed_at: null,
+    })
+  })
+
+  it('markDayFailed sparar ursäkten på de oavklarade uppgifterna', async () => {
+    const calls = installTables(fromMock, {
+      daily_logs: { error: null },
+      task_completions: { error: null },
+    })
+    await markDayFailed('dl1', 'Somnade i soffan')
+    expect(argsOf(calls, 'daily_logs', 'update')[0][0]).toEqual({ status: 'failed' })
+    expect(argsOf(calls, 'task_completions', 'update')[0][0]).toEqual({ failed_reason: 'Somnade i soffan' })
+    expect(argsOf(calls, 'task_completions', 'eq')).toEqual([
+      ['daily_log_id', 'dl1'], ['completed', false],
+    ])
+  })
+
+  it('markDayCompleted och markDayPending växlar status', async () => {
+    let calls = installTables(fromMock, { daily_logs: { error: null } })
+    await markDayCompleted('dl1')
+    expect(argsOf(calls, 'daily_logs', 'update')[0][0]).toMatchObject({ status: 'completed' })
+
+    calls = installTables(fromMock, { daily_logs: { error: null } })
+    await markDayPending('dl1')
+    expect(argsOf(calls, 'daily_logs', 'update')[0][0]).toEqual({ status: 'pending', completed_at: null })
+  })
+})
+
+describe('missade dagar', () => {
+  const challenge = (createdDaysAfterStart: number): UserChallenge => ({
+    id: 'ch1', user_id: 'u1',
+    start_date: daysAgo(10),
+    created_at: `${daysAgo(10 - createdDaysAfterStart)}T08:00:00Z`,
+  } as UserChallenge)
+
+  it('flaggar bara okvitterade dagar före idag', async () => {
+    installTables(fromMock, { daily_logs: { data: [
+      { day_number: 1, status: 'completed' },
+      { day_number: 2, status: 'failed' },
+      { day_number: 3, status: 'pending' },
+    ] } })
+    // Dag 11 idag: dag 3 (pending) och 4–10 (helt utan logg) är missade
+    expect(await getMissedDayNumbers(challenge(0), 11)).toEqual([3, 4, 5, 6, 7, 8, 9, 10])
+  })
+
+  it('bakdaterad start flaggar inget före appens första dag', async () => {
+    installTables(fromMock, { daily_logs: { data: [] } })
+    // Skapad 5 dagar efter startdatumet → dag 1–5 var "före appen"
+    expect(await getMissedDayNumbers(challenge(5), 11)).toEqual([6, 7, 8, 9, 10])
+  })
+
+  it('acknowledgeMissedDays kvitterar med rätt datum per dag', async () => {
+    const calls = installTables(fromMock, { daily_logs: { error: null } })
+    await acknowledgeMissedDays(challenge(0), [3, 4])
+    const [rows, opts] = argsOf(calls, 'daily_logs', 'upsert')[0] as [Array<{ day_number: number; date: string; status: string }>, unknown]
+    expect(rows.map(r => r.day_number)).toEqual([3, 4])
+    expect(rows[0].date).toBe(daysAgo(8))   // start för 10 dagar sedan + dag 3
+    expect(rows[0].status).toBe('failed')
+    expect(opts).toEqual({ onConflict: 'challenge_id,day_number' })
+
+    jest.clearAllMocks()
+    await acknowledgeMissedDays(challenge(0), [])
+    expect(fromMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('översikter', () => {
+  it('countCompletedDays räknar klara dagar', async () => {
+    installTables(fromMock, { daily_logs: { count: 41 } })
+    expect(await countCompletedDays('ch1')).toBe(41)
+  })
+
+  it('getAllDays klassar historik, idag och framtid', async () => {
+    installTables(fromMock, { daily_logs: { data: [
+      { day_number: 1, status: 'completed' },
+      { day_number: 2, status: 'failed' },
+    ] } })
+    const days = await getAllDays('ch1', 4)
+    expect(days[0].status).toBe('completed')
+    expect(days[1].status).toBe('failed')
+    expect(days[2].status).toBe('failed')     // dag 3 utan logg före idag = missad
+    expect(days[3].status).toBe('pending')    // dag 4 är idag
+    expect(days[4].status).toBe('future')
+    expect(days).toHaveLength(75)
+  })
+
+  it('getWeekStatuses mappar datum till status', async () => {
+    installTables(fromMock, { daily_logs: { data: [
+      { date: '2026-07-21', status: 'completed' },
+      { date: '2026-07-22', status: 'failed' },
+    ] } })
+    expect(await getWeekStatuses('ch1')).toEqual({
+      '2026-07-21': 'completed', '2026-07-22': 'failed',
+    })
+  })
+})
+
+describe('streak', () => {
+  it('räknar bakåt från idag när dagen är klar', async () => {
+    installTables(fromMock, { daily_logs: { data: [
+      { date: daysAgo(0), status: 'completed' },
+      { date: daysAgo(1), status: 'completed' },
+      { date: daysAgo(2), status: 'completed' },
+      { date: daysAgo(3), status: 'failed' },
+    ] } })
+    expect(await getStreak('ch1')).toBe(3)
+  })
+
+  it('opåbörjad dag räknas från igår, och luckor bryter', async () => {
+    installTables(fromMock, { daily_logs: { data: [
+      { date: daysAgo(0), status: 'pending' },
+      { date: daysAgo(1), status: 'completed' },
+      { date: daysAgo(3), status: 'completed' },   // hål på dag 2 → bryter
+    ] } })
+    expect(await getStreak('ch1')).toBe(1)
+
+    installTables(fromMock, { daily_logs: { data: [] } })
+    expect(await getStreak('ch1')).toBe(0)
+  })
+
+  it('getStreakOf litar bara på numeriska RPC-svar', async () => {
+    rpcMock.mockResolvedValue({ data: 17 })
+    expect(await getStreakOf('u2')).toBe(17)
+    rpcMock.mockResolvedValue({ data: null })
+    expect(await getStreakOf('u2')).toBe(0)
+    rpcMock.mockResolvedValue({ data: 5, error: { message: 'nej' } })
+    expect(await getStreakOf('u2')).toBe(0)
+  })
+})
+
+describe('dagvyer utan bieffekter', () => {
+  it('getDayDetail: ingen logg ger null-status och inga uppgifter', async () => {
+    installTables(fromMock, { daily_logs: { data: null } })
+    expect(await getDayDetail('ch1', '2026-07-01')).toEqual({ status: null, tasks: [] })
+  })
+
+  it('getDayDetail: logg med uppgifter mappas', async () => {
+    installTables(fromMock, {
+      daily_logs: { data: { id: 'dl1', status: 'completed' } },
+      task_completions: { data: [RAW_TASK] },
+    })
+    const detail = await getDayDetail('ch1', '2026-07-01')
+    expect(detail.status).toBe('completed')
+    expect(detail.tasks[0].name).toBe('Vatten')
+  })
+
+  it('getTasksForDay: dag utan logg visar mallarna som ogjorda', async () => {
+    installTables(fromMock, {
+      daily_logs: { data: null },
+      user_challenges: { data: { level_id: 'lvl1', user_id: 'u1' } },
+      task_templates: [
+        { data: [{ id: 't1', name: 'Träning', type: 'workout' }] },
+        { data: [{ id: 't9', name: 'Kall dusch', type: 'workout', icon: 'snow' }] },
+      ],
+    })
+    const tasks = await getTasksForDay('ch1', 5)
+    expect(tasks).toHaveLength(2)
+    expect(tasks![0]).toMatchObject({ completionId: 'tpl:t1', completed: false })
+    expect(tasks![1]).toMatchObject({ name: 'Kall dusch', icon: 'snow' })
+  })
+
+  it('getTasksForDay: null när varken logg eller utmaning finns', async () => {
+    installTables(fromMock, {
+      daily_logs: { data: null },
+      user_challenges: { data: null },
+    })
+    expect(await getTasksForDay('ch1', 5)).toBeNull()
+  })
+})
