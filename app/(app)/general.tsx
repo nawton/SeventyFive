@@ -39,9 +39,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function SettingRow({ icon, label, value, onPress, rightElement, danger, last }: {
+function SettingRow({ icon, label, sub, value, onPress, rightElement, danger, last }: {
   icon: React.ComponentProps<typeof Ionicons>['name']
   label: string
+  /** Kort förklaring under etiketten — vad raden faktiskt gör */
+  sub?: string
   value?: string
   onPress?: () => void
   rightElement?: React.ReactNode
@@ -60,7 +62,10 @@ function SettingRow({ icon, label, value, onPress, rightElement, danger, last }:
     >
       <View style={styles.rowLeft}>
         <Ionicons name={icon} size={20} color={danger ? RED : TEXT_SECONDARY} />
-        <Text style={[styles.rowLabel, danger && styles.rowLabelDanger]}>{label}</Text>
+        <View style={styles.rowTextWrap}>
+          <Text style={[styles.rowLabel, danger && styles.rowLabelDanger]}>{label}</Text>
+          {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
+        </View>
       </View>
       <View style={styles.rowRight}>
         {value && <Text style={styles.rowValue}>{value}</Text>}
@@ -247,21 +252,34 @@ export default function GeneralScreen() {
           </Section>
         ) : null}
 
-        <Section title="Schema">
+        <Section title="Träningsschema">
           <SettingRow
-            icon="time-outline"
-            label="Ditt dagsschema"
-            onPress={() => router.push('/(auth)/schedule?from=settings' as any)}
+            icon="calendar-outline"
+            label="Hantera veckoschemat"
+            sub="Se, ändra och ta bort veckans pass"
+            onPress={() => router.push('/(app)/manage-sessions' as never)}
           />
           <SettingRow
-            icon="create-outline"
-            label="Ändra träningsschema"
+            icon="color-wand-outline"
+            label="Skapa nytt schema"
+            sub="Schemaguiden bygger veckan åt dig"
             onPress={() => setWizardVisible(true)}
           />
           <SettingRow
             icon="refresh-outline"
-            label="Nollställ träningsschema"
+            label="Nollställ schemat"
+            sub="Tar bort alla upprepande pass, historiken sparas"
             onPress={handleResetSchedule}
+            last
+          />
+        </Section>
+
+        <Section title="Dagsrutin">
+          <SettingRow
+            icon="time-outline"
+            label="Dagliga tider"
+            sub="Vakentid, måltider och träningstider"
+            onPress={() => router.push('/(auth)/schedule?from=settings' as any)}
             last
           />
         </Section>
@@ -352,8 +370,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14, paddingHorizontal: 16,
   },
   rowBorder: { borderBottomWidth: 1 },
-  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingRight: 8 },
+  rowTextWrap: { flex: 1 },
   rowLabel: { color: TEXT_PRIMARY, fontSize: 15 },
+  rowSub: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2, lineHeight: 16 },
   rowLabelDanger: { color: RED },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowValue: { color: TEXT_SECONDARY, fontSize: 14 },
