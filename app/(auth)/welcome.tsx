@@ -14,7 +14,11 @@ import { router } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { LinearGradient } from 'expo-linear-gradient'
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
+import Animated, {
+  FadeIn, FadeInDown, FadeInUp,
+  useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS,
+} from 'react-native-reanimated'
 import { NUM_FONT } from '@/lib/theme'
 
 const { width } = Dimensions.get('window')
@@ -40,6 +44,8 @@ const BLUE  = '#3FA7FF'
 const GREEN = '#66BB6A'
 
 const DAY_ITEM_W = 54
+const DAY_SHEET_H = 620
+const SHEET_SPRING = { damping: 20, stiffness: 220, mass: 0.8 } as const
 
 const SLIDES = ['valkommen', 'utmaningen', 'schemat', 'statistiken', 'community'] as const
 type SlideKey = typeof SLIDES[number]
@@ -231,6 +237,42 @@ export default function Welcome() {
     router.push({ pathname: '/(auth)/login', params: { startDay: String(selectedDay) } })
   }
 
+  // Arket glider upp självt; drag ner eller tryck utanför stänger UTAN att
+  // spara den inställda dagen — bara Fortsätt-knappen bekräftar valet
+  const daySheetY = useSharedValue(DAY_SHEET_H)
+
+  function openDaySheet() {
+    setSelectedDay(1)
+    setDayModalVisible(true)
+    daySheetY.value = DAY_SHEET_H
+    daySheetY.value = withSpring(0, SHEET_SPRING)
+  }
+
+  function dismissDaySheet() {
+    setDayModalVisible(false)
+    setSelectedDay(1)
+  }
+
+  const daySheetDrag = Gesture.Pan()
+    .activeOffsetY([-12, 12])
+    .failOffsetX([-14, 14])   // hjulet äger horisontella drag
+    .onUpdate(e => {
+      daySheetY.value = e.translationY > 0 ? e.translationY : e.translationY * 0.15
+    })
+    .onEnd(e => {
+      if (e.translationY > 100 || e.velocityY > 600) {
+        daySheetY.value = withTiming(DAY_SHEET_H, { duration: 200 }, finished => {
+          if (finished) runOnJS(dismissDaySheet)()
+        })
+      } else {
+        daySheetY.value = withSpring(0, SHEET_SPRING)
+      }
+    })
+
+  const daySheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: daySheetY.value }],
+  }))
+
   // Hjulet och siffran hålls i synk: knapparna och tryck scrollar hjulet dit
   function setDay(day: number, scroll = true) {
     const clamped = Math.min(74, Math.max(1, day))
@@ -318,7 +360,7 @@ export default function Welcome() {
             >
               <Text style={s.outlineText}>Logga in</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.dayLink} onPress={() => setDayModalVisible(true)} activeOpacity={0.7}>
+            <TouchableOpacity style={s.dayLink} onPress={openDaySheet} activeOpacity={0.7}>
               <Ionicons name="calendar-outline" size={14} color={MUTED} />
               <Text style={s.dayLinkText}>Jag har redan börjat, välj dag</Text>
             </TouchableOpacity>
@@ -341,11 +383,13 @@ export default function Welcome() {
       <Modal
         visible={dayModalVisible}
         transparent
-        animationType="slide"
-        onRequestClose={() => setDayModalVisible(false)}
+        animationType="fade"
+        onRequestClose={dismissDaySheet}
       >
-        <View style={s.modalOverlay}>
-          <View style={[s.sheet, { paddingBottom: 24 + insets.bottom }]}>
+        <GestureHandlerRootView style={s.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={dismissDaySheet} testID="dayBackdrop" />
+          <GestureDetector gesture={daySheetDrag}>
+          <Animated.View style={[s.sheet, { paddingBottom: 24 + insets.bottom }, daySheetStyle]}>
             <View style={s.sheetHandle} />
             <Text style={s.sheetTitle}>Vilken dag är du på?</Text>
             <Text style={s.sheetSub}>Dra i hjulet eller stega dig fram</Text>
@@ -405,12 +449,13 @@ export default function Welcome() {
                   <Text style={s.confirmBtnText}>Fortsätt från dag {selectedDay}</Text>
                 </LinearGradient>
               </TouchableOpacity>
-              <TouchableOpacity style={s.cancelBtn} onPress={() => setDayModalVisible(false)}>
+              <TouchableOpacity style={s.cancelBtn} onPress={dismissDaySheet}>
                 <Text style={s.cancelBtnText}>Avbryt</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Animated.View>
+          </GestureDetector>
+        </GestureHandlerRootView>
       </Modal>
     </View>
   )

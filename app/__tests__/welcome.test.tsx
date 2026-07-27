@@ -67,6 +67,23 @@ describe('Welcome — onboardingen', () => {
     expect(router.push).toHaveBeenCalledWith('/(auth)/login')
   })
 
+  it('stängning utan Fortsätt sparar inte den valda dagen', () => {
+    render(<Welcome />)
+    next(4)
+    fireEvent.press(screen.getByText('Jag har redan börjat, välj dag'))
+    fireEvent.press(screen.getByText('55'))
+    expect(screen.getByText('Fortsätt från dag 55')).toBeOnTheScreen()
+
+    // Tryck utanför stänger och kastar valet
+    fireEvent.press(screen.getByTestId('dayBackdrop'))
+    expect(screen.queryByText('Vilken dag är du på?')).toBeNull()
+    expect(router.push).not.toHaveBeenCalled()
+
+    // Nästa öppning börjar om från dag 1
+    fireEvent.press(screen.getByText('Jag har redan börjat, välj dag'))
+    expect(screen.getByText('Fortsätt från dag 1')).toBeOnTheScreen()
+  })
+
   it('dagväljaren skickar med startdagen till inloggningen', () => {
     render(<Welcome />)
     next(4)
