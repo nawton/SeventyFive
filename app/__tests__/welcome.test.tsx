@@ -12,51 +12,49 @@ function next(times = 1) {
 beforeEach(() => jest.clearAllMocks())
 
 describe('Welcome — story-bläddringen', () => {
-  it('startar på brand-sliden med uppgiftskortet och vägarna in synliga', () => {
+  it('startar på brand-sliden utan inloggningsknappar', () => {
     render(<Welcome />)
     expect(screen.getByText('SeventyFive')).toBeOnTheScreen()
-    expect(screen.getByText('75 dagar som\nförändrar allt.')).toBeOnTheScreen()
-    // Mockkortet visar dagen i utmaningen
-    expect(screen.getByText('Dagens uppgifter')).toBeOnTheScreen()
-    // Skapa konto/Logga in ligger kvar på alla slides, som i förlagan
-    expect(screen.getByTestId('welcomeRegister')).toBeOnTheScreen()
-    expect(screen.getByTestId('welcomeLogin')).toBeOnTheScreen()
+    expect(screen.getByText('75 dagar. 5 uppgifter. Inga undantag.')).toBeOnTheScreen()
+    expect(screen.queryByTestId('welcomeRegister')).toBeNull()
   })
 
   it('höger sida bläddrar framåt, vänster bakåt', () => {
     render(<Welcome />)
     next()
-    expect(screen.getByText('Fem uppgifter,\nvarje dag.')).toBeOnTheScreen()
+    expect(screen.getByText('Fem uppgifter, varje dag')).toBeOnTheScreen()
     expect(screen.getByText('Läs 10 sidor')).toBeOnTheScreen()
 
     fireEvent.press(screen.getByTestId('storyPrev'))
-    expect(screen.getByText('75 dagar som\nförändrar allt.')).toBeOnTheScreen()
+    expect(screen.getByText('75 dagar. 5 uppgifter. Inga undantag.')).toBeOnTheScreen()
 
     // Bakåt från första sliden stannar kvar
     fireEvent.press(screen.getByTestId('storyPrev'))
-    expect(screen.getByText('75 dagar som\nförändrar allt.')).toBeOnTheScreen()
+    expect(screen.getByText('SeventyFive')).toBeOnTheScreen()
   })
 
   it('alla fem slides nås i ordning med sina mockkort, sista stannar', () => {
     render(<Welcome />)
     next(2)
-    expect(screen.getByText('En träningsplan\nbyggd för dig.')).toBeOnTheScreen()
-    expect(screen.getByText('Vecka 3')).toBeOnTheScreen()
-    expect(screen.getByText(/Bröst & Triceps/)).toBeOnTheScreen()
+    expect(screen.getByText('Ditt schema, dina pass')).toBeOnTheScreen()
+    expect(screen.getByText('Bröst & Triceps')).toBeOnTheScreen()
+    expect(screen.getByText('Bänkpress')).toBeOnTheScreen()
     next()
-    expect(screen.getByText('Se dina framsteg\nsvart på vitt.')).toBeOnTheScreen()
+    expect(screen.getByText('Följ dina framsteg')).toBeOnTheScreen()
     expect(screen.getByText('Platina')).toBeOnTheScreen()
     next()
-    expect(screen.getByText('Allt är roligare\ntillsammans.')).toBeOnTheScreen()
+    expect(screen.getByText('Kör tillsammans')).toBeOnTheScreen()
     expect(screen.getByText('Elin Berg')).toBeOnTheScreen()
 
     // Framåt på sista sliden gör ingenting
     next()
-    expect(screen.getByText('Allt är roligare\ntillsammans.')).toBeOnTheScreen()
+    expect(screen.getByText('Kör tillsammans')).toBeOnTheScreen()
   })
 
-  it('Skapa konto och Logga in fungerar direkt från första sliden', () => {
+  it('sista sliden leder till registrering respektive inloggning', () => {
     render(<Welcome />)
+    next(4)
+
     fireEvent.press(screen.getByTestId('welcomeRegister'))
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/(auth)/login', params: { mode: 'register' },
@@ -68,6 +66,7 @@ describe('Welcome — story-bläddringen', () => {
 
   it('dagväljaren skickar med startdagen till inloggningen', () => {
     render(<Welcome />)
+    next(4)
     fireEvent.press(screen.getByText('Jag har redan börjat, välj dag'))
     expect(screen.getByText('Vilken dag är du på?')).toBeOnTheScreen()
 
