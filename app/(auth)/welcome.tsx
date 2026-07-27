@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { memo, useCallback, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -46,6 +46,22 @@ const GREEN = '#66BB6A'
 const DAY_ITEM_W = 54
 const DAY_SHEET_H = 620
 const SHEET_SPRING = { damping: 20, stiffness: 220, mass: 0.8 } as const
+const DAYS = Array.from({ length: 74 }, (_, i) => i + 1)
+
+/** Memoiserad hjulsiffra — bara den som tänds/släcks ritas om, inte alla 74 */
+const WheelItem = memo(function WheelItem({ day, active, onSelect }: {
+  day: number
+  active: boolean
+  onSelect: (day: number) => void
+}) {
+  return (
+    <Pressable style={s.wheelItem} onPress={() => onSelect(day)}>
+      <View style={[s.wheelCircle, active && s.wheelCircleActive]}>
+        <Text style={[s.wheelNum, active && s.wheelNumActive]}>{day}</Text>
+      </View>
+    </Pressable>
+  )
+})
 
 const SLIDES = ['valkommen', 'utmaningen', 'schemat', 'statistiken', 'community'] as const
 type SlideKey = typeof SLIDES[number]
@@ -242,6 +258,7 @@ export default function Welcome() {
   const daySheetY = useSharedValue(DAY_SHEET_H)
 
   function openDaySheet() {
+    selectedDayRef.current = 1
     setSelectedDay(1)
     setDayModalVisible(true)
     daySheetY.value = DAY_SHEET_H
@@ -250,6 +267,7 @@ export default function Welcome() {
 
   function dismissDaySheet() {
     setDayModalVisible(false)
+    selectedDayRef.current = 1
     setSelectedDay(1)
   }
 
@@ -273,15 +291,24 @@ export default function Welcome() {
     transform: [{ translateY: daySheetY.value }],
   }))
 
-  // Hjulet och siffran hålls i synk: knapparna och tryck scrollar hjulet dit
-  function setDay(day: number, scroll = true) {
+  // Hjulet och siffran hålls i synk. wheelBusy spärrar onScroll medan en
+  // programmatisk scroll animerar — annars uppstår en laggig återkopplings-
+  // loop där varje delposition sätter state och ritar om hela hjulet.
+  const selectedDayRef = useRef(1)
+  const wheelBusy = useRef(false)
+
+  const selectDay = useCallback((day: number, scroll = true) => {
     const clamped = Math.min(74, Math.max(1, day))
-    if (clamped !== selectedDay) {
+    if (clamped !== selectedDayRef.current) {
+      selectedDayRef.current = clamped
       Haptics.selectionAsync()
       setSelectedDay(clamped)
     }
-    if (scroll) dayScrollRef.current?.scrollTo({ x: (clamped - 1) * DAY_ITEM_W, animated: true })
-  }
+    if (scroll) {
+      wheelBusy.current = true
+      dayScrollRef.current?.scrollTo({ x: (clamped - 1) * DAY_ITEM_W, animated: true })
+    }
+  }, [])
 
   return (
     <View style={s.screen}>
@@ -396,7 +423,7 @@ export default function Welcome() {
 
             {/* Stora dagsiffran med finjustering */}
             <View style={s.dayReadout}>
-              <TouchableOpacity style={s.stepBtn} onPress={() => setDay(selectedDay - 1)}
+              <TouchableOpacity style={s.stepBtn} onPress={() => selectDay(selectedDay - 1)}
                 activeOpacity={0.7} testID="dayMinus">
                 <Ionicons name="remove" size={22} color={OFFWHITE} />
               </TouchableOpacity>
@@ -405,7 +432,7 @@ export default function Welcome() {
                 <Text style={s.dayBigNum}>{selectedDay}</Text>
                 <Text style={s.dayOf}>av 75</Text>
               </View>
-              <TouchableOpacity style={s.stepBtn} onPress={() => setDay(selectedDay + 1)}
+              <TouchableOpacity style={s.stepBtn} onPress={() => selectDay(selectedDay + 1)}
                 activeOpacity={0.7} testID="dayPlus">
                 <Ionicons name="add" size={22} color={OFFWHITE} />
               </TouchableOpacity>
@@ -424,18 +451,21 @@ export default function Welcome() {
               decelerationRate="fast"
               contentContainerStyle={{ paddingHorizontal: (width - 40 - DAY_ITEM_W) / 2 }}
               scrollEventThrottle={16}
+              onScrollBeginDrag={() => { wheelBusy.current = false }}
               onScroll={e => {
+                if (wheelBusy.current) return
                 const i = Math.min(73, Math.max(0, Math.round(e.nativeEvent.contentOffset.x / DAY_ITEM_W)))
-                if (i + 1 !== selectedDay) setDay(i + 1, false)
+                if (i + 1 !== selectedDayRef.current) selectDay(i + 1, false)
+              }}
+              onMomentumScrollEnd={e => {
+                wheelBusy.current = false
+                const i = Math.min(73, Math.max(0, Math.round(e.nativeEvent.contentOffset.x / DAY_ITEM_W)))
+                if (i + 1 !== selectedDayRef.current) selectDay(i + 1, false)
               }}
               style={s.wheel}
             >
-              {Array.from({ length: 74 }, (_, i) => i + 1).map(day => (
-                <Pressable key={day} style={s.wheelItem} onPress={() => setDay(day)}>
-                  <View style={[s.wheelCircle, selectedDay === day && s.wheelCircleActive]}>
-                    <Text style={[s.wheelNum, selectedDay === day && s.wheelNumActive]}>{day}</Text>
-                  </View>
-                </Pressable>
+              {DAYS.map(day => (
+                <WheelItem key={day} day={day} active={selectedDay === day} onSelect={selectDay} />
               ))}
             </ScrollView>
 
