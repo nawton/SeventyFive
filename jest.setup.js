@@ -78,3 +78,14 @@ jest.mock('react-native-maps', () => {
   })
   return { __esModule: true, default: MapView, Polyline: View, Marker: View }
 })
+
+// ── Tysta KÄNDA ofarliga testvarningar ────────────────────────────────────────
+// "not wrapped in act(...)" kommer från eftersläntrande bakgrundsjobb:
+// VirtualizedLists interna timer och sena promises efter sista påståendet.
+// Testerna väntar på riktiga UI-tillstånd via findBy*, så varningen tillför
+// bara brus. Alla ANDRA console.error släpps igenom orörda.
+const realConsoleError = console.error
+console.error = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('not wrapped in act')) return
+  realConsoleError(...args)
+}
