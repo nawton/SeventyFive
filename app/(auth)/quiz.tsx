@@ -19,10 +19,11 @@ interface Option {
 export interface QuizAnswers {
   why: string
   goal: string
-  pressure: string
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
+// Nivån väljs på nästa sida (Välj din nivå) — därför ingen "hur hårt"-fråga
+// här, det vore samma val två gånger.
 
 const QUESTIONS: Question[] = [
   {
@@ -43,15 +44,6 @@ const QUESTIONS: Question[] = [
       { value: 'muscle', label: 'Bygga muskler' },
       { value: 'energy', label: 'Få mer energi och fokus' },
       { value: 'routines', label: 'Skapa bättre rutiner' },
-    ],
-  },
-  {
-    id: 'pressure',
-    question: 'Hur hårt vill du ha det?',
-    options: [
-      { value: 'normal', label: 'Lagom, jag tar det steg för steg' },
-      { value: 'hard', label: 'Hårt, jag vill utmanas ordentligt' },
-      { value: 'extreme', label: 'Extremt, jag vill testa min gräns' },
     ],
   },
 ]
@@ -111,7 +103,7 @@ export default function QuizScreen() {
 
       {/* Question */}
       <View style={styles.body}>
-        <Text style={styles.stepLabel}>Steg {step + 1} av 5</Text>
+        <Text style={styles.stepLabel}>Steg {step + 1} av 4</Text>
         <Text style={styles.question}>{current.question}</Text>
 
         <View style={styles.options}>
@@ -145,7 +137,7 @@ export default function QuizScreen() {
           activeOpacity={0.8}
         >
           <Text style={styles.nextButtonText}>
-            {isLast ? 'Se mitt resultat' : 'Nästa'}
+            {isLast ? 'Välj nivå' : 'Nästa'}
           </Text>
         </TouchableOpacity>
       </View>

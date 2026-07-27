@@ -91,18 +91,12 @@ const COMPARE: Array<{ label: string; values: [string, string, string] }> = [
   { label: 'Omstart vid missad dag', values: ['Nej, 1 dags marginal/vecka', 'Ja, från dag 1', 'Ja, från dag 1'] },
 ]
 
-function getRecommendedLevel(pressure: string): Level {
-  if (pressure === 'extreme') return 'extreme'
-  if (pressure === 'hard') return 'hard'
-  return 'normal'
-}
-
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function RecommendationScreen() {
-  const params = useLocalSearchParams<{ why: string; goal: string; pressure: string; startDay?: string }>()
-  const recommendedLevel = getRecommendedLevel(params.pressure ?? 'normal')
-  const [selectedLevel, setSelectedLevel] = useState<Level>(recommendedLevel)
+  const params = useLocalSearchParams<{ why: string; goal: string; startDay?: string }>()
+  // Normal förvald — det är rätt val för de flesta
+  const [selectedLevel, setSelectedLevel] = useState<Level>('normal')
   const [loading, setLoading] = useState(false)
   const level = LEVELS[selectedLevel]
 
@@ -118,7 +112,8 @@ export default function RecommendationScreen() {
       await saveChallenge(user.id, selectedLevel, {
         why: params.why ?? '',
         goal: params.goal ?? '',
-        pressure: params.pressure ?? 'normal',
+        // Nivåvalet ÄR pressvalet numera — quizets steg 3 togs bort
+        pressure: selectedLevel,
       }, startDay)
       // Cast tills Metro genererat om typed routes för den nya skärmen
       router.replace('/(auth)/setup-schedule' as any)
@@ -149,7 +144,7 @@ export default function RecommendationScreen() {
   return (
     <SafeScreen style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.stepLabel}>Steg 4 av 5</Text>
+        <Text style={styles.stepLabel}>Steg 3 av 4</Text>
         <Text style={styles.title}>Välj din nivå</Text>
         <Text style={styles.subtitle}>
           Nivåerna skiljer sig mycket åt. Läs igenom vad som krävs innan du bestämmer dig.

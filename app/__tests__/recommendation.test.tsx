@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 
 jest.mock('expo-router', () => ({
   router: { replace: jest.fn() },
-  useLocalSearchParams: jest.fn(() => ({ why: 'w', goal: 'g', pressure: 'normal' })),
+  useLocalSearchParams: jest.fn(() => ({ why: 'w', goal: 'g' })),
 }))
 jest.mock('@/lib/supabase', () => ({
   supabase: { auth: { getSession: jest.fn().mockResolvedValue({
@@ -20,7 +20,7 @@ const acceptMock = acceptChallenge as jest.Mock
 
 beforeEach(() => {
   jest.clearAllMocks()
-  paramsMock.mockReturnValue({ why: 'w', goal: 'g', pressure: 'normal' })
+  paramsMock.mockReturnValue({ why: 'w', goal: 'g' })
 })
 
 describe('RecommendationScreen', () => {
@@ -102,15 +102,16 @@ describe('RecommendationScreen', () => {
     alertSpy.mockRestore()
   })
 
-  it('rekommendationen följer quizets press och startdagen följer med', async () => {
-    paramsMock.mockReturnValue({ why: 'w', goal: 'g', pressure: 'extreme', startDay: '42' })
+  it('startdagen följer med och nivåvalet blir pressvärdet i quizsvaren', async () => {
+    paramsMock.mockReturnValue({ why: 'w', goal: 'g', startDay: '42' })
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {})
     render(<RecommendationScreen />)
 
-    // Extreme är förvald och rekommenderad
-    expect(screen.getByText('Kall dusch varje morgon')).toBeOnTheScreen()
+    // Normal är alltid förvald — quizet frågar inte längre hur hårt man vill ha det
+    expect(screen.getByText('4 träningspass i veckan')).toBeOnTheScreen()
     expect(screen.getByText(/Du startar på dag 42/)).toBeOnTheScreen()
 
+    fireEvent.press(screen.getByTestId('level-extreme'))
     fireEvent.press(screen.getByText('Acceptera utmaningen: Extreme'))
     const [, , buttons] = alertSpy.mock.calls[0]
     act(() => {
@@ -118,7 +119,7 @@ describe('RecommendationScreen', () => {
         .find(b => b.text === 'Kör Extreme')!.onPress!()
     })
     await waitFor(() => expect(acceptMock).toHaveBeenCalledWith(
-      'u1', 'extreme', expect.any(Object), 42,
+      'u1', 'extreme', { why: 'w', goal: 'g', pressure: 'extreme' }, 42,
     ))
     alertSpy.mockRestore()
   })
