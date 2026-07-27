@@ -21,6 +21,8 @@ interface LevelConfig {
   color: string
   /** Bekräftelsetexten innan man låser in en tuffare nivå — tom för Normal */
   warning: string
+  /** Vad som händer vid en missad dag — texten under Acceptera-knappen */
+  missText: string
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -40,6 +42,7 @@ const LEVELS: Record<Level, LevelConfig> = {
     ],
     color: '#3BE862',
     warning: '',
+    missText: 'Missar du en dag har du en dags marginal per vecka.',
   },
   hard: {
     slug: 'hard',
@@ -54,6 +57,7 @@ const LEVELS: Record<Level, LevelConfig> = {
     ],
     color: '#FFA817',
     warning: 'Hard kräver träning varje dag med ett pass utomhus, 10 sidor läsning och progressfoto varje dag i 75 dagar. Missar du en dag börjar du om från dag 1.',
+    missText: 'Missar du en dag börjar utmaningen om från dag 1.',
   },
   extreme: {
     slug: 'extreme',
@@ -69,6 +73,7 @@ const LEVELS: Record<Level, LevelConfig> = {
     ],
     color: '#FF3B4A',
     warning: 'Extreme kräver två pass per dag, strikt kost, 4 liter vatten, 10 sidor läsning och kall dusch varje morgon, i 75 dagar utan vilodagar. Missar du en dag börjar du om från dag 1.',
+    missText: 'Missar du en dag börjar utmaningen om från dag 1, utan undantag.',
   },
 }
 
@@ -248,9 +253,8 @@ export default function RecommendationScreen() {
           }
         </TouchableOpacity>
         <Text style={styles.disclaimer}>
-          {params.startDay
-            ? `Du startar på dag ${params.startDay}. Missar du en dag börjar utmaningen om från dag 1.`
-            : 'Dag 1 börjar idag. Missar du en dag börjar utmaningen om från dag 1.'}
+          {params.startDay ? `Du startar på dag ${params.startDay}. ` : 'Dag 1 börjar idag. '}
+          {level.missText}
         </Text>
       </View>
 

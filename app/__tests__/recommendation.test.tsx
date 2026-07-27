@@ -48,6 +48,19 @@ describe('RecommendationScreen', () => {
     expect(screen.queryByText('4 träningspass i veckan')).toBeNull()
   })
 
+  it('texten under knappen följer den valda nivåns konsekvenser', () => {
+    render(<RecommendationScreen />)
+    // Normal har marginal, ingen omstart
+    expect(screen.getByText(/en dags marginal per vecka/)).toBeOnTheScreen()
+
+    fireEvent.press(screen.getByTestId('level-hard'))
+    expect(screen.getByText(/börjar utmaningen om från dag 1/)).toBeOnTheScreen()
+    expect(screen.queryByText(/en dags marginal per vecka/)).toBeNull()
+
+    fireEvent.press(screen.getByTestId('level-extreme'))
+    expect(screen.getByText(/utan undantag/)).toBeOnTheScreen()
+  })
+
   it('Normal accepteras direkt utan extra bekräftelse', async () => {
     render(<RecommendationScreen />)
     fireEvent.press(screen.getByText('Acceptera utmaningen: Normal'))
