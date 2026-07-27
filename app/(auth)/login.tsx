@@ -21,8 +21,9 @@ import { AppTextInput } from '@/components/AppTextInput'
 type Mode = 'login' | 'register'
 
 export default function LoginScreen() {
-  const { startDay } = useLocalSearchParams<{ startDay?: string }>()
-  const [mode, setMode] = useState<Mode>('login')
+  const { startDay, mode: modeParam } = useLocalSearchParams<{ startDay?: string; mode?: string }>()
+  // Välkomstsidans "Skapa konto" landar direkt i registreringsläget
+  const [mode, setMode] = useState<Mode>(modeParam === 'register' ? 'register' : 'login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
