@@ -26,10 +26,10 @@ const DEFS: NavDef[] = [
   },
   {
     key: 'traning', label: 'Träning', href: '/traning', items: [
-      { title: 'Styrketräning', desc: 'Bygg pass med set, reps och vikt.', href: '/traning#styrka' },
-      { title: 'Löpning', desc: 'GPS-spårning med tempo och distans.', href: '/traning#lopning' },
-      { title: 'Cykling', desc: 'Logga rundor och se din utveckling.', href: '/traning#cykling' },
-      { title: 'Promenader', desc: 'Vardagsrörelse som räknas.', href: '/traning#promenad' },
+      { title: 'Styrketräning', desc: 'Bygg pass med set, reps och vikt.', href: '/traning/styrka' },
+      { title: 'Löpning', desc: 'GPS-spårning med tempo och distans.', href: '/traning/lopning' },
+      { title: 'Cykling', desc: 'Logga rundor och se din utveckling.', href: '/traning/cykling' },
+      { title: 'Promenader', desc: 'Vardagsrörelse som räknas.', href: '/traning/promenader' },
       { title: 'Egna träningspass', desc: 'Skapa upplägg som passar dig.', href: '/traning#egna' },
       { title: 'Träningshistorik', desc: 'Alla pass samlade på ett ställe.', href: '/traning#historik' },
       { title: 'Träningsschema', desc: 'Planera veckan längs en tidslinje.', href: '/traning#schema' },

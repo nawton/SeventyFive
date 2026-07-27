@@ -77,3 +77,29 @@ export function SectionText({ kicker, title, children }: { kicker?: string; titl
 export function P({ children, last }: { children: ReactNode; last?: boolean }) {
   return <p style={{ color: 'var(--ink2)', fontSize: 17, lineHeight: 1.7, marginBottom: last ? 0 : 14 }}>{children}</p>
 }
+
+/** Tom bildram: markerar var ett riktigt foto ska in senare. Bilderna
+    väljs manuellt, lägg aldrig in något här på eget bevåg. */
+export function PhotoSlot({ ratio = '16 / 10', label, radius = 28 }: {
+  ratio?: string
+  label: string
+  radius?: number
+}) {
+  return (
+    <div style={{
+      aspectRatio: ratio,
+      background: 'linear-gradient(160deg, #E9ECF4, #DDE2EE)',
+      border: '1.5px dashed rgba(59, 91, 219, 0.35)',
+      borderRadius: radius,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 10, padding: 20,
+    }}>
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8A93A8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="1.6" /><path d="M4 18l5-5 3 3 4-4 4 4" />
+      </svg>
+      <span style={{ fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace", fontSize: 12, color: '#6B7590', textAlign: 'center', lineHeight: 1.5, maxWidth: '85%' }}>
+        Bildplats: {label}
+      </span>
+    </div>
+  )
+}

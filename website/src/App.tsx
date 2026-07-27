@@ -5,6 +5,10 @@ import { SiteFooter } from './components/SiteFooter'
 import Home from './pages/Home'
 import AppPage from './pages/AppPage'
 import Traning from './pages/Traning'
+import Styrka from './pages/traning/Styrka'
+import Lopning from './pages/traning/Lopning'
+import Cykling from './pages/traning/Cykling'
+import Promenader from './pages/traning/Promenader'
 import Challenges from './pages/Challenges'
 import ProgressPage from './pages/ProgressPage'
 import Community from './pages/Community'
@@ -40,6 +44,10 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/appen" element={<AppPage />} />
         <Route path="/traning" element={<Traning />} />
+        <Route path="/traning/styrka" element={<Styrka />} />
+        <Route path="/traning/lopning" element={<Lopning />} />
+        <Route path="/traning/cykling" element={<Cykling />} />
+        <Route path="/traning/promenader" element={<Promenader />} />
         <Route path="/challenges" element={<Challenges />} />
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/community" element={<Community />} />

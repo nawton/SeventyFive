@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Reveal } from '../components/Reveal'
-import { PageHero, Phone } from '../components/Sections'
-import { IconCheck } from '../components/icons'
+import { PageHero, Phone, PhotoSlot } from '../components/Sections'
+import { IconCheck, IconArrow } from '../components/icons'
 import shotCalendar from '../assets/screens/IMG_8741.PNG'
 import shotMuscles from '../assets/screens/IMG_8737.PNG'
 import shotGps from '../assets/screens/IMG_8736.PNG'
@@ -11,11 +11,11 @@ import shotLog from '../assets/screens/IMG_8735.PNG'
 import shotSessions from '../assets/screens/IMG_8749.PNG'
 
 const CATS = [
-  { id: 'styrka', title: 'Styrketräning', body: 'Bygg pass övning för övning och logga set, reps och vikt medan du kör.', shot: shotLog, alt: 'Dagens gympass med övningar och senaste vikter' },
-  { id: 'lopning', title: 'Löpning', body: 'GPS-spårning med rutt, tempo, distans och kalorier i realtid.', shot: shotGps, alt: 'Löpning med karta över Stockholm, mål och röstguidning', link: { to: '/gps-demo', label: 'Testa GPS-kartan live' } },
-  { id: 'cykling', title: 'Cykling', body: 'Logga rundor med distans och tid, och se veckans volym växa.', shot: shotLive, alt: 'Sessionslistan med veckans cardiopass' },
-  { id: 'promenad', title: 'Promenader', body: 'Vardagsrörelsen räknas, på Normal-nivån godkänns promenader som pass.', shot: shotSessions, alt: 'Promenad längs Norr Mälarstrand med rutt på kartan' },
-  { id: 'rorlighet', title: 'Tempoutveckling', body: 'Snittempo vecka för vecka, så du ser formen komma även när dagarna känns tunga.', shot: shotSplits, alt: 'Tempoutveckling per vecka' },
+  { id: 'styrka', to: '/traning/styrka', title: 'Styrketräning', body: 'Bygg pass övning för övning och logga set, reps och vikt medan du kör.', shot: shotLog, alt: 'Dagens gympass med övningar och senaste vikter' },
+  { id: 'lopning', to: '/traning/lopning', title: 'Löpning', body: 'GPS-spårning med rutt, tempo, distans och kalorier i realtid.', shot: shotGps, alt: 'Löpning med karta över Stockholm, mål och röstguidning' },
+  { id: 'cykling', to: '/traning/cykling', title: 'Cykling', body: 'Logga rundor med distans och tid, och se veckans volym växa.', shot: shotLive, alt: 'Sessionslistan med veckans cardiopass' },
+  { id: 'promenad', to: '/traning/promenader', title: 'Promenader', body: 'Vardagsrörelsen räknas, på Normal-nivån godkänns promenader som pass.', shot: shotSessions, alt: 'Promenad längs Norr Mälarstrand med rutt på kartan' },
+  { id: 'rorlighet', to: '/traning/lopning', title: 'Tempoutveckling', body: 'Snittempo vecka för vecka, så du ser formen komma även när dagarna känns tunga.', shot: shotSplits, alt: 'Tempoutveckling per vecka' },
 ]
 
 const CHECKS = [
@@ -46,21 +46,32 @@ export default function Traning() {
         orange
       />
 
+      <section style={{ padding: 'clamp(10px, 2vw, 30px) 0' }}>
+        <div className="container">
+          <Reveal>
+            {/* Bilden väljs manuellt senare */}
+            <PhotoSlot ratio="21 / 8" label="bred bild, träningsgrupp eller löpare i bergslandskap, motljus" radius={40} />
+          </Reveal>
+        </div>
+      </section>
+
       <section style={{ padding: 'clamp(30px, 4vw, 60px) 0' }}>
         <div className="container">
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 20 }}>
             {CATS.map((c, i) => (
               <Reveal key={c.id} delay={(i % 3) * 60}>
-                <div id={c.id} className="softCard hoverLift" style={{ scrollMarginTop: 90, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Link to={c.to} id={c.id} className="softCard hoverLift" style={{ scrollMarginTop: 90, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column', color: 'inherit' }}>
                   <div style={{ aspectRatio: '16/10', overflow: 'hidden', borderBottom: '1px solid var(--line)', background: '#E9ECF4' }}>
                     <img src={c.shot} alt={c.alt} loading="lazy" style={{ width: '100%', display: 'block', marginTop: '-8%' }} />
                   </div>
                   <div style={{ padding: '22px 24px 26px' }}>
                     <h3 style={{ fontWeight: 700, fontSize: 19, marginBottom: 8 }}>{c.title}</h3>
-                    <p style={{ color: 'var(--ink3)', fontSize: 14.5, lineHeight: 1.6, marginBottom: c.link ? 10 : 0 }}>{c.body}</p>
-                    {c.link && <Link to={c.link.to} style={{ fontWeight: 600, fontSize: 14 }}>{c.link.label}</Link>}
+                    <p style={{ color: 'var(--ink3)', fontSize: 14.5, lineHeight: 1.6, marginBottom: 10 }}>{c.body}</p>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontWeight: 600, fontSize: 14, color: 'var(--blue)' }}>
+                      Läs mer<IconArrow size={15} strokeWidth={2.2} />
+                    </span>
                   </div>
-                </div>
+                </Link>
               </Reveal>
             ))}
             <Reveal delay={120}>
