@@ -47,6 +47,7 @@ const DEFS: NavDef[] = [
     ],
   },
   { key: 'progress', label: 'Progress', href: '/progress' },
+  { key: 'demo', label: 'Demo', href: '/demo' },
   {
     key: 'community', label: 'Community', href: '/community', items: [
       { title: 'Aktivitetsflöde', desc: 'Se vänners pass och avklarade dagar.', href: '/community#flode' },
@@ -64,6 +65,7 @@ function activeKey(pathname: string): string {
   if (pathname.startsWith('/traning') || pathname.startsWith('/gps-demo')) return 'traning'
   if (pathname.startsWith('/challenges')) return 'challenges'
   if (pathname.startsWith('/progress')) return 'progress'
+  if (pathname.startsWith('/demo')) return 'demo'
   if (pathname.startsWith('/community')) return 'community'
   if (pathname.startsWith('/om')) return 'om'
   return ''

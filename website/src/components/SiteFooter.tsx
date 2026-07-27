@@ -27,6 +27,7 @@ export function SiteFooter() {
                 <Link to="/traning">Träning</Link>
                 <Link to="/challenges">Challenges</Link>
                 <Link to="/progress">Progress</Link>
+                <Link to="/demo">Demo</Link>
               </div>
             </div>
             <div>

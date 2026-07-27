@@ -10,6 +10,7 @@ import ProgressPage from './pages/ProgressPage'
 import Community from './pages/Community'
 import About from './pages/About'
 import GpsDemo from './pages/GpsDemo'
+import Demo from './pages/Demo'
 import Login from './pages/Login'
 import Privacy from './pages/Privacy'
 import Support from './pages/Support'
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/community" element={<Community />} />
         <Route path="/om" element={<About />} />
         <Route path="/gps-demo" element={<GpsDemo />} />
+        <Route path="/demo" element={<Demo />} />
         <Route path="/logga-in" element={<Login />} />
         <Route path="/integritetspolicy" element={<Privacy />} />
         <Route path="/support" element={<Support />} />
