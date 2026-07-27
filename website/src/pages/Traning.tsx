@@ -61,8 +61,8 @@ export default function Traning() {
             {CATS.map((c, i) => (
               <Reveal key={c.id} delay={(i % 3) * 60}>
                 <Link to={c.to} id={c.id} className="softCard hoverLift" style={{ scrollMarginTop: 90, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column', color: 'inherit' }}>
-                  <div style={{ aspectRatio: '16/10', overflow: 'hidden', borderBottom: '1px solid var(--line)', background: '#E9ECF4' }}>
-                    <img src={c.shot} alt={c.alt} loading="lazy" style={{ width: '100%', display: 'block', marginTop: '-8%' }} />
+                  <div style={{ aspectRatio: '16/10', overflow: 'hidden', borderBottom: '1px solid var(--line)', background: 'linear-gradient(160deg, #EDF0F7, #E2E6F0)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 20 }}>
+                    <img src={c.shot} alt={c.alt} loading="lazy" style={{ width: '56%', display: 'block', borderRadius: '22px 22px 0 0', border: '1px solid rgba(20,22,28,0.10)', borderBottom: 'none', boxShadow: '0 14px 30px rgba(20,25,45,0.14)' }} />
                   </div>
                   <div style={{ padding: '22px 24px 26px' }}>
                     <h3 style={{ fontWeight: 700, fontSize: 19, marginBottom: 8 }}>{c.title}</h3>
