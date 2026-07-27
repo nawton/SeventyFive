@@ -5,14 +5,14 @@ import {
   IconCheck, IconArrow, IconChevDown, IconLayers, IconTasks, IconChart,
   IconMedal, IconFlame, IconBell, IconUsers,
 } from '../components/icons'
-import shotHome from '../assets/screens/IMG_8705.PNG'
-import shotProgress from '../assets/screens/IMG_8713.PNG'
-import shotCalendar from '../assets/screens/IMG_8704.PNG'
-import shotGps from '../assets/screens/IMG_8700.PNG'
-import shotMedals from '../assets/screens/IMG_8717.PNG'
-import shotMuscles from '../assets/screens/IMG_8719.PNG'
-import shotDistance from '../assets/screens/IMG_8714.PNG'
-import shotGroup from '../assets/screens/IMG_8709.PNG'
+import shotHome from '../assets/screens/IMG_8733.PNG'
+import shotProgress from '../assets/screens/IMG_8740.PNG'
+import shotCalendar from '../assets/screens/IMG_8735.PNG'
+import shotGps from '../assets/screens/IMG_8736.PNG'
+import shotMedals from '../assets/screens/IMG_8739.PNG'
+import shotMuscles from '../assets/screens/IMG_8737.PNG'
+import shotDistance from '../assets/screens/IMG_8745.PNG'
+import shotGroup from '../assets/screens/IMG_8750.PNG'
 
 const CHIPS = ['Dagliga uppgifter', 'Träningsplanering', 'Statistik och streaks', 'Personlig utveckling']
 
@@ -121,7 +121,7 @@ export default function Home() {
               </div>
               <div style={{ position: 'absolute', right: 'max(0px, calc(50% - 290px))', bottom: '-4%', width: 'min(46%, 205px)', zIndex: 3, animation: 'sfFloat 7s ease-in-out infinite' }}>
                 <div className="phone phoneSm">
-                  <img src={shotProgress} alt="Framsteg-vyn med dag 8 av 75 och veckostatistik" />
+                  <img src={shotProgress} alt="Framsteg-vyn med dag 42 av 75 och veckostatistik" />
                 </div>
               </div>
             </div>
@@ -218,7 +218,7 @@ export default function Home() {
                   <p style={{ color: 'var(--ink3)', fontSize: 14.5, lineHeight: 1.6 }}>Spåra löpning, cykling och promenader med karta, tempo och kalorier.</p>
                 </div>
                 <div style={{ flex: 1, padding: '0 26px', overflow: 'hidden', display: 'flex', alignItems: 'flex-start' }}>
-                  <img src={shotGps} alt="Löpningsvy med karta över Åre, tempo och distans" style={{ display: 'block', width: '100%', borderRadius: '24px 24px 0 0', border: '1px solid rgba(20,22,28,0.08)', borderBottom: 'none' }} />
+                  <img src={shotGps} alt="Löpningsvy med karta över Stockholm, mål och röstguidning" style={{ display: 'block', width: '100%', borderRadius: '24px 24px 0 0', border: '1px solid rgba(20,22,28,0.08)', borderBottom: 'none' }} />
                 </div>
               </div>
             </Reveal>
@@ -247,7 +247,7 @@ export default function Home() {
                   <p style={{ color: 'var(--ink3)', fontSize: 14.5, lineHeight: 1.6 }}>26 medaljer att låsa upp, från första dagen till hela vägen i mål.</p>
                 </div>
                 <div style={{ flex: 1, padding: '0 26px', overflow: 'hidden', display: 'flex', alignItems: 'flex-start' }}>
-                  <img src={shotMedals} alt="Rekord och medaljer, 4 av 26 upplåsta" style={{ display: 'block', width: '100%', borderRadius: '24px 24px 0 0', border: '1px solid rgba(20,22,28,0.08)', borderBottom: 'none' }} />
+                  <img src={shotMedals} alt="Medaljsamlingen, 18 av 26 upplåsta" style={{ display: 'block', width: '100%', borderRadius: '24px 24px 0 0', border: '1px solid rgba(20,22,28,0.08)', borderBottom: 'none' }} />
                 </div>
               </div>
             </Reveal>
@@ -329,7 +329,7 @@ export default function Home() {
                   </div>
                   <div style={{ width: 'min(46%, 220px)', marginTop: 36 }}>
                     <div className="phone" style={{ borderRadius: 38, boxShadow: '0 26px 60px rgba(20,25,45,0.25)' }}>
-                      <img src={shotDistance} alt="Distansstatistik med veckograf och fördelning per aktivitet" style={{ borderRadius: 30 }} />
+                      <img src={shotDistance} alt="Distansgraf över veckan med fördelning per aktivitet" style={{ borderRadius: 30 }} />
                     </div>
                   </div>
                 </div>

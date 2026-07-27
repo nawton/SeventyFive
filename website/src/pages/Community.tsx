@@ -1,8 +1,8 @@
 import { Reveal } from '../components/Reveal'
 import { PageHero, Phone } from '../components/Sections'
 import { IconUsers, IconTrophy, IconTarget, IconHeart } from '../components/icons'
-import shotGroup from '../assets/screens/IMG_8709.PNG'
-import shotFeed from '../assets/screens/IMG_8707.PNG'
+import shotGroup from '../assets/screens/IMG_8750.PNG'
+import shotFeed from '../assets/screens/IMG_8748.PNG'
 
 // OBS: exempeldata i flödeslistan, byts mot riktig data efter lansering
 const FEED = [
@@ -57,7 +57,7 @@ export default function Community() {
             </Reveal>
             <Reveal delay={120}>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <Phone src={shotGroup} alt="Gruppvy med veckans topplista och delat flöde" />
+                <Phone src={shotGroup} alt="Gruppen Team Sthlm med veckans topplista och flöde" />
               </div>
             </Reveal>
           </div>
@@ -97,7 +97,7 @@ export default function Community() {
             </Reveal>
             <Reveal delay={120}>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <Phone src={shotFeed} alt="Aktivitetsflödet med ett GPS-spårat pass" />
+                <Phone src={shotFeed} alt="Aktivitetsflödet med en GPS-spårad promenad på Kungsholmen" />
               </div>
             </Reveal>
           </div>

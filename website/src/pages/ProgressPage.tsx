@@ -1,8 +1,8 @@
 import { Reveal } from '../components/Reveal'
 import { PageHero, Phone } from '../components/Sections'
 import { IconFlame, IconMedal } from '../components/icons'
-import shotProgress from '../assets/screens/IMG_8713.PNG'
-import shotGymStats from '../assets/screens/IMG_8716.PNG'
+import shotProgress from '../assets/screens/IMG_8740.PNG'
+import shotGymStats from '../assets/screens/IMG_8752.PNG'
 
 const WEEKDAYS = [
   { d: 'M', v: 0.8 }, { d: 'T', v: 0.8 }, { d: 'O', v: 0.5 }, { d: 'T', v: 0.8 },
@@ -98,7 +98,7 @@ export default function ProgressPage() {
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(59,91,219,0.1)', color: 'var(--blue)' }}><IconFlame size={24} strokeWidth={1.8} /></span>
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: '#F0F2F7', color: '#B9BFCE', border: '1.5px dashed #C9CFDC', fontSize: 22, fontWeight: 600 }}>+</span>
                 </div>
-                <p style={{ color: 'var(--ink3)', fontSize: 14, lineHeight: 1.6 }}>11 av 26 upplåsta. Nästa: 50 dagar i rad.</p>
+                <p style={{ color: 'var(--ink3)', fontSize: 14, lineHeight: 1.6 }}>18 av 26 upplåsta. Nästa: Halvvägs, dag 50.</p>
               </div>
             </Reveal>
           </div>
@@ -123,8 +123,8 @@ export default function ProgressPage() {
               </Reveal>
               <Reveal delay={120}>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
-                  <Phone src={shotProgress} alt="Framsteg-vyn med utmaningens översikt" width="min(44%, 210px)" />
-                  <Phone src={shotGymStats} alt="Gympass-statistik med volym och historik" width="min(44%, 210px)" style={{ marginTop: 32 }} />
+                  <Phone src={shotProgress} alt="Framsteg-vyn med dag 42, klarade dagar och veckan" width="min(44%, 210px)" />
+                  <Phone src={shotGymStats} alt="Muskelfördelningen som radardiagram med set per muskelgrupp" width="min(44%, 210px)" style={{ marginTop: 32 }} />
                 </div>
               </Reveal>
             </div>

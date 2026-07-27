@@ -2,20 +2,20 @@ import { Link } from 'react-router-dom'
 import { Reveal } from '../components/Reveal'
 import { PageHero, Phone } from '../components/Sections'
 import { IconCheck } from '../components/icons'
-import shotCalendar from '../assets/screens/IMG_8704.PNG'
-import shotMuscles from '../assets/screens/IMG_8719.PNG'
-import shotGps from '../assets/screens/IMG_8700.PNG'
-import shotLive from '../assets/screens/IMG_8701.PNG'
-import shotSplits from '../assets/screens/IMG_8702.PNG'
-import shotLog from '../assets/screens/IMG_8720.PNG'
-import shotSessions from '../assets/screens/IMG_8715.PNG'
+import shotCalendar from '../assets/screens/IMG_8741.PNG'
+import shotMuscles from '../assets/screens/IMG_8737.PNG'
+import shotGps from '../assets/screens/IMG_8736.PNG'
+import shotLive from '../assets/screens/IMG_8744.PNG'
+import shotSplits from '../assets/screens/IMG_8743.PNG'
+import shotLog from '../assets/screens/IMG_8735.PNG'
+import shotSessions from '../assets/screens/IMG_8749.PNG'
 
 const CATS = [
-  { id: 'styrka', title: 'Styrketräning', body: 'Bygg pass övning för övning och logga set, reps och vikt medan du kör.', shot: shotLog, alt: 'Gympass med övningar, set och vikter' },
-  { id: 'lopning', title: 'Löpning', body: 'GPS-spårning med rutt, tempo, distans och kalorier i realtid.', shot: shotGps, alt: 'Löpningsvy med karta, tempo och distans', link: { to: '/gps-demo', label: 'Testa GPS-kartan live' } },
-  { id: 'cykling', title: 'Cykling', body: 'Logga rundor med distans och tid, och se veckans volym växa.', shot: shotLive, alt: 'Passvy med tid, tempo och distans i realtid' },
-  { id: 'promenad', title: 'Promenader', body: 'Vardagsrörelsen räknas, på Normal-nivån godkänns promenader som pass.', shot: shotSessions, alt: 'Lista över loggade cardiosessioner' },
-  { id: 'rorlighet', title: 'Splits och tempo', body: 'Kilometertider segment för segment, så du ser exakt var passet vanns.', shot: shotSplits, alt: 'Splits per kilometer under ett pass' },
+  { id: 'styrka', title: 'Styrketräning', body: 'Bygg pass övning för övning och logga set, reps och vikt medan du kör.', shot: shotLog, alt: 'Dagens gympass med övningar och senaste vikter' },
+  { id: 'lopning', title: 'Löpning', body: 'GPS-spårning med rutt, tempo, distans och kalorier i realtid.', shot: shotGps, alt: 'Löpning med karta över Stockholm, mål och röstguidning', link: { to: '/gps-demo', label: 'Testa GPS-kartan live' } },
+  { id: 'cykling', title: 'Cykling', body: 'Logga rundor med distans och tid, och se veckans volym växa.', shot: shotLive, alt: 'Sessionslistan med veckans cardiopass' },
+  { id: 'promenad', title: 'Promenader', body: 'Vardagsrörelsen räknas, på Normal-nivån godkänns promenader som pass.', shot: shotSessions, alt: 'Promenad längs Norr Mälarstrand med rutt på kartan' },
+  { id: 'rorlighet', title: 'Tempoutveckling', body: 'Snittempo vecka för vecka, så du ser formen komma även när dagarna känns tunga.', shot: shotSplits, alt: 'Tempoutveckling per vecka' },
 ]
 
 const CHECKS = [
@@ -94,7 +94,7 @@ export default function Traning() {
               </Reveal>
               <Reveal delay={120}>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
-                  <Phone src={shotCalendar} alt="Kalender med planerade träningspass" width="min(44%, 210px)" />
+                  <Phone src={shotCalendar} alt="Kalendern med en hel månad klarade dagar" width="min(44%, 210px)" />
                   <Phone src={shotMuscles} alt="Tränade muskler visualiserade på kroppskarta" width="min(44%, 210px)" style={{ marginTop: 32 }} />
                 </div>
               </Reveal>

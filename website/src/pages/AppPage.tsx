@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom'
 import { Reveal } from '../components/Reveal'
 import { PageHero, Phone, Split, SectionText, P } from '../components/Sections'
 import { IconArrow } from '../components/icons'
-import shotHome from '../assets/screens/IMG_8705.PNG'
-import shotLog from '../assets/screens/IMG_8720.PNG'
-import shotDistance from '../assets/screens/IMG_8714.PNG'
-import shotGymStats from '../assets/screens/IMG_8716.PNG'
-import shotMedals from '../assets/screens/IMG_8717.PNG'
+import shotHome from '../assets/screens/IMG_8733.PNG'
+import shotLog from '../assets/screens/IMG_8735.PNG'
+import shotDistance from '../assets/screens/IMG_8745.PNG'
+import shotGymStats from '../assets/screens/IMG_8742.PNG'
+import shotMedals from '../assets/screens/IMG_8738.PNG'
 
 const MORE = [
   { title: 'Påminnelser', body: 'Smarta notiser när dagen håller på att rinna iväg.' },
@@ -43,7 +43,7 @@ export default function AppPage() {
       <Split id="logg" card>
         <Reveal>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <Phone src={shotLog} alt="Logga träningspass med övningar och set" />
+            <Phone src={shotLog} alt="Dagens gympass med övningar och senaste vikter" />
           </div>
         </Reveal>
         <Reveal delay={120}>
@@ -74,7 +74,7 @@ export default function AppPage() {
         <Reveal delay={120}>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
             <Phone src={shotDistance} alt="Distansstatistik med veckograf" width="min(44%, 210px)" />
-            <Phone src={shotGymStats} alt="Gympass-statistik med volym och historik" width="min(44%, 210px)" style={{ marginTop: 32 }} />
+            <Phone src={shotGymStats} alt="Träningsdetaljer med total distans och snittempo" width="min(44%, 210px)" style={{ marginTop: 32 }} />
           </div>
         </Reveal>
       </Split>
@@ -119,7 +119,7 @@ export default function AppPage() {
               </Reveal>
               <Reveal delay={120}>
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <Phone src={shotMedals} alt="Medaljvy med 4 av 26 upplåsta" />
+                  <Phone src={shotMedals} alt="Rekordnivån Platina med poäng mot nästa nivå" />
                 </div>
               </Reveal>
             </div>
