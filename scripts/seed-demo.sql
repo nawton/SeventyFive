@@ -187,12 +187,15 @@ BEGIN
     END IF;
   END LOOP;
 
+  RAISE NOTICE 'Träningsdata klar: utmaning, dagar, cardio, gym och schema.';
+
   -- ── Gruppen: Team Åre med vänner, topplista och inlägg ─────────────────────
+  BEGIN
   INSERT INTO groups (owner_id, name, description, sport, tags, is_private, location)
   VALUES (uid, 'Team Åre', 'Vi kör 75 dagar tillsammans. Alla pass räknas, ingen lämnas kvar.', 'all', '{Löpning,Gym}', FALSE, 'Åre')
   RETURNING id INTO grp_id;
 
-  INSERT INTO group_members (group_id, user_id, status) VALUES (grp_id, uid, 'accepted')
+  INSERT INTO group_members (group_id, user_id, role, status) VALUES (grp_id, uid, 'owner', 'accepted')
   ON CONFLICT DO NOTHING;
   FOREACH fid IN ARRAY friend_ids LOOP
     INSERT INTO group_members (group_id, user_id, status, invited_by)
@@ -226,6 +229,10 @@ BEGIN
     INSERT INTO post_comments (post_key, owner_id, author_id, body)
     VALUES (post_keys[1], uid, friend_ids[1], 'Grym fart, sista kilometern var snabbast!');
   END IF;
+  RAISE NOTICE 'Social data klar: grupp, medlemmar, följen och gillamarkeringar.';
+  EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'Sociala delen hoppades över (%). Träningsdatan är ändå sparad.', SQLERRM;
+  END;
 
   RAISE NOTICE 'Klart! Demokontot % är fyllt: utmaning dag 42, % pass, grupp Team Åre med % medlemmar.',
     demo_email,
