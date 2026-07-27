@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
+  Platform,
 } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import { SafeScreen } from '@/components/SafeScreen'
@@ -30,10 +31,36 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
   const [results, setResults] = useState<Array<Group & { memberCount: number }>>([])
   const [searching, setSearching] = useState(false)
   const [scanOpen, setScanOpen] = useState(false)
+  // Gruppen som väntar på att modalerna ska hinna ner innan den öppnas
+  const pendingGroup = useRef<Group | null>(null)
 
   useEffect(() => {
-    if (visible) { setQuery(''); setResults([]); setSearching(false) }
+    if (visible) { setQuery(''); setResults([]); setSearching(false); pendingGroup.current = null }
   }, [visible])
+
+  // iOS river presentationen (svart skärm) om två staplade modaler stängs i
+  // samma andetag — därför i sekvens: kameran ner, sökarket ner, sen gruppen.
+  // Varje steg fortsätter i onDismiss, som fyrar när nedtagningen är KLAR.
+  function openGroupSafely(g: Group) {
+    if (Platform.OS !== 'ios') {
+      setScanOpen(false)
+      onClose()
+      onOpenGroup(g)
+      return
+    }
+    pendingGroup.current = g
+    if (scanOpen) setScanOpen(false)   // steg 1 — fortsätter i handleScannerDismissed
+    else onClose()                     // direkt till steg 2 när kameran inte är uppe
+  }
+
+  function handleScannerDismissed() {
+    if (pendingGroup.current) onClose()   // steg 2 — fortsätter i handleSheetDismissed
+  }
+
+  function handleSheetDismissed() {
+    const g = pendingGroup.current
+    if (g) { pendingGroup.current = null; onOpenGroup(g) }   // steg 3
+  }
 
   // Debounce: sök när man slutat skriva, från två tecken
   useEffect(() => {
@@ -52,7 +79,7 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
   const q = query.trim()
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} onDismiss={handleSheetDismissed}>
       <SafeScreen style={s.screen}>
         <View style={s.header}>
           <View style={{ width: 40 }} />
@@ -82,7 +109,7 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
 
           {!searching && results.map(g => (
             <TouchableOpacity key={g.id} style={[s.row, chrome]} activeOpacity={0.75}
-              onPress={() => onOpenGroup(g)} testID={`found-${g.id}`}>
+              onPress={() => openGroupSafely(g)} testID={`found-${g.id}`}>
               <FeedAvatar url={g.avatar_url} fallback={g.name.charAt(0).toUpperCase()} size={48} />
               <View style={{ flex: 1 }}>
                 <Text style={s.rowName} numberOfLines={1}>{g.name}</Text>
@@ -106,7 +133,8 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
         <GroupScanSheet
           visible={scanOpen}
           onClose={() => setScanOpen(false)}
-          onFound={g => { setScanOpen(false); onOpenGroup(g) }}
+          onFound={openGroupSafely}
+          onDismissed={handleScannerDismissed}
         />
       </SafeScreen>
     </Modal>

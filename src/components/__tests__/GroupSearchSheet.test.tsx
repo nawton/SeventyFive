@@ -1,3 +1,4 @@
+import { Modal } from 'react-native'
 import { render, screen, fireEvent, act } from '@testing-library/react-native'
 import { GroupSearchSheet } from '../GroupSearchSheet'
 import { searchGroups, type Group } from '@/services/groups'
@@ -18,9 +19,14 @@ const RESULTS = [
   { id: 'g3', name: 'Team Duo', is_private: true, memberCount: 1, location: null, avatar_url: null },
 ]
 
-function mount(onOpenGroup = jest.fn()) {
-  render(<GroupSearchSheet visible onClose={jest.fn()} onOpenGroup={onOpenGroup} />)
-  return onOpenGroup
+function mount(onOpenGroup = jest.fn(), onClose = jest.fn()) {
+  render(<GroupSearchSheet visible onClose={onClose} onOpenGroup={onOpenGroup} />)
+  return { onOpenGroup, onClose }
+}
+
+// iOS-kedjan väntar på att arket ska vara helt nedtaget innan gruppen öppnas
+function dismissSheet() {
+  fireEvent(screen.UNSAFE_getByType(Modal), 'dismiss')
 }
 
 async function type(text: string) {
@@ -52,14 +58,18 @@ describe('GroupSearchSheet', () => {
   })
 
   it('träffarna visar medlemsantal, men privata gruppers dolda antal blir bara Privat', async () => {
-    const onOpenGroup = mount()
+    const { onOpenGroup, onClose } = mount()
     await type('team')
 
     expect(screen.getByText('3 medlemmar · Stockholm')).toBeOnTheScreen()
     expect(screen.getByText('Privat')).toBeOnTheScreen()
     expect(screen.getByText('1 medlem · Privat')).toBeOnTheScreen()
 
+    // Arket stängs först — gruppen öppnas när nedtagningen är klar
     fireEvent.press(screen.getByTestId('found-g1'))
+    expect(onClose).toHaveBeenCalled()
+    expect(onOpenGroup).not.toHaveBeenCalled()
+    dismissSheet()
     expect(onOpenGroup).toHaveBeenCalledWith(RESULTS[0])
   })
 
@@ -74,15 +84,37 @@ describe('GroupSearchSheet', () => {
     expect(screen.getByText('Inga grupper matchade "nätfel".')).toBeOnTheScreen()
   })
 
-  it('QR-raden öppnar skannern och en hittad grupp öppnas direkt', async () => {
-    const onOpenGroup = mount()
+  it('QR-träff stänger kameran, sedan arket, och först då öppnas gruppen', async () => {
+    const { onOpenGroup, onClose } = mount()
     expect(mockScanProps.current?.visible).toBe(false)
 
     fireEvent.press(screen.getByTestId('scanGroup'))
     expect(mockScanProps.current?.visible).toBe(true)
 
+    // Steg 1: träffen tar bara ner kameran — inget öppnas ännu
     act(() => { mockScanProps.current!.onFound(RESULTS[0] as unknown as Group) })
-    expect(onOpenGroup).toHaveBeenCalledWith(RESULTS[0])
     expect(mockScanProps.current?.visible).toBe(false)
+    expect(onClose).not.toHaveBeenCalled()
+    expect(onOpenGroup).not.toHaveBeenCalled()
+
+    // Steg 2: kameran helt nere → sökarket ombeds stänga
+    act(() => { mockScanProps.current!.onDismissed() })
+    expect(onClose).toHaveBeenCalled()
+    expect(onOpenGroup).not.toHaveBeenCalled()
+
+    // Steg 3: arket helt nere → gruppen öppnas
+    dismissSheet()
+    expect(onOpenGroup).toHaveBeenCalledWith(RESULTS[0])
+  })
+
+  it('att stänga skannern utan träff öppnar ingenting', async () => {
+    const { onOpenGroup, onClose } = mount()
+    fireEvent.press(screen.getByTestId('scanGroup'))
+    act(() => { mockScanProps.current!.onClose() })
+    act(() => { mockScanProps.current!.onDismissed() })
+    expect(onClose).not.toHaveBeenCalled()
+
+    dismissSheet()
+    expect(onOpenGroup).not.toHaveBeenCalled()
   })
 })

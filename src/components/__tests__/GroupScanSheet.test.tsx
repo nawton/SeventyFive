@@ -1,4 +1,4 @@
-import { Alert } from 'react-native'
+import { Alert, Modal } from 'react-native'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react-native'
 import * as Haptics from 'expo-haptics'
 import { GroupScanSheet } from '../GroupScanSheet'
@@ -33,6 +33,13 @@ beforeEach(() => {
 })
 
 describe('GroupScanSheet', () => {
+  it('meddelar via onDismissed när modalen är helt nedtagen', () => {
+    const onDismissed = jest.fn()
+    render(<GroupScanSheet visible onClose={jest.fn()} onFound={jest.fn()} onDismissed={onDismissed} />)
+    fireEvent(screen.UNSAFE_getByType(Modal), 'dismiss')
+    expect(onDismissed).toHaveBeenCalled()
+  })
+
   it('utan kameratillstånd: förklaring och knapp som frågar om åtkomst', () => {
     mockCam.permission = null
     render(<GroupScanSheet visible onClose={jest.fn()} onFound={jest.fn()} />)

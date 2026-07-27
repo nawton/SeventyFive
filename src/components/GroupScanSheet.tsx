@@ -23,13 +23,15 @@ try {
   useCameraPermissions = cam.useCameraPermissions
 } catch { /* modulen finns inte i den här byggnationen */ }
 
-export function GroupScanSheet({ visible, onClose, onFound }: {
+export function GroupScanSheet({ visible, onClose, onFound, onDismissed }: {
   visible: boolean
   onClose: () => void
   onFound: (group: Group) => void
+  /** iOS: modalen är helt nedtagen — säkert att stänga nästa modal i kedjan */
+  onDismissed?: () => void
 }) {
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} onDismiss={onDismissed}>
       {CameraView && useCameraPermissions
         ? <ScannerInner onClose={onClose} onFound={onFound} />
         : (
