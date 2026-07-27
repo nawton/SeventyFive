@@ -25,17 +25,18 @@ interface LevelConfig {
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
+// Reglerna speglar Jämför nivåerna-tabellen — håll dem i synk med hemsidan
 const LEVELS: Record<Level, LevelConfig> = {
   normal: {
     slug: 'normal',
     name: 'Normal',
     tagline: 'En stark start. Hållbar förändring.',
     rules: [
-      '1 träningspass per dag (45 min)',
+      '4 träningspass i veckan',
       'Följ din kostplan',
-      'Drick 3 liter vatten',
-      'Läs 10 sidor',
-      'Ta ett progressfoto',
+      'Drick 2 liter vatten',
+      'Läsning och progressfoton är valfria',
+      'En dags marginal per vecka',
     ],
     color: '#3BE862',
     warning: '',
@@ -45,29 +46,29 @@ const LEVELS: Record<Level, LevelConfig> = {
     name: 'Hard',
     tagline: 'Disciplin bygger karaktär.',
     rules: [
-      '2 träningspass per dag (45 min vardera)',
-      'Noll fuskmat',
-      'Drick 4 liter vatten',
-      'Läs 10 sidor',
-      'Ta ett progressfoto',
+      '1 träningspass per dag, ett utomhus',
+      'Håll din kost, noll fuskmat',
+      'Drick 3 liter vatten',
+      'Läs 10 sidor per dag',
+      'Ta ett progressfoto varje dag',
     ],
     color: '#FFA817',
-    warning: 'Hard kräver två träningspass varje dag i 75 dagar, utan undantag. Missar du en dag börjar du om från dag 1.',
+    warning: 'Hard kräver träning varje dag med ett pass utomhus, 10 sidor läsning och progressfoto varje dag i 75 dagar. Missar du en dag börjar du om från dag 1.',
   },
   extreme: {
     slug: 'extreme',
     name: 'Extreme',
     tagline: 'Bara de starkaste klarar detta.',
     rules: [
-      '2 träningspass per dag (ett utomhus)',
+      '2 träningspass per dag',
       'Strikt kostplan, inga undantag',
       'Drick 4 liter vatten',
-      'Läs 20 sidor',
-      'Ta ett progressfoto',
+      'Läs 10 sidor per dag',
+      'Ta ett progressfoto varje dag',
       'Kall dusch varje morgon',
     ],
     color: '#FF3B4A',
-    warning: 'Extreme kräver två pass per dag varav ett utomhus, strikt kost, 20 sidor läsning och kall dusch varje morgon, i 75 dagar utan undantag.',
+    warning: 'Extreme kräver två pass per dag, strikt kost, 4 liter vatten, 10 sidor läsning och kall dusch varje morgon, i 75 dagar utan vilodagar. Missar du en dag börjar du om från dag 1.',
   },
 }
 
@@ -185,7 +186,7 @@ export default function RecommendationScreen() {
                 <View style={styles.rulesList}>
                   {l.rules.map((rule, i) => (
                     <View key={i} style={styles.ruleRow}>
-                      <View style={[styles.ruleDot, { backgroundColor: l.color }]} />
+                      <Ionicons name="checkmark-circle" size={17} color={l.color} />
                       <Text style={styles.ruleText}>{rule}</Text>
                     </View>
                   ))}
@@ -350,11 +351,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  ruleDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
   },
   ruleText: {
     color: TEXT_PRIMARY,

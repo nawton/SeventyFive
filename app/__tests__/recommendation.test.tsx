@@ -36,7 +36,8 @@ describe('RecommendationScreen', () => {
     expect(screen.getByText('Nej, 1 dags marginal/vecka')).toBeOnTheScreen()
     expect(screen.getByText('Inga vilodagar')).toBeOnTheScreen()
     // Vald nivå (Normal) visar sina regler, de andra är hopfällda
-    expect(screen.getByText('1 träningspass per dag (45 min)')).toBeOnTheScreen()
+    expect(screen.getByText('4 träningspass i veckan')).toBeOnTheScreen()
+    expect(screen.getByText('En dags marginal per vecka')).toBeOnTheScreen()
     expect(screen.queryByText('Kall dusch varje morgon')).toBeNull()
   })
 
@@ -44,7 +45,7 @@ describe('RecommendationScreen', () => {
     render(<RecommendationScreen />)
     fireEvent.press(screen.getByTestId('level-extreme'))
     expect(screen.getByText('Kall dusch varje morgon')).toBeOnTheScreen()
-    expect(screen.queryByText('1 träningspass per dag (45 min)')).toBeNull()
+    expect(screen.queryByText('4 träningspass i veckan')).toBeNull()
   })
 
   it('Normal accepteras direkt utan extra bekräftelse', async () => {
