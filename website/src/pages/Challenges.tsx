@@ -80,9 +80,6 @@ export default function Challenges() {
                   display: 'flex', flexDirection: 'column', gap: 14,
                   boxShadow: lv.variant === 'dark' ? '0 14px 44px rgba(16,27,69,0.3)' : lv.variant === 'rec' ? '0 12px 38px rgba(43,75,215,0.14)' : 'var(--shadow-sm)',
                 }}>
-                  {lv.variant === 'rec' && (
-                    <span style={{ position: 'absolute', top: -13, left: 30, background: 'linear-gradient(140deg, #3B5BDB, #2338A8)', color: '#FFFFFF', fontSize: 12.5, fontWeight: 700, letterSpacing: 0.5, padding: '6px 14px', borderRadius: 999 }}>Rekommenderad</span>
-                  )}
                   <div style={{ fontFamily: 'var(--font-hd)', fontWeight: 700, fontSize: 22, ...(lv.variant === 'dark' ? { background: 'linear-gradient(120deg, #FF9D68, #F2652A)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' } : lv.variant === 'rec' ? { color: 'var(--blue)' } : { color: 'var(--ink)' }) }}>{lv.title}</div>
                   <p style={{ color: lv.variant === 'dark' ? '#AEB6D9' : 'var(--ink3)', fontSize: 15, lineHeight: 1.65, flex: 1 }}>{lv.body}</p>
                   <Link to="/app" style={

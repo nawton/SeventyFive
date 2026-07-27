@@ -173,14 +173,7 @@ export default function RecommendationScreen() {
             >
               <View style={styles.levelHead}>
                 <View style={{ flex: 1 }}>
-                  <View style={styles.levelNameRow}>
-                    <Text style={[styles.levelName, { color: l.color }]}>{l.name}</Text>
-                    {slug === recommendedLevel && (
-                      <View style={styles.recBadge}>
-                        <Text style={styles.recBadgeText}>REKOMMENDERAD</Text>
-                      </View>
-                    )}
-                  </View>
+                  <Text style={[styles.levelName, { color: l.color }]}>{l.name}</Text>
                   <Text style={styles.tagline}>{l.tagline}</Text>
                 </View>
                 <View style={[styles.radio, selected && { borderColor: l.color, backgroundColor: l.color }]}>
@@ -202,23 +195,39 @@ export default function RecommendationScreen() {
           )
         })}
 
-        {/* Jämförelsen — så mycket skiljer nivåerna */}
+        {/* Jämförelsen — kravet på egen rad med tre luftiga kolumner under,
+            och den valda nivåns kolumn tonad i nivåns färg */}
         <View style={styles.compareCard}>
           <Text style={styles.compareTitle}>Jämför nivåerna</Text>
-          <View style={styles.compareRow}>
-            <View style={styles.compareLabelCell} />
+          <View style={styles.compareValues}>
             {LEVEL_ORDER.map(slug => (
-              <Text key={slug} style={[styles.compareHead, { color: LEVELS[slug].color }]}>
-                {LEVELS[slug].name}
-              </Text>
+              <View
+                key={slug}
+                style={[styles.compareHeadCell, selectedLevel === slug && { backgroundColor: LEVELS[slug].color + '1F' }]}
+              >
+                <Text style={[styles.compareHead, { color: LEVELS[slug].color }]}>
+                  {LEVELS[slug].name}
+                </Text>
+              </View>
             ))}
           </View>
           {COMPARE.map(row => (
-            <View key={row.label} style={[styles.compareRow, styles.compareRowLine]}>
-              <Text style={styles.compareLabelCell}>{row.label}</Text>
-              {row.values.map((val, i) => (
-                <Text key={i} style={styles.compareValue}>{val}</Text>
-              ))}
+            <View key={row.label} style={styles.compareBlock}>
+              <Text style={styles.compareLabel}>{row.label.toUpperCase()}</Text>
+              <View style={styles.compareValues}>
+                {row.values.map((val, i) => {
+                  const slug = LEVEL_ORDER[i]
+                  const active = selectedLevel === slug
+                  return (
+                    <View
+                      key={slug}
+                      style={[styles.compareCell, active && { backgroundColor: LEVELS[slug].color + '14' }]}
+                    >
+                      <Text style={[styles.compareValue, active && styles.compareValueActive]}>{val}</Text>
+                    </View>
+                  )
+                })}
+              </View>
             </View>
           ))}
         </View>
@@ -315,27 +324,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  levelNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
   levelName: {
     fontSize: 22,
     fontWeight: '800',
-  },
-  recBadge: {
-    backgroundColor: accentAlpha('1E'),
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  recBadgeText: {
-    color: ACCENT,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
   },
   tagline: {
     color: TEXT_SECONDARY,
@@ -373,44 +364,56 @@ const styles = StyleSheet.create({
 
   compareCard: {
     backgroundColor: CARD,
-    borderRadius: 16,
-    padding: 16,
-    gap: 10,
+    borderRadius: 20,
+    padding: 18,
+    gap: 16,
     marginTop: 4,
   },
   compareTitle: {
     color: TEXT_PRIMARY,
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  compareRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  compareRowLine: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: BORDER,
-    paddingTop: 10,
-  },
-  compareLabelCell: {
-    width: 86,
-    color: TEXT_SECONDARY,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '600',
-  },
-  compareHead: {
-    flex: 1,
-    fontSize: 13,
+    fontSize: 17,
     fontWeight: '800',
   },
-  compareValue: {
+  compareValues: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  compareHeadCell: {
     flex: 1,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+  },
+  compareHead: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  compareBlock: {
+    gap: 7,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: BORDER,
+    paddingTop: 13,
+  },
+  compareLabel: {
+    color: TEXT_SECONDARY,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.9,
+  },
+  compareCell: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+  },
+  compareValue: {
+    color: TEXT_SECONDARY,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  compareValueActive: {
     color: TEXT_PRIMARY,
-    fontSize: 12,
-    lineHeight: 16,
+    fontWeight: '600',
   },
 
   footer: {

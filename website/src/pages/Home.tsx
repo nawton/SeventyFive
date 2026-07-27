@@ -434,9 +434,6 @@ export default function Home() {
                         boxShadow: lv.dark ? '0 0 60px rgba(242,101,42,0.35)' : '0 0 44px rgba(59,91,219,0.25)',
                       }} />
                     )}
-                    {lv.rec && (
-                      <span style={{ position: 'absolute', top: -13, left: 30, background: 'linear-gradient(140deg, #3B5BDB, #2338A8)', color: '#FFFFFF', fontSize: 12.5, fontWeight: 700, letterSpacing: 0.5, padding: '6px 14px', borderRadius: 999 }}>Rekommenderad</span>
-                    )}
                     <div style={{ fontFamily: 'var(--font-hd)', fontWeight: 700, fontSize: 22, ...(lv.dark ? { background: 'linear-gradient(120deg, #FF9D68, #F2652A)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' } : lv.titleStyle) }}>{lv.title}</div>
                     <p style={{ color: lv.dark ? '#AEB6D9' : 'var(--ink3)', fontSize: 15, lineHeight: 1.65, flex: 1 }}>{lv.body}</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 10 }}>

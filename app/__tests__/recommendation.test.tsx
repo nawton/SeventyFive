@@ -24,10 +24,10 @@ beforeEach(() => {
 })
 
 describe('RecommendationScreen', () => {
-  it('rådet om Normal, rekommendationsbadgen och jämförelsen visas', () => {
+  it('rådet om Normal och jämförelsen visas, utan rekommendationsbadge', () => {
     render(<RecommendationScreen />)
     expect(screen.getByText(/det bästa valet/)).toBeOnTheScreen()
-    expect(screen.getByText('REKOMMENDERAD')).toBeOnTheScreen()
+    expect(screen.queryByText('REKOMMENDERAD')).toBeNull()
     expect(screen.getByText('Jämför nivåerna')).toBeOnTheScreen()
     // Exakt samma stats som hemsidans jämförelsetabell
     expect(screen.getByText('4 pass/vecka')).toBeOnTheScreen()
