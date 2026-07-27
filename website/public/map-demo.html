@@ -7,27 +7,102 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
 <style>
-html,body{margin:0;height:100%;font-family:system-ui,-apple-system,sans-serif}
-#map{height:100%;width:100%}
-.panel{position:absolute;top:14px;left:14px;z-index:1100;background:rgba(16,27,69,0.93);color:#fff;border-radius:18px;padding:13px 18px;display:flex;gap:24px;box-shadow:0 12px 34px rgba(16,27,69,0.35)}
-.panel .stat{display:flex;flex-direction:column;gap:2px}
-.panel .label{font-size:10.5px;letter-spacing:1.2px;color:#9DA9D6;font-weight:600}
-.panel .val{font-size:21px;font-weight:800;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
-.panel .val small{font-size:12px;font-weight:600;color:#9DA9D6;margin-left:3px}
-#replay{position:absolute;bottom:22px;left:14px;z-index:1100;background:linear-gradient(140deg,#FF9D68,#F2652A);color:#14100B;border:none;border-radius:999px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 10px 28px rgba(242,101,42,0.4);transition:transform 0.2s ease}
-#replay:hover{transform:translateY(-2px)}
-.hint{position:absolute;bottom:22px;right:14px;z-index:1100;background:rgba(255,255,255,0.92);color:#4B5468;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:500;box-shadow:0 6px 18px rgba(20,25,45,0.15)}
+html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#F4F5F7;overflow:hidden}
+*{box-sizing:border-box}
+#wrap{display:flex;height:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none}
+#wrap::-webkit-scrollbar{display:none}
+.panel{flex:0 0 100%;scroll-snap-align:start;position:relative;height:100%}
+
+/* ── Kartvyn ── */
+#map{position:absolute;inset:0}
+.statsCard{position:absolute;top:12px;left:12px;right:12px;z-index:1100;background:rgba(249,249,251,0.96);border-radius:24px;padding:16px 18px 12px;box-shadow:0 10px 30px rgba(20,25,45,0.18)}
+.bigTimer{font-size:40px;font-weight:800;letter-spacing:-0.5px;text-align:center;color:#111;font-variant-numeric:tabular-nums}
+.statRow{display:flex;justify-content:space-between;margin-top:8px;padding:0 4px}
+.statRow .cell{text-align:center;flex:1}
+.statRow .v{font-size:17px;font-weight:800;color:#111;font-variant-numeric:tabular-nums}
+.statRow .l{font-size:9.5px;font-weight:700;letter-spacing:0.8px;color:#8A93A8;margin-top:1px}
+#playBtn{position:absolute;left:16px;right:16px;bottom:18px;z-index:1100;background:#4B7BFA;color:#fff;border:none;border-radius:999px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 10px 26px rgba(75,123,250,0.4);font-family:inherit}
+#playBtn:active{transform:scale(0.98)}
+
+/* ── Detaljvyn ── */
+.detail{display:flex;flex-direction:column;padding:14px 22px 20px;height:100%;background:#F4F5F7}
+.grab{width:44px;height:4px;border-radius:2px;background:#C9CDD6;margin:0 auto 8px}
+.hint{text-align:center;color:#5B6478;font-size:13.5px;font-weight:600;margin-bottom:12px}
+.goalRow{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#B7BCC7;margin-bottom:5px}
+.goalRow b{color:#4B7BFA}
+.goalTrack{height:5px;border-radius:3px;background:#E4E6EC;overflow:hidden;margin-bottom:8px}
+.goalFill{height:100%;width:0%;background:#4B7BFA;border-radius:3px}
+.dBlock{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid #2A2C31;min-height:0}
+.dBlock:last-child{border-bottom:none}
+.dVal{font-size:clamp(30px,9cqh,52px);font-weight:800;letter-spacing:-1px;color:#111;font-variant-numeric:tabular-nums;line-height:1.1}
+.dLbl{font-size:11px;font-weight:700;letter-spacing:1.5px;color:#5B6478;margin-top:2px}
+.dPair{flex:1;display:flex;align-items:center;min-height:0}
+.dPair .half{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dPair .half+.half{border-left:1px solid #2A2C31}
+
+/* ── Splits ── */
+.splits{height:100%;overflow-y:auto;padding:14px 18px 24px;background:#F4F5F7}
+.splits h1{font-size:34px;font-weight:900;letter-spacing:-1px;color:#111;margin:6px 0 14px}
+.split{border-radius:20px;padding:14px 18px;margin-bottom:10px;background:#FFFFFF;box-shadow:0 3px 10px rgba(20,25,45,0.05)}
+.split.done{background:#5AA0F8;box-shadow:0 6px 16px rgba(90,160,248,0.35)}
+.split .k{font-size:15px;font-weight:700;color:#3F4654}
+.split.done .k{color:#12325E}
+.split .p{font-size:30px;font-weight:900;color:#B7BCC7;letter-spacing:-0.5px;font-variant-numeric:tabular-nums}
+.split.done .p{color:#0B1B33}
+.split .p small{font-size:15px;font-weight:700}
+.split .d{font-size:14px;font-weight:600;color:#8A93A8}
+.split.done .d{color:#1E4173}
+
+/* ── Sidprickar ── */
+.dots{position:absolute;bottom:6px;left:0;right:0;display:flex;justify-content:center;gap:6px;z-index:1200;pointer-events:none}
+.dots span{width:7px;height:7px;border-radius:50%;background:#C2C7D1;transition:background 0.2s;pointer-events:auto;cursor:pointer}
+.dots span.on{background:#111}
+.leaflet-control-attribution{font-size:9px !important}
 </style>
 </head>
 <body>
-<div id="map"></div>
-<div class="panel">
-  <div class="stat"><span class="label">DISTANS</span><span class="val" id="dist">0,00<small>km</small></span></div>
-  <div class="stat"><span class="label">TID</span><span class="val" id="time">0:00</span></div>
-  <div class="stat"><span class="label">TEMPO</span><span class="val" id="pace">5:32<small>/km</small></span></div>
+<div id="wrap">
+  <section class="panel" id="pMap">
+    <div id="map"></div>
+    <div class="statsCard">
+      <div class="bigTimer" id="mTime">00:00:00</div>
+      <div class="statRow">
+        <div class="cell"><div class="v" id="mKm">0.00</div><div class="l">KM</div></div>
+        <div class="cell"><div class="v" id="mAvg">--:--</div><div class="l">SNITT /KM</div></div>
+        <div class="cell"><div class="v" id="mNow">--:--</div><div class="l">NU /KM</div></div>
+        <div class="cell"><div class="v" id="mKcal">0</div><div class="l">KCAL</div></div>
+      </div>
+    </div>
+    <button id="playBtn">Spela upp rundan</button>
+  </section>
+
+  <section class="panel">
+    <div class="detail" style="container-type:size">
+      <div class="grab"></div>
+      <div class="hint">Svep höger för karta · vänster för splits</div>
+      <div class="goalRow"><span>Mål: 7,0 km</span><b id="dPct">0%</b></div>
+      <div class="goalTrack"><div class="goalFill" id="dFill"></div></div>
+      <div class="dBlock"><div class="dVal" id="dTime">00:00:00</div><div class="dLbl">TID</div></div>
+      <div class="dBlock"><div class="dVal" id="dNow">--:--</div><div class="dLbl">NU /KM</div></div>
+      <div class="dBlock"><div class="dVal" id="dKm">0.00</div><div class="dLbl">DISTANS (KM)</div></div>
+      <div class="dPair">
+        <div class="half"><div class="dVal" id="dAvg" style="font-size:clamp(24px,7cqh,40px)">--:--</div><div class="dLbl">SNITT /KM</div></div>
+        <div class="half"><div class="dVal" id="dKcal" style="font-size:clamp(24px,7cqh,40px)">0</div><div class="dLbl">KCAL</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="splits">
+      <div class="grab"></div>
+      <div class="hint">Svep höger för detaljvyn</div>
+      <h1>Splits</h1>
+      <div id="splitList"></div>
+    </div>
+  </section>
 </div>
-<button id="replay">Spela upp rundan</button>
-<div class="hint">Klicka på kartan för att zooma med scroll</div>
+<div class="dots"><span class="on"></span><span></span><span></span></div>
+
 <script>
 // Riktig runda: Djurgården runt (7,0 km längs gatunätet, via OSRM)
 const route = [
@@ -202,38 +277,94 @@ const route = [
   [59.33226,18.09644],
   [59.33251,18.09538]
 ];
-const map = L.map('map', { scrollWheelZoom: false });
+const map = L.map('map', { scrollWheelZoom: false, zoomControl: false });
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap-bidragsgivarna © CARTO', maxZoom: 20
+  attribution: '© OpenStreetMap © CARTO', maxZoom: 20
 }).addTo(map);
-map.fitBounds(L.latLngBounds(route), { padding: [50, 50] });
+map.fitBounds(L.latLngBounds(route), { padding: [70, 30] });
 map.on('click', () => map.scrollWheelZoom.enable());
 
-L.polyline(route, { color: '#2B4BD7', weight: 4, opacity: 0.18 }).addTo(map);
-const drawn = L.polyline([route[0]], { color: '#2B4BD7', weight: 5, opacity: 0.95 }).addTo(map);
-L.circleMarker(route[0], { radius: 6, color: '#fff', weight: 2.5, fillColor: '#101B45', fillOpacity: 1 }).addTo(map).bindTooltip('Start');
+L.polyline(route, { color: '#2B4BD7', weight: 4, opacity: 0.15 }).addTo(map);
+const drawn = L.polyline([route[0]], { color: '#F2652A', weight: 5, opacity: 0.95 }).addTo(map);
+L.circleMarker(route[0], { radius: 6, color: '#fff', weight: 2.5, fillColor: '#101B45', fillOpacity: 1 }).addTo(map);
 const runner = L.circleMarker(route[0], { radius: 8, color: '#fff', weight: 3, fillColor: '#F2652A', fillOpacity: 1 }).addTo(map);
 
-// Kumulativa avstånd längs rundan
+// Kumulativa avstånd + tempo per kilometer (sekunder/km)
 const cum = [0];
 for (let i = 1; i < route.length; i++) cum.push(cum[i-1] + L.latLng(route[i-1]).distanceTo(L.latLng(route[i])));
 const total = cum[cum.length-1];
-const PACE = 332; // sek per km (5:32)
-const DUR = 13000, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const totalKm = total / 1000;
+const PACES = [341, 328, 335, 319, 324, 312, 298, 307];
+const kmCount = Math.ceil(totalKm);
 const $ = id => document.getElementById(id);
-const fmtTime = s => Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
+const fmtP = s => Math.floor(s/60) + ':' + String(Math.round(s%60)).padStart(2,'0');
+const fmtT = s => {
+  s = Math.round(s);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), x = s%60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(x).padStart(2,'0');
+};
+
+// Splits-block: ett per kilometer
+const list = $('splitList');
+for (let i = 0; i < kmCount; i++) {
+  const div = document.createElement('div');
+  div.className = 'split';
+  div.innerHTML = '<div class="k">Kilometer ' + (i+1) + '</div>'
+    + '<div class="p" id="sp' + i + '">–:–– <small>/km</small></div>'
+    + '<div class="d" id="sd' + i + '">0,00 av 1,00 km</div>';
+  list.appendChild(div);
+}
+
+function elapsedAt(distKm) {
+  let t = 0, k = 0;
+  while (k < Math.floor(distKm)) { t += PACES[Math.min(k, PACES.length-1)]; k++; }
+  return t + (distKm - Math.floor(distKm)) * PACES[Math.min(Math.floor(distKm), PACES.length-1)];
+}
 
 function setProgress(p) {
   const d = total * p;
+  const dKm = d / 1000;
   let i = 1; while (i < cum.length - 1 && cum[i] < d) i++;
   const f = (d - cum[i-1]) / (cum[i] - cum[i-1] || 1);
   const a = route[i-1], b = route[i];
   const pos = [a[0] + (b[0]-a[0])*f, a[1] + (b[1]-a[1])*f];
   drawn.setLatLngs(route.slice(0, i).concat([pos]));
   runner.setLatLng(pos);
-  $('dist').innerHTML = (d/1000).toFixed(2).replace('.', ',') + '<small>km</small>';
-  $('time').textContent = fmtTime(d/1000 * PACE);
+
+  const el = elapsedAt(dKm);
+  const kmIdx = Math.min(Math.floor(dKm), PACES.length-1);
+  const kmStr = dKm.toFixed(2).replace('.', ',');
+  const avg = dKm > 0.05 ? fmtP(el / dKm) : '--:--';
+  const now = p > 0 && p < 1 ? fmtP(PACES[kmIdx]) : '--:--';
+  const kcal = Math.round(dKm * 68);
+
+  $('mTime').textContent = fmtT(el); $('dTime').textContent = fmtT(el);
+  $('mKm').textContent = kmStr;      $('dKm').textContent = kmStr;
+  $('mAvg').textContent = avg;       $('dAvg').textContent = avg;
+  $('mNow').textContent = now;       $('dNow').textContent = now;
+  $('mKcal').textContent = kcal;     $('dKcal').textContent = kcal;
+  $('dPct').textContent = Math.round(p * 100 * totalKm / 7.0) + '%';
+  $('dFill').style.width = Math.min(100, p * 100 * totalKm / 7.0) + '%';
+
+  for (let k = 0; k < kmCount; k++) {
+    const done = dKm >= k + 1;
+    const active = !done && dKm > k;
+    const blk = $('sp' + k).parentElement;
+    blk.className = 'split' + (done || active ? ' done' : '');
+    if (done) {
+      $('sp' + k).innerHTML = fmtP(PACES[Math.min(k, PACES.length-1)]) + ' <small>/km</small>';
+      $('sd' + k).textContent = '1,00 av 1,00 km';
+    } else if (active) {
+      $('sp' + k).innerHTML = fmtP(PACES[Math.min(k, PACES.length-1)]) + ' <small>/km</small>';
+      $('sd' + k).textContent = (dKm - k).toFixed(2).replace('.', ',') + ' av 1,00 km';
+    } else {
+      $('sp' + k).innerHTML = '–:–– <small>/km</small>';
+      $('sd' + k).textContent = '0,00 av 1,00 km';
+    }
+  }
 }
+
+const DUR = 20000, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let raf;
 function play() {
   cancelAnimationFrame(raf);
@@ -246,8 +377,18 @@ function play() {
   };
   raf = requestAnimationFrame(tick);
 }
-$('replay').addEventListener('click', play);
+$('playBtn').addEventListener('click', play);
 play();
+
+// Sidprickarna följer svepet, och går att klicka
+const wrap = $('wrap');
+const dots = document.querySelectorAll('.dots span');
+wrap.addEventListener('scroll', () => {
+  const idx = Math.round(wrap.scrollLeft / wrap.clientWidth);
+  dots.forEach((d, i) => d.classList.toggle('on', i === idx));
+}, { passive: true });
+dots.forEach((d, i) => d.addEventListener('click', () =>
+  wrap.scrollTo({ left: i * wrap.clientWidth, behavior: 'smooth' })));
 </script>
 </body>
 </html>

@@ -12,23 +12,26 @@ export default function GpsDemo() {
           </div>
           <h1 style={{ fontWeight: 800, fontSize: 'clamp(30px, 4.5vw, 48px)', letterSpacing: '-0.025em', lineHeight: 1.1, marginBottom: 14 }}>Testa GPS-spårningen direkt</h1>
           <p style={{ color: 'var(--ink2)', fontSize: 17, lineHeight: 1.65, maxWidth: 640 }}>
-            Så här ser det ut när appen spårar din runda: rutt, distans, tid och
-            tempo i realtid. Kartan är på riktigt, panorera, zooma och spela upp
-            en exempelrunda på Djurgården i Stockholm.
+            Appens riktiga passvy i tre delar: kartan, detaljvyn med stora
+            siffror och splits där varje block är en kilometer. Svep mellan
+            vyerna i telefonen precis som i appen, och spela upp en riktig
+            7 km-runda runt Djurgården.
           </p>
         </Reveal>
       </div>
       <div className="container" style={{ padding: '20px 24px 0', flex: 1 }}>
         <Reveal delay={80}>
-          <div style={{ borderRadius: 32, overflow: 'hidden', border: '1px solid rgba(20,22,28,0.08)', boxShadow: '0 24px 60px rgba(20,25,45,0.14)' }}>
-            <iframe
-              src="/map-demo.html"
-              title="Interaktiv GPS-kartdemo, exempelrunda på Djurgården"
-              style={{ display: 'block', width: '100%', height: 'min(72vh, 620px)', border: 'none' }}
-            />
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: 'min(390px, 92vw)', background: '#0F1115', borderRadius: 54, padding: 11, boxShadow: '0 40px 90px rgba(20,25,45,0.35)' }}>
+              <iframe
+                src="/map-demo.html"
+                title="Interaktiv GPS-demo med karta, detaljvy och splits"
+                style={{ display: 'block', width: '100%', aspectRatio: '9 / 18.5', border: 'none', borderRadius: 44, background: '#F4F5F7' }}
+              />
+            </div>
           </div>
-          <p style={{ color: 'var(--mut)', fontSize: 13, margin: '14px 4px 0' }}>
-            Exempelrunda på Djurgården, Stockholm. Kartdata © OpenStreetMap-bidragsgivarna.
+          <p style={{ color: 'var(--mut)', fontSize: 13, margin: '16px 4px 0', textAlign: 'center' }}>
+            Djurgården runt, 7,0 km. Kartdata © OpenStreetMap-bidragsgivarna © CARTO.
           </p>
         </Reveal>
       </div>
