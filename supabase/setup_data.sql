@@ -13,7 +13,7 @@ INSERT INTO challenge_levels (id, slug, display_name, description, rules) VALUES
 (
   'a1b2c3d4-0001-0001-0001-000000000001',
   'normal',
-  'Nawton Flow',
+  'Normal',
   'Perfekt för dig som är redo att bygga en livsstil. Krävande men hållbar.',
   '[
     {"rule": "Träna 30 minuter om dagen", "icon": "dumbbell"},
@@ -26,7 +26,7 @@ INSERT INTO challenge_levels (id, slug, display_name, description, rules) VALUES
 (
   'a1b2c3d4-0002-0002-0002-000000000002',
   'hard',
-  'Nawton Hard',
+  'Hard',
   'För dig som vill testa din gräns på riktigt. Ingen återvändo.',
   '[
     {"rule": "Träna 45 minuter om dagen", "icon": "dumbbell"},
@@ -40,7 +40,7 @@ INSERT INTO challenge_levels (id, slug, display_name, description, rules) VALUES
 (
   'a1b2c3d4-0003-0003-0003-000000000003',
   'extreme',
-  'Nawton Extreme',
+  'Extreme',
   'Eliten. Byggt för dem som vill förändra vem de är på 75 dagar.',
   '[
     {"rule": "Träna 60 minuter × 2 per dag", "icon": "dumbbell"},
