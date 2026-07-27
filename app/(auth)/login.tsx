@@ -10,19 +10,31 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native'
-import { SafeScreen } from '@/components/SafeScreen'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
+import { Ionicons } from '@/components/Icon'
+import { LinearGradient } from 'expo-linear-gradient'
 import { signInWithGoogle } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
 import { updateProfile } from '@/services/profile'
-import { BG, BORDER, CARD, ACCENT } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
 
 type Mode = 'login' | 'register'
 
+// Samma palett som onboardingen — sidorna ska kännas som ett flöde
+const NAVY      = '#0A1120'
+const NAVY_TOP  = '#101A2E'
+const EDGE      = 'rgba(255,255,255,0.08)'
+const OFFWHITE  = '#F4F5FA'
+const MUTED     = 'rgba(244,245,250,0.62)'
+const ORANGE      = '#FFA817'
+const ORANGE_DEEP = '#FF7A1A'
+const BLUE = '#3FA7FF'
+
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets()
   const { startDay, mode: modeParam } = useLocalSearchParams<{ startDay?: string; mode?: string }>()
-  // Välkomstsidans "Skapa konto" landar direkt i registreringsläget
+  // Välkomstsidans "Registrera dig" landar direkt i registreringsläget
   const [mode, setMode] = useState<Mode>(modeParam === 'register' ? 'register' : 'login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -127,217 +139,214 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeScreen style={styles.screen}>
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.container}>
+    <View style={styles.screen}>
+      {/* Samma marinblå bas och organiska former som onboardingen */}
+      <LinearGradient colors={[NAVY_TOP, NAVY]} style={StyleSheet.absoluteFill} pointerEvents="none" />
+      <View style={styles.blobOrange} pointerEvents="none" />
+      <View style={styles.blobBlue} pointerEvents="none" />
 
-        <View style={styles.header}>
-          <Text style={styles.logo}>NAWTON</Text>
-          <Text style={styles.title}>SeventyFive</Text>
-          <Text style={styles.subtitle}>
-            {mode === 'login' ? 'Logga in för att fortsätta' : 'Skapa ditt konto'}
-          </Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={[styles.topBar, { marginTop: insets.top + 6 }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+            <Ionicons name="chevron-back" size={20} color={OFFWHITE} />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.form}>
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogle}
-            disabled={googleLoading}
-            activeOpacity={0.8}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color="#000" size="small" />
-            ) : (
-              <>
-                <Text style={styles.googleIcon}>G</Text>
-                <Text style={styles.googleText}>Fortsätt med Google</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>eller</Text>
-            <View style={styles.dividerLine} />
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <View style={styles.brandRow}>
+              <Text style={styles.brandName}>SeventyFive</Text>
+              <Text style={styles.brandBy}>by Nawton</Text>
+            </View>
+            <Text style={styles.title}>
+              {mode === 'login' ? 'Logga in' : 'Skapa ditt konto'}
+            </Text>
+            <Text style={styles.subtitle}>
+              {mode === 'login'
+                ? 'Fortsätt din resa, en dag i taget.'
+                : 'Din resa börjar här.'}
+            </Text>
           </View>
 
-          {mode === 'register' && (
+          <View style={styles.form}>
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogle}
+              disabled={googleLoading}
+              activeOpacity={0.8}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color="#000" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.googleIcon}>G</Text>
+                  <Text style={styles.googleText}>Fortsätt med Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>eller</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {mode === 'register' && (
+              <AppTextInput
+                style={styles.input}
+                placeholder="Ditt namn"
+                placeholderTextColor="rgba(244,245,250,0.35)"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                autoCorrect={false}
+                returnKeyType="next"
+                onSubmitEditing={() => emailRef.current?.focus()}
+              />
+            )}
             <AppTextInput
+              ref={emailRef}
               style={styles.input}
-              placeholder="Ditt namn"
-              placeholderTextColor="#555"
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
+              placeholder="Email"
+              placeholderTextColor="rgba(244,245,250,0.35)"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
-              onSubmitEditing={() => emailRef.current?.focus()}
+              onSubmitEditing={() => passwordRef.current?.focus()}
             />
-          )}
-          <AppTextInput
-            ref={emailRef}
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#555"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
-          />
-          <AppTextInput
-            ref={passwordRef}
-            style={styles.input}
-            placeholder="Lösenord"
-            placeholderTextColor="#555"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-          />
+            <AppTextInput
+              ref={passwordRef}
+              style={styles.input}
+              placeholder="Lösenord"
+              placeholderTextColor="rgba(244,245,250,0.35)"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
+            />
 
-          <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.disabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color="#000" />
-            ) : (
-              <Text style={styles.primaryButtonText}>
-                {mode === 'login' ? 'Logga in' : 'Registrera'}
-              </Text>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={loading}
+              activeOpacity={0.85}
+              style={loading && styles.disabled}
+            >
+              <LinearGradient
+                colors={[ORANGE, ORANGE_DEEP]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={styles.primaryButton}
+              >
+                {loading ? (
+                  <ActivityIndicator color={NAVY} />
+                ) : (
+                  <Text style={styles.primaryButtonText}>
+                    {mode === 'login' ? 'Logga in' : 'Registrera dig'}
+                  </Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.links}>
+            {mode === 'login' && (
+              <TouchableOpacity
+                style={styles.switchButton}
+                onPress={() => router.push('/(auth)/forgot-password')}
+              >
+                <Text style={styles.switchText}>Glömt lösenordet?</Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+
+            <TouchableOpacity style={styles.switchPill} onPress={switchMode}>
+              <Text style={styles.switchPillText}>
+                {mode === 'login'
+                  ? 'Inget konto? Registrera dig'
+                  : 'Har du ett konto? Logga in'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-
-        {mode === 'login' && (
-          <TouchableOpacity
-            style={styles.switchButton}
-            onPress={() => router.push('/(auth)/forgot-password')}
-          >
-            <Text style={styles.switchText}>Glömt lösenordet?</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={styles.switchButton}
-          onPress={switchMode}
-        >
-          <Text style={styles.switchText}>
-            {mode === 'login'
-              ? 'Inget konto? Registrera dig'
-              : 'Har du ett konto? Logga in'}
-          </Text>
-        </TouchableOpacity>
-
-      </View>
-    </KeyboardAvoidingView>
-    </SafeScreen>
+      </KeyboardAvoidingView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
+  screen: { flex: 1, backgroundColor: NAVY },
+
+  blobOrange: {
+    position: 'absolute', top: -140, right: -120,
+    width: 340, height: 340, borderRadius: 170,
+    backgroundColor: ORANGE, opacity: 0.07,
   },
+  blobBlue: {
+    position: 'absolute', bottom: 60, left: -150,
+    width: 380, height: 380, borderRadius: 190,
+    backgroundColor: BLUE, opacity: 0.05,
+  },
+
+  topBar: { paddingHorizontal: 20, height: 40, justifyContent: 'center' },
+  backBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
   container: {
-    flex: 1,
-    paddingHorizontal: 28,
-    justifyContent: 'center',
-    gap: 32,
+    flex: 1, paddingHorizontal: 26,
+    justifyContent: 'center', gap: 28, paddingBottom: 40,
   },
-  header: {
-    gap: 8,
-  },
-  logo: {
-    color: ACCENT,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 5,
-  },
+
+  header:   { gap: 6 },
+  brandRow:  { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 },
+  brandName: { color: 'rgba(244,245,250,0.55)', fontSize: 14, fontWeight: '800' },
+  brandBy:   { color: ORANGE, fontSize: 11, fontWeight: '600' },
   title: {
-    color: '#FFFFFF',
-    fontSize: 38,
-    fontWeight: '700',
+    color: OFFWHITE, fontSize: 30, fontWeight: '800',
+    letterSpacing: -0.4,
   },
-  subtitle: {
-    color: '#666666',
-    fontSize: 15,
-  },
-  form: {
-    gap: 12,
-  },
+  subtitle: { color: MUTED, fontSize: 14 },
+
+  form: { gap: 12 },
   input: {
-    backgroundColor: CARD,
-    borderRadius: 12,
-    paddingVertical: 15,
-    paddingHorizontal: 18,
-    color: '#FFFFFF',
-    fontSize: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: EDGE,
+    borderRadius: 16,
+    paddingVertical: 15, paddingHorizontal: 18,
+    color: OFFWHITE, fontSize: 16,
   },
   primaryButton: {
-    backgroundColor: ACCENT,
-    borderRadius: 12,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: 4,
+    borderRadius: 999, paddingVertical: 16, alignItems: 'center', marginTop: 4,
+    shadowColor: ORANGE, shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.28, shadowRadius: 14,
   },
-  disabled: {
-    opacity: 0.5,
-  },
-  primaryButtonText: {
-    color: '#000000',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  switchButton: {
-    alignItems: 'center',
-  },
-  switchText: {
-    color: '#555555',
-    fontSize: 14,
-  },
+  disabled: { opacity: 0.6 },
+  primaryButtonText: { color: NAVY, fontSize: 16, fontWeight: '800' },
+
   googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: '#FFFFFF', borderRadius: 999, paddingVertical: 14,
   },
-  googleIcon: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#4285F4',
+  googleIcon: { fontSize: 16, fontWeight: '700', color: '#4285F4' },
+  googleText: { color: '#000000', fontSize: 15, fontWeight: '600' },
+
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: EDGE },
+  dividerText: { color: MUTED, fontSize: 13 },
+
+  links: { gap: 12, alignItems: 'center' },
+  switchButton: { alignItems: 'center' },
+  switchText:   { color: MUTED, fontSize: 14 },
+  switchPill: {
+    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999,
+    paddingHorizontal: 16, paddingVertical: 10,
   },
-  googleText: {
-    color: '#000000',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: BORDER,
-  },
-  dividerText: {
-    color: '#555555',
-    fontSize: 13,
-  },
+  switchPillText: { color: OFFWHITE, fontSize: 13, fontWeight: '600' },
 })

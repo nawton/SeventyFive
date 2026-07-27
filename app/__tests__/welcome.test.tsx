@@ -27,7 +27,7 @@ describe('Welcome — onboardingen', () => {
     render(<Welcome />)
     fireEvent.press(screen.getByTestId('welcomeContinue'))
     expect(screen.getByText('Vad är en 75 challenge?')).toBeOnTheScreen()
-    expect(screen.getByText('Dagliga uppgifter')).toBeOnTheScreen()
+    expect(screen.getByText('Håll din kost')).toBeOnTheScreen()
 
     next()
     expect(screen.getByText('Planera ditt schema och dina pass')).toBeOnTheScreen()

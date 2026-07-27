@@ -64,7 +64,7 @@ const COPY: Record<SlideKey, { title: string; body: string }> = {
   },
   community: {
     title: 'Utvecklas tillsammans med andra',
-    body: 'Gå med i grupper, dela din resa och håll motivationen uppe tillsammans med andra som genomför sin challenge.',
+    body: 'Gå med i grupper, dela din resa och håll motivationen uppe tillsammans.',
   },
 }
 
@@ -101,46 +101,30 @@ function WelcomeCollage() {
   )
 }
 
-// ─── Sida 2: utmaningen — dagskort + vanechips ───────────────────────────────
-
-const HABITS = [
-  { icon: 'checkbox-outline',      label: 'Dagliga uppgifter' },
-  { icon: 'repeat-outline',        label: 'Bättre rutiner' },
-  { icon: 'barbell-outline',       label: 'Träning och rörelse' },
-  { icon: 'water-outline',         label: 'Vatten och återhämtning' },
-  { icon: 'flame-outline',         label: 'Fokus på kontinuitet' },
-  { icon: 'trending-up-outline',   label: 'Framsteg dag för dag' },
-] as const
+// ─── Sida 2: utmaningen — dagskortet med alla fem uppgifterna ────────────────
 
 function ChallengeVisual() {
   return (
-    <View style={{ gap: 12 }}>
-      <View style={v.mockCard}>
-        <View style={v.mockHead}>
-          <View>
-            <Text style={v.mockLabel}>DAGENS UPPGIFTER</Text>
-            <Text style={v.mockTitle}>Dag <Text style={v.mockNum}>12</Text> av 75</Text>
-          </View>
-          <View style={v.ringBadge}><Text style={v.ringBadgeText}>3/5</Text></View>
+    <View style={v.mockCard}>
+      <View style={v.mockHead}>
+        <View>
+          <Text style={v.mockLabel}>DAGENS UPPGIFTER</Text>
+          <Text style={v.mockTitle}>Dag <Text style={v.mockNum}>12</Text> av 75</Text>
         </View>
-        <View style={v.mockBar}><View style={[v.mockBarFill, { width: '60%' }]} /></View>
-        {['Träna 45 minuter', 'Drick 3 liter vatten', 'Läs 10 sidor'].map((t, i) => (
-          <View key={t} style={v.mockRow}>
-            <View style={[v.tick, i < 2 && v.tickOn]}>
-              {i < 2 && <Ionicons name="checkmark" size={11} color="#0A1120" />}
-            </View>
-            <Text style={[v.mockRowText, i < 2 && v.mockRowDone]}>{t}</Text>
-          </View>
-        ))}
+        <View style={v.ringBadge}><Text style={v.ringBadgeText}>3/5</Text></View>
       </View>
-      <View style={v.chipWrap}>
-        {HABITS.map(h => (
-          <View key={h.label} style={v.habitChip}>
-            <Ionicons name={h.icon} size={14} color={ORANGE} />
-            <Text style={v.habitChipText}>{h.label}</Text>
+      <View style={v.mockBar}><View style={[v.mockBarFill, { width: '60%' }]} /></View>
+      {[
+        'Träna 45 minuter', 'Håll din kost', 'Drick 3 liter vatten',
+        'Läs 10 sidor', 'Ta ett framstegsfoto',
+      ].map((t, i) => (
+        <View key={t} style={v.mockRow}>
+          <View style={[v.tick, i < 3 && v.tickOn]}>
+            {i < 3 && <Ionicons name="checkmark" size={11} color="#0A1120" />}
           </View>
-        ))}
-      </View>
+          <Text style={[v.mockRowText, i < 3 && v.mockRowDone]}>{t}</Text>
+        </View>
+      ))}
     </View>
   )
 }
@@ -221,38 +205,35 @@ function StatsVisual() {
 const GROUPS = [
   { name: '75 Challenge Nybörjare', members: '128 medlemmar', color: ORANGE, letter: '75' },
   { name: 'Löpargruppen',           members: '64 medlemmar',  color: BLUE,   letter: 'L' },
-  { name: 'Sommardisciplin',        members: '32 medlemmar',  color: GREEN,  letter: 'S' },
 ] as const
 
+/** Kompakt: ett enda kort så texten och knapparna alltid får plats under */
 function CommunityVisual() {
   return (
-    <View style={{ gap: 12 }}>
-      <View style={[v.mockCard, { gap: 12 }]}>
-        <Text style={v.mockLabel}>GRUPPER</Text>
-        {GROUPS.map(gr => (
-          <View key={gr.name} style={v.groupRow}>
-            <View style={[v.groupAvatar, { backgroundColor: gr.color + '22' }]}>
-              <Text style={[v.groupLetter, { color: gr.color }]}>{gr.letter}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={v.groupName}>{gr.name}</Text>
-              <Text style={v.groupMeta}>{gr.members}</Text>
-            </View>
-            <View style={v.joinPill}><Text style={v.joinPillText}>Gå med</Text></View>
-          </View>
-        ))}
-      </View>
-      <View style={v.mockCard}>
-        <View style={v.groupRow}>
-          <View style={[v.groupAvatar, { backgroundColor: ORANGE_SOFT }]}>
-            <Text style={[v.groupLetter, { color: ORANGE }]}>E</Text>
+    <View style={[v.mockCard, { gap: 11 }]}>
+      <Text style={v.mockLabel}>GRUPPER</Text>
+      {GROUPS.map(gr => (
+        <View key={gr.name} style={v.groupRow}>
+          <View style={[v.groupAvatar, { backgroundColor: gr.color + '22' }]}>
+            <Text style={[v.groupLetter, { color: gr.color }]}>{gr.letter}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={v.groupName}>Elin Berg delade ett pass</Text>
-            <Text style={v.groupMeta}>Löpning · 7,03 km · 5:12 /km</Text>
+            <Text style={v.groupName}>{gr.name}</Text>
+            <Text style={v.groupMeta}>{gr.members}</Text>
           </View>
-          <Ionicons name="heart" size={16} color="#FF3B4A" />
+          <View style={v.joinPill}><Text style={v.joinPillText}>Gå med</Text></View>
         </View>
+      ))}
+      <View style={v.cardDivider} />
+      <View style={v.groupRow}>
+        <View style={[v.groupAvatar, { backgroundColor: ORANGE_SOFT }]}>
+          <Text style={[v.groupLetter, { color: ORANGE }]}>E</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={v.groupName}>Elin Berg delade ett pass</Text>
+          <Text style={v.groupMeta}>Löpning · 7,03 km · 5:12 /km</Text>
+        </View>
+        <Ionicons name="heart" size={16} color="#FF3B4A" />
       </View>
     </View>
   )
@@ -325,9 +306,6 @@ export default function Welcome() {
           <Text style={s.title}>{COPY[slideKey].title}</Text>
           <Text style={s.body}>{COPY[slideKey].body}</Text>
           {slideKey === 'valkommen' && <Text style={s.tagline}>Din resa börjar här.</Text>}
-          {slideKey === 'community' && (
-            <Text style={s.support}>Skapa grupper, följ andras framsteg och bygg motivation tillsammans.</Text>
-          )}
         </Animated.View>
       </View>
 
@@ -363,6 +341,7 @@ export default function Welcome() {
               <Text style={s.outlineText}>Logga in</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.dayLink} onPress={() => setDayModalVisible(true)} activeOpacity={0.7}>
+              <Ionicons name="calendar-outline" size={14} color={MUTED} />
               <Text style={s.dayLinkText}>Jag har redan börjat, välj dag</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -465,17 +444,16 @@ const s = StyleSheet.create({
   },
   skipText: { color: MUTED, fontSize: 14, fontWeight: '600' },
 
-  content: { flex: 1, paddingHorizontal: 26, justifyContent: 'center', gap: 24 },
+  content: { flex: 1, paddingHorizontal: 26, justifyContent: 'center', gap: 18 },
   visualArea: { justifyContent: 'center' },
-  textArea:   { gap: 10 },
+  textArea:   { gap: 8 },
 
   title: {
-    color: OFFWHITE, fontSize: 28, fontWeight: '800',
-    letterSpacing: -0.4, lineHeight: 34,
+    color: OFFWHITE, fontSize: 25, fontWeight: '800',
+    letterSpacing: -0.4, lineHeight: 31,
   },
-  body:    { color: MUTED, fontSize: 15, lineHeight: 23 },
-  tagline: { color: ORANGE, fontSize: 15, fontWeight: '700', marginTop: 2 },
-  support: { color: 'rgba(244,245,250,0.45)', fontSize: 13, lineHeight: 19 },
+  body:    { color: MUTED, fontSize: 14, lineHeight: 21 },
+  tagline: { color: ORANGE, fontSize: 14, fontWeight: '700', marginTop: 2 },
 
   bottom: { paddingHorizontal: 26, paddingTop: 8, gap: 16 },
   dotsRow: { flexDirection: 'row', gap: 7, justifyContent: 'center' },
@@ -497,8 +475,12 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'rgba(244,245,250,0.25)',
   },
   outlineText: { color: OFFWHITE, fontSize: 15, fontWeight: '700' },
-  dayLink: { alignItems: 'center', paddingVertical: 3 },
-  dayLinkText: { color: 'rgba(244,245,250,0.35)', fontSize: 12, fontWeight: '500' },
+  dayLink: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999,
+    paddingHorizontal: 15, paddingVertical: 9, marginTop: 2,
+  },
+  dayLinkText: { color: MUTED, fontSize: 13, fontWeight: '600' },
 
   // Dagväljaren
   modalOverlay: {
@@ -530,16 +512,16 @@ const s = StyleSheet.create({
 
   sheetFooter: { gap: 10, marginTop: 16 },
   confirmBtn: {
-    backgroundColor: ORANGE, borderRadius: 14,
+    backgroundColor: ORANGE, borderRadius: 999,
     paddingVertical: 15, alignItems: 'center',
   },
   confirmBtnDisabled: { opacity: 0.35 },
   confirmBtnText: { color: '#0A1120', fontSize: 15, fontWeight: '800' },
   cancelBtn: {
-    borderRadius: 14, paddingVertical: 13, alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 999, paddingVertical: 13, alignItems: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(244,245,250,0.22)',
   },
-  cancelBtnText: { color: MUTED, fontSize: 14 },
+  cancelBtnText: { color: MUTED, fontSize: 14, fontWeight: '600' },
 })
 
 // ─── Visuella delarnas styles ────────────────────────────────────────────────
@@ -638,6 +620,7 @@ const v = StyleSheet.create({
   groupLetter: { fontSize: 14, fontWeight: '800' },
   groupName:   { color: OFFWHITE, fontSize: 14, fontWeight: '700' },
   groupMeta:   { color: MUTED, fontSize: 12, marginTop: 1 },
+  cardDivider: { height: 1, backgroundColor: EDGE, marginVertical: 1 },
   joinPill: {
     backgroundColor: ORANGE_SOFT, borderRadius: 999,
     paddingHorizontal: 13, paddingVertical: 7,
