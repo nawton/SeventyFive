@@ -463,7 +463,7 @@ export function SessionFullscreen({
         ...(prs.length > 0 ? ['', t('🏆 Nya personliga rekord:'), ...prs] : []),
       ].filter((l): l is string => l !== null)
 
-      const wrapUp = () => {
+      const wrapUp = (withSummary: boolean) => {
         onClose()
         if (saveErrors.length > 0) {
           console.warn('Sparfel vid Slutför:', saveErrors)
@@ -475,16 +475,19 @@ export function SessionFullscreen({
           return
         }
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-        setTimeout(() => Alert.alert(t('Pass sparat 💪'), summaryLines.join('\n')), 400)
+        // Granskningsskärmen har redan visat allt — ingen popup ovanpå den
+        if (withSummary) {
+          setTimeout(() => Alert.alert(t('Pass sparat 💪'), summaryLines.join('\n')), 400)
+        }
       }
       if (!isCompleted) {
-        // Nytt avklarat pass → betygsätt ansträngningen innan vi stänger
+        // Nytt avklarat pass → betyg + granskning innan vi stänger
         requestEffort(() => {
           onComplete()
-          wrapUp()
+          wrapUp(false)
         })
       } else {
-        wrapUp()
+        wrapUp(true)
       }
     } finally {
       setSaving(false)

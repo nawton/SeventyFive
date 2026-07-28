@@ -79,8 +79,11 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries, onDon
   }
 
   return (
-    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onDone}>
-      <View style={s.screen}>
+    // Helskärm, inte pageSheet: en svepning ner slängde annars titel,
+    // kommentar och foto man hunnit skriva. Klar och Hoppa över är enda
+    // vägarna ut, Android-backen får inte tyst kasta inmatningen heller.
+    <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={() => {}}>
+      <View style={[s.screen, { paddingTop: insets.top }]}>
         <ScrollView
           contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
           showsVerticalScrollIndicator={false}
