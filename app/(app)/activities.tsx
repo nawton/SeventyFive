@@ -162,6 +162,10 @@ export default function ActivitiesScreen() {
         {selected?.kind === 'strength' && (
           <GymSummaryView
             name="Gympass"
+            authorName={selected.authorName}
+            avatarUrl={selected.authorAvatar}
+            ownerId={selected.authorId}
+            workoutDate={selected.workouts[0]?.data.workout_date ?? selected.createdAt.split('T')[0]}
             dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
             logged={selected.workouts}
             plannedNames={[]}

@@ -5,6 +5,12 @@ import type { StrengthWorkout } from '@/services/strengthWorkouts'
 jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn(), auth: { getSession: jest.fn() },
   storage: { from: () => ({ getPublicUrl: (p: string) => ({ data: { publicUrl: `https://test/${p}` } }) }) },
 } }))
+jest.mock('@/services/gymPassMeta', () => ({
+  getPassMeta: jest.fn().mockResolvedValue({
+    user_id: 'u9', workout_date: '2026-07-27', title: 'Oh snap', note: 'Tappade 20 kg på tån', photo_path: null,
+  }),
+  passPhotoUrl: (p: string) => `https://test/${p}`,
+}))
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),
   impactAsync: jest.fn(),
@@ -38,5 +44,25 @@ describe('GymSummaryView — set-tabellen', () => {
     expect(screen.getByText('70 kg × 8')).toBeOnTheScreen()
     expect(screen.getByText('6 reps')).toBeOnTheScreen()
     expect(screen.getByText('topp 70 kg')).toBeOnTheScreen()
+  })
+
+  it('med ägare visas avatar-toppen och granskningens titel och kommentar', async () => {
+    render(
+      <GymSummaryView
+        name="Gympass"
+        authorName="Vera Holm"
+        avatarUrl={null}
+        ownerId="u9"
+        workoutDate="2026-07-27"
+        dateLabel="måndag 27 juli"
+        logged={[W]}
+        plannedNames={[]}
+        onClose={jest.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Vera Holm')).toBeOnTheScreen()
+    expect(await screen.findByText('Oh snap')).toBeOnTheScreen()
+    expect(screen.getByText('Tappade 20 kg på tån')).toBeOnTheScreen()
   })
 })

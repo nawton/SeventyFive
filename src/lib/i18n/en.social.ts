@@ -4,6 +4,20 @@ export const EN_SOCIAL: Record<string, string> = {
   // Flödeskortets övningsförhandsvisning
   '{n} set': '{n} sets',
   'VIKT & REPS': 'WEIGHT & REPS',
+
+  // Granskningen efter passet
+  'Bra jobbat!': 'Great work!',
+  'Gå igenom passet innan det delas, allt är redan sparat.': 'Review your workout before it is shared, everything is already saved.',
+  'VOLYM': 'VOLUME',
+  'KÄNSLA': 'FEEL',
+  'TITEL': 'TITLE',
+  'KOMMENTAR': 'COMMENT',
+  'FOTO': 'PHOTO',
+  'T.ex. Tungt benpass': 'E.g. Heavy leg day',
+  'Hur kändes passet?': 'How did the workout feel?',
+  'Lägg till foto': 'Add photo',
+  'Passet är sparat, men titeln och fotot kunde inte laddas upp. Försök igen.': 'Your workout is saved, but the title and photo could not be uploaded. Try again.',
+
   '+ 1 övning till': '+ 1 more exercise',
   '+ {n} övningar till': '+ {n} more exercises',
   // --- lib/report.ts ---

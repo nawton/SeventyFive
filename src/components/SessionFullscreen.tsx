@@ -26,6 +26,7 @@ import {
   setPassDraft, getPassDraft, clearPassDraft,
 } from '@/lib/prefs'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
+import { PassReviewSheet, type ReviewEntry } from '@/components/PassReviewSheet'
 import { AppTextInput } from '@/components/AppTextInput'
 
 type LogSet = { reps: string; weight: string; done: boolean }
@@ -304,16 +305,37 @@ export function SessionFullscreen({
     setEffortOpen(true)
   }
 
+  // Granskningen (titel, kommentar, foto) ligger mellan betyget och
+  // stängningen — passet är redan sparat när betyget visas
+  const [review, setReview] = useState<{ effort: number | null } | null>(null)
+
   function handleEffortDone(e: number | null) {
     setEffortOpen(false)
     if (e && session) {
       setPassEffort(`${session.id}:${date}`, e).catch(() => {})
       setPassEffortState(e)
     }
+    setReview({ effort: e })
+  }
+
+  function finishReview() {
+    setReview(null)
     const then = afterEffortRef.current
     afterEffortRef.current = null
     then?.()
   }
+
+  const reviewEntries: ReviewEntry[] = exercises
+    .map(ex => ({
+      name: ex.exercise_name,
+      sets: (logs[ex.id] ?? [])
+        .map(r => ({
+          reps: parseInt(r.reps, 10) || 0,
+          weightKg: parseFloat(r.weight.replace(',', '.')) || 0,
+        }))
+        .filter(st => st.reps > 0),
+    }))
+    .filter(e => e.sets.length > 0)
 
   // Rader med reps räknas — även om man glömt bocka dem. Ibockade rader utan
   // ifyllda siffror sparas med de visade platshållarna (förra passets set,
@@ -716,6 +738,16 @@ export function SessionFullscreen({
 
       {infoEx !== null && (
         <ExerciseInfoSheet exercise={infoEx} onClose={() => setInfoEx(null)} />
+      )}
+
+      {review !== null && (
+        <PassReviewSheet
+          workoutDate={date}
+          durationS={finalDur}
+          effort={review.effort}
+          entries={reviewEntries}
+          onDone={finishReview}
+        />
       )}
     </Modal>
   )

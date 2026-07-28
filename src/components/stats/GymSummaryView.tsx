@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { View, Text, Image, StyleSheet, ScrollView, Modal, TouchableOpacity, Dimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
@@ -7,6 +7,8 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { PostSocialBar } from '@/components/PostSocialBar'
 import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
 import { exerciseImageUrlFor } from '@/lib/exerciseInfo/images'
+import { getPassMeta, passPhotoUrl, type GymPassMeta } from '@/services/gymPassMeta'
+import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
 import { useStatsColors } from '@/components/stats/statsShared'
@@ -39,7 +41,13 @@ function progressionFor(all: StrengthWorkout[], exerciseName: string) {
 // =============================================================================
 
 
-export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorkouts, onClose, social }: {
+export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, name, dateLabel, logged, plannedNames, allWorkouts, onClose, social }: {
+  /** Visar Hevy-toppen med avatar när inläggets ägare är känd */
+  authorName?: string
+  avatarUrl?: string | null
+  /** Tillsammans med workoutDate hämtas titel, kommentar och foto */
+  ownerId?: string
+  workoutDate?: string
   name: string
   dateLabel: string | null
   /** Loggade övningar med set och vikter */
@@ -54,6 +62,19 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
 }) {
   const t = useT()
   const P = useStatsColors()
+  // Titel, kommentar och foto från granskningen — hämtas när ägaren är känd
+  const [meta, setMeta] = useState<GymPassMeta | null>(null)
+  useEffect(() => {
+    let alive = true
+    if (ownerId && workoutDate) {
+      getPassMeta(ownerId, workoutDate)
+        .then(m => { if (alive) setMeta(m) })
+        .catch(() => {})
+    } else {
+      setMeta(null)
+    }
+    return () => { alive = false }
+  }, [ownerId, workoutDate])
   const insets = useSafeAreaInsets()
   const [progressEx, setProgressEx] = useState<string | null>(null)
   const progression = progressEx && allWorkouts ? progressionFor(allWorkouts, progressEx) : []
@@ -81,20 +102,37 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero */}
+        {/* Hero: avatar + namn när inläggets ägare är känd, annars ikonen */}
         <View style={s.hero}>
-          <View style={s.heroIcon}>
-            <Ionicons name="barbell-outline" size={24} color={ACCENT} />
-          </View>
+          {authorName ? (
+            <FeedAvatar url={avatarUrl ?? null} fallback={authorName.charAt(0).toUpperCase()} size={46} />
+          ) : (
+            <View style={s.heroIcon}>
+              <Ionicons name="barbell-outline" size={24} color={ACCENT} />
+            </View>
+          )}
           <View style={{ flex: 1 }}>
-            <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{t(name)}</Text>
-            <Text style={s.heroSub}>{t('Gympass')}</Text>
+            <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
+              {authorName ?? t(name)}
+            </Text>
+            <Text style={s.heroSub}>{dateLabel ? `${t('Gympass')} · ${dateLabel}` : t('Gympass')}</Text>
           </View>
           <View style={s.donePill}>
             <Ionicons name="checkmark-circle" size={13} color={GREEN} />
             <Text style={s.donePillText}>{t('Avklarat')}</Text>
           </View>
         </View>
+
+        {/* Titel, kommentar och foto från granskningen */}
+        {meta && (meta.title || meta.note || meta.photo_path) && (
+          <View style={s.metaWrap} testID="passMeta">
+            {meta.title ? <Text style={s.metaTitle}>{meta.title}</Text> : null}
+            {meta.note ? <Text style={s.metaNote}>{meta.note}</Text> : null}
+            {meta.photo_path && passPhotoUrl(meta.photo_path) ? (
+              <Image source={{ uri: passPhotoUrl(meta.photo_path)! }} style={s.metaPhoto} />
+            ) : null}
+          </View>
+        )}
 
         {/* Träningsdetaljer */}
         <Text style={s.sectionHead}>{t('Träningsdetaljer')}</Text>
@@ -326,6 +364,13 @@ const s = StyleSheet.create({
   exBlock: { paddingVertical: 13, gap: 9 },
   exHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   exName: { color: ACCENT, fontSize: 17, fontWeight: '800', flex: 1 },
+  metaWrap: { paddingHorizontal: 2, gap: 8, marginTop: 2 },
+  metaTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800' },
+  metaNote: { color: TEXT_SECONDARY, fontSize: 15, lineHeight: 21 },
+  metaPhoto: {
+    width: '100%', aspectRatio: 4 / 3, borderRadius: 16,
+    backgroundColor: 'rgba(128,128,128,0.10)', marginTop: 4,
+  },
   exThumb: {
     width: 46, height: 46, borderRadius: 23,
     backgroundColor: '#FFFFFF', resizeMode: 'contain',
