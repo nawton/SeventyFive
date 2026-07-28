@@ -560,7 +560,7 @@ export function SessionFullscreen({
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="trash-outline" size={17} color="rgba(255,255,255,0.3)" />
+                      <Ionicons name="trash-outline" size={17} color={TEXT_SECONDARY} />
                     </TouchableOpacity>
                   </View>
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Modal,
+  View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Modal, Image,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
@@ -8,7 +8,9 @@ import * as Haptics from 'expo-haptics'
 import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, ACCENT, accentAlpha } from '@/lib/theme'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
-import type { Exercise } from '@/services/exercises'
+import { ExerciseInfoSheet } from '@/components/ExerciseInfoSheet'
+import { EXERCISE_INFO } from '@/lib/exerciseInfo'
+import { exerciseImageUrl, type Exercise } from '@/services/exercises'
 import { AppTextInput } from '@/components/AppTextInput'
 import { GlassCircleButton } from '@/components/GlassButton'
 
@@ -45,6 +47,8 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
   const [saving, setSaving] = useState(false)
   // Muskelgruppssidan (samma som Lägg till övning i passvyn) — nested modal
   const [pickerOpen, setPickerOpen] = useState(false)
+  // Infobladet: tryck på en övningsrad i översikten
+  const [infoEx, setInfoEx] = useState<Exercise | null>(null)
 
   useEffect(() => {
     if (!visible) return
@@ -219,17 +223,34 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
 
               {/* Set, reps och vikt fylls i inne i passet — här väljs bara övningarna */}
               <View style={s.exListCard}>
-                {entries.map((en, i) => (
-                  <View key={en.exercise.id} style={[s.exListRow, i < entries.length - 1 && s.exListBorder]}>
-                    <View style={s.exListIcon}>
-                      <Ionicons name="barbell-outline" size={17} color={ACCENT} />
-                    </View>
-                    <Text style={s.exListName} numberOfLines={1}>{en.exercise.name}</Text>
-                    <TouchableOpacity onPress={() => removeEntry(en.exercise.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Ionicons name="close-circle" size={20} color={TEXT_SECONDARY} />
+                {entries.map((en, i) => {
+                  const hasInfo = !!EXERCISE_INFO[en.exercise.name] || !!en.exercise.image_path
+                  return (
+                    <TouchableOpacity
+                      key={en.exercise.id}
+                      style={[s.exListRow, i < entries.length - 1 && s.exListBorder]}
+                      onPress={hasInfo ? () => { Haptics.selectionAsync(); setInfoEx(en.exercise) } : undefined}
+                      activeOpacity={hasInfo ? 0.7 : 1}
+                      testID={`overviewRow-${en.exercise.id}`}
+                    >
+                      {en.exercise.image_path ? (
+                        <Image
+                          source={{ uri: exerciseImageUrl(en.exercise.image_path) }}
+                          style={s.exListImg}
+                        />
+                      ) : (
+                        <View style={s.exListIcon}>
+                          <Ionicons name="barbell-outline" size={17} color={ACCENT} />
+                        </View>
+                      )}
+                      <Text style={s.exListName} numberOfLines={1}>{t(en.exercise.name)}</Text>
+                      {hasInfo && <Ionicons name="chevron-forward" size={15} color={TEXT_SECONDARY} />}
+                      <TouchableOpacity onPress={() => removeEntry(en.exercise.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Ionicons name="close-circle" size={20} color={TEXT_SECONDARY} />
+                      </TouchableOpacity>
                     </TouchableOpacity>
-                  </View>
-                ))}
+                  )
+                })}
               </View>
 
               {/* Fler övningar via muskelgruppssidan */}
@@ -254,6 +275,10 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
 
         {/* Muskelgruppssidan — samma väljare som i passvyn, gymOnly.
             Ligger inne i modalens träd så den presenterar korrekt på iOS. */}
+        {infoEx !== null && (
+          <ExerciseInfoSheet exercise={infoEx} onClose={() => setInfoEx(null)} />
+        )}
+
         <ExercisePickerSheet
           visible={pickerOpen}
           exercises={exercises}
@@ -337,8 +362,12 @@ const s = StyleSheet.create({
   exListRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 13 },
   exListBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
   exListIcon: {
-    width: 34, height: 34, borderRadius: 10, backgroundColor: accentAlpha('18'),
+    width: 44, height: 44, borderRadius: 12, backgroundColor: accentAlpha('18'),
     alignItems: 'center', justifyContent: 'center',
+  },
+  exListImg: {
+    width: 44, height: 44, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth,
+    borderColor: BORDER, backgroundColor: '#FFFFFF', resizeMode: 'contain',
   },
   exListName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
 })
