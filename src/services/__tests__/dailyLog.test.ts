@@ -2,7 +2,7 @@ import {
   getOrCreateTodayLog, getOrCreateTaskCompletions, setTaskCompleted,
   setTaskProgress, markDayCompleted, markDayPending, markDayFailed,
   getMissedDayNumbers, acknowledgeMissedDays, countCompletedDays,
-  countCompletedDaysAllTime, getBestStreakAllTime, updateDayTasks,
+  countCompletedDaysAllTime, getBestStreakAllTime, updateDayTasks, missedWithinWeeklyMargin,
   getAllDays, getStreak, getWeekStatuses, getStreakOf, getDayDetail,
   getTasksForDay,
 } from '../dailyLog'
@@ -245,6 +245,21 @@ describe('streak', () => {
     expect(await getStreakOf('u2')).toBe(0)
     rpcMock.mockResolvedValue({ data: 5, error: { message: 'nej' } })
     expect(await getStreakOf('u2')).toBe(0)
+  })
+})
+
+// Normals marginal: en missad dag per utmaningsvecka är förlåten
+describe('missedWithinWeeklyMargin', () => {
+  it('en miss per vecka ryms i marginalen, även i olika veckor', () => {
+    expect(missedWithinWeeklyMargin([])).toBe(true)
+    expect(missedWithinWeeklyMargin([3])).toBe(true)
+    expect(missedWithinWeeklyMargin([3, 9, 16])).toBe(true)   // vecka 1, 2 och 3
+  })
+
+  it('två missar i samma utmaningsvecka spränger marginalen', () => {
+    expect(missedWithinWeeklyMargin([3, 5])).toBe(false)      // båda i vecka 1
+    expect(missedWithinWeeklyMargin([8, 14])).toBe(false)     // båda i vecka 2 (dag 8–14)
+    expect(missedWithinWeeklyMargin([7, 8])).toBe(true)       // veckogränsen: dag 7 v1, dag 8 v2
   })
 })
 

@@ -11,12 +11,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '@/lib/supabase'
 import { scheduleDailyReminders, cancelDailyReminders, areRemindersActive } from '@/services/notifications'
 import { registerPushToken } from '@/services/pushTokens'
-import { getActiveChallenge, calculateCurrentDay, levelDisplayName } from '@/services/challenge'
+import { getActiveChallenge, calculateCurrentDay, levelDisplayName, changeLevel } from '@/services/challenge'
 import { deleteRepeatingSessions } from '@/services/workoutSchedule'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useCardChrome } from '@/lib/theme'
+import type { UserChallengeWithLevel } from '@/types/database'
 
 const IS_EXPO_GO = Constants.appOwnership === 'expo'
 
@@ -84,6 +85,7 @@ export default function GeneralScreen() {
   const [startDate, setStartDate]   = useState('')
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [userId, setUserId]         = useState<string | null>(null)
+  const [challenge, setChallenge]   = useState<UserChallengeWithLevel | null>(null)
   const [wizardVisible, setWizardVisible] = useState(false)
 
   useEffect(() => {
@@ -93,6 +95,7 @@ export default function GeneralScreen() {
       setUserId(session.user.id)
       const challenge = await getActiveChallenge(session.user.id).catch(() => null)
       if (challenge) {
+        setChallenge(challenge)
         setCurrentDay(calculateCurrentDay(challenge.start_date))
         setLevelName(levelDisplayName(challenge))
         setStartDate(formatDate(challenge.start_date))
@@ -197,6 +200,57 @@ export default function GeneralScreen() {
     }
   }
 
+  // Nivåbyte: tillåts EN gång per utmaning. Allt man gjort behålls,
+  // de nya reglerna seedas från nästa dags uppgifter.
+  function handleChangeLevel() {
+    if (!challenge) return
+    if (challenge.level_changed_at) {
+      Alert.alert('Nivån är redan ändrad', 'Nivån kan bara ändras en gång per utmaning.')
+      return
+    }
+    const currentSlug = challenge.challenge_levels?.slug
+    const options = (['normal', 'hard', 'extreme'] as const)
+      .filter(slug => slug !== currentSlug)
+      .map(slug => ({
+        text: slug.charAt(0).toUpperCase() + slug.slice(1),
+        onPress: () => confirmChangeLevel(slug),
+      }))
+    Alert.alert(
+      'Byt nivå',
+      'Du kan bara byta nivå en gång under utmaningen. Allt du gjort hittills behålls, de nya reglerna gäller från och med imorgon.',
+      [{ text: 'Avbryt', style: 'cancel' as const }, ...options],
+    )
+  }
+
+  function confirmChangeLevel(slug: 'normal' | 'hard' | 'extreme') {
+    const name = slug.charAt(0).toUpperCase() + slug.slice(1)
+    Alert.alert(
+      `Byta till ${name}?`,
+      'Det här går inte att ångra, nivån kan inte bytas igen under den här utmaningen.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: `Byt till ${name}`,
+          style: 'destructive',
+          onPress: async () => {
+            if (!challenge) return
+            try {
+              await changeLevel(challenge, slug)
+              const updated = await getActiveChallenge(challenge.user_id).catch(() => null)
+              if (updated) {
+                setChallenge(updated)
+                setLevelName(levelDisplayName(updated))
+              }
+              Alert.alert('Nivå ändrad', `Du kör nu ${name}. De nya reglerna dyker upp med morgondagens uppgifter.`)
+            } catch (e: any) {
+              Alert.alert('Kunde inte byta nivå', e.message ?? 'Försök igen.')
+            }
+          },
+        },
+      ],
+    )
+  }
+
   function handleResetSchedule() {
     if (!userId) return
     Alert.alert(
@@ -248,7 +302,16 @@ export default function GeneralScreen() {
           <Section title="Aktiv utmaning">
             <SettingRow icon="trophy-outline"   label="Nivå"       value={levelName} />
             <SettingRow icon="calendar-outline" label="Startdatum" value={startDate} />
-            <SettingRow icon="flag-outline"     label="Dag"        value={`${currentDay} av 75`} last />
+            <SettingRow icon="flag-outline"     label="Dag"        value={`${currentDay} av 75`} />
+            <SettingRow
+              icon="swap-vertical-outline"
+              label="Byt nivå"
+              sub={challenge?.level_changed_at
+                ? 'Nivån har redan ändrats en gång'
+                : 'Kan bara göras en gång per utmaning'}
+              onPress={challenge?.level_changed_at ? undefined : handleChangeLevel}
+              last
+            />
           </Section>
         ) : null}
 

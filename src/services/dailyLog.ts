@@ -252,6 +252,20 @@ export async function acknowledgeMissedDays(
   if (error) throw error
 }
 
+/**
+ * Normals marginal: en missad dag per utmaningsvecka (dag 1–7 = vecka 1 osv)
+ * är förlåten — utmaningen fortsätter utan omstartsfråga. Två missar i
+ * samma vecka spränger marginalen.
+ */
+export function missedWithinWeeklyMargin(missedDayNumbers: number[]): boolean {
+  const byWeek = new Map<number, number>()
+  for (const day of missedDayNumbers) {
+    const week = Math.ceil(day / 7)
+    byWeek.set(week, (byWeek.get(week) ?? 0) + 1)
+  }
+  return [...byWeek.values()].every(count => count <= 1)
+}
+
 export interface DayTaskUpdate {
   /** 'tpl:<templateId>' när dagen saknar logg — raden skapas då vid sparning */
   completionId: string

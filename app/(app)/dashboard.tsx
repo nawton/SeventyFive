@@ -49,6 +49,7 @@ import {
   getMissedDayNumbers,
   acknowledgeMissedDays,
   countCompletedDays,
+  missedWithinWeeklyMargin,
   type TaskItem,
   type TaskDetails,
 } from '@/services/dailyLog'
@@ -396,9 +397,21 @@ export default function DashboardScreen() {
       // Rollover-check: tidigare dagar som varken är klara eller kvitterade
       const missed = await getMissedDayNumbers(active, day)
       if (missed.length > 0) {
-        setMissedDays(missed)
-        setRestartVariant('missed')
-        setRestartVisible(true)
+        // Normal har en dags marginal per vecka — inom den fortsätter
+        // utmaningen utan omstartsfråga, dagen kvitteras bara som missad
+        if (active.challenge_levels?.slug === 'normal' && missedWithinWeeklyMargin(missed)) {
+          await acknowledgeMissedDays(active, missed)
+          Alert.alert(
+            'Marginalen räddade dig',
+            missed.length === 1
+              ? `Dag ${missed[0]} räknas som missad, men på Normal har du en dags marginal per vecka. Utmaningen fortsätter.`
+              : `Dagarna ${missed.join(', ')} räknas som missade, men marginalen på Normal täcker dem. Utmaningen fortsätter.`,
+          )
+        } else {
+          setMissedDays(missed)
+          setRestartVariant('missed')
+          setRestartVisible(true)
+        }
       }
     } catch {
       setLoadError(true)
@@ -458,15 +471,28 @@ export default function DashboardScreen() {
     applyTaskUpdate(task, !task.completed, task.details)
   }
 
-  // ── Framstegsfoto: ta bild eller skippa medvetet — dagen godkänns ändå ──
+  // ── Framstegsfoto: valfritt BARA på Normal — Hard och Extreme kräver
+  //    ett foto varje dag enligt nivåreglerna ──
   function handlePhotoPress(task: TaskItem) {
     if (task.completed) {
       router.push('/(app)/profile')
       return
     }
+    const slug = challenge?.challenge_levels?.slug
+    if (slug !== 'normal') {
+      Alert.alert(
+        'Dagens framstegsfoto',
+        `Framstegsfotot är en av reglerna på ${levelName || 'din nivå'}: ett foto varje dag.`,
+        [
+          { text: 'Avbryt', style: 'cancel' },
+          { text: 'Ta foto', onPress: () => router.push({ pathname: '/(app)/profile', params: { action: 'addPhoto' } }) },
+        ],
+      )
+      return
+    }
     Alert.alert(
       'Dagens framstegsfoto',
-      'Vill du ta ett foto nu eller hoppa över idag? Dagen godkänns även utan foto.',
+      'Vill du ta ett foto nu eller hoppa över idag? På Normal godkänns dagen även utan foto.',
       [
         { text: 'Avbryt', style: 'cancel' },
         { text: 'Hoppa över idag', onPress: () => applyTaskUpdate(task, true, { ...task.details, skipped: true }) },
@@ -487,16 +513,29 @@ export default function DashboardScreen() {
     applyTaskUpdate(task, glasses >= waterGoal(task), { ...task.details, glasses })
   }
 
-  // ── Läsning: logga bok + sidor innan uppgiften bockas i ──
+  // ── Läsning: logga bok + sidor innan uppgiften bockas i.
+  //    På Normal är läsningen valfri och kan hoppas över utan att dagen missas ──
   function handleReadingPress(task: TaskItem) {
     if (task.completed) {
       Alert.alert('Ta bort läsloggen?', 'Uppgiften markeras som ej klar.', [
         { text: 'Avbryt', style: 'cancel' },
         { text: 'Ta bort', style: 'destructive', onPress: () => applyTaskUpdate(task, false, null) },
       ])
-    } else {
-      setReadingTask(task)
+      return
     }
+    if (challenge?.challenge_levels?.slug === 'normal') {
+      Alert.alert(
+        'Dagens läsning',
+        'Läsningen är valfri på Normal. Logga det du läst eller hoppa över idag.',
+        [
+          { text: 'Avbryt', style: 'cancel' },
+          { text: 'Hoppa över idag', onPress: () => applyTaskUpdate(task, true, { ...task.details, skipped: true }) },
+          { text: 'Logga läsning', onPress: () => setReadingTask(task) },
+        ],
+      )
+      return
+    }
+    setReadingTask(task)
   }
 
   async function handleReadingSave(book: string, pages: number) {
@@ -940,6 +979,7 @@ export default function DashboardScreen() {
         visible={restartVisible}
         variant={restartVariant}
         missedDays={missedDays}
+        allowContinue={challenge?.challenge_levels?.slug === 'normal'}
         onRestart={handleRestart}
         onContinue={handleContinueAnyway}
       />

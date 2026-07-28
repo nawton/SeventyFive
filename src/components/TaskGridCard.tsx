@@ -22,6 +22,7 @@ export const TASK_COLORS: Record<TaskType, string> = {
   diet:    '#66BB6A',
   reading: '#AB47BC',
   photo:   '#EC407A',
+  cold_shower: '#7EC8FF',
   custom:  '#9B6DFF',
 }
 
@@ -33,6 +34,7 @@ export const TASK_COLORS_LIGHT: Record<TaskType, string> = {
   diet:    '#3E9A4E',
   reading: '#8E3AA6',
   photo:   '#C42D63',
+  cold_shower: '#2E7DB8',
   custom:  '#7A50D6',
 }
 
@@ -42,6 +44,7 @@ export const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>[
   water:   'water-outline',
   reading: 'book-outline',
   photo:   'camera-outline',
+  cold_shower: 'snow-outline',
   custom:  'checkmark-circle-outline',
 }
 

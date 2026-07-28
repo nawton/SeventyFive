@@ -7,7 +7,7 @@
 export type SubscriptionStatus = 'trial' | 'active' | 'expired'
 export type ChallengeStatus = 'active' | 'failed' | 'completed'
 export type DailyLogStatus = 'pending' | 'completed' | 'failed'
-export type TaskType = 'workout' | 'diet' | 'water' | 'reading' | 'photo' | 'custom'
+export type TaskType = 'workout' | 'diet' | 'water' | 'reading' | 'photo' | 'cold_shower' | 'custom'
 export type ExerciseCategory = 'strength' | 'cardio' | 'mobility' | 'hiit'
 export type ExerciseDifficulty = 'beginner' | 'intermediate' | 'advanced'
 export type ChallengeSlug = 'normal' | 'hard' | 'extreme'
@@ -58,6 +58,8 @@ export interface UserChallenge {
   current_day: number
   status: ChallengeStatus
   failed_on_day: number | null
+  /** Satt när nivån bytts — nivåbyte tillåts bara en gång per utmaning */
+  level_changed_at?: string | null
   created_at: string
 }
 

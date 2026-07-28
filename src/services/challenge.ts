@@ -118,6 +118,26 @@ async function backfillCompletedDays(
   if (compError) throw compError
 }
 
+/**
+ * Byter nivå på en pågående utmaning — tillåts EN gång per utmaning.
+ * Historiken lämnas helt orörd: gamla dagar behåller sina loggar och
+ * bockar, de nya reglerna seedas från nästa dags logg.
+ */
+export async function changeLevel(challenge: UserChallenge, newSlug: string): Promise<void> {
+  if (challenge.level_changed_at) {
+    throw new Error('Nivån kan bara ändras en gång per utmaning.')
+  }
+  const levelId = LEVEL_IDS[newSlug]
+  if (!levelId) throw new Error('Okänd nivå.')
+  if (levelId === challenge.level_id) throw new Error('Du är redan på den nivån.')
+
+  const { error } = await supabase
+    .from('user_challenges')
+    .update({ level_id: levelId, level_changed_at: new Date().toISOString() })
+    .eq('id', challenge.id)
+  if (error) throw error
+}
+
 const LEVEL_NAMES: Record<string, string> = {
   normal: 'Normal',
   hard: 'Hard',

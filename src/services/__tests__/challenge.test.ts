@@ -1,6 +1,7 @@
 import {
   acceptChallenge, getActiveChallenge, calculateDaysSinceStart,
   calculateCurrentDay, restartChallenge, completeChallenge, levelDisplayName,
+  changeLevel,
 } from '../challenge'
 import { supabase } from '@/lib/supabase'
 import { toLocalDateString } from '@/lib/date'
@@ -196,6 +197,35 @@ describe('restartChallenge', () => {
     })
     await expect(restartChallenge(challenge)).rejects.toMatchObject({ message: 'stopp' })
     expect(calls.user_challenges).toHaveLength(1)
+  })
+})
+
+describe('changeLevel', () => {
+  const base = {
+    id: 'c1', user_id: 'u1',
+    level_id: 'a1b2c3d4-0001-0001-0001-000000000001',   // normal
+    level_changed_at: null,
+  } as unknown as UserChallenge
+
+  it('byter nivå en gång och stämplar bytet, historiken rörs inte', async () => {
+    const calls = installTables(fromMock, { user_challenges: { data: null } })
+    await changeLevel(base, 'hard')
+
+    const patch = argsOf(calls, 'user_challenges', 'update')[0][0] as Record<string, unknown>
+    expect(patch.level_id).toBe(HARD_LEVEL)
+    expect(typeof patch.level_changed_at).toBe('string')
+    expect(argsOf(calls, 'user_challenges', 'eq')[0]).toEqual(['id', 'c1'])
+    // Bara utmaningsraden rörs — loggar och pass lämnas helt ifred
+    expect(new Set(fromMock.mock.calls.map(c => c[0]))).toEqual(new Set(['user_challenges']))
+  })
+
+  it('vägrar ett andra byte, okänd nivå och byte till samma nivå', async () => {
+    installTables(fromMock, { user_challenges: { data: null } })
+    await expect(changeLevel({ ...base, level_changed_at: '2026-07-01T10:00:00Z' } as UserChallenge, 'hard'))
+      .rejects.toThrow('en gång')
+    await expect(changeLevel(base, 'banan')).rejects.toThrow('Okänd')
+    await expect(changeLevel(base, 'normal')).rejects.toThrow('redan på')
+    expect(fromMock).not.toHaveBeenCalled()
   })
 })
 

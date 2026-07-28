@@ -17,13 +17,15 @@ interface Props {
   /** 'missed' = dagar upptäcktes vid app-öppning, 'today' = dagen rapporterades nyss */
   variant: 'missed' | 'today'
   missedDays: number[]
+  /** Normal får fortsätta ändå — på Hard och Extreme är omstarten regeln */
+  allowContinue?: boolean
   onRestart: () => Promise<void>
   onContinue: () => Promise<void>
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function RestartPromptModal({ visible, variant, missedDays, onRestart, onContinue }: Props) {
+export function RestartPromptModal({ visible, variant, missedDays, allowContinue = true, onRestart, onContinue }: Props) {
   const [busy, setBusy] = useState<'restart' | 'continue' | null>(null)
 
   function title(): string {
@@ -53,7 +55,7 @@ export function RestartPromptModal({ visible, variant, missedDays, onRestart, on
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={() => handle('continue')}
+      onRequestClose={() => { if (allowContinue) handle('continue') }}
     >
       <View style={styles.screen}>
         <View style={styles.container}>
@@ -65,8 +67,9 @@ export function RestartPromptModal({ visible, variant, missedDays, onRestart, on
 
           <View style={styles.card}>
             <Text style={styles.cardText}>
-              Att starta om är inte att förlora, det är att ta utmaningen på allvar.
-              Att fortsätta är okej, men dagen räknas som missad i din statistik.
+              {allowContinue
+                ? 'Att starta om är inte att förlora, det är att ta utmaningen på allvar. Att fortsätta är okej, men dagen räknas som missad i din statistik.'
+                : 'På din nivå är regeln enkel: en missad dag betyder omstart från dag 1. Allt du loggat, dina pass och rekord finns kvar, det är bara dagräkningen som börjar om.'}
             </Text>
           </View>
 
@@ -82,17 +85,19 @@ export function RestartPromptModal({ visible, variant, missedDays, onRestart, on
             }
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.continueButton, busy !== null && styles.disabled]}
-            onPress={() => handle('continue')}
-            disabled={busy !== null}
-            activeOpacity={0.8}
-          >
-            {busy === 'continue'
-              ? <ActivityIndicator color={ACCENT} />
-              : <Text style={styles.continueButtonText}>Fortsätt ändå</Text>
-            }
-          </TouchableOpacity>
+          {allowContinue && (
+            <TouchableOpacity
+              style={[styles.continueButton, busy !== null && styles.disabled]}
+              onPress={() => handle('continue')}
+              disabled={busy !== null}
+              activeOpacity={0.8}
+            >
+              {busy === 'continue'
+                ? <ActivityIndicator color={ACCENT} />
+                : <Text style={styles.continueButtonText}>Fortsätt ändå</Text>
+              }
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Modal>
