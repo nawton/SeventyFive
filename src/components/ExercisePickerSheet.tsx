@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
+import { EN } from '@/lib/i18n/en'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
 import { useBodyGender } from '@/lib/bodyGender'
 import { CATEGORY_LABELS, EQUIPMENT_LABELS, type Exercise, type ExerciseEquipment } from '@/services/exercises'
@@ -59,7 +60,7 @@ const POPULAR: Record<string, string[]> = {
               'Good mornings', 'Nordic curl', 'Genomdrag med kabel', 'Kettlebell swing'],
   gluteal: ['Hip thrust', 'Knäböj', 'Utfall', 'Rumänsk marklyft', 'Bulgariska utfall',
             'Glute kickback i kabel', 'Genomdrag med kabel', 'Sumo marklyft', 'Steg-ups'],
-  adductors: ['Sumo marklyft', 'Bulgariska utfall', 'Utfall'],
+  adductors: ['Sumo marklyft'],
   calves: ['Vadpress stående', 'Sittande vadpress'],
   tibialis: [],
 }
@@ -199,7 +200,7 @@ export function ExercisePickerSheet({
   }
 
   function openInfo(ex: Exercise) {
-    if (!EXERCISE_INFO[ex.name] && !ex.image_path) return
+    if (!EXERCISE_INFO[ex.name] && !ex.image_path && !ex.primary_muscle && !ex.instructions?.length) return
     Haptics.selectionAsync()
     setInfoEx(ex)
   }
@@ -246,9 +247,13 @@ export function ExercisePickerSheet({
   const filteredExercises = search.trim()
     // Sökningen matchar både det lagrade svenska namnet och den visade
     // engelska översättningen, så "bench" hittar Bänkpress på engelska
-    ? equipExercises.filter(e =>
-        e.name.toLowerCase().includes(search.toLowerCase()) ||
-        t(e.name).toLowerCase().includes(search.toLowerCase()))
+    ? equipExercises.filter(e => {
+        const q = search.toLowerCase()
+        // Engelska namnet är alltid sökbart, även i svenskt läge
+        return e.name.toLowerCase().includes(q) ||
+          (EN[e.name]?.toLowerCase().includes(q) ?? false) ||
+          t(e.name).toLowerCase().includes(q)
+      })
     : equipExercises
 
   // Vanliga överst (utan sökning): kuraterade träffar först, resten under

@@ -590,7 +590,7 @@ export function SessionFullscreen({
                     <Text style={s.exName}>{t(ex.exercise_name)}</Text>
                     {(() => {
                       const lib = exercisesList.find(e => e.name === ex.exercise_name)
-                      return lib && (EXERCISE_INFO[lib.name] || lib.image_path) ? (
+                      return lib && (EXERCISE_INFO[lib.name] || lib.image_path || lib.primary_muscle) ? (
                         <TouchableOpacity
                           onPress={() => setInfoEx(lib)}
                           hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}

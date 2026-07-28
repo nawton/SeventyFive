@@ -227,7 +227,7 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
               {/* Set, reps och vikt fylls i inne i passet — här väljs bara övningarna */}
               <View style={s.exListCard}>
                 {entries.map((en, i) => {
-                  const hasInfo = !!EXERCISE_INFO[en.exercise.name] || !!en.exercise.image_path
+                  const hasInfo = !!EXERCISE_INFO[en.exercise.name] || !!en.exercise.image_path || !!en.exercise.primary_muscle
                   return (
                     <TouchableOpacity
                       key={en.exercise.id}

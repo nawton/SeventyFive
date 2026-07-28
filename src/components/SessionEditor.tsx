@@ -493,7 +493,7 @@ export function SessionEditor({
                 return (
                   <View key={d.key} style={[s.exRow, chip, chip]}>
                     <Text style={s.exName} numberOfLines={1}>{t(d.exercise_name)}</Text>
-                    {exInfo && (EXERCISE_INFO[exInfo.name] || exInfo.image_path) ? (
+                    {exInfo && (EXERCISE_INFO[exInfo.name] || exInfo.image_path || exInfo.primary_muscle) ? (
                       <TouchableOpacity
                         onPress={() => setInfoEx(exInfo)}
                         hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}

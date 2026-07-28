@@ -884,7 +884,6 @@ INSERT INTO exercises (name, description, category, difficulty, equipment, prima
 ('Sittande curl med EZ-stång', NULL, 'strength', 'beginner', 'barbell', 'biceps', ARRAY['forearm'], 'weight_reps', 'lib/edb-1458.gif'),
 ('Sittande tricepsextension med EZ-stång', NULL, 'strength', 'beginner', 'barbell', 'triceps', ARRAY['deltoids'], 'weight_reps', 'lib/edb-0453.gif'),
 ('Spider curl med EZ-stång', NULL, 'strength', 'beginner', 'barbell', 'biceps', ARRAY['forearm'], 'weight_reps', 'lib/edb-0454.gif'),
-('Ez barbell spider curl', NULL, 'strength', 'beginner', 'barbell', 'biceps', ARRAY['forearm'], 'weight_reps', 'lib/edb-1628.gif'),
 ('Bicepscurl med EZ-stång och arm blaster', NULL, 'strength', 'beginner', 'barbell', 'biceps', ARRAY['forearm'], 'weight_reps', 'lib/edb-2404.gif'),
 ('Bänkpress med EZ-stång och smalt grepp', NULL, 'strength', 'beginner', 'barbell', 'triceps', ARRAY['chest','deltoids'], 'weight_reps', 'lib/edb-2432.gif'),
 ('Stående bicepscurl med EZ-stång och brett grepp', NULL, 'strength', 'beginner', 'barbell', 'biceps', ARRAY['forearm'], 'weight_reps', 'lib/edb-2741.gif'),
@@ -1003,7 +1002,6 @@ INSERT INTO exercises (name, description, category, difficulty, equipment, prima
 ('Bicepscurl i maskin', NULL, 'strength', 'beginner', 'machine', 'biceps', ARRAY['forearm'], 'weight_reps', 'lib/edb-0575.gif'),
 ('Vadpress i maskin', NULL, 'strength', 'beginner', 'machine', 'calves', ARRAY['hamstring'], 'weight_reps', 'lib/edb-2289.gif'),
 ('Bröstpress i maskin', NULL, 'strength', 'beginner', 'machine', 'chest', ARRAY['triceps','deltoids'], 'weight_reps', 'lib/edb-0577.gif'),
-('Lever chest press', NULL, 'strength', 'beginner', 'machine', 'chest', ARRAY['triceps','deltoids'], 'weight_reps', 'lib/edb-0576.gif'),
 ('Marklyft i maskin', NULL, 'strength', 'beginner', 'machine', 'gluteal', ARRAY['hamstring','quadriceps'], 'weight_reps', 'lib/edb-0578.gif'),
 ('Negativ bröstpress i maskin', NULL, 'strength', 'beginner', 'machine', 'chest', ARRAY['triceps','deltoids'], 'weight_reps', 'lib/edb-1300.gif'),
 ('Donkey calf raise i maskin', NULL, 'strength', 'beginner', 'machine', 'calves', ARRAY['hamstring','gluteal'], 'weight_reps', 'lib/edb-1253.gif'),
@@ -1168,7 +1166,6 @@ INSERT INTO exercises (name, description, category, difficulty, equipment, prima
 ('Enbens vadpress på golv i smithmaskin', NULL, 'strength', 'beginner', 'machine', 'calves', ARRAY['hamstring','gluteal'], 'weight_reps', 'lib/edb-1393.gif'),
 ('Bakre deltarodd i smithmaskin', NULL, 'strength', 'beginner', 'machine', 'deltoids', ARRAY['trapezius','upper-back','biceps'], 'weight_reps', 'lib/edb-0762.gif'),
 ('Omvänd vadpress i smithmaskin', NULL, 'strength', 'beginner', 'machine', 'calves', ARRAY['hamstring'], 'weight_reps', 'lib/edb-0763.gif'),
-('Smith reverse calf raises', NULL, 'strength', 'beginner', 'machine', 'calves', ARRAY['hamstring'], 'weight_reps', 'lib/edb-1394.gif'),
 ('Framåtlutad rodd omvänt grepp i smithmaskin', NULL, 'strength', 'beginner', 'machine', 'upper-back', ARRAY['biceps','forearm'], 'weight_reps', 'lib/edb-1361.gif'),
 ('Press omvänt grepp i smithmaskin', NULL, 'strength', 'beginner', 'machine', 'chest', ARRAY['triceps','deltoids'], 'weight_reps', 'lib/edb-0764.gif'),
 ('Sittande enbens vadpress i smithmaskin', NULL, 'strength', 'beginner', 'machine', 'calves', ARRAY['hamstring'], 'weight_reps', 'lib/edb-1395.gif'),
@@ -1291,10 +1288,6 @@ INSERT INTO exercises (name, description, category, difficulty, equipment, prima
 ('Rollover till V-sit', NULL, 'strength', 'beginner', 'none', 'abs', ARRAY['quadriceps','adductors','gluteal','hamstring'], 'bodyweight', 'lib/edb-2572.gif'),
 ('Dorsalflexion i fotled', NULL, 'strength', 'beginner', 'none', 'calves', NULL, 'bodyweight', 'lib/edb-2761.gif'),
 ('Step up med utfall och hantlar', NULL, 'strength', 'beginner', 'dumbbell', 'quadriceps', ARRAY['gluteal','hamstring','adductors','calves','abs'], 'weight_reps', 'lib/edb-2795.gif'),
-('Barbell squat jump step rear lunge', NULL, 'strength', 'beginner', 'barbell', 'quadriceps', ARRAY['gluteal','hamstring','calves','abs','adductors'], 'weight_reps', 'lib/edb-2797.gif'),
-('Dumbbell supported squat', NULL, 'strength', 'beginner', 'machine', 'quadriceps', ARRAY['gluteal','hamstring','calves','abs'], 'weight_reps', 'lib/edb-2804.gif'),
-('Dumbbell single leg deadlift with stepbox support', NULL, 'strength', 'beginner', 'dumbbell', 'hamstring', ARRAY['gluteal','lower-back','calves','forearm','abs'], 'weight_reps', 'lib/edb-2806.gif'),
-('Dumbbell sumo pull through', NULL, 'strength', 'beginner', 'dumbbell', 'gluteal', ARRAY['hamstring','adductors','lower-back','quadriceps'], 'weight_reps', 'lib/edb-2807.gif'),
 ('Split squat med skivstång (version 2)', NULL, 'strength', 'beginner', 'barbell', 'quadriceps', ARRAY['gluteal','hamstring','adductors','calves','abs'], 'weight_reps', 'lib/edb-2809.gif'),
 ('Liggande bentwist med skivstång', NULL, 'strength', 'beginner', 'barbell', 'abs', ARRAY['deltoids','triceps','chest','gluteal'], 'weight_reps', 'lib/edb-2811.gif'),
 ('Hakindragning', NULL, 'strength', 'beginner', 'none', 'lower-back', ARRAY['trapezius','upper-back'], 'bodyweight', 'lib/edb-3149.gif'),
@@ -2260,3 +2253,141 @@ UPDATE exercises SET instructions = $instr$[{"sv": "Stå med fötterna axelbrett
 UPDATE exercises SET instructions = $instr$[{"sv": "Stå upprätt med en hantel i varje hand och handflatorna vända mot kroppen.", "en": "Stand up straight with a dumbbell in each hand, palms facing your body."}, {"sv": "Håll armbågarna nära kroppen och rotera handflatorna så att de pekar framåt.", "en": "Keep your elbows close to your torso and rotate your palms to face forward."}, {"sv": "Curla upp hantlarna till axlarna och håll överarmarna stilla.", "en": "Curl the dumbbells up to your shoulders while keeping your upper arms stationary."}, {"sv": "I toppen av rörelsen roterar du handlederna så att handflatorna vänds bort från kroppen.", "en": "At the top of the movement, rotate your wrists so that your palms are facing away from your body."}, {"sv": "Sänk långsamt tillbaka hantlarna till startpositionen och rotera samtidigt tillbaka handflatorna mot kroppen.", "en": "Slowly lower the dumbbells back to the starting position, rotating your palms back to facing your body."}, {"sv": "Upprepa önskat antal repetitioner.", "en": "Repeat for the desired number of repetitions."}]$instr$::jsonb WHERE name = 'Zottman curl med hantlar' AND user_id IS NULL;
 UPDATE exercises SET instructions = $instr$[{"sv": "Sitt vid en preacherbänk med en hantel i varje hand, handflatorna uppåt och armbågarna vilande på dynan.", "en": "Sit on a preacher bench with a dumbbell in each hand, palms facing up and elbows resting on the pad."}, {"sv": "Curla upp hantlarna mot axlarna med överarmarna stilla och handflatorna uppåt.", "en": "Curl the dumbbells up towards your shoulders, keeping your upper arms stationary and your palms facing up."}, {"sv": "I toppen av curlen roterar du handlederna så att handflatorna vänds nedåt.", "en": "At the top of the curl, rotate your wrists so that your palms are facing down."}, {"sv": "Sänk långsamt tillbaka hantlarna till startpositionen och rotera samtidigt tillbaka handlederna till utgångsläget.", "en": "Slowly lower the dumbbells back down to the starting position, rotating your wrists back to the starting position as you do so."}, {"sv": "Upprepa önskat antal repetitioner.", "en": "Repeat for the desired number of repetitions."}]$instr$::jsonb WHERE name = 'Zottman preacher curl med hantel' AND user_id IS NULL;
 UPDATE exercises SET instructions = $instr$[{"sv": "Stå rakt upp med fötterna axelbrett isär.", "en": "Stand up straight with your feet shoulder-width apart."}, {"sv": "Sträck armarna rakt fram, parallellt med golvet.", "en": "Extend your arms straight in front of you, parallel to the ground."}, {"sv": "Fläta samman fingrarna och vrid handflatorna bort från kroppen.", "en": "Interlace your fingers and rotate your palms away from your body."}, {"sv": "Lyft långsamt armarna över huvudet, håll dem raka och parallella med varandra.", "en": "Slowly raise your arms overhead, keeping them straight and parallel to each other."}, {"sv": "Pressa ihop skulderbladen medan du lyfter armarna.", "en": "As you raise your arms, squeeze your shoulder blades together."}, {"sv": "Håll stretchen i 15 till 30 sekunder, släpp sedan och upprepa.", "en": "Hold the stretch for 15-30 seconds, then release and repeat."}]$instr$::jsonb WHERE name = 'Övre ryggstretch' AND user_id IS NULL;
+
+-- Utrustnings-backfill för ursprungsbiblioteket (samma som migrationerna)
+UPDATE exercises SET equipment = 'other' WHERE name = 'Ab wheel' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Arnold press' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Axellyft med kabel' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Bakre deltalyft' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Bakre deltalyft i kabel' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'machine' WHERE name = 'Bencurl liggande' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'machine' WHERE name = 'Benextension' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Benlyft liggande' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'machine' WHERE name = 'Benpress' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Bicepscurl' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Box squat' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Bulgariska utfall' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Bänkpress' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Chin-ups' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Crunches' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Decline bänkpress' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Dips' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Dragon flag' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Enarms hantelrodd' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Enarms kabelcurl' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Enarms kabelrodd' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Face pulls' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Farmers walk' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Flyes med hantlar' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Frivändning' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Front squat' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Frontlyft' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Frontlyft i kabel' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Genomdrag med kabel' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Glute kickback i kabel' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Goblet squat' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Good mornings' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Hack squat' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Hammercurl' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Handledscurl' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Hantelpress axlar' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Hantelpress liggande' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Hip thrust' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Hyperextensions' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Hängande benlyft' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'machine' WHERE name = 'Höftabduktion i kabel' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Kabelbiceps' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Kabelcrunch' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Kabelcurl med rep' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Kabelflyes' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Kabelkorsning' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Kabelpress' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Kabelpullover' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Kabelrodd sittande' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Kabeltriceps över huvud' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Kabelvridning' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'kettlebell' WHERE name = 'Kettlebell swing' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Knäböj' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Koncentrationscurl' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Latsdrag bakåt' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Latsdrag framifrån' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Latsdrag med raka armar' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Latsdrag smalt grepp' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Lutande bänkpress' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Lutande hantelpress' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Lutande kabelflyes' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Marklyft' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Militärpress' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Mountain climbers' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Nordic curl' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Omvänd flyes' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'band' WHERE name = 'Pallof press' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'machine' WHERE name = 'Pec deck' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'kettlebell' WHERE name = 'Pistol squat' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'other' WHERE name = 'Plankan' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Preacher curl' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Pull-ups' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Push press' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Push-ups' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Rack pull' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Rodd med skivstång' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Rumänsk marklyft' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Russian twist' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Shrugs med hantlar' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Shrugs med skivstång' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Sidolyft' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Sidoplanka' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'machine' WHERE name = 'Sittande bencurl' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Sittande vadpress' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'none' WHERE name = 'Situps' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Skull crushers' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Smalbänkpress' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Steg-ups' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Stående kabelrodd' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Sumo marklyft' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'machine' WHERE name = 'T-bar rodd' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Thrusters' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Triceps kickback' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Tricepspress smal' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Tricepsstötning kabel' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'cable' WHERE name = 'Tricepsstötning med rep' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Upright row' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'dumbbell' WHERE name = 'Utfall' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Vadpress stående' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'barbell' WHERE name = 'Landmine press' AND user_id IS NULL AND equipment IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Armcirklar med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Bänkdips med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Chin-up smalt grepp med vikt i dipställning' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Crunch med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Crunch med vikt bakom huvudet' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Dips mellan tre bänkar med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Dips på rak stång med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Donkey vadpress med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Drop armhävning med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Enarms pull-up med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Frontlyft med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Hängande ben och höftlyft med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Knäböj med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Knästående steg med sving och vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Liggande nackextension med huvudsele' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Liggande nackflexion med huvudsele' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Muscle up med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Muscle up på stång med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Negativ sit-up med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Otis up' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Plankan' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Pull-up med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Russian twist med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Russian twist med vikt och lyfta ben' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Sidoliggande nacklyft med huvudsele' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Sissy squat med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Sittande nackextension med huvudsele (viktad)' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Stretchutfall med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Strongman fatkast' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Stående curl med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Stående greppkläm med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Stående nackextension med huvudsele' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Svend press med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Tricepsdips i hög barr med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Tricepsdips med vikt' AND user_id IS NULL;
+UPDATE exercises SET equipment = 'plate' WHERE name = 'Utfall med sving och vikt' AND user_id IS NULL;

@@ -33,14 +33,15 @@ export function ExerciseInfoSheet({ exercise, onClose }: {
   // förblir fritt från supabase-klienten
   const [fetchedSteps, setFetchedSteps] = useState<Array<{ sv: string; en: string }> | null>(null)
 
-  const info = exercise ? EXERCISE_INFO[exercise.name] : undefined
+  // Egna övningar (user_id) får aldrig bibliotekets bundlade steg vid namnkrock
+  const info = exercise && !exercise.user_id ? EXERCISE_INFO[exercise.name] : undefined
 
   useEffect(() => {
     let alive = true
     setFetchedSteps(null)
     const base = process.env.EXPO_PUBLIC_SUPABASE_URL
     const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
-    if (!exercise || info || exercise.instructions || !base || !key) return
+    if (!exercise || info || exercise.user_id || exercise.instructions?.length || !base || !key) return
     fetch(`${base}/rest/v1/exercises?select=instructions&name=eq.${encodeURIComponent(exercise.name)}&user_id=is.null&limit=1`,
       { headers: { apikey: key } })
       .then(r => r.json())
@@ -56,7 +57,7 @@ export function ExerciseInfoSheet({ exercise, onClose }: {
   const target = info?.target ?? (exercise.primary_muscle ? SLUG_LABELS[exercise.primary_muscle] : null)
   const secondary = info?.secondary ?? (exercise.other_muscles ?? []).map(m => SLUG_LABELS[m]).filter(Boolean)
   const equipment = info?.equipment ?? (exercise.equipment ? EQUIPMENT_LABELS[exercise.equipment] : null)
-  const steps = info?.steps ?? exercise.instructions ?? fetchedSteps
+  const steps = info?.steps ?? (exercise.instructions?.length ? exercise.instructions : null) ?? fetchedSteps
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
