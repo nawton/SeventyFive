@@ -5,7 +5,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@/components/Icon'
-import { EquipmentIcon } from '@/components/EquipmentIcon'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { MuscleThumb } from '@/components/MuscleThumb'
 import { AppTextInput } from '@/components/AppTextInput'
@@ -239,8 +238,7 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
                 activeOpacity={0.7}
                 testID={`equipment-${key}`}
               >
-                <EquipmentIcon equipment={key} size={20} color={equipment === key ? T.ACCENT : T.TEXT_SECONDARY} />
-                <Text style={[s.optionText, { flex: 1 }, equipment === key && { color: T.ACCENT, fontWeight: '700' }]}>
+                <Text style={[s.optionText, equipment === key && { color: T.ACCENT, fontWeight: '700' }]}>
                   {t(EQUIPMENT_LABELS[key])}
                 </Text>
                 {equipment === key && <Ionicons name="checkmark" size={18} color={T.ACCENT} />}

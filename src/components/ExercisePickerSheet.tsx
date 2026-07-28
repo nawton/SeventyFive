@@ -9,8 +9,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
-import { MuscleThumb } from '@/components/MuscleThumb'
-import { EquipmentIcon } from '@/components/EquipmentIcon'
 import { useBodyGender } from '@/lib/bodyGender'
 import { CATEGORY_LABELS, EQUIPMENT_LABELS, exerciseImageUrl, type Exercise, type ExerciseEquipment } from '@/services/exercises'
 import { CreateExerciseSheet } from '@/components/CreateExerciseSheet'
@@ -26,7 +24,15 @@ type Page = 'landing' | 'gym' | 'cardio' | 'exercises'
 // Ett delmuskelfilter: slug-baserat där SVG-biblioteket har en egen muskel,
 // nyckelordsbaserat (match) där biblioteket är för grovt — bröstets och
 // axelns delar är samma slug men skiljs på övningsnamnet
-type SubDef = { key: string; label: string; slug: Slug; side?: 'front' | 'back'; match?: (n: string) => boolean }
+type SubDef = {
+  key: string
+  label: string
+  /** Fullständigt namn i den platta filterlistan ("Övre bröst") */
+  flatLabel?: string
+  slug: Slug
+  side?: 'front' | 'back'
+  match?: (n: string) => boolean
+}
 
 type GymGroup = { key: string; label: string; side: 'front' | 'back'; slugs: Slug[]; color: string; subs?: SubDef[] }
 
@@ -35,17 +41,17 @@ const nameHas = (n: string, ...words: string[]) => words.some(w => n.includes(w)
 const GYM_GROUPS: GymGroup[] = [
   { key: 'chest',     label: 'Bröst',   side: 'front', slugs: ['chest'],                                      color: '#FF6B6B',
     subs: [
-      { key: 'upper-chest', label: 'Övre',      slug: 'chest', match: n => nameHas(n, 'lutande', 'incline') },
-      { key: 'mid-chest',   label: 'Mellersta', slug: 'chest', match: n => !nameHas(n, 'lutande', 'incline', 'decline', 'dip') },
-      { key: 'lower-chest', label: 'Nedre',     slug: 'chest', match: n => nameHas(n, 'decline', 'dip') },
+      { key: 'upper-chest', label: 'Övre',      flatLabel: 'Övre bröst',      slug: 'chest', match: n => nameHas(n, 'lutande', 'incline') },
+      { key: 'mid-chest',   label: 'Mellersta', flatLabel: 'Mellersta bröst', slug: 'chest', match: n => !nameHas(n, 'lutande', 'incline', 'decline', 'dip') },
+      { key: 'lower-chest', label: 'Nedre',     flatLabel: 'Nedre bröst',     slug: 'chest', match: n => nameHas(n, 'decline', 'dip') },
     ] },
   { key: 'back',      label: 'Rygg',    side: 'back',  slugs: ['upper-back', 'lower-back', 'trapezius'],       color: '#4ECDC4' },
   { key: 'legs',      label: 'Ben',     side: 'front', slugs: ['quadriceps', 'hamstring', 'gluteal', 'calves', 'adductors', 'tibialis'], color: '#45B7D1' },
   { key: 'shoulders', label: 'Axlar',   side: 'front', slugs: ['deltoids'],                                    color: '#F7DC6F',
     subs: [
-      { key: 'front-delts', label: 'Främre',    slug: 'deltoids', match: n => nameHas(n, 'militär', 'press', 'front', 'arnold') },
-      { key: 'side-delts',  label: 'Mellersta', slug: 'deltoids', match: n => nameHas(n, 'sido', 'lateral', 'axellyft', 'upright') },
-      { key: 'rear-delts',  label: 'Bakre',     slug: 'deltoids', side: 'back', match: n => nameHas(n, 'bakre', 'rear', 'face pull', 'omvänd', 'reverse') },
+      { key: 'front-delts', label: 'Främre',    flatLabel: 'Främre delta',    slug: 'deltoids', match: n => nameHas(n, 'militär', 'press', 'front', 'arnold') },
+      { key: 'side-delts',  label: 'Mellersta', flatLabel: 'Mellersta delta', slug: 'deltoids', match: n => nameHas(n, 'sido', 'lateral', 'axellyft', 'upright') },
+      { key: 'rear-delts',  label: 'Bakre',     flatLabel: 'Bakre delta',     slug: 'deltoids', side: 'back', match: n => nameHas(n, 'bakre', 'rear', 'face pull', 'omvänd', 'reverse') },
     ] },
   { key: 'arms',      label: 'Armar',   side: 'front', slugs: ['biceps', 'triceps', 'forearm'],                color: '#A29BFE' },
   { key: 'core',      label: 'Mage',    side: 'front', slugs: ['abs', 'obliques'],                             color: '#FD79A8' },
@@ -83,49 +89,6 @@ const GroupBodyThumb = memo(function GroupBodyThumb({ slugs, side, color, scale 
   )
 })
 
-// Hela filterkortet memoiserat med primitiva props — ett tryck ritar bara om
-// de två kort vars aktiv-status ändras, aldrig SVG-kropparna
-const SubFilterCard = memo(function SubFilterCard({ subKey, label, active, accent, dimText, tintBg, groupSide, slugs, slug, thumbSide, onPick }: {
-  subKey: string
-  label: string
-  active: boolean
-  accent: string
-  dimText: string
-  tintBg: string
-  groupSide: 'front' | 'back'
-  slugs: Slug[]
-  /** Saknas → Alla-kortet med hela gruppens muskler tända */
-  slug?: Slug
-  thumbSide?: 'front' | 'back'
-  onPick: (v: string) => void
-}) {
-  return (
-    <TouchableOpacity
-      style={s.subCard}
-      onPress={() => { Haptics.selectionAsync(); onPick(subKey) }}
-      activeOpacity={0.75}
-      testID={`subMuscle-${subKey}`}
-    >
-      <View style={[s.subThumbRing, active && { borderColor: accent }]}>
-        {!slug ? (
-          <View style={[s.subAllThumb, { backgroundColor: tintBg }]}>
-            <GroupBodyThumb slugs={slugs} side={groupSide} color={accent} scale={0.22} />
-          </View>
-        ) : (
-          <MuscleThumb slug={slug} size={48} color={accent} side={thumbSide} />
-        )}
-      </View>
-      <Text
-        style={[s.subCardText, { color: active ? accent : dimText }, active && { fontWeight: '700' }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.8}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  )
-})
 
 function cardioExIcon(ex: Exercise): IoniconName {
   const n = ex.name.toLowerCase()
@@ -387,11 +350,32 @@ export function ExercisePickerSheet({
                     <Text style={[s.groupSelBadgeText, { color: onAccent }]}>{multiSel.filter(e => getExerciseMuscleGroup(e.name) === group.key).length}</Text>
                   </View>
                 )}
-                {selectedGroup === group.key
+                {selectedGroup === group.key && subMuscle === 'all'
                   ? <Ionicons name="checkmark" size={20} color={T.ACCENT} />
                   : <Ionicons name="chevron-forward" size={20} color={TEXT_SECONDARY} />}
               </TouchableOpacity>
-            ))}
+            )).flatMap((row, gi) => {
+              const group = GYM_GROUPS[gi]
+              const subs = subDefsFor(group)
+              if (subs.length < 2) return [row]
+              return [row, ...subs.map(sd => {
+                const on = selectedGroup === group.key && subMuscle === sd.key
+                return (
+                  <TouchableOpacity
+                    key={`${group.key}-${sd.key}`}
+                    style={s.subRow}
+                    onPress={() => { Haptics.selectionAsync(); setSelectedGroup(group.key); setSubMuscle(sd.key); setPage('exercises') }}
+                    activeOpacity={0.7}
+                    testID={`subMuscle-${sd.key}`}
+                  >
+                    <Text style={[s.subRowText, on && { color: T.ACCENT, fontWeight: '700' }]}>
+                      {t(sd.flatLabel ?? SLUG_LABELS[sd.slug])}
+                    </Text>
+                    {on && <Ionicons name="checkmark" size={18} color={T.ACCENT} />}
+                  </TouchableOpacity>
+                )
+              })]
+            })}
           </ScrollView>
         )}
 
@@ -433,7 +417,14 @@ export function ExercisePickerSheet({
               >
                 <Ionicons name="body-outline" size={17} color={selectedGroup !== 'all' ? T.ACCENT : TEXT_SECONDARY} />
                 <Text style={[s.filterBtnText, selectedGroup !== 'all' && { color: T.ACCENT, fontWeight: '700' }]}>
-                  {selectedGroup === 'all' ? t('Alla muskler') : gymGroupLabel}
+                  {selectedGroup === 'all'
+                    ? t('Alla muskler')
+                    : (() => {
+                        const sd = subMuscle !== 'all'
+                          ? subDefsFor(GYM_GROUPS.find(g => g.key === selectedGroup)!).find(x => x.key === subMuscle)
+                          : undefined
+                        return sd ? t(sd.flatLabel ?? SLUG_LABELS[sd.slug]) : gymGroupLabel
+                      })()}
                 </Text>
                 <Ionicons name="chevron-down" size={15} color={selectedGroup !== 'all' ? T.ACCENT : TEXT_SECONDARY} />
               </TouchableOpacity>
@@ -443,55 +434,13 @@ export function ExercisePickerSheet({
                 activeOpacity={0.75}
                 testID="equipFilter"
               >
-                <EquipmentIcon equipment={equipFilter} size={17} color={equipFilter !== 'all' ? T.ACCENT : T.TEXT_SECONDARY} />
+                <Ionicons name="barbell-outline" size={17} color={equipFilter !== 'all' ? T.ACCENT : T.TEXT_SECONDARY} />
                 <Text style={[s.filterBtnText, equipFilter !== 'all' && { color: T.ACCENT, fontWeight: '700' }]}>
                   {equipFilter === 'all' ? t('Utrustning') : t(EQUIPMENT_LABELS[equipFilter])}
                 </Text>
                 <Ionicons name="chevron-down" size={15} color={equipFilter !== 'all' ? T.ACCENT : TEXT_SECONDARY} />
               </TouchableOpacity>
             </View>
-            {(() => {
-              const group = GYM_GROUPS.find(g => g.key === selectedGroup)
-              const subs = group ? subDefsFor(group) : []
-              if (!group || subs.length < 2) return null
-              return (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={s.subMuscleBar}
-                  contentContainerStyle={s.subMuscleRow}
-                >
-                  {/* Alla: hela gruppens muskler tända i en helkroppsvy */}
-                  <SubFilterCard
-                    subKey="all"
-                    label={t('Alla')}
-                    active={subMuscle === 'all'}
-                    accent={T.ACCENT}
-                    dimText={T.TEXT_SECONDARY}
-                    tintBg={tint('14')}
-                    groupSide={group.side}
-                    slugs={group.slugs}
-                    onPick={setSubMuscle}
-                  />
-                  {subs.map(sd => (
-                    <SubFilterCard
-                      key={sd.key}
-                      subKey={sd.key}
-                      label={t(sd.label)}
-                      active={subMuscle === sd.key}
-                      accent={T.ACCENT}
-                      dimText={T.TEXT_SECONDARY}
-                      tintBg={tint('14')}
-                      groupSide={group.side}
-                      slugs={group.slugs}
-                      slug={sd.slug}
-                      thumbSide={sd.side}
-                      onPick={setSubMuscle}
-                    />
-                  ))}
-                </ScrollView>
-              )
-            })()}
             <View style={s.searchBar}>
               <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} />
               <AppTextInput
@@ -648,14 +597,9 @@ export function ExercisePickerSheet({
                     activeOpacity={0.75}
                     testID={`equip-${key}`}
                   >
-                    <View style={s.equipRowLeft}>
-                      <View style={[s.equipIconBox, { backgroundColor: on ? tint('16') : 'rgba(128,128,128,0.10)' }]}>
-                        <EquipmentIcon equipment={key} size={20} color={on ? T.ACCENT : T.TEXT_SECONDARY} />
-                      </View>
-                      <Text style={[s.equipRowText, on && { color: T.ACCENT, fontWeight: '700' }]}>
-                        {key === 'all' ? t('All utrustning') : t(EQUIPMENT_LABELS[key as ExerciseEquipment])}
-                      </Text>
-                    </View>
+                    <Text style={[s.equipRowText, on && { color: T.ACCENT, fontWeight: '700' }]}>
+                      {key === 'all' ? t('All utrustning') : t(EQUIPMENT_LABELS[key as ExerciseEquipment])}
+                    </Text>
                     {on && <Ionicons name="checkmark" size={18} color={T.ACCENT} />}
                   </TouchableOpacity>
                 )
@@ -737,6 +681,12 @@ const s = StyleSheet.create({
     backgroundColor: CARD, borderRadius: 12,
   },
   groupLabel: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
+  subRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingLeft: 96, paddingRight: 20, paddingVertical: 11,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.10)',
+  },
+  subRowText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
   groupCount: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
 
   // Section header
@@ -845,27 +795,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 13, borderRadius: 12,
   },
-  equipRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  equipIconBox: {
-    width: 36, height: 36, borderRadius: 11,
-    alignItems: 'center', justifyContent: 'center',
-  },
   equipRowText: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
 
-  // Delmuskelfiltret — SVG-kort som visar VAR muskeln sitter
-  // Fast höjd: horisontella ScrollViews mäter inte barnhöjd pålitligt,
-  // utan den klipps texten under cirklarna bort
-  subMuscleBar: { flexGrow: 0, flexShrink: 0, height: 88, marginBottom: 6 },
-  subMuscleRow: { paddingHorizontal: 20, gap: 10, paddingVertical: 2, paddingBottom: 6, alignItems: 'flex-start' },
-  subCard: { alignItems: 'center', gap: 6, width: 70 },
-  subThumbRing: {
-    borderWidth: 2, borderColor: 'transparent', borderRadius: 28, padding: 2,
-  },
-  subAllThumb: {
-    width: 48, height: 48, borderRadius: 24,
-    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-  },
-  subCardText: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
 
   // Skapa egen övning
   createRow: {

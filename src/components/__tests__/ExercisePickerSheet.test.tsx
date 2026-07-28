@@ -99,45 +99,42 @@ describe('ExercisePickerSheet — delmuskelfiltret', () => {
 
     fireEvent.press(screen.getByTestId('muscleFilter'))
     expect(screen.getByText('Alla muskler')).toBeOnTheScreen()
+    // Delmusklerna ligger som rader i samma platta lista
+    expect(screen.getByTestId('subMuscle-upper-back')).toBeOnTheScreen()
+    expect(screen.getByTestId('subMuscle-trapezius')).toBeOnTheScreen()
     fireEvent.press(screen.getByText('Rygg'))
 
     expect(screen.getByText('Rodd med skivstång')).toBeOnTheScreen()
     expect(screen.getByText('Marklyft')).toBeOnTheScreen()
     expect(screen.queryByText('Bänkpress')).toBeNull()
-
-    expect(screen.getByTestId('subMuscle-all')).toBeOnTheScreen()
-    expect(screen.getByTestId('subMuscle-upper-back')).toBeOnTheScreen()
-    expect(screen.getByTestId('subMuscle-lower-back')).toBeOnTheScreen()
-    expect(screen.getByTestId('subMuscle-trapezius')).toBeOnTheScreen()
   })
 
-  it('delmuskelchipen filtrerar listan och Alla återställer', () => {
+  it('delmuskelraden filtrerar listan och grupprad återställer', () => {
     mount()
     fireEvent.press(screen.getByTestId('muscleFilter'))
-    fireEvent.press(screen.getByText('Rygg'))
-
     fireEvent.press(screen.getByTestId('subMuscle-lower-back'))
+
     expect(screen.getByText('Marklyft')).toBeOnTheScreen()
     expect(screen.queryByText('Rodd med skivstång')).toBeNull()
 
-    fireEvent.press(screen.getByTestId('subMuscle-all'))
+    // Hela gruppen igen via huvudraden
+    fireEvent.press(screen.getByTestId('muscleFilter'))
+    fireEvent.press(screen.getByText('Rygg'))
     expect(screen.getByText('Rodd med skivstång')).toBeOnTheScreen()
   })
 
   it('Bröst delas i övre, mellersta och nedre via övningsnamnet', () => {
     mount()
-    fireEvent.press(screen.getByTestId('muscleFilter'))
-    fireEvent.press(screen.getByText('Bröst'))
-    expect(screen.getByText('Bänkpress')).toBeOnTheScreen()
     // Övning med foto visar bilden, övning utan behåller ikonen
     expect(screen.getByTestId('exerciseImage-e3')).toBeOnTheScreen()
     expect(screen.queryByTestId('exerciseImage-e4')).toBeNull()
-    expect(screen.getByText('Lutande bänkpress')).toBeOnTheScreen()
 
+    fireEvent.press(screen.getByTestId('muscleFilter'))
     fireEvent.press(screen.getByTestId('subMuscle-upper-chest'))
     expect(screen.getByText('Lutande bänkpress')).toBeOnTheScreen()
     expect(screen.queryByText('Bänkpress')).toBeNull()
 
+    fireEvent.press(screen.getByTestId('muscleFilter'))
     fireEvent.press(screen.getByTestId('subMuscle-mid-chest'))
     expect(screen.getByText('Bänkpress')).toBeOnTheScreen()
     expect(screen.queryByText('Lutande bänkpress')).toBeNull()
@@ -146,14 +143,11 @@ describe('ExercisePickerSheet — delmuskelfiltret', () => {
   it('Axlar delas i främre, mellersta och bakre delta', () => {
     mount()
     fireEvent.press(screen.getByTestId('muscleFilter'))
-    fireEvent.press(screen.getByText('Axlar'))
-    expect(screen.getByText('Sidolyft')).toBeOnTheScreen()
-    expect(screen.getByText('Bakre deltalyft')).toBeOnTheScreen()
-
     fireEvent.press(screen.getByTestId('subMuscle-rear-delts'))
     expect(screen.getByText('Bakre deltalyft')).toBeOnTheScreen()
     expect(screen.queryByText('Sidolyft')).toBeNull()
 
+    fireEvent.press(screen.getByTestId('muscleFilter'))
     fireEvent.press(screen.getByTestId('subMuscle-side-delts'))
     expect(screen.getByText('Sidolyft')).toBeOnTheScreen()
     expect(screen.queryByText('Bakre deltalyft')).toBeNull()
