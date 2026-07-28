@@ -70,6 +70,7 @@ export function OverviewTab({
   days, startDate, challengeId, currentDay, streak,
   workouts, strengthWorkouts, completedSessions, unit, avatarUrl,
   calSwipeRef, onTabScroll, refreshControl, onOpenWorkout, onRemoveWorkoutLocal,
+  onDayEdited,
 }: {
   days: DaySummary[]
   startDate: string | null
@@ -88,6 +89,8 @@ export function OverviewTab({
   refreshControl: React.ReactElement<import('react-native').RefreshControlProps>
   onOpenWorkout: (w: CardioWorkout) => void
   onRemoveWorkoutLocal: (id: string) => void
+  /** Efter en efterhandsredigering av en dags uppgifter — ladda om statistiken */
+  onDayEdited?: () => void
 }) {
   const P = useStatsColors()
   const unitLabel = distanceUnitLabel(unit)
@@ -248,6 +251,7 @@ export function OverviewTab({
               challengeId={challengeId}
               onPressDay={setSelectedDay}
               gestureRef={calSwipeRef}
+              onDayEdited={onDayEdited}
               workouts={workouts}
               strengthWorkouts={strengthWorkouts}
               completedSessions={completedSessions}
@@ -270,6 +274,7 @@ export function OverviewTab({
             unit={unit}
             onClose={() => setSelectedDay(null)}
             onSelectWorkout={onOpenWorkout}
+            onTasksChanged={onDayEdited}
           />
         )}
       </Modal>

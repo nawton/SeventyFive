@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Modal } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Modal, Alert } from 'react-native'
 import Animated, {
   useSharedValue, useAnimatedStyle,
   withSpring, withTiming, runOnJS,
@@ -11,7 +11,7 @@ import { GREEN, RED, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, 
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { fmtTime } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
-import { getTasksForDay, type DaySummary, type TaskItem } from '@/services/dailyLog'
+import { getTasksForDay, updateDayTasks, type DaySummary, type TaskItem } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
 import { GymSummaryView } from './GymSummaryView'
@@ -39,71 +39,109 @@ function dayDate(startDate: string, dayNumber: number): Date {
   return d
 }
 
-// Dagens uppgifter — ligger som första element i träningslistan så kortet
-// scrollar bort naturligt; kan även svepas bort i sidled
-function TasksCard({ tasks, failedDay, onDismiss, onHeight }: {
+// Dagens uppgifter — första kortet i dagsvyn. Går inte att svepa bort;
+// glömda bockar rättas i efterhand via Redigera, med ärlighetspåminnelsen
+// innan. Sparningen uppdaterar dagens status så hela appen följer med.
+function TasksCard({ tasks, failedDay, editable, onSave }: {
   tasks: TaskItem[]
   failedDay: boolean
-  onDismiss: () => void
-  onHeight?: (h: number) => void
+  editable: boolean
+  onSave: (updated: TaskItem[]) => Promise<void>
 }) {
-  const x = useSharedValue(0)
-  const pan = Gesture.Pan()
-    .activeOffsetX([-12, 12])
-    .failOffsetY([-10, 10])
-    .onUpdate(e => { x.value = e.translationX })
-    .onEnd(e => {
-      if (Math.abs(e.translationX) > SCREEN_WIDTH * 0.3 || Math.abs(e.velocityX) > 800) {
-        x.value = withTiming(
-          Math.sign(e.translationX || 1) * SCREEN_WIDTH,
-          { duration: 180 },
-          () => runOnJS(onDismiss)(),
-        )
-      } else {
-        x.value = withSpring(0, SHEET_SP)
-      }
-    })
-  const anim = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }],
-    opacity: 1 - Math.abs(x.value) / SCREEN_WIDTH,
-  }))
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<TaskItem[]>(tasks)
+  const [saving, setSaving] = useState(false)
+  useEffect(() => { if (!editing) setDraft(tasks) }, [tasks, editing])
 
+  function startEditing() {
+    Alert.alert(
+      'Ändra i efterhand?',
+      'Bocka bara i det du faktiskt gjorde. Utmaningen handlar om ärlighet mot dig själv, det är bara dig det påverkar.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Jag är säker', onPress: () => setEditing(true) },
+      ],
+    )
+  }
+
+  async function save() {
+    setSaving(true)
+    try {
+      await onSave(draft)
+      setEditing(false)
+    } catch {
+      Alert.alert('Kunde inte spara', 'Kontrollera din anslutning och försök igen.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const shown = editing ? draft : tasks
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View
-        style={[s.tasksWrap, anim]}
-        onLayout={e => onHeight?.(e.nativeEvent.layout.height)}
-      >
-        <View style={s.tasksHead}>
-          <Text style={s.tasksTitle}>Dagens uppgifter</Text>
-          <Text style={[
-            s.tasksCount,
-            { color: tasks.every(t => t.completed) ? GREEN : failedDay ? RED : TEXT_SECONDARY },
-          ]}>
-            {tasks.filter(t => t.completed).length} av {tasks.length}
-          </Text>
-        </View>
-        {tasks.map((t, i) => {
-          const missed = !t.completed && failedDay
-          return (
-            <View key={t.completionId} style={[s.taskRow, i > 0 && s.taskRowBorder]}>
-              <Ionicons
-                name={t.completed ? 'checkmark-circle' : missed ? 'close-circle' : 'ellipse-outline'}
-                size={20}
-                color={t.completed ? GREEN : missed ? RED : 'rgba(255,255,255,0.25)'}
-              />
-              <Text style={[s.taskName, missed && { color: RED, fontWeight: '600' }]} numberOfLines={1}>
-                {t.name}
-              </Text>
-            </View>
-          )
-        })}
-      </Animated.View>
-    </GestureDetector>
+    <View style={s.tasksWrap}>
+      <View style={s.tasksHead}>
+        <Text style={s.tasksTitle}>Dagens uppgifter</Text>
+        {editing ? (
+          <View style={s.editActions}>
+            <TouchableOpacity onPress={() => setEditing(false)} hitSlop={8} disabled={saving}>
+              <Text style={s.editCancel}>Avbryt</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={save} hitSlop={8} disabled={saving} testID="tasksSave">
+              <Text style={s.editSave}>{saving ? 'Sparar …' : 'Spara'}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={s.editActions}>
+            <Text style={[
+              s.tasksCount,
+              { color: tasks.every(t => t.completed) ? GREEN : failedDay ? RED : TEXT_SECONDARY },
+            ]}>
+              {tasks.filter(t => t.completed).length} av {tasks.length}
+            </Text>
+            {editable && (
+              <TouchableOpacity onPress={startEditing} hitSlop={8} testID="tasksEdit">
+                <Text style={s.editSave}>Redigera</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
+      {shown.map((t, i) => {
+        const missed = !t.completed && failedDay && !editing
+        const row = (
+          <>
+            <Ionicons
+              name={t.completed ? 'checkmark-circle' : missed ? 'close-circle' : 'ellipse-outline'}
+              size={20}
+              color={t.completed ? GREEN : missed ? RED : 'rgba(255,255,255,0.25)'}
+            />
+            <Text style={[s.taskName, missed && { color: RED, fontWeight: '600' }]} numberOfLines={1}>
+              {t.name}
+            </Text>
+          </>
+        )
+        if (!editing) {
+          return <View key={t.completionId} style={[s.taskRow, i > 0 && s.taskRowBorder]}>{row}</View>
+        }
+        return (
+          <TouchableOpacity
+            key={t.completionId}
+            style={[s.taskRow, i > 0 && s.taskRowBorder]}
+            activeOpacity={0.7}
+            testID={`taskToggle-${i}`}
+            onPress={() => setDraft(prev => prev.map(x =>
+              x.completionId === t.completionId ? { ...x, completed: !x.completed } : x
+            ))}
+          >
+            {row}
+          </TouchableOpacity>
+        )
+      })}
+    </View>
   )
 }
 
-export function DayWorkoutsModal({ day, startDate, challengeId, workouts, strengthWorkouts, completedSessions, unit = 'metric', onClose, onSelectWorkout }: {
+export function DayWorkoutsModal({ day, startDate, challengeId, workouts, strengthWorkouts, completedSessions, unit = 'metric', onClose, onSelectWorkout, onTasksChanged }: {
   day: DaySummary
   startDate: string
   challengeId?: string | null
@@ -113,6 +151,8 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
   unit?: UnitSystem
   onClose: () => void
   onSelectWorkout: (w: CardioWorkout) => void
+  /** Efter en efterhandsredigering — skalet laddar om så allt blir grönt överallt */
+  onTasksChanged?: () => void
 }) {
   const T = useThemeStrings()
   const insets    = useSafeAreaInsets()
@@ -133,12 +173,9 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
   // kan svepas bort i sidled; extra scrollhöjd garanterar att det alltid
   // går att dra upp listan över kortet, även med få övningar.
   const [tasks, setTasks] = useState<TaskItem[] | null>(null)
-  const [tasksHidden, setTasksHidden] = useState(false)
   // Gympassets detaljvy — samma Apple-stil som cardiopassens
   const [gymDetail, setGymDetail] = useState<{ name: string; planned: string[]; logged: StrengthWorkout[] } | null>(null)
-  const [tasksH, setTasksH] = useState(0)
-  const [listVpH, setListVpH] = useState(0)
-  const showTasks = !!tasks && tasks.length > 0 && !tasksHidden
+  const showTasks = !!tasks && tasks.length > 0
   useEffect(() => {
     if (!challengeId || day.status === 'future') return
     let active = true
@@ -147,6 +184,27 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
       .catch(() => {})
     return () => { active = false }
   }, [challengeId, day.dayNumber])
+
+  // Efterhandsredigeringen: skriv bockarna, uppdatera dagens status och
+  // låt skalet ladda om — kalendern och räknarna blir gröna i hela appen
+  async function handleSaveTasks(updated: TaskItem[]) {
+    if (!challengeId) return
+    const status = await updateDayTasks(
+      challengeId,
+      day.dayNumber,
+      dateIso,
+      updated.map(t => ({
+        completionId: t.completionId,
+        templateId: t.templateId,
+        completed: t.completed,
+      })),
+    )
+    setTasks(updated)
+    onTasksChanged?.()
+    if (status === 'completed' && day.status !== 'completed') {
+      Alert.alert('Snyggt!', `Dag ${day.dayNumber} räknas nu som klarad.`)
+    }
+  }
 
   function dismiss() {
     sheetTop.value     = withTiming(SCREEN_HEIGHT, { duration: 300 }, () => runOnJS(onClose)())
@@ -222,7 +280,8 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
               <TasksCard
                 tasks={tasks!}
                 failedDay={day.status === 'failed'}
-                onDismiss={() => setTasksHidden(true)}
+                editable={!!challengeId && day.status !== 'future'}
+                onSave={handleSaveTasks}
               />
             </View>
           )}
@@ -260,28 +319,21 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               style={{ flex: 1 }}
-              onLayout={e => setListVpH(e.nativeEvent.layout.height)}
               onMomentumScrollEnd={e => setPage(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH))}
             >
               {pages.map(p => (
                 <ScrollView
                   key={p.key}
                   style={{ width: SCREEN_WIDTH }}
-                  contentContainerStyle={[
-                    s.scroll,
-                    // Alltid minst en kortlängds scrollutrymme så kortet kan dras bort
-                    showTasks && listVpH > 0 && tasksH > 0
-                      ? { minHeight: listVpH + tasksH + 12 }
-                      : null,
-                  ]}
+                  contentContainerStyle={s.scroll}
                   showsVerticalScrollIndicator={false}
                 >
                   {showTasks && (
                     <TasksCard
                       tasks={tasks!}
                       failedDay={day.status === 'failed'}
-                      onDismiss={() => setTasksHidden(true)}
-                      onHeight={setTasksH}
+                      editable={!!challengeId && day.status !== 'future'}
+                      onSave={handleSaveTasks}
                     />
                   )}
                   {p.key === 'cardio' ? (
@@ -462,6 +514,9 @@ const s = StyleSheet.create({
   },
   tasksTitle: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   tasksCount: { fontSize: 13, fontFamily: NUM_FONT_SEMI },
+  editActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  editSave:   { color: ACCENT, fontSize: 13, fontWeight: '800' },
+  editCancel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   taskRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.07)' },
   taskName: { color: TEXT_PRIMARY, fontSize: 14, flex: 1 },

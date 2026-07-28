@@ -315,6 +315,7 @@ export default function StatsScreen() {
           refreshControl={<AppRefreshControl refreshing={statsRefreshing} onRefresh={refreshStats} />}
           onOpenWorkout={setSelectedWorkout}
           onRemoveWorkoutLocal={id => setWorkouts(prev => prev.filter(w => w.id !== id))}
+          onDayEdited={() => loadStats()}
         />
 
         {/* ── CARDIO ── */}

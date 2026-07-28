@@ -2,7 +2,7 @@ import {
   getOrCreateTodayLog, getOrCreateTaskCompletions, setTaskCompleted,
   setTaskProgress, markDayCompleted, markDayPending, markDayFailed,
   getMissedDayNumbers, acknowledgeMissedDays, countCompletedDays,
-  countCompletedDaysAllTime, getBestStreakAllTime,
+  countCompletedDaysAllTime, getBestStreakAllTime, updateDayTasks,
   getAllDays, getStreak, getWeekStatuses, getStreakOf, getDayDetail,
   getTasksForDay,
 } from '../dailyLog'
@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase'
 import { installTables, argsOf } from '@/testUtils/supabaseChain'
 import type { UserChallenge } from '@/types/database'
 
-jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn(), rpc: jest.fn() } }))
+jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn(), rpc: jest.fn(), auth: { getSession: jest.fn() } } }))
 
 const fromMock = supabase.from as jest.Mock
 const rpcMock = supabase.rpc as jest.Mock
@@ -245,6 +245,78 @@ describe('streak', () => {
     expect(await getStreakOf('u2')).toBe(0)
     rpcMock.mockResolvedValue({ data: 5, error: { message: 'nej' } })
     expect(await getStreakOf('u2')).toBe(0)
+  })
+})
+
+// Efterhandsredigeringen från kalendern: bockar skrivs, status följer med
+describe('updateDayTasks', () => {
+  const signIn = (uid: string | null) => {
+    ;(supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: { session: uid ? { user: { id: uid } } : null },
+    })
+  }
+
+  it('befintlig dag: upsertar bockarna och blir klarad när allt är i', async () => {
+    const calls = installTables(fromMock, {
+      daily_logs: [{ data: { id: 'log1' } }, { data: null }],
+      task_completions: [{ data: null }, { data: [{ completed: true }, { completed: true }] }],
+    })
+    const status = await updateDayTasks('ch1', 5, daysAgo(3), [
+      { completionId: 'a', templateId: 't1', completed: true },
+      { completionId: 'b', templateId: 't2', completed: true },
+    ])
+    expect(status).toBe('completed')
+
+    const [rows, options] = argsOf(calls, 'task_completions', 'upsert')[0]
+    expect(options).toEqual({ onConflict: 'daily_log_id,task_template_id' })
+    expect(rows).toEqual([
+      expect.objectContaining({ daily_log_id: 'log1', task_template_id: 't1', completed: true, failed_reason: null }),
+      expect.objectContaining({ daily_log_id: 'log1', task_template_id: 't2', completed: true, failed_reason: null }),
+    ])
+    const statusUpdate = argsOf(calls, 'daily_logs', 'update', 1)[0][0] as Record<string, unknown>
+    expect(statusUpdate.status).toBe('completed')
+    expect(typeof statusUpdate.completed_at).toBe('string')
+  })
+
+  it('glömd dag utan logg: loggen skapas först, ofullständig dag bakåt blir failed', async () => {
+    signIn('u1')
+    const calls = installTables(fromMock, {
+      daily_logs: [{ data: null }, { data: { id: 'log9' } }, { data: null }],
+      task_completions: [{ data: null }, { data: [{ completed: true }, { completed: false }] }],
+    })
+    const status = await updateDayTasks('ch1', 3, daysAgo(7), [
+      { completionId: 'tpl:t1', templateId: 't1', completed: true },
+      { completionId: 'tpl:t2', templateId: 't2', completed: false },
+    ])
+    expect(status).toBe('failed')
+
+    expect(argsOf(calls, 'daily_logs', 'insert', 1)[0][0]).toEqual({
+      challenge_id: 'ch1', user_id: 'u1', day_number: 3,
+      date: daysAgo(7), status: 'pending',
+    })
+    expect(argsOf(calls, 'daily_logs', 'update', 2)[0][0]).toMatchObject({
+      status: 'failed', completed_at: null,
+    })
+  })
+
+  it('dagens datum med luckor förblir pågående, inte failad', async () => {
+    installTables(fromMock, {
+      daily_logs: [{ data: { id: 'log1' } }, { data: null }],
+      task_completions: [{ data: null }, { data: [{ completed: false }] }],
+    })
+    expect(await updateDayTasks('ch1', 10, daysAgo(0), [
+      { completionId: 'a', templateId: 't1', completed: false },
+    ])).toBe('pending')
+  })
+
+  it('tomma uppdateringar rör ingenting, läsfel bubblar upp', async () => {
+    expect(await updateDayTasks('ch1', 5, daysAgo(1), [])).toBe('pending')
+    expect(fromMock).not.toHaveBeenCalled()
+
+    installTables(fromMock, { daily_logs: { data: null, error: { message: 'rls' } } })
+    await expect(updateDayTasks('ch1', 5, daysAgo(1), [
+      { completionId: 'a', templateId: 't1', completed: true },
+    ])).rejects.toMatchObject({ message: 'rls' })
   })
 })
 

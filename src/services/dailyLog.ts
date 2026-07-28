@@ -252,6 +252,84 @@ export async function acknowledgeMissedDays(
   if (error) throw error
 }
 
+export interface DayTaskUpdate {
+  /** 'tpl:<templateId>' när dagen saknar logg — raden skapas då vid sparning */
+  completionId: string
+  templateId: string
+  completed: boolean
+}
+
+/**
+ * Redigering i efterhand från kalendern: skriver dagens bockar och sätter
+ * dagens status därefter. Skapar dagslogg och avbockningsrader om dagen
+ * saknar dem (glömda dagar). Blir allt ibockat räknas dagen som klarad,
+ * vilket slår igenom överallt eftersom hela appen läser daily_logs.status.
+ */
+export async function updateDayTasks(
+  challengeId: string,
+  dayNumber: number,
+  date: string,
+  updates: DayTaskUpdate[],
+): Promise<'completed' | 'pending' | 'failed'> {
+  if (updates.length === 0) return 'pending'
+
+  // Dagens logg — skapa den om dagen aldrig registrerades
+  const { data: existing, error: logError } = await supabase
+    .from('daily_logs')
+    .select('id')
+    .eq('challenge_id', challengeId)
+    .eq('day_number', dayNumber)
+    .maybeSingle()
+  if (logError) throw logError
+
+  let logId: string = existing?.id
+  if (!logId) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const uid = session?.user?.id
+    if (!uid) throw new Error('Inte inloggad')
+    const { data: created, error: createError } = await supabase
+      .from('daily_logs')
+      .insert({ challenge_id: challengeId, user_id: uid, day_number: dayNumber, date, status: 'pending' })
+      .select('id')
+      .single()
+    if (createError) throw createError
+    logId = created.id
+  }
+
+  // Upsert klarar både befintliga rader och glömda dagars saknade rader.
+  // failed_reason nollas — en ibockad uppgift är inte längre missad.
+  const now = new Date().toISOString()
+  const { error: upsertError } = await supabase
+    .from('task_completions')
+    .upsert(updates.map(u => ({
+      daily_log_id: logId,
+      task_template_id: u.templateId,
+      completed: u.completed,
+      completed_at: u.completed ? now : null,
+      failed_reason: null,
+    })), { onConflict: 'daily_log_id,task_template_id' })
+  if (upsertError) throw upsertError
+
+  // Dagens status följer bockarna: allt i → klarad; annars pågående idag
+  // och missad bakåt i tiden
+  const { data: all, error: allError } = await supabase
+    .from('task_completions')
+    .select('completed')
+    .eq('daily_log_id', logId)
+  if (allError) throw allError
+
+  const rows = all ?? []
+  const allDone = rows.length > 0 && rows.every(r => r.completed)
+  const status = allDone ? 'completed' : date === toLocalDateString() ? 'pending' : 'failed'
+  const { error: statusError } = await supabase
+    .from('daily_logs')
+    .update({ status, completed_at: allDone ? now : null })
+    .eq('id', logId)
+  if (statusError) throw statusError
+
+  return status
+}
+
 export async function countCompletedDays(challengeId: string): Promise<number> {
   const { count } = await supabase
     .from('daily_logs')

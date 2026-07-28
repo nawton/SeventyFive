@@ -82,6 +82,7 @@ export function CalendarView({
   days, startDate, currentDay, onPressDay, gestureRef,
   workouts = [], strengthWorkouts = [], completedSessions = [],
   unit = 'metric', avatarUrl = null, onDeleteWorkout, challengeId = null,
+  onDayEdited,
 }: {
   days: DaySummary[]
   startDate: string | null
@@ -97,6 +98,7 @@ export function CalendarView({
   unit?: UnitSystem
   avatarUrl?: string | null
   onDeleteWorkout?: (id: string) => void
+  onDayEdited?: () => void
 }) {
   const init  = startDate ? parseLocalDate(startDate) : new Date()
   const [view, setView] = useState(new Date(init.getFullYear(), init.getMonth(), 1))
@@ -329,6 +331,7 @@ export function CalendarView({
                 unit={unit}
                 onClose={() => setFsDay(null)}
                 onSelectWorkout={setFsWorkout}
+                onTasksChanged={onDayEdited}
               />
             </View>
           )}
