@@ -19,16 +19,40 @@ import { GlassCircleButton } from '@/components/GlassButton'
 
 type Page = 'landing' | 'gym' | 'cardio' | 'exercises'
 
-type GymGroup = { key: string; label: string; side: 'front' | 'back'; slugs: Slug[]; color: string }
+// Ett delmuskelfilter: slug-baserat där SVG-biblioteket har en egen muskel,
+// nyckelordsbaserat (match) där biblioteket är för grovt — bröstets och
+// axelns delar är samma slug men skiljs på övningsnamnet
+type SubDef = { key: string; label: string; slug: Slug; side?: 'front' | 'back'; match?: (n: string) => boolean }
+
+type GymGroup = { key: string; label: string; side: 'front' | 'back'; slugs: Slug[]; color: string; subs?: SubDef[] }
+
+const nameHas = (n: string, ...words: string[]) => words.some(w => n.includes(w))
 
 const GYM_GROUPS: GymGroup[] = [
-  { key: 'chest',     label: 'Bröst',   side: 'front', slugs: ['chest'],                                      color: '#FF6B6B' },
+  { key: 'chest',     label: 'Bröst',   side: 'front', slugs: ['chest'],                                      color: '#FF6B6B',
+    subs: [
+      { key: 'upper-chest', label: 'Övre',      slug: 'chest', match: n => nameHas(n, 'lutande', 'incline') },
+      { key: 'mid-chest',   label: 'Mellersta', slug: 'chest', match: n => !nameHas(n, 'lutande', 'incline', 'decline', 'dip') },
+      { key: 'lower-chest', label: 'Nedre',     slug: 'chest', match: n => nameHas(n, 'decline', 'dip') },
+    ] },
   { key: 'back',      label: 'Rygg',    side: 'back',  slugs: ['upper-back', 'lower-back', 'trapezius'],       color: '#4ECDC4' },
   { key: 'legs',      label: 'Ben',     side: 'front', slugs: ['quadriceps', 'hamstring', 'gluteal', 'calves', 'adductors', 'tibialis'], color: '#45B7D1' },
-  { key: 'shoulders', label: 'Axlar',   side: 'front', slugs: ['deltoids'],                                    color: '#F7DC6F' },
+  { key: 'shoulders', label: 'Axlar',   side: 'front', slugs: ['deltoids'],                                    color: '#F7DC6F',
+    subs: [
+      { key: 'front-delts', label: 'Främre',    slug: 'deltoids', match: n => nameHas(n, 'militär', 'press', 'front', 'arnold') },
+      { key: 'side-delts',  label: 'Mellersta', slug: 'deltoids', match: n => nameHas(n, 'sido', 'lateral', 'axellyft', 'upright') },
+      { key: 'rear-delts',  label: 'Bakre',     slug: 'deltoids', side: 'back', match: n => nameHas(n, 'bakre', 'rear', 'face pull', 'omvänd', 'reverse') },
+    ] },
   { key: 'arms',      label: 'Armar',   side: 'front', slugs: ['biceps', 'triceps', 'forearm'],                color: '#A29BFE' },
   { key: 'core',      label: 'Mage',    side: 'front', slugs: ['abs', 'obliques'],                             color: '#FD79A8' },
 ]
+
+/** Gruppens delfilter: uttryckliga subs, annars ett per slug (minst två) */
+function subDefsFor(group: GymGroup): SubDef[] {
+  if (group.subs) return group.subs
+  if (group.slugs.length < 2) return []
+  return group.slugs.map(sl => ({ key: sl, label: SLUG_LABELS[sl], slug: sl }))
+}
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
 
@@ -56,31 +80,34 @@ const GroupBodyThumb = memo(function GroupBodyThumb({ slugs, side, color, scale 
 
 // Hela filterkortet memoiserat med primitiva props — ett tryck ritar bara om
 // de två kort vars aktiv-status ändras, aldrig SVG-kropparna
-const SubFilterCard = memo(function SubFilterCard({ value, label, active, accent, dimText, tintBg, side, slugs, onPick }: {
-  value: Slug | 'all'
+const SubFilterCard = memo(function SubFilterCard({ subKey, label, active, accent, dimText, tintBg, groupSide, slugs, slug, thumbSide, onPick }: {
+  subKey: string
   label: string
   active: boolean
   accent: string
   dimText: string
   tintBg: string
-  side: 'front' | 'back'
+  groupSide: 'front' | 'back'
   slugs: Slug[]
-  onPick: (v: Slug | 'all') => void
+  /** Saknas → Alla-kortet med hela gruppens muskler tända */
+  slug?: Slug
+  thumbSide?: 'front' | 'back'
+  onPick: (v: string) => void
 }) {
   return (
     <TouchableOpacity
       style={s.subCard}
-      onPress={() => { Haptics.selectionAsync(); onPick(value) }}
+      onPress={() => { Haptics.selectionAsync(); onPick(subKey) }}
       activeOpacity={0.75}
-      testID={`subMuscle-${value}`}
+      testID={`subMuscle-${subKey}`}
     >
       <View style={[s.subThumbRing, active && { borderColor: accent }]}>
-        {value === 'all' ? (
+        {!slug ? (
           <View style={[s.subAllThumb, { backgroundColor: tintBg }]}>
-            <GroupBodyThumb slugs={slugs} side={side} color={accent} scale={0.22} />
+            <GroupBodyThumb slugs={slugs} side={groupSide} color={accent} scale={0.22} />
           </View>
         ) : (
-          <MuscleThumb slug={value} size={48} color={accent} />
+          <MuscleThumb slug={slug} size={48} color={accent} side={thumbSide} />
         )}
       </View>
       <Text
@@ -134,8 +161,9 @@ export function ExercisePickerSheet({
   const startPage: Page = gymOnly ? 'gym' : 'landing'
   const [page, setPage]                   = useState<Page>(startPage)
   const [selectedGroup, setSelectedGroup] = useState('')
-  // Delmuskelfiltret inne i en grupp: 'all' visar hela gruppens övningar
-  const [subMuscle, setSubMuscle]         = useState<Slug | 'all'>('all')
+  // Delmuskelfiltret inne i en grupp: 'all' visar hela gruppens övningar,
+  // annars nyckeln till ett SubDef (slug eller nyckelordsregion)
+  const [subMuscle, setSubMuscle]         = useState<string>('all')
   const [search, setSearch]               = useState('')
   const [pendingEx, setPendingEx]         = useState<Exercise | null>(null)
   // Egna övningar skapade i den här sessionen — läggs ovanpå prop-listan
@@ -216,9 +244,13 @@ export function ExercisePickerSheet({
   const groupAll = selectedGroup === 'all'
     ? strengthExes
     : strengthExes.filter(e => getExerciseMuscleGroup(e.name) === selectedGroup)
-  const groupExercises = subMuscle === 'all'
+  const activeGroupDef = GYM_GROUPS.find(g => g.key === selectedGroup)
+  const activeSub = activeGroupDef ? subDefsFor(activeGroupDef).find(sd => sd.key === subMuscle) : undefined
+  const groupExercises = !activeSub
     ? groupAll
-    : groupAll.filter(e => getMusclesForName(e.name).includes(subMuscle))
+    : groupAll.filter(e => activeSub.match
+        ? activeSub.match(e.name.toLowerCase()) || activeSub.match(t(e.name).toLowerCase())
+        : getMusclesForName(e.name).includes(activeSub.slug))
   const filteredExercises = search.trim()
     // Sökningen matchar både det lagrade svenska namnet och den visade
     // engelska översättningen, så "bench" hittar Bänkpress på engelska
@@ -353,8 +385,8 @@ export function ExercisePickerSheet({
           <>
             {(() => {
               const group = GYM_GROUPS.find(g => g.key === selectedGroup)
-              const slugs = group?.slugs ?? []
-              if (!group || slugs.length < 2) return null
+              const subs = group ? subDefsFor(group) : []
+              if (!group || subs.length < 2) return null
               return (
                 <ScrollView
                   horizontal
@@ -364,27 +396,29 @@ export function ExercisePickerSheet({
                 >
                   {/* Alla: hela gruppens muskler tända i en helkroppsvy */}
                   <SubFilterCard
-                    value="all"
+                    subKey="all"
                     label={t('Alla')}
                     active={subMuscle === 'all'}
                     accent={T.ACCENT}
                     dimText={T.TEXT_SECONDARY}
                     tintBg={tint('14')}
-                    side={group.side}
-                    slugs={slugs}
+                    groupSide={group.side}
+                    slugs={group.slugs}
                     onPick={setSubMuscle}
                   />
-                  {slugs.map(sl => (
+                  {subs.map(sd => (
                     <SubFilterCard
-                      key={sl}
-                      value={sl}
-                      label={t(SLUG_LABELS[sl])}
-                      active={subMuscle === sl}
+                      key={sd.key}
+                      subKey={sd.key}
+                      label={t(sd.label)}
+                      active={subMuscle === sd.key}
                       accent={T.ACCENT}
                       dimText={T.TEXT_SECONDARY}
                       tintBg={tint('14')}
-                      side={group.side}
-                      slugs={slugs}
+                      groupSide={group.side}
+                      slugs={group.slugs}
+                      slug={sd.slug}
+                      thumbSide={sd.side}
                       onPick={setSubMuscle}
                     />
                   ))}
@@ -407,6 +441,7 @@ export function ExercisePickerSheet({
             </View>
 
             <ScrollView
+              style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
               keyboardShouldPersistTaps="handled"
@@ -660,7 +695,7 @@ const s = StyleSheet.create({
   // Delmuskelfiltret — SVG-kort som visar VAR muskeln sitter
   // Fast höjd: horisontella ScrollViews mäter inte barnhöjd pålitligt,
   // utan den klipps texten under cirklarna bort
-  subMuscleBar: { flexGrow: 0, height: 88, marginBottom: 6 },
+  subMuscleBar: { flexGrow: 0, flexShrink: 0, height: 88, marginBottom: 6 },
   subMuscleRow: { paddingHorizontal: 20, gap: 10, paddingVertical: 2, paddingBottom: 6, alignItems: 'flex-start' },
   subCard: { alignItems: 'center', gap: 6, width: 70 },
   subThumbRing: {

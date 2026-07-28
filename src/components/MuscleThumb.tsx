@@ -17,12 +17,14 @@ const MUSCLE_CENTER: Partial<Record<Slug, number>> = {
   quadriceps: 0.55, hamstring: 0.58, tibialis: 0.74, calves: 0.75,
 }
 
-export const MuscleThumb = memo(function MuscleThumb({ slug, size = 52, color, tintAlpha = '14' }: {
+export const MuscleThumb = memo(function MuscleThumb({ slug, size = 52, color, tintAlpha = '14', side }: {
   slug: Slug
   size?: number
   /** Accentfärgen som hex — temaväxlad av anroparen (orange mörkt, blå ljust) */
   color: string
   tintAlpha?: string
+  /** Tvinga vy: bakre delta ska visas bakifrån trots att framsidan är standard */
+  side?: 'front' | 'back'
 }) {
   const [bodyH, setBodyH] = useState(0)
   const frac = MUSCLE_CENTER[slug] ?? 0.35
@@ -42,7 +44,7 @@ export const MuscleThumb = memo(function MuscleThumb({ slug, size = 52, color, t
       >
         <Body
           data={[{ slug, intensity: 1 as const }]}
-          side={bestSideForMuscles([slug])}
+          side={side ?? bestSideForMuscles([slug])}
           gender="male"
           scale={0.45}
           colors={[color]}

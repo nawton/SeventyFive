@@ -28,16 +28,24 @@ export const SLUG_LABELS: Record<Slug, string> = {
   'upper-back':'Övre rygg',
 }
 
+// Ordningen spelar roll: gruppen (Bröst/Rygg/…) avgörs av FÖRSTA träffens
+// första slug, så specifika poster (bakre delta, bencurl) står före de
+// breda ('curl' vinner annars över 'bencurl' och benmaskiner blir armar)
 const MUSCLE_KEYWORDS: Array<{ words: string[]; slugs: Slug[] }> = [
-  { words: ['bänk', 'bench', 'bröst', 'chest', 'butterfly'], slugs: ['chest', 'triceps', 'deltoids'] },
-  { words: ['knäböj', 'squat', 'benpress', 'utfall', 'lunge', 'leg press'], slugs: ['quadriceps', 'gluteal', 'hamstring'] },
+  { words: ['bakre delta', 'rear delt', 'reverse fly', 'omvänd', 'face pull'], slugs: ['deltoids', 'upper-back'] },
+  { words: ['bänk', 'bench', 'bröst', 'chest', 'butterfly', 'korsning', 'crossover', 'flyes', 'pec'], slugs: ['chest', 'triceps', 'deltoids'] },
+  { words: ['bencurl', 'leg curl', 'hamstring', 'nordic'], slugs: ['hamstring'] },
+  { words: ['benextension', 'leg extension'], slugs: ['quadriceps'] },
+  { words: ['knäböj', 'squat', 'benpress', 'utfall', 'lunge', 'leg press', 'steg-ups', 'step-up', 'hip thrust', 'höftlyft'], slugs: ['quadriceps', 'gluteal', 'hamstring'] },
   { words: ['marklyft', 'deadlift', 'rumänsk', 'romanian'], slugs: ['lower-back', 'hamstring', 'gluteal', 'trapezius'] },
+  { words: ['frivändning', 'clean'], slugs: ['quadriceps', 'hamstring', 'gluteal', 'trapezius'] },
   { words: ['axelpress', 'shoulder', 'militär', 'overhead', 'arnold'], slugs: ['deltoids', 'triceps'] },
+  { words: ['sidolyft', 'frontlyft', 'delta', 'axellyft', 'axlar', 'lateral', 'upright'], slugs: ['deltoids'] },
   { words: ['bicep', 'curl', 'hammer'], slugs: ['biceps', 'forearm'] },
-  { words: ['tricep', 'dip'], slugs: ['triceps'] },
-  { words: ['rygg', 'pull', 'rodd', 'row', 'chin', 'lat'], slugs: ['upper-back', 'biceps', 'trapezius'] },
-  { words: ['mage', 'ab', 'plankan', 'plank', 'situp', 'crunch', 'core'], slugs: ['abs', 'obliques'] },
-  { words: ['vader', 'calf', 'calves'], slugs: ['calves'] },
+  { words: ['tricep', 'dip', 'pushdown'], slugs: ['triceps'] },
+  { words: ['rygg', 'pull', 'rodd', 'row', 'chin', 'lats', 'pulldown'], slugs: ['upper-back', 'biceps', 'trapezius'] },
+  { words: ['mage', 'abs', 'ab wheel', 'plankan', 'plank', 'situp', 'crunch', 'core'], slugs: ['abs', 'obliques'] },
+  { words: ['vader', 'vadpress', 'calf', 'calves'], slugs: ['calves'] },
   { words: ['shrug', 'axellyftar', 'trapezius'], slugs: ['trapezius'] },
   { words: ['adductor', 'höftadd'], slugs: ['adductors'] },
 ]

@@ -126,4 +126,11 @@ export const EN_EXERCISES: Record<string, string> = {
   'Farmers walk, sled push': 'Farmers walk, sled push',
   'Exempel: {names}': 'Example: {names}',
   'TID': 'TIME',
+
+  // Delmuskelfilter (bröstets och axelns regioner)
+  'Övre': 'Upper',
+  'Mellersta': 'Middle',
+  'Nedre': 'Lower',
+  'Främre': 'Front',
+  'Bakre': 'Rear',
 }
