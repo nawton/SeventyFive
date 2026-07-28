@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
-  TextInput, ScrollView, Modal, KeyboardAvoidingView, Platform, Keyboard,
+  TextInput, ScrollView, Modal, KeyboardAvoidingView, Platform, Keyboard, useColorScheme,
 } from 'react-native'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
@@ -154,8 +154,11 @@ export function ExercisePickerSheet({
 }) {
   const t = useT()
   const T = useThemeStrings()
-  // Ljust läge har blå accent — aldrig orange kanter där
+  // Ljust läge har blå accent — aldrig orange kanter där. Allt i den här
+  // modalen måste använda råa strängfärger: iOS fryser dynamiska färger
+  // i borders/bakgrunder inne i modaler, annars läcker mörklägesorange in
   const tint = (alpha: string) => `${T.ACCENT}${alpha}`
+  const onAccent = useColorScheme() === 'light' ? '#FFFFFF' : '#000000'
   const insets = useSafeAreaInsets()
   // Gym-pass startar direkt på muskelgrupperna; annars på typvalet
   const startPage: Page = gymOnly ? 'gym' : 'landing'
@@ -344,8 +347,8 @@ export function ExercisePickerSheet({
                   <Text style={s.groupCount}>{t('{n} övningar', { n: gymGroupCount(group.key) })}</Text>
                 </View>
                 {multiSelect && multiSel.filter(e => getExerciseMuscleGroup(e.name) === group.key).length > 0 && (
-                  <View style={s.groupSelBadge}>
-                    <Text style={s.groupSelBadgeText}>{multiSel.filter(e => getExerciseMuscleGroup(e.name) === group.key).length}</Text>
+                  <View style={[s.groupSelBadge, { backgroundColor: T.ACCENT }]}>
+                    <Text style={[s.groupSelBadgeText, { color: onAccent }]}>{multiSel.filter(e => getExerciseMuscleGroup(e.name) === group.key).length}</Text>
                   </View>
                 )}
                 <Ionicons name="chevron-forward" size={20} color={TEXT_SECONDARY} />
@@ -369,8 +372,8 @@ export function ExercisePickerSheet({
                         <Ionicons name={cardioExIcon(ex)} size={22} color="#34C759" />
                       </View>
                       <Text style={[s.rowName, { flex: 1 }]}>{t(ex.name)}</Text>
-                      <View style={s.addBtn}>
-                        <Ionicons name="add" size={20} color={ACCENT} />
+                      <View style={[s.addBtn, { backgroundColor: tint('18') }]}>
+                        <Ionicons name="add" size={20} color={T.ACCENT} />
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -449,26 +452,26 @@ export function ExercisePickerSheet({
               {filteredExercises.map(ex => {
                 const on = multiSelect && multiSel.some(e => e.id === ex.id)
                 return (
-                  <TouchableOpacity key={ex.id} style={[s.row, on && s.rowOn]} onPress={() => handleTap(ex)} activeOpacity={0.7}>
+                  <TouchableOpacity key={ex.id} style={[s.row, on && { backgroundColor: tint('0D') }]} onPress={() => handleTap(ex)} activeOpacity={0.7}>
                     {ex.image_path ? (
                       <Image
                         testID={`exerciseImage-${ex.id}`}
                         source={{ uri: exerciseImageUrl(ex.image_path) }}
-                        style={[s.exImg, on && { borderWidth: 2, borderColor: T.ACCENT }]}
+                        style={[s.exImg, { borderColor: T.BORDER }, on && { borderWidth: 2, borderColor: T.ACCENT }]}
                       />
                     ) : (
-                      <View style={[s.exIconBox, on && { backgroundColor: tint('22') }]}>
-                        <Ionicons name="barbell-outline" size={18} color={on ? T.ACCENT : TEXT_SECONDARY} />
+                      <View style={[s.exIconBox, { borderColor: T.BORDER }, on && { backgroundColor: tint('22'), borderColor: T.ACCENT }]}>
+                        <Ionicons name="barbell-outline" size={22} color={on ? T.ACCENT : T.TEXT_SECONDARY} />
                       </View>
                     )}
-                    <Text style={[s.rowName, { flex: 1 }, on && { color: ACCENT }]}>{t(ex.name)}</Text>
+                    <Text style={[s.rowName, { flex: 1 }, on && { color: T.ACCENT }]}>{t(ex.name)}</Text>
                     {multiSelect ? (
-                      <View style={[s.checkBox, on && s.checkBoxOn]}>
-                        {on && <Ionicons name="checkmark" size={16} color="#000" />}
+                      <View style={[s.checkBox, { borderColor: T.BORDER }, on && { backgroundColor: T.ACCENT, borderColor: T.ACCENT }]}>
+                        {on && <Ionicons name="checkmark" size={16} color={onAccent} />}
                       </View>
                     ) : (
-                      <View style={s.addBtn}>
-                        <Ionicons name="add" size={20} color={ACCENT} />
+                      <View style={[s.addBtn, { backgroundColor: tint('18') }]}>
+                        <Ionicons name="add" size={20} color={T.ACCENT} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -478,8 +481,8 @@ export function ExercisePickerSheet({
                 <View style={{ alignItems: 'center', gap: 10 }}>
                   <Text style={s.emptyText}>{t('Inga övningar hittades')}</Text>
                   <TouchableOpacity style={[s.emptyCreateBtn, { backgroundColor: T.ACCENT }]} onPress={() => setCreateOpen(true)} activeOpacity={0.8} testID="createFromEmpty">
-                    <Ionicons name="add" size={16} color="#000" />
-                    <Text style={s.emptyCreateText}>{t('Skapa "{name}"', { name: search.trim() })}</Text>
+                    <Ionicons name="add" size={16} color={onAccent} />
+                    <Text style={[s.emptyCreateText, { color: onAccent }]}>{t('Skapa "{name}"', { name: search.trim() })}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -490,9 +493,9 @@ export function ExercisePickerSheet({
         {/* ── Klar-knapp i multiväljarläget ────────────────────────── */}
         {multiSelect && multiSel.length > 0 && (page === 'gym' || page === 'exercises') && (
           <View style={[s.multiFooter, { paddingBottom: insets.bottom + 12 }]}>
-            <TouchableOpacity style={s.multiBtn} onPress={confirmMulti} activeOpacity={0.85}>
-              <Ionicons name="checkmark" size={20} color="#000" />
-              <Text style={s.multiBtnText}>
+            <TouchableOpacity style={[s.multiBtn, { backgroundColor: T.ACCENT }]} onPress={confirmMulti} activeOpacity={0.85}>
+              <Ionicons name="checkmark" size={20} color={onAccent} />
+              <Text style={[s.multiBtnText, { color: onAccent }]}>
                 {t('Klar · {n} {unit}', { n: multiSel.length, unit: multiSel.length === 1 ? t('övning') : t('övningar') })}
               </Text>
             </TouchableOpacity>
@@ -542,8 +545,8 @@ export function ExercisePickerSheet({
                   />
                 </View>
               </View>
-              <TouchableOpacity style={s.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
-                <Text style={s.confirmBtnText}>{t('Lägg till i pass')}</Text>
+              <TouchableOpacity style={[s.confirmBtn, { backgroundColor: T.ACCENT, shadowColor: T.ACCENT }]} onPress={handleConfirm} activeOpacity={0.85}>
+                <Text style={[s.confirmBtnText, { color: onAccent }]}>{t('Lägg till i pass')}</Text>
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
@@ -567,17 +570,15 @@ export function ExercisePickerSheet({
 }
 
 const s = StyleSheet.create({
-  rowOn: { backgroundColor: 'rgba(255,159,10,0.05)' },
   checkBox: {
-    width: 26, height: 26, borderRadius: 8, borderWidth: 1.5, borderColor: BORDER,
+    width: 28, height: 28, borderRadius: 9, borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
   },
-  checkBoxOn: { backgroundColor: ACCENT, borderColor: ACCENT },
   groupSelBadge: {
     minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6,
-    backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center', marginRight: 8,
+    alignItems: 'center', justifyContent: 'center', marginRight: 8,
   },
-  groupSelBadgeText: { color: '#000', fontSize: 12, fontWeight: '800' },
+  groupSelBadgeText: { fontSize: 12, fontWeight: '800' },
   multiFooter: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     paddingHorizontal: 16, paddingTop: 10,
@@ -585,9 +586,9 @@ const s = StyleSheet.create({
   },
   multiBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ACCENT, borderRadius: 16, paddingVertical: 16,
+    borderRadius: 16, paddingVertical: 16,
   },
-  multiBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
+  multiBtnText: { fontSize: 16, fontWeight: '800' },
 
   screen: { flex: 1, backgroundColor: BG },
 
@@ -635,7 +636,7 @@ const s = StyleSheet.create({
   // Exercise rows
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: 20, paddingVertical: 14,
+    paddingHorizontal: 20, paddingVertical: 16,
     borderBottomWidth: 1, borderBottomColor: BORDER,
   },
   cardioIconBox: {
@@ -643,15 +644,18 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(52,199,89,0.12)', alignItems: 'center', justifyContent: 'center',
   },
   exIconBox: {
-    width: 44, height: 44, borderRadius: 12,
+    width: 56, height: 56, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth,
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
   },
-  // Illustrationerna är svarta linjer på vitt — plattan är vit även i mörkt läge
-  exImg: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFFFFF' },
-  rowName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  // Illustrationerna är svarta linjer på vitt — plattan är vit även i mörkt
+  // läge, och samma hårlinjeram som ikonplattan så alla kort ser likadana ut
+  exImg: {
+    width: 56, height: 56, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: '#FFFFFF',
+  },
+  rowName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
   addBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,149,0,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
   emptyText: { color: TEXT_SECONDARY, textAlign: 'center', marginTop: 48, fontSize: 15 },
