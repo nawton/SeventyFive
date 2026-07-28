@@ -4,11 +4,12 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
+import Body from 'react-native-body-highlighter'
 import { Ionicons } from '@/components/Icon'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { AppTextInput } from '@/components/AppTextInput'
 import { useT } from '@/lib/i18n'
-import { SLUG_LABELS, type Slug } from '@/lib/muscles'
+import { SLUG_LABELS, bestSideForMuscles, type Slug } from '@/lib/muscles'
 import {
   createCustomExercise, EQUIPMENT_LABELS, EXERCISE_TYPE_INFO,
   type Exercise, type ExerciseEquipment, type ExerciseType,
@@ -24,6 +25,22 @@ import {
 // =============================================================================
 
 type Page = 'form' | 'equipment' | 'muscle' | 'otherMuscles' | 'type'
+
+/** Miniatyrkropp med muskeln tänd — så man ser exakt vad som avses */
+function MuscleThumb({ slug }: { slug: Slug }) {
+  return (
+    <View style={s.muscleThumb}>
+      <Body
+        data={[{ slug, intensity: 1 as const }]}
+        side={bestSideForMuscles([slug])}
+        gender="male"
+        scale={0.25}
+        colors={['#FFA817']}
+        defaultFill="#3A3A3C"
+      />
+    </View>
+  )
+}
 
 const MUSCLE_SLUGS = Object.keys(SLUG_LABELS) as Slug[]
 const EQUIPMENT_KEYS = Object.keys(EQUIPMENT_LABELS) as ExerciseEquipment[]
@@ -228,7 +245,8 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
                 activeOpacity={0.7}
                 testID={`muscle-${slug}`}
               >
-                <Text style={[s.optionText, primaryMuscle === slug && { color: ACCENT, fontWeight: '700' }]}>
+                <MuscleThumb slug={slug} />
+                <Text style={[s.optionText, { flex: 1 }, primaryMuscle === slug && { color: ACCENT, fontWeight: '700' }]}>
                   {t(SLUG_LABELS[slug])}
                 </Text>
                 {primaryMuscle === slug && <Ionicons name="checkmark" size={18} color={ACCENT} />}
@@ -250,7 +268,8 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
                   activeOpacity={0.7}
                   testID={`other-${slug}`}
                 >
-                  <Text style={[s.optionText, on && { color: ACCENT, fontWeight: '700' }]}>
+                  <MuscleThumb slug={slug} />
+                  <Text style={[s.optionText, { flex: 1 }, on && { color: ACCENT, fontWeight: '700' }]}>
                     {t(SLUG_LABELS[slug])}
                   </Text>
                   <View style={[s.checkbox, on && { backgroundColor: ACCENT, borderColor: ACCENT }]}>
@@ -341,7 +360,13 @@ const s = StyleSheet.create({
   optionRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: CARD, borderRadius: 14,
-    paddingHorizontal: 16, paddingVertical: 15,
+    paddingHorizontal: 16, paddingVertical: 15, gap: 12,
+  },
+  muscleThumb: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: 'rgba(255,168,23,0.08)',
+    alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
   },
   optionRowActive: { backgroundColor: accentAlpha('14') },
   optionText: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },

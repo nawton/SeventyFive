@@ -9,6 +9,7 @@ export type ExerciseEquipment =
 export type ExerciseType =
   | 'weight_reps' | 'bodyweight' | 'weighted_bodyweight'
   | 'assisted_bodyweight' | 'duration' | 'duration_weight'
+  | 'distance_duration' | 'weight_distance'
 
 export interface Exercise {
   id: string
@@ -44,6 +45,8 @@ export const EXERCISE_TYPE_INFO: Record<ExerciseType, { label: string; example: 
   assisted_bodyweight: { label: 'Assisterad kroppsvikt',  example: 'Assisterade pull-ups och dips',      badges: ['REPS', '-KG'] },
   duration:            { label: 'Endast tid',                    example: 'Plankan, yoga, stretching',          badges: ['TID'] },
   duration_weight:     { label: 'Tid & vikt',             example: 'Viktad planka, wall sit',            badges: ['KG', 'TID'] },
+  distance_duration:   { label: 'Distans & tid',           example: 'Löpning, cykling, rodd',             badges: ['KM', 'TID'] },
+  weight_distance:     { label: 'Vikt & distans',          example: 'Farmers walk, sled push',            badges: ['KG', 'KM'] },
 }
 
 export const CATEGORY_LABELS: Record<ExerciseCategory, string> = {

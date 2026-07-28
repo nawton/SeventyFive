@@ -117,6 +117,10 @@ export const EN_EXERCISES: Record<string, string> = {
   'Assisterade pull-ups och dips': 'Assisted pull-ups and dips',
   'Plankan, yoga, stretching': 'Planks, yoga, stretching',
   'Viktad planka, wall sit': 'Weighted plank, wall sit',
+  'Distans & tid': 'Distance & duration',
+  'Vikt & distans': 'Weight & distance',
+  'Löpning, cykling, rodd': 'Running, cycling, rowing',
+  'Farmers walk, sled push': 'Farmers walk, sled push',
   'Exempel: {names}': 'Example: {names}',
   'TID': 'TIME',
 }
