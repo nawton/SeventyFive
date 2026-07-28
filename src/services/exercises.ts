@@ -26,6 +26,8 @@ export interface Exercise {
   exercise_type?: ExerciseType | null
   /** Objektnyckel i Storage-bucketen exercise-images (foton från free-exercise-db) */
   image_path?: string | null
+  /** Steg-för-steg från ExerciseDB-paketet, översatta — lagras i databasen */
+  instructions?: Array<{ sv: string; en: string }> | null
 }
 
 export const EQUIPMENT_LABELS: Record<ExerciseEquipment, string> = {
@@ -79,7 +81,7 @@ export function exerciseImageUrl(path: string): string {
 export async function getExercises(): Promise<Exercise[]> {
   let { data, error } = await supabase
     .from('exercises')
-    .select('id, name, description, category, difficulty, video_url, user_id, equipment, primary_muscle, other_muscles, exercise_type, image_path')
+    .select('id, name, description, category, difficulty, video_url, user_id, equipment, primary_muscle, other_muscles, exercise_type, image_path, instructions')
     .order('category')
     .order('name')
 
@@ -133,7 +135,7 @@ export async function createCustomExercise(params: {
       other_muscles: params.otherMuscles,
       exercise_type: params.exerciseType,
     })
-    .select('id, name, description, category, difficulty, video_url, user_id, equipment, primary_muscle, other_muscles, exercise_type, image_path')
+    .select('id, name, description, category, difficulty, video_url, user_id, equipment, primary_muscle, other_muscles, exercise_type, image_path, instructions')
     .single()
   if (error) throw error
 
