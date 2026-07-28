@@ -164,10 +164,11 @@ export function ExercisePickerSheet({
   const tint = (alpha: string) => `${T.ACCENT}${alpha}`
   const onAccent = useColorScheme() === 'light' ? '#FFFFFF' : '#000000'
   const insets = useSafeAreaInsets()
-  // Gym-pass startar direkt på muskelgrupperna; annars på typvalet
-  const startPage: Page = gymOnly ? 'gym' : 'landing'
+  // Gym-pass landar direkt i listan med ALLA övningar — muskelfiltret
+  // (gamla gruppsidan) öppnas via knappen högst upp
+  const startPage: Page = gymOnly ? 'exercises' : 'landing'
   const [page, setPage]                   = useState<Page>(startPage)
-  const [selectedGroup, setSelectedGroup] = useState('')
+  const [selectedGroup, setSelectedGroup] = useState('all')
   // Delmuskelfiltret inne i en grupp: 'all' visar hela gruppens övningar,
   // annars nyckeln till ett SubDef (slug eller nyckelordsregion)
   const [subMuscle, setSubMuscle]         = useState<string>('all')
@@ -186,7 +187,7 @@ export function ExercisePickerSheet({
   useEffect(() => {
     if (!visible) {
       setPage(startPage)
-      setSelectedGroup('')
+      setSelectedGroup('all')
       setSubMuscle('all')
       setSearch('')
       setPendingEx(null)
@@ -200,17 +201,18 @@ export function ExercisePickerSheet({
 
   function handleClose() {
     setPage(startPage)
-    setSelectedGroup('')
+    setSelectedGroup('all')
     setSearch('')
     setPendingEx(null)
     onClose()
   }
 
   function handleBack() {
-    if (page === 'exercises') { setPage('gym'); setSearch(''); setSubMuscle('all') }
-    // I gym-only-läget finns ingen landing att backa till → stäng istället
-    else if (page === 'gym' && gymOnly) handleClose()
-    else if (page === 'gym' || page === 'cardio') setPage('landing')
+    // Muskelfiltret backar alltid till listan
+    if (page === 'gym') setPage('exercises')
+    else if (page === 'exercises' && !gymOnly) { setPage('landing'); setSelectedGroup('all'); setSubMuscle('all'); setSearch('') }
+    else if (page === 'exercises') handleClose()
+    else if (page === 'cardio') setPage('landing')
   }
 
   function openInfo(ex: Exercise) {
@@ -275,11 +277,11 @@ export function ExercisePickerSheet({
     : groupExercises
 
   const gymGroupLabel = t(GYM_GROUPS.find(g => g.key === selectedGroup)?.label ?? '')
-  // I gym-only-läget är gym-sidan roten → visa stäng-ikon, inte bakåtpil
-  const showBack      = page !== 'landing' && !(gymOnly && page === 'gym')
-  const headerTitle   = page === 'gym' ? (gymOnly ? t('Lägg till övning') : t('Gym'))
+  // I gym-only-läget är listan roten → visa stäng-ikon, inte bakåtpil
+  const showBack      = page !== 'landing' && !(gymOnly && page === 'exercises')
+  const headerTitle   = page === 'gym' ? t('Filtrera på muskel')
     : page === 'cardio'    ? t('Cardio')
-    : page === 'exercises' ? gymGroupLabel
+    : page === 'exercises' ? t('Lägg till övning')
     : t('Lägg till övning')
 
   return (
@@ -306,7 +308,7 @@ export function ExercisePickerSheet({
           <View style={s.landingContainer}>
             <Text style={s.landingSub}>{t('Välj typ av övning')}</Text>
             <View style={s.landingCards}>
-              <TouchableOpacity style={s.landingCard} onPress={() => setPage('gym')} activeOpacity={0.8}>
+              <TouchableOpacity style={s.landingCard} onPress={() => { setSelectedGroup('all'); setPage('exercises') }} activeOpacity={0.8}>
                 <View style={[s.landingIcon, { backgroundColor: 'rgba(255,149,0,0.18)' }]}>
                   <Ionicons name="barbell" size={44} color={ACCENT} />
                 </View>
@@ -344,11 +346,26 @@ export function ExercisePickerSheet({
               </View>
               <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
             </TouchableOpacity>
+            <TouchableOpacity
+              style={s.groupRow}
+              onPress={() => { Haptics.selectionAsync(); setSelectedGroup('all'); setSubMuscle('all'); setPage('exercises') }}
+              activeOpacity={0.7}
+              testID="filterAll"
+            >
+              <View style={[s.thumbWrap, { backgroundColor: tint('14'), justifyContent: 'center' }]}>
+                <Ionicons name="body-outline" size={30} color={T.ACCENT} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.groupLabel}>{t('Alla muskler')}</Text>
+                <Text style={s.groupCount}>{t('{n} övningar', { n: strengthExes.length })}</Text>
+              </View>
+              {selectedGroup === 'all' && <Ionicons name="checkmark" size={20} color={T.ACCENT} />}
+            </TouchableOpacity>
             {GYM_GROUPS.map(group => (
               <TouchableOpacity
                 key={group.key}
                 style={s.groupRow}
-                onPress={() => { setSelectedGroup(group.key); setSubMuscle('all'); setPage('exercises') }}
+                onPress={() => { Haptics.selectionAsync(); setSelectedGroup(group.key); setSubMuscle('all'); setPage('exercises') }}
                 activeOpacity={0.7}
               >
                 <View style={[s.thumbWrap, { backgroundColor: group.color + '14' }]}>
@@ -363,7 +380,9 @@ export function ExercisePickerSheet({
                     <Text style={[s.groupSelBadgeText, { color: onAccent }]}>{multiSel.filter(e => getExerciseMuscleGroup(e.name) === group.key).length}</Text>
                   </View>
                 )}
-                <Ionicons name="chevron-forward" size={20} color={TEXT_SECONDARY} />
+                {selectedGroup === group.key
+                  ? <Ionicons name="checkmark" size={20} color={T.ACCENT} />
+                  : <Ionicons name="chevron-forward" size={20} color={TEXT_SECONDARY} />}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -395,9 +414,21 @@ export function ExercisePickerSheet({
           </ScrollView>
         )}
 
-        {/* ── EXERCISES — strength in selected muscle group ─────────── */}
+        {/* ── EXERCISES — hela biblioteket, filtrerat via muskelknappen ── */}
         {page === 'exercises' && (
           <>
+            <TouchableOpacity
+              style={[s.filterBtn, selectedGroup !== 'all' && { borderColor: T.ACCENT, backgroundColor: tint('10') }]}
+              onPress={() => { Haptics.selectionAsync(); setPage('gym') }}
+              activeOpacity={0.75}
+              testID="muscleFilter"
+            >
+              <Ionicons name="body-outline" size={17} color={selectedGroup !== 'all' ? T.ACCENT : TEXT_SECONDARY} />
+              <Text style={[s.filterBtnText, selectedGroup !== 'all' && { color: T.ACCENT, fontWeight: '700' }]}>
+                {selectedGroup === 'all' ? t('Alla muskler') : gymGroupLabel}
+              </Text>
+              <Ionicons name="chevron-down" size={15} color={selectedGroup !== 'all' ? T.ACCENT : TEXT_SECONDARY} />
+            </TouchableOpacity>
             {(() => {
               const group = GYM_GROUPS.find(g => g.key === selectedGroup)
               const subs = group ? subDefsFor(group) : []
@@ -733,6 +764,16 @@ const s = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 10,
   },
   confirmBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+
+  filterBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginTop: 10, marginBottom: 8,
+    paddingHorizontal: 14, paddingVertical: 11,
+    backgroundColor: CARD, borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(128,128,128,0.18)',
+    alignSelf: 'flex-start',
+  },
+  filterBtnText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
 
   // Delmuskelfiltret — SVG-kort som visar VAR muskeln sitter
   // Fast höjd: horisontella ScrollViews mäter inte barnhöjd pålitligt,

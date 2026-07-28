@@ -48,7 +48,6 @@ describe('ExercisePickerSheet — infobladet', () => {
 
   it('långtryck på en övning öppnar infobladet med svenska steg', () => {
     mount()
-    fireEvent.press(screen.getByText('Bröst'))
     fireEvent(screen.getByText('Bänkpress'), 'longPress')
 
     expect(screen.getByTestId('exerciseInfoSheet')).toBeOnTheScreen()
@@ -60,7 +59,6 @@ describe('ExercisePickerSheet — infobladet', () => {
 
   it('tryck på GIF-plattan öppnar också infobladet', () => {
     mount()
-    fireEvent.press(screen.getByText('Bröst'))
     expect(screen.queryByTestId('exerciseInfoSheet')).toBeNull()
     fireEvent.press(screen.getByTestId('exerciseImage-e3'))
     expect(screen.getByTestId('exerciseInfoSheet')).toBeOnTheScreen()
@@ -69,7 +67,6 @@ describe('ExercisePickerSheet — infobladet', () => {
   it('på engelska visas de engelska originalstegen', async () => {
     await act(async () => { await setLanguage('en') })
     mount()
-    fireEvent.press(screen.getByText('Chest'))
     fireEvent(screen.getByText('Bench press'), 'longPress')
 
     expect(screen.getByText('INSTRUCTIONS')).toBeOnTheScreen()
@@ -78,8 +75,14 @@ describe('ExercisePickerSheet — infobladet', () => {
 })
 
 describe('ExercisePickerSheet — delmuskelfiltret', () => {
-  it('gruppen visar alla sina övningar som standard, med filterchips', () => {
+  it('alla övningar visas direkt, muskelknappen filtrerar till gruppen', () => {
     mount()
+    // Hela biblioteket syns utan filter
+    expect(screen.getByText('Bänkpress')).toBeOnTheScreen()
+    expect(screen.getByText('Rodd med skivstång')).toBeOnTheScreen()
+
+    fireEvent.press(screen.getByTestId('muscleFilter'))
+    expect(screen.getByText('Alla muskler')).toBeOnTheScreen()
     fireEvent.press(screen.getByText('Rygg'))
 
     expect(screen.getByText('Rodd med skivstång')).toBeOnTheScreen()
@@ -94,6 +97,7 @@ describe('ExercisePickerSheet — delmuskelfiltret', () => {
 
   it('delmuskelchipen filtrerar listan och Alla återställer', () => {
     mount()
+    fireEvent.press(screen.getByTestId('muscleFilter'))
     fireEvent.press(screen.getByText('Rygg'))
 
     fireEvent.press(screen.getByTestId('subMuscle-lower-back'))
@@ -106,6 +110,7 @@ describe('ExercisePickerSheet — delmuskelfiltret', () => {
 
   it('Bröst delas i övre, mellersta och nedre via övningsnamnet', () => {
     mount()
+    fireEvent.press(screen.getByTestId('muscleFilter'))
     fireEvent.press(screen.getByText('Bröst'))
     expect(screen.getByText('Bänkpress')).toBeOnTheScreen()
     // Övning med foto visar bilden, övning utan behåller ikonen
@@ -124,6 +129,7 @@ describe('ExercisePickerSheet — delmuskelfiltret', () => {
 
   it('Axlar delas i främre, mellersta och bakre delta', () => {
     mount()
+    fireEvent.press(screen.getByTestId('muscleFilter'))
     fireEvent.press(screen.getByText('Axlar'))
     expect(screen.getByText('Sidolyft')).toBeOnTheScreen()
     expect(screen.getByText('Bakre deltalyft')).toBeOnTheScreen()

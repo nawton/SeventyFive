@@ -29,7 +29,6 @@ describe('LogWorkoutSheet — passöversikten', () => {
       />,
     )
     fireEvent.press(screen.getByText('Gym'))
-    fireEvent.press(screen.getByText('Bröst'))
     fireEvent.press(screen.getByText('Bänkpress'))
     fireEvent.press(screen.getByText(/Klar · 1/))
 
