@@ -7,6 +7,7 @@ import { EN_PROFILE } from './en.profile'
 import { EN_AUTH } from './en.auth'
 import { EN_CARDIO } from './en.cardio'
 import { EN_EXERCISES } from './en.exercises'
+import { EN_EXERCISES_LIB } from './en.exercisesLib'
 
 // Sammanslagen ordbok — ett område per fil så flera kan jobba parallellt
 export const EN: Record<string, string> = {
@@ -19,4 +20,5 @@ export const EN: Record<string, string> = {
   ...EN_AUTH,
   ...EN_CARDIO,
   ...EN_EXERCISES,
+  ...EN_EXERCISES_LIB,
 }
