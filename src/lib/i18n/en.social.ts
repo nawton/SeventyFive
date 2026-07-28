@@ -10,6 +10,7 @@ export const EN_SOCIAL: Record<string, string> = {
   'Gå igenom passet innan det delas, allt är redan sparat.': 'Review your workout before it is shared, everything is already saved.',
   'VOLYM': 'VOLUME',
   'KÄNSLA': 'FEEL',
+  'Inga set loggades det här passet.': 'No sets were logged this workout.',
   'TITEL': 'TITLE',
   'KOMMENTAR': 'COMMENT',
   'FOTO': 'PHOTO',

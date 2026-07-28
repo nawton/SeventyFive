@@ -46,6 +46,7 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries, onDon
 
   const totalSets = entries.reduce((s, e) => s + e.sets.length, 0)
   const totalKg = entries.reduce((s, e) => s + e.sets.reduce((x, r) => x + r.reps * r.weightKg, 0), 0)
+  const totalReps = entries.reduce((s, e) => s + e.sets.reduce((x, r) => x + r.reps, 0), 0)
 
   async function pickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -99,12 +100,17 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries, onDon
           <View style={s.statCard}>
             <View style={s.statCell}>
               <Text style={s.statLbl}>{t('TID')}</Text>
-              <Text style={s.statVal}>{durationS !== null ? fmtTime(durationS) : '–'.replace('–', '-')}</Text>
+              <Text style={s.statVal}>{durationS !== null && durationS > 0 ? fmtTime(durationS) : '-'}</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.statCell}>
               <Text style={s.statLbl}>{t('SET')}</Text>
               <Text style={s.statVal}>{totalSets}</Text>
+            </View>
+            <View style={s.statDivider} />
+            <View style={s.statCell}>
+              <Text style={s.statLbl}>{t('REPS')}</Text>
+              <Text style={s.statVal}>{totalReps}</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.statCell}>
@@ -167,6 +173,9 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries, onDon
           {/* Övningarna längst ner, som facit */}
           <Text style={s.label}>{t('ÖVNINGAR')}</Text>
           <View style={s.exCard}>
+            {entries.length === 0 && (
+              <Text style={s.emptyText}>{t('Inga set loggades det här passet.')}</Text>
+            )}
             {entries.map((e, i) => {
               const img = exerciseImageUrlFor(e.name)
               return (
@@ -263,6 +272,7 @@ const s = StyleSheet.create({
   exName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   exSets: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2, fontVariant: ['tabular-nums'] },
   exCount: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT },
+  emptyText: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', paddingVertical: 18 },
 
   footer: {
     position: 'absolute', left: 0, right: 0, bottom: 0,

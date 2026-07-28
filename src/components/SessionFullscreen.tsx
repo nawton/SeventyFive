@@ -306,8 +306,23 @@ export function SessionFullscreen({
   }
 
   // Granskningen (titel, kommentar, foto) ligger mellan betyget och
-  // stängningen — passet är redan sparat när betyget visas
+  // stängningen — passet är redan sparat när betyget visas. Innehållet
+  // snapshotas från det som FAKTISKT sparades (collectSets fyller i
+  // platshållarvärden för ibockade rader), inte från råa fältet
   const [review, setReview] = useState<{ effort: number | null } | null>(null)
+  const reviewSnapshotRef = useRef<{ entries: ReviewEntry[]; durationS: number | null }>({ entries: [], durationS: null })
+
+  function snapshotReview(toSave: ReturnType<typeof collectSets>, durationS: number | null) {
+    reviewSnapshotRef.current = {
+      entries: toSave
+        .filter(x => x.validSets.length > 0)
+        .map(x => ({
+          name: x.ex.exercise_name,
+          sets: x.validSets.map(r => ({ reps: r.reps, weightKg: r.weight_kg })),
+        })),
+      durationS,
+    }
+  }
 
   function handleEffortDone(e: number | null) {
     setEffortOpen(false)
@@ -324,18 +339,6 @@ export function SessionFullscreen({
     afterEffortRef.current = null
     then?.()
   }
-
-  const reviewEntries: ReviewEntry[] = exercises
-    .map(ex => ({
-      name: ex.exercise_name,
-      sets: (logs[ex.id] ?? [])
-        .map(r => ({
-          reps: parseInt(r.reps, 10) || 0,
-          weightKg: parseFloat(r.weight.replace(',', '.')) || 0,
-        }))
-        .filter(st => st.reps > 0),
-    }))
-    .filter(e => e.sets.length > 0)
 
   // Rader med reps räknas — även om man glömt bocka dem. Ibockade rader utan
   // ifyllda siffror sparas med de visade platshållarna (förra passets set,
@@ -402,6 +405,7 @@ export function SessionFullscreen({
         setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
         clearPassStart(`${session.id}:${date}`).catch(() => {})
         clearPassDraft(`${session.id}:${date}`).catch(() => {})
+        snapshotReview([], elapsed)
         requestEffort(() => {
           onComplete()
           onClose()
@@ -482,6 +486,7 @@ export function SessionFullscreen({
       }
       if (!isCompleted) {
         // Nytt avklarat pass → betyg + granskning innan vi stänger
+        snapshotReview(toSave, elapsed)
         requestEffort(() => {
           onComplete()
           wrapUp(false)
@@ -746,9 +751,9 @@ export function SessionFullscreen({
       {review !== null && (
         <PassReviewSheet
           workoutDate={date}
-          durationS={finalDur}
+          durationS={reviewSnapshotRef.current.durationS}
           effort={review.effort}
-          entries={reviewEntries}
+          entries={reviewSnapshotRef.current.entries}
           onDone={finishReview}
         />
       )}
