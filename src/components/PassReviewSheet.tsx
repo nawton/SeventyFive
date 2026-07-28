@@ -11,6 +11,7 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, useThemeStrin
 import { compressImage } from '@/lib/image'
 import { fmtTime } from '@/lib/format'
 import { savePassMeta } from '@/services/gymPassMeta'
+import { updateStrengthWorkoutSets } from '@/services/workouts'
 import { exerciseImageUrlFor } from '@/lib/exerciseInfo/images'
 import { effortColor, effortLabel } from '@/components/EffortRating'
 import { AppTextInput } from '@/components/AppTextInput'
@@ -24,10 +25,12 @@ import { AppTextInput } from '@/components/AppTextInput'
 
 export type ReviewEntry = {
   name: string
+  /** user_workouts-radens id — gör övningen redigerbar från granskningen */
+  workoutId?: string | null
   sets: Array<{ reps: number; weightKg: number }>
 }
 
-export function PassReviewSheet({ workoutDate, durationS, effort, entries, onDone }: {
+export function PassReviewSheet({ workoutDate, durationS, effort, entries: initialEntries, onDone }: {
   workoutDate: string
   durationS: number | null
   effort: number | null
@@ -43,10 +46,40 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries, onDon
   const [note, setNote] = useState('')
   const [photoUri, setPhotoUri] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // Redigerbara lokalt — sparas per övning direkt mot databasen
+  const [entries, setEntries] = useState<ReviewEntry[]>(initialEntries)
+  const [editIx, setEditIx] = useState<number | null>(null)
+  const [editSets, setEditSets] = useState<Array<{ reps: string; weight: string }>>([])
+  const [editSaving, setEditSaving] = useState(false)
+
+  function openEdit(ix: number) {
+    setEditSets(entries[ix].sets.map(r => ({ reps: String(r.reps), weight: r.weightKg > 0 ? String(r.weightKg) : '' })))
+    setEditIx(ix)
+  }
+
+  async function saveEdit() {
+    if (editIx === null) return
+    const entry = entries[editIx]
+    const parsed = editSets
+      .map(r => ({ reps: parseInt(r.reps, 10) || 0, weight_kg: parseFloat(r.weight.replace(',', '.')) || 0 }))
+      .filter(r => r.reps > 0)
+    if (parsed.length === 0 || !entry.workoutId) { setEditIx(null); return }
+    setEditSaving(true)
+    try {
+      await updateStrengthWorkoutSets(entry.workoutId, parsed)
+      setEntries(prev => prev.map((e, i) => i === editIx
+        ? { ...e, sets: parsed.map(r => ({ reps: r.reps, weightKg: r.weight_kg })) }
+        : e))
+      setEditIx(null)
+    } catch {
+      Alert.alert(t('Något gick fel'), t('Ändringen kunde inte sparas. Försök igen.'))
+    } finally {
+      setEditSaving(false)
+    }
+  }
 
   const totalSets = entries.reduce((s, e) => s + e.sets.length, 0)
   const totalKg = entries.reduce((s, e) => s + e.sets.reduce((x, r) => x + r.reps * r.weightKg, 0), 0)
-  const totalReps = entries.reduce((s, e) => s + e.sets.reduce((x, r) => x + r.reps, 0), 0)
 
   async function pickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -109,11 +142,6 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries, onDon
             </View>
             <View style={s.statDivider} />
             <View style={s.statCell}>
-              <Text style={s.statLbl}>{t('REPS')}</Text>
-              <Text style={s.statVal}>{totalReps}</Text>
-            </View>
-            <View style={s.statDivider} />
-            <View style={s.statCell}>
               <Text style={s.statLbl}>{t('VOLYM')}</Text>
               <Text style={s.statVal}>{Math.round(totalKg)} kg</Text>
             </View>
@@ -133,7 +161,7 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries, onDon
             style={s.input}
             value={title}
             onChangeText={setTitle}
-            placeholder={t('T.ex. Tungt benpass')}
+            placeholder={t('Gympass')}
             placeholderTextColor={TEXT_SECONDARY}
             returnKeyType="done"
             testID="reviewTitle"
@@ -179,7 +207,13 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries, onDon
             {entries.map((e, i) => {
               const img = exerciseImageUrlFor(e.name)
               return (
-                <View key={e.name + i} style={[s.exRow, i > 0 && s.exBorder]}>
+                <TouchableOpacity
+                  key={e.name + i}
+                  style={[s.exRow, i > 0 && s.exBorder]}
+                  onPress={e.workoutId ? () => openEdit(i) : undefined}
+                  activeOpacity={e.workoutId ? 0.7 : 1}
+                  testID={`reviewEx-${i}`}
+                >
                   {img ? (
                     <Image source={{ uri: img }} style={s.exImg} />
                   ) : (
@@ -194,11 +228,74 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries, onDon
                     </Text>
                   </View>
                   <Text style={s.exCount}>{t('{n} set', { n: e.sets.length })}</Text>
-                </View>
+                  {e.workoutId ? <Ionicons name="pencil-outline" size={15} color={TEXT_SECONDARY} /> : null}
+                </TouchableOpacity>
               )
             })}
           </View>
         </ScrollView>
+
+        {editIx !== null && (
+          <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditIx(null)}>
+            <View style={s.editScreen}>
+              <Text style={s.editTitle}>{t(entries[editIx].name)}</Text>
+              <ScrollView contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
+                {editSets.map((row, j) => (
+                  <View key={j} style={s.editRow}>
+                    <Text style={s.editNum}>{j + 1}</Text>
+                    <AppTextInput
+                      style={s.editInput}
+                      value={row.reps}
+                      onChangeText={v => setEditSets(prev => prev.map((r, k) => k === j ? { ...r, reps: v.replace(/[^0-9]/g, '') } : r))}
+                      keyboardType="number-pad"
+                      placeholder={t('Reps')}
+                      placeholderTextColor={TEXT_SECONDARY}
+                      testID={`editReps-${j}`}
+                    />
+                    <AppTextInput
+                      style={s.editInput}
+                      value={row.weight}
+                      onChangeText={v => setEditSets(prev => prev.map((r, k) => k === j ? { ...r, weight: v } : r))}
+                      keyboardType="decimal-pad"
+                      placeholder={t('Kg')}
+                      placeholderTextColor={TEXT_SECONDARY}
+                      testID={`editKg-${j}`}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setEditSets(prev => prev.filter((_, k) => k !== j))}
+                      hitSlop={8}
+                      testID={`editRemove-${j}`}
+                    >
+                      <Ionicons name="close-circle" size={20} color={TEXT_SECONDARY} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <TouchableOpacity
+                  style={[s.editAdd, { borderColor: tint('55') }]}
+                  onPress={() => setEditSets(prev => [...prev, { reps: '', weight: '' }])}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="add" size={17} color={T.ACCENT} />
+                  <Text style={[s.editAddText, { color: T.ACCENT }]}>{t('Lägg till set')}</Text>
+                </TouchableOpacity>
+              </ScrollView>
+              <View style={s.editFooter}>
+                <TouchableOpacity
+                  style={[s.saveBtn, { backgroundColor: T.ACCENT, flex: 1 }, editSaving && { opacity: 0.6 }]}
+                  onPress={saveEdit}
+                  disabled={editSaving}
+                  activeOpacity={0.85}
+                  testID="editSave"
+                >
+                  {editSaving ? <ActivityIndicator color={onAccent} /> : <Text style={[s.saveBtnText, { color: onAccent }]}>{t('Spara')}</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setEditIx(null)} disabled={editSaving} hitSlop={8}>
+                  <Text style={s.skipText}>{t('Avbryt')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
 
         <View style={[s.footer, { paddingBottom: insets.bottom + 10 }]}>
           <TouchableOpacity
@@ -273,6 +370,26 @@ const s = StyleSheet.create({
   exSets: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2, fontVariant: ['tabular-nums'] },
   exCount: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT },
   emptyText: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', paddingVertical: 18 },
+
+  editScreen: { flex: 1, backgroundColor: BG, paddingTop: 24 },
+  editTitle: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800', paddingHorizontal: 20, paddingBottom: 14 },
+  editRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 20, paddingVertical: 6,
+  },
+  editNum: { width: 24, color: TEXT_SECONDARY, fontSize: 15, fontFamily: NUM_FONT },
+  editInput: {
+    flex: 1, backgroundColor: CARD, borderRadius: 12,
+    color: TEXT_PRIMARY, fontSize: 16, paddingHorizontal: 12, paddingVertical: 11,
+    textAlign: 'center',
+  },
+  editAdd: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginHorizontal: 20, marginTop: 10, paddingVertical: 12,
+    borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed',
+  },
+  editAddText: { fontSize: 14, fontWeight: '700' },
+  editFooter: { alignItems: 'center', gap: 12, padding: 20 },
 
   footer: {
     position: 'absolute', left: 0, right: 0, bottom: 0,

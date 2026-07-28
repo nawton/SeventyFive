@@ -28,7 +28,7 @@ export async function saveStrengthWorkout(params: {
   category: 'strength' | 'mobility' | 'hiit'
   sets: StrengthSet[]
   workoutDate?: string
-}): Promise<boolean> {
+}): Promise<string> {
   const today = toLocalDateString()
   const entry: StrengthData = {
     category: params.category,
@@ -37,14 +37,31 @@ export async function saveStrengthWorkout(params: {
     sets: params.sets,
     workout_date: params.workoutDate ?? today,
   }
-  const { error } = await supabase.from('user_workouts').insert({
+  // Id:t tillbaka: granskningen efter passet redigerar raden vid behov
+  const { data, error } = await supabase.from('user_workouts').insert({
     user_id: params.userId,
     name: params.exerciseName,
     is_favorite: false,
     exercises: [entry],
-  })
+  }).select('id').single()
   if (error) throw new Error(error.message)
-  return true
+  return (data as { id: string }).id
+}
+
+/** Skriver om seten på en sparad övningsrad — granskningens redigering. */
+export async function updateStrengthWorkoutSets(workoutId: string, sets: StrengthSet[]): Promise<void> {
+  const { data, error } = await supabase
+    .from('user_workouts')
+    .select('exercises')
+    .eq('id', workoutId)
+    .single()
+  if (error) throw new Error(error.message)
+  const exercises = ((data as { exercises: StrengthData[] }).exercises ?? []).map(e => ({ ...e, sets }))
+  const { error: updErr } = await supabase
+    .from('user_workouts')
+    .update({ exercises })
+    .eq('id', workoutId)
+  if (updErr) throw new Error(updErr.message)
 }
 
 export async function deleteWorkout(id: string): Promise<boolean> {

@@ -34,12 +34,12 @@ beforeEach(() => jest.clearAllMocks())
 
 describe('saveStrengthWorkout', () => {
   it('sparar övningen som en styrkepost med dagens datum som standard', async () => {
-    const calls = installTables(fromMock, { user_workouts: { error: null } })
-    const ok = await saveStrengthWorkout({
+    const calls = installTables(fromMock, { user_workouts: { data: { id: 'w9' }, error: null } })
+    const id = await saveStrengthWorkout({
       userId: 'u1', exerciseId: 'e1', exerciseName: 'Bänkpress',
       category: 'strength', sets: [{ reps: 8, weight_kg: 60 }],
     })
-    expect(ok).toBe(true)
+    expect(id).toBe('w9')
     expect(argsOf(calls, 'user_workouts', 'insert')[0][0]).toEqual({
       user_id: 'u1', name: 'Bänkpress', is_favorite: false,
       exercises: [{
@@ -50,7 +50,7 @@ describe('saveStrengthWorkout', () => {
   })
 
   it('respekterar angivet datum och kastar fel vidare', async () => {
-    const calls = installTables(fromMock, { user_workouts: { error: null } })
+    const calls = installTables(fromMock, { user_workouts: { data: { id: 'w9' }, error: null } })
     await saveStrengthWorkout({
       userId: 'u1', exerciseId: 'e1', exerciseName: 'Knäböj',
       category: 'strength', sets: [], workoutDate: '2026-07-01',

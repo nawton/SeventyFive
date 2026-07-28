@@ -84,7 +84,6 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, na
     (b, p) => (p.topKg > (b?.topKg ?? 0) ? { topKg: p.topKg, topReps: p.topReps } : b), null)
 
   const totalSets = logged.reduce((s, w) => s + w.data.sets.length, 0)
-  const totalReps = logged.reduce((s, w) => s + w.data.sets.reduce((x, r) => x + r.reps, 0), 0)
   const totalKg   = logged.reduce((s, w) => s + w.data.sets.reduce((x, r) => x + r.reps * (r.weight_kg || 0), 0), 0)
   const loggedNames = new Set(logged.map(w => w.data.exercise_name))
   const unlogged = plannedNames.filter(n => !loggedNames.has(n))
@@ -145,13 +144,6 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, na
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>Set</Text>
               <Text style={[s.dtlVal, { color: P.PURPLE }]}>{totalSets}</Text>
-            </View>
-          </View>
-          <View style={s.dtlSep} />
-          <View style={s.dtlRow}>
-            <View style={s.dtlCell}>
-              <Text style={s.dtlLbl}>{t('Reps totalt')}</Text>
-              <Text style={[s.dtlVal, { color: GREEN }]}>{totalReps}</Text>
             </View>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>{t('Volym')}</Text>

@@ -312,12 +312,17 @@ export function SessionFullscreen({
   const [review, setReview] = useState<{ effort: number | null } | null>(null)
   const reviewSnapshotRef = useRef<{ entries: ReviewEntry[]; durationS: number | null }>({ entries: [], durationS: null })
 
-  function snapshotReview(toSave: ReturnType<typeof collectSets>, durationS: number | null) {
+  function snapshotReview(
+    toSave: ReturnType<typeof collectSets>,
+    durationS: number | null,
+    savedIds?: Map<string, string>,
+  ) {
     reviewSnapshotRef.current = {
       entries: toSave
         .filter(x => x.validSets.length > 0)
         .map(x => ({
           name: x.ex.exercise_name,
+          workoutId: savedIds?.get(x.ex.id) ?? null,
           sets: x.validSets.map(r => ({ reps: r.reps, weightKg: r.weight_kg })),
         })),
       durationS,
@@ -418,6 +423,7 @@ export function SessionFullscreen({
   async function saveAndFinish(toSave: ReturnType<typeof collectSets>) {
     if (!session || !userId) return
     setSaving(true)
+    const savedWorkoutIds = new Map<string, string>()
     try {
       const records = await getPersonalRecords(userId).catch(() => [])
       const prs: string[] = []
@@ -428,14 +434,15 @@ export function SessionFullscreen({
       for (const { ex, validSets } of toSave) {
         if (validSets.length === 0) continue
         const exInfo = exercisesList.find(e => e.name === ex.exercise_name)
-        await saveStrengthWorkout({
+        const savedId = await saveStrengthWorkout({
           userId,
           exerciseId: exInfo?.id ?? ex.id,
           exerciseName: ex.exercise_name,
           category: (exInfo?.category === 'mobility' || exInfo?.category === 'hiit') ? exInfo.category : 'strength',
           sets: validSets,
           workoutDate: date,
-        }).catch((e: Error) => { saveErrors.push(t('{name} · set: {msg}', { name: ex.exercise_name, msg: e.message })); return false })
+        }).catch((e: Error) => { saveErrors.push(t('{name} · set: {msg}', { name: ex.exercise_name, msg: e.message })); return null })
+        if (savedId) savedWorkoutIds.set(ex.id, savedId)
         await completeExercise(ex.id, userId, date)
           .catch((e: Error) => { saveErrors.push(t('{name} · avbockning: {msg}', { name: ex.exercise_name, msg: e.message })) })
         // Spegla till passets rad — bara för engångspass (mallar lämnas orörda)
@@ -486,7 +493,7 @@ export function SessionFullscreen({
       }
       if (!isCompleted) {
         // Nytt avklarat pass → betyg + granskning innan vi stänger
-        snapshotReview(toSave, elapsed)
+        snapshotReview(toSave, elapsed, savedWorkoutIds)
         requestEffort(() => {
           onComplete()
           wrapUp(false)
