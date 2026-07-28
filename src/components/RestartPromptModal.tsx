@@ -10,6 +10,7 @@ import {
 
 import { BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 import { StreakFlame } from '@/components/StreakFlame'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useT } from '@/lib/i18n'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ interface Props {
 
 export function RestartPromptModal({ visible, variant, missedDays, allowContinue = true, onRestart, onContinue }: Props) {
   const t = useT()
+  const insets = useSafeAreaInsets()
   const [busy, setBusy] = useState<'restart' | 'continue' | null>(null)
 
   function title(): string {
@@ -62,9 +64,13 @@ export function RestartPromptModal({ visible, variant, missedDays, allowContinue
       presentationStyle={allowContinue ? 'pageSheet' : 'fullScreen'}
       onRequestClose={() => { if (allowContinue) handle('continue') }}
     >
-      <View style={styles.screen}>
+      <View style={[
+        styles.screen,
+        // fullScreen täcker notch och hemindikator — pageSheet sköter toppen själv
+        { paddingTop: allowContinue ? 0 : insets.top, paddingBottom: insets.bottom },
+      ]}>
         <View style={styles.container}>
-          <View style={styles.handle} />
+          {allowContinue && <View style={styles.handle} />}
 
           <View style={{ alignSelf: 'center' }}>
             <StreakFlame size={44} />
