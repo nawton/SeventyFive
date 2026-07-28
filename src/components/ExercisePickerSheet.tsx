@@ -6,6 +6,11 @@ import {
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Pressable } from 'react-native'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
+import Animated, {
+  useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS,
+} from 'react-native-reanimated'
 import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
@@ -22,6 +27,9 @@ import { AppTextInput } from '@/components/AppTextInput'
 import { GlassCircleButton } from '@/components/GlassButton'
 
 type Page = 'landing' | 'gym' | 'cardio' | 'exercises'
+
+const EQUIP_SLIDE = 520
+const EQUIP_SPRING = { damping: 20, stiffness: 220, mass: 0.8 } as const
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
 
@@ -78,6 +86,38 @@ export function ExercisePickerSheet({
   // Utrustningsfiltret: kombineras fritt med muskelfiltret
   const [equipFilter, setEquipFilter]     = useState<'all' | ExerciseEquipment>('all')
   const [equipOpen, setEquipOpen]         = useState(false)
+  const equipTy = useSharedValue(EQUIP_SLIDE)
+
+  function openEquip() {
+    setEquipOpen(true)
+    equipTy.value = EQUIP_SLIDE
+    equipTy.value = withSpring(0, EQUIP_SPRING)
+  }
+
+  function closeEquip() {
+    equipTy.value = withTiming(EQUIP_SLIDE, { duration: 200 }, finished => {
+      if (finished) runOnJS(setEquipOpen)(false)
+    })
+  }
+
+  const equipDrag = Gesture.Pan()
+    .activeOffsetY([-12, 12])
+    .onUpdate(e => {
+      equipTy.value = e.translationY > 0 ? e.translationY : e.translationY * 0.15
+    })
+    .onEnd(e => {
+      if (e.translationY > 100 || e.velocityY > 600) {
+        equipTy.value = withTiming(EQUIP_SLIDE, { duration: 200 }, finished => {
+          if (finished) runOnJS(setEquipOpen)(false)
+        })
+      } else {
+        equipTy.value = withSpring(0, EQUIP_SPRING)
+      }
+    })
+
+  const equipSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: equipTy.value }],
+  }))
   const [search, setSearch]               = useState('')
   const [pendingEx, setPendingEx]         = useState<Exercise | null>(null)
   // Egna övningar skapade i den här sessionen — läggs ovanpå prop-listan
@@ -314,7 +354,7 @@ export function ExercisePickerSheet({
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.filterBtn, equipFilter !== 'all' && { borderColor: T.ACCENT, backgroundColor: tint('10') }]}
-                onPress={() => { Haptics.selectionAsync(); setEquipOpen(true) }}
+                onPress={() => { Haptics.selectionAsync(); openEquip() }}
                 activeOpacity={0.75}
                 testID="equipFilter"
               >
@@ -466,30 +506,37 @@ export function ExercisePickerSheet({
       )}
 
       {equipOpen && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => setEquipOpen(false)}>
-          <TouchableOpacity style={s.equipBackdrop} activeOpacity={1} onPress={() => setEquipOpen(false)} testID="equipBackdrop">
-            <View style={[s.equipSheet, { backgroundColor: T.BG, borderColor: 'rgba(128,128,128,0.20)', paddingBottom: insets.bottom + 12 }]}>
-              <View style={s.equipHandle} />
-              <Text style={s.equipTitle}>{t('Filtrera på utrustning')}</Text>
-              {(['all', ...equipOptions] as const).map(key => {
-                const on = equipFilter === key
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    style={[s.equipRow, on && { backgroundColor: tint('12') }]}
-                    onPress={() => { Haptics.selectionAsync(); setEquipFilter(key as 'all' | ExerciseEquipment); setEquipOpen(false) }}
-                    activeOpacity={0.75}
-                    testID={`equip-${key}`}
-                  >
-                    <Text style={[s.equipRowText, on && { color: T.ACCENT, fontWeight: '700' }]}>
-                      {key === 'all' ? t('All utrustning') : t(EQUIPMENT_LABELS[key as ExerciseEquipment])}
-                    </Text>
-                    {on && <Ionicons name="checkmark" size={18} color={T.ACCENT} />}
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-          </TouchableOpacity>
+        <Modal visible transparent animationType="fade" onRequestClose={closeEquip}>
+          <GestureHandlerRootView style={s.equipRoot}>
+            <Pressable style={s.equipBackdrop} onPress={closeEquip} testID="equipBackdrop" />
+            <GestureDetector gesture={equipDrag}>
+              <Animated.View style={[
+                s.equipSheet,
+                { backgroundColor: T.BG, borderColor: 'rgba(128,128,128,0.20)', paddingBottom: insets.bottom + 12 },
+                equipSheetStyle,
+              ]}>
+                <View style={s.equipHandle} />
+                <Text style={s.equipTitle}>{t('Filtrera på utrustning')}</Text>
+                {(['all', ...equipOptions] as const).map(key => {
+                  const on = equipFilter === key
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[s.equipRow, on && { backgroundColor: tint('12') }]}
+                      onPress={() => { Haptics.selectionAsync(); setEquipFilter(key as 'all' | ExerciseEquipment); closeEquip() }}
+                      activeOpacity={0.75}
+                      testID={`equip-${key}`}
+                    >
+                      <Text style={[s.equipRowText, on && { color: T.ACCENT, fontWeight: '700' }]}>
+                        {key === 'all' ? t('All utrustning') : t(EQUIPMENT_LABELS[key as ExerciseEquipment])}
+                      </Text>
+                      {on && <Ionicons name="checkmark" size={18} color={T.ACCENT} />}
+                    </TouchableOpacity>
+                  )
+                })}
+              </Animated.View>
+            </GestureDetector>
+          </GestureHandlerRootView>
         </Modal>
       )}
 
@@ -657,7 +704,8 @@ const s = StyleSheet.create({
   },
   filterBtnText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
 
-  equipBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
+  equipRoot: { flex: 1, justifyContent: 'flex-end' },
+  equipBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
   equipSheet: {
     borderTopLeftRadius: 22, borderTopRightRadius: 22, borderWidth: 1,
     paddingHorizontal: 16, paddingTop: 10,
