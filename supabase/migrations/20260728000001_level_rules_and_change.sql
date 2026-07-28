@@ -20,6 +20,11 @@
 
 ALTER TABLE user_challenges ADD COLUMN IF NOT EXISTS level_changed_at timestamptz;
 
+-- Typlistan behöver känna till kalla duschen innan Extreme-uppgiften läggs in
+ALTER TABLE task_templates DROP CONSTRAINT IF EXISTS task_templates_type_check;
+ALTER TABLE task_templates ADD CONSTRAINT task_templates_type_check
+  CHECK (type IN ('workout', 'diet', 'water', 'reading', 'photo', 'cold_shower', 'custom'));
+
 -- ── Normal ───────────────────────────────────────────────────────────────────
 UPDATE task_templates SET
   name = 'Träningspass',
