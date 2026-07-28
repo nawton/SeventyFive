@@ -1,4 +1,9 @@
 import { render, screen, fireEvent, act } from '@testing-library/react-native'
+
+// Simuleringarna är tunga och kör parallellt med 89 andra sviter, och med
+// --coverage är allt instrumenterat och långsammare. Standardens 5s flakar
+// på fullbelastad maskin trots att testerna är friska, ge dem rejäl marginal.
+jest.setTimeout(30000)
 import CardioScreen from '../cardio'
 import { useLocalSearchParams, router } from 'expo-router'
 import * as Speech from 'expo-speech'
