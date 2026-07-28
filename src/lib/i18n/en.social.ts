@@ -3,6 +3,7 @@
 export const EN_SOCIAL: Record<string, string> = {
   // Flödeskortets övningsförhandsvisning
   '{n} set': '{n} sets',
+  'VIKT & REPS': 'WEIGHT & REPS',
   '+ 1 övning till': '+ 1 more exercise',
   '+ {n} övningar till': '+ {n} more exercises',
   // --- lib/report.ts ---

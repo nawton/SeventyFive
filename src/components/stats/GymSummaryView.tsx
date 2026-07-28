@@ -147,23 +147,26 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
                           ? <Image source={{ uri: img }} style={s.exThumb} />
                           : null
                       })()}
-                      <Text style={s.exName} numberOfLines={1}>{t(w.data.exercise_name)}</Text>
+                      <Text style={s.exName} numberOfLines={2}>{t(w.data.exercise_name)}</Text>
                       {topKg > 0 && (
                         <Text style={s.exTop}>
                           {t('topp {kg} kg', { kg: topKg })}
                         </Text>
                       )}
-                      {allWorkouts && <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.28)" />}
+                      {allWorkouts && <Ionicons name="chevron-forward" size={14} color={TEXT_SECONDARY} />}
                     </View>
-                    <View style={s.setWrap}>
-                      {w.data.sets.map((set, j) => (
-                        <View key={j} style={s.setChip}>
-                          <Text style={s.setChipText}>
-                            {set.weight_kg > 0 ? `${set.weight_kg} kg × ${set.reps}` : `${set.reps} reps`}
-                          </Text>
-                        </View>
-                      ))}
+                    <View style={s.tableHead}>
+                      <Text style={[s.th, { width: 40 }]}>{t('SET')}</Text>
+                      <Text style={s.th}>{t('VIKT & REPS')}</Text>
                     </View>
+                    {w.data.sets.map((set, j) => (
+                      <View key={j} style={[s.setLine, j % 2 === 1 && s.setLineAlt]}>
+                        <Text style={s.setNum}>{j + 1}</Text>
+                        <Text style={s.setVal}>
+                          {set.weight_kg > 0 ? `${set.weight_kg} kg × ${set.reps}` : `${set.reps} reps`}
+                        </Text>
+                      </View>
+                    ))}
                   </TouchableOpacity>
                 )
               })}
@@ -322,13 +325,23 @@ const s = StyleSheet.create({
 
   exBlock: { paddingVertical: 13, gap: 9 },
   exHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  exName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600', flex: 1 },
+  exName: { color: ACCENT, fontSize: 17, fontWeight: '800', flex: 1 },
   exThumb: {
-    width: 40, height: 40, borderRadius: 11,
+    width: 46, height: 46, borderRadius: 23,
     backgroundColor: '#FFFFFF', resizeMode: 'contain',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: DIVIDER,
   },
   exTop: { color: ACCENT, fontSize: 12, fontFamily: NUM_FONT_SEMI },
   exUnlogged: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
+  tableHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
+  th: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
+  setLine: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 9, paddingHorizontal: 8, marginHorizontal: -8, borderRadius: 10,
+  },
+  setLineAlt: { backgroundColor: 'rgba(128,128,128,0.09)' },
+  setNum: { width: 40, color: TEXT_PRIMARY, fontSize: 16, fontFamily: NUM_FONT_SEMI, paddingLeft: 4 },
+  setVal: { color: TEXT_PRIMARY, fontSize: 16, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
   setWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   setChip: {
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 9,
