@@ -155,7 +155,6 @@ export const EN_EXERCISES: Record<string, string> = {
   'Farmers walk, sled push': 'Farmers walk, sled push',
   'Exempel: {names}': 'Example: {names}',
   'TID': 'TIME',
-  'Övningsillustrationer från Everkinetic, CC BY-SA 4.0.': 'Exercise illustrations by Everkinetic, CC BY-SA 4.0.',
 
   // Delmuskelfilter (bröstets och axelns regioner)
   'Övre': 'Upper',
