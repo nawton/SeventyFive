@@ -10,6 +10,7 @@ import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 import { CATEGORY_LABELS, type Exercise } from '@/services/exercises'
+import { CreateExerciseSheet } from '@/components/CreateExerciseSheet'
 import { getExerciseMuscleGroup, type Slug } from '@/lib/muscles'
 import type { ExerciseCategory } from '@/types/database'
 import { AppTextInput } from '@/components/AppTextInput'
@@ -68,6 +69,10 @@ export function ExercisePickerSheet({
   const [selectedGroup, setSelectedGroup] = useState('')
   const [search, setSearch]               = useState('')
   const [pendingEx, setPendingEx]         = useState<Exercise | null>(null)
+  // Egna övningar skapade i den här sessionen — läggs ovanpå prop-listan
+  // så de syns direkt utan att skalet behöver ladda om
+  const [createdExes, setCreatedExes]     = useState<Exercise[]>([])
+  const [createOpen, setCreateOpen]       = useState(false)
   const [multiSel, setMultiSel]           = useState<Exercise[]>([])
   const [sets, setSets]                   = useState('3')
   const [reps, setReps]                   = useState('10')
@@ -82,7 +87,7 @@ export function ExercisePickerSheet({
     }
   }, [visible, startPage])
 
-  const unique       = [...new Map(exercises.map(e => [e.name.toLowerCase(), e])).values()]
+  const unique       = [...new Map([...exercises, ...createdExes].map(e => [e.name.toLowerCase(), e])).values()]
   const strengthExes = unique.filter(e => e.category === 'strength')
   const otherExes    = unique.filter(e => e.category !== 'strength')
 
@@ -203,6 +208,22 @@ export function ExercisePickerSheet({
         {/* ── GYM — muscle groups ──────────────────────────────────── */}
         {page === 'gym' && (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
+            {/* Saknas övningen? Skapa en egen — den hamnar under sin muskelgrupp */}
+            <TouchableOpacity
+              style={s.createRow}
+              onPress={() => setCreateOpen(true)}
+              activeOpacity={0.75}
+              testID="createExercise"
+            >
+              <View style={s.createIcon}>
+                <Ionicons name="add" size={20} color={ACCENT} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.createTitle}>{t('Skapa egen övning')}</Text>
+                <Text style={s.createSub}>{t('Hittar du inte din övning? Lägg till den själv.')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
+            </TouchableOpacity>
             {GYM_GROUPS.map(group => (
               <TouchableOpacity
                 key={group.key}
@@ -305,7 +326,13 @@ export function ExercisePickerSheet({
                 )
               })}
               {filteredExercises.length === 0 && (
-                <Text style={s.emptyText}>{t('Inga övningar hittades')}</Text>
+                <View style={{ alignItems: 'center', gap: 10 }}>
+                  <Text style={s.emptyText}>{t('Inga övningar hittades')}</Text>
+                  <TouchableOpacity style={s.emptyCreateBtn} onPress={() => setCreateOpen(true)} activeOpacity={0.8} testID="createFromEmpty">
+                    <Ionicons name="add" size={16} color="#000" />
+                    <Text style={s.emptyCreateText}>{t('Skapa "{name}"', { name: search.trim() })}</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </ScrollView>
           </>
@@ -374,6 +401,18 @@ export function ExercisePickerSheet({
         )}
 
       </View>
+
+      <CreateExerciseSheet
+        visible={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={ex => {
+          // Direkt in i listan och till rätt muskelgrupp så den kan väljas
+          setCreatedExes(prev => [...prev, ex])
+          setSelectedGroup(getExerciseMuscleGroup(ex.name))
+          setSearch('')
+          setPage('exercises')
+        }}
+      />
     </Modal>
   )
 }
@@ -511,4 +550,26 @@ const s = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 10,
   },
   confirmBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+
+  // Skapa egen övning
+  createRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: accentAlpha('10'),
+    borderWidth: 1, borderColor: accentAlpha('35'),
+    borderRadius: 16, padding: 14,
+    marginHorizontal: 20, marginBottom: 14,
+  },
+  createIcon: {
+    width: 36, height: 36, borderRadius: 12,
+    backgroundColor: accentAlpha('22'),
+    alignItems: 'center', justifyContent: 'center',
+  },
+  createTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
+  createSub:   { color: TEXT_SECONDARY, fontSize: 12, marginTop: 1 },
+  emptyCreateBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: ACCENT, borderRadius: 999,
+    paddingHorizontal: 16, paddingVertical: 10,
+  },
+  emptyCreateText: { color: '#000', fontSize: 14, fontWeight: '700' },
 })

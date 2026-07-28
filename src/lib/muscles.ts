@@ -42,8 +42,20 @@ const MUSCLE_KEYWORDS: Array<{ words: string[]; slugs: Slug[] }> = [
   { words: ['adductor', 'höftadd'], slugs: ['adductors'] },
 ]
 
+// Egna övningar: muskler väljs explicit vid skapandet istället för
+// nyckelordsmatchning. Registret fylls när övningarna hämtas och
+// konsulteras FÖRE nyckelorden, så muskelkartan funkar för egna namn.
+const CUSTOM_EXERCISE_MUSCLES = new Map<string, Slug[]>()
+
+export function registerExerciseMuscles(name: string, slugs: Slug[]): void {
+  if (slugs.length > 0) CUSTOM_EXERCISE_MUSCLES.set(name.trim().toLowerCase(), slugs)
+}
+
 export function getMusclesForName(name: string): Slug[] {
   const lower = name.toLowerCase()
+  // Egna övningar har explicit valda muskler — de vinner över nyckelorden
+  const custom = CUSTOM_EXERCISE_MUSCLES.get(lower.trim())
+  if (custom) return [...custom]
   const result = new Set<Slug>()
   for (const entry of MUSCLE_KEYWORDS) {
     if (entry.words.some(w => lower.includes(w))) {

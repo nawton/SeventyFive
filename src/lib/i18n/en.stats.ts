@@ -115,7 +115,7 @@ export const EN_STATS: Record<string, string> = {
   'Kunde inte spara': 'Could not save',
   'Kontrollera din anslutning och försök igen.': 'Check your connection and try again.',
   'Dagens uppgifter': 'Today\'s tasks',
-  'Sparar …': 'Saving…',
+  'Sparar …': 'Saving …',
   'Spara': 'Save',
   '{a} av {b}': '{a} of {b}',
   'Redigera': 'Edit',
