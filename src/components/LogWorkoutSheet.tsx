@@ -301,7 +301,7 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.16)',
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
@@ -341,7 +341,8 @@ const s = StyleSheet.create({
   footer: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     paddingHorizontal: 16, paddingTop: 10,
-    backgroundColor: BG, borderTopWidth: 1, borderTopColor: BORDER,
+    backgroundColor: BG,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.16)',
   },
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
