@@ -183,6 +183,8 @@ export const EN_EXERCISES: Record<string, string> = {
   'Träningshjul': 'Ab wheel',
 
   'Alla muskler': 'All muscles',
+  'VANLIGA': 'POPULAR',
+  'ALLA ÖVNINGAR': 'ALL EXERCISES',
   'All utrustning': 'All equipment',
   'Filtrera på utrustning': 'Filter by equipment',
   'Filtrera på muskel': 'Filter by muscle',

@@ -74,6 +74,24 @@ describe('ExercisePickerSheet — infobladet', () => {
   })
 })
 
+describe('ExercisePickerSheet — vanliga övningar', () => {
+  it('VANLIGA-sektionen ligger överst och försvinner vid sökning', () => {
+    mount()
+    expect(screen.getByText('VANLIGA')).toBeOnTheScreen()
+    expect(screen.getByText('ALLA ÖVNINGAR')).toBeOnTheScreen()
+
+    fireEvent.press(screen.getByTestId('muscleFilter'))
+    fireEvent.press(screen.getByTestId('muscle-deltoids'))
+    // Sidolyft är kuraterad som vanlig för axlar
+    expect(screen.getByText('VANLIGA')).toBeOnTheScreen()
+    expect(screen.getByText('Sidolyft')).toBeOnTheScreen()
+
+    fireEvent.changeText(screen.getByPlaceholderText('Sök övning…'), 'sido')
+    expect(screen.queryByText('VANLIGA')).toBeNull()
+    expect(screen.getByText('Sidolyft')).toBeOnTheScreen()
+  })
+})
+
 describe('ExercisePickerSheet — utrustningsfiltret', () => {
   it('filtrerar på redskap och kombineras med muskelfiltret', () => {
     mount()

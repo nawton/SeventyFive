@@ -28,6 +28,42 @@ import { GlassCircleButton } from '@/components/GlassButton'
 
 type Page = 'landing' | 'gym' | 'cardio' | 'exercises'
 
+// Vanliga övningar som visas överst — kuraterade per muskel plus en
+// generell topplista. Namnen är bibliotekets kanoniska svenska namn;
+// de som inte finns i datan filtreras tyst bort.
+const POPULAR: Record<string, string[]> = {
+  all: ['Bänkpress', 'Knäböj', 'Marklyft', 'Latsdrag framifrån', 'Militärpress',
+        'Bicepscurl', 'Tricepsstötning kabel', 'Benpress', 'Sidolyft', 'Kabelrodd sittande'],
+  chest: ['Bänkpress', 'Hantelpress liggande', 'Lutande bänkpress', 'Lutande hantelpress',
+          'Kabelkorsning', 'Flyes med hantlar', 'Push-ups', 'Dips', 'Kabelflyes', 'Pec deck'],
+  'upper-back': ['Latsdrag framifrån', 'Pull-ups', 'Rodd med skivstång', 'Kabelrodd sittande',
+                 'Enarms hantelrodd', 'T-bar rodd', 'Chin-ups', 'Latsdrag smalt grepp',
+                 'Stående kabelrodd', 'Face pulls'],
+  'lower-back': ['Marklyft', 'Rumänsk marklyft', 'Hyperextensions', 'Good mornings',
+                 'Rack pull', 'Sumo marklyft', 'Genomdrag med kabel', 'Kettlebell swing'],
+  trapezius: ['Shrugs med skivstång', 'Shrugs med hantlar', 'Upright row', 'Face pulls',
+              'Marklyft', 'Rack pull', 'Frivändning', 'Farmers walk'],
+  deltoids: ['Militärpress', 'Hantelpress axlar', 'Sidolyft', 'Frontlyft', 'Bakre deltalyft',
+             'Arnold press', 'Axellyft med kabel', 'Omvänd flyes', 'Push press', 'Upright row'],
+  biceps: ['Bicepscurl', 'Hammercurl', 'Kabelbiceps', 'Preacher curl', 'Koncentrationscurl',
+           'Chin-ups', 'Enarms kabelcurl', 'Kabelcurl med rep'],
+  triceps: ['Tricepsstötning kabel', 'Tricepsstötning med rep', 'Smalbänkpress', 'Dips',
+            'Skull crushers', 'Kabeltriceps över huvud', 'Triceps kickback', 'Tricepspress smal'],
+  forearm: ['Handledscurl', 'Hammercurl', 'Farmers walk', 'Bicepscurl'],
+  abs: ['Plankan', 'Situps', 'Crunches', 'Hängande benlyft', 'Kabelcrunch', 'Russian twist',
+        'Mountain climbers', 'Benlyft liggande', 'Ab wheel', 'Sidoplanka'],
+  obliques: ['Russian twist', 'Sidoplanka', 'Kabelvridning', 'Pallof press', 'Hängande benlyft'],
+  quadriceps: ['Knäböj', 'Benpress', 'Utfall', 'Benextension', 'Front squat', 'Bulgariska utfall',
+               'Hack squat', 'Goblet squat', 'Steg-ups', 'Box squat'],
+  hamstring: ['Rumänsk marklyft', 'Bencurl liggande', 'Sittande bencurl', 'Marklyft',
+              'Good mornings', 'Nordic curl', 'Genomdrag med kabel', 'Kettlebell swing'],
+  gluteal: ['Hip thrust', 'Knäböj', 'Utfall', 'Rumänsk marklyft', 'Bulgariska utfall',
+            'Glute kickback i kabel', 'Genomdrag med kabel', 'Sumo marklyft', 'Steg-ups'],
+  adductors: ['Sumo marklyft', 'Bulgariska utfall', 'Utfall'],
+  calves: ['Vadpress stående', 'Sittande vadpress'],
+  tibialis: [],
+}
+
 const EQUIP_SLIDE = 520
 const EQUIP_SPRING = { damping: 20, stiffness: 220, mass: 0.8 } as const
 
@@ -215,6 +251,24 @@ export function ExercisePickerSheet({
         t(e.name).toLowerCase().includes(search.toLowerCase()))
     : equipExercises
 
+  // Vanliga överst (utan sökning): kuraterade träffar först, resten under
+  type ListItem = { kind: 'header'; title: string } | { kind: 'ex'; ex: Exercise }
+  const listData: ListItem[] = (() => {
+    if (search.trim()) return filteredExercises.map(ex => ({ kind: 'ex' as const, ex }))
+    const wanted = POPULAR[muscleFilter] ?? []
+    const byName = new Map(filteredExercises.map(e => [e.name, e]))
+    const popular = wanted.map(n => byName.get(n)).filter((e): e is Exercise => !!e)
+    if (popular.length === 0) return filteredExercises.map(ex => ({ kind: 'ex' as const, ex }))
+    const popIds = new Set(popular.map(e => e.id))
+    const rest = filteredExercises.filter(e => !popIds.has(e.id))
+    return [
+      { kind: 'header' as const, title: 'VANLIGA' },
+      ...popular.map(ex => ({ kind: 'ex' as const, ex })),
+      { kind: 'header' as const, title: 'ALLA ÖVNINGAR' },
+      ...rest.map(ex => ({ kind: 'ex' as const, ex })),
+    ]
+  })()
+
   const equipOptions = (Object.keys(EQUIPMENT_LABELS) as ExerciseEquipment[])
     .filter(k => strengthExes.some(e => e.equipment === k))
 
@@ -382,14 +436,18 @@ export function ExercisePickerSheet({
 
             <FlatList
               style={{ flex: 1 }}
-              data={filteredExercises}
-              keyExtractor={ex => ex.id}
+              data={listData}
+              keyExtractor={item => item.kind === 'header' ? `h-${item.title}` : item.ex.id}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
               keyboardShouldPersistTaps="handled"
-              initialNumToRender={12}
+              initialNumToRender={14}
               windowSize={7}
-              renderItem={({ item: ex }) => {
+              renderItem={({ item }) => {
+                if (item.kind === 'header') {
+                  return <Text style={s.sectionHeader}>{t(item.title)}</Text>
+                }
+                const ex = item.ex
                 const on = multiSelect && multiSel.some(e => e.id === ex.id)
                 return (
                   <TouchableOpacity
