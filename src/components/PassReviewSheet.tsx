@@ -277,7 +277,7 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries: initi
             <GestureHandlerRootView style={s.editRoot}>
               <Pressable style={s.editBackdrop} onPress={closeEdit} testID="editBackdrop" />
               <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <Animated.View style={[s.editSheet, { paddingBottom: insets.bottom + 16 }, editSheetStyle]}>
+                <Animated.View style={[s.editSheet, { backgroundColor: T.BG, borderColor: T.BORDER, paddingBottom: insets.bottom + 16 }, editSheetStyle]}>
                   {/* Handtaget och rubriken äger nedsvepet, inte inmatningsfälten */}
                   <GestureDetector gesture={editDrag}>
                     <View style={s.editDragArea}>
@@ -427,9 +427,10 @@ const s = StyleSheet.create({
 
   editRoot: { flex: 1, justifyContent: 'flex-end' },
   editBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
+  // Färgerna sätts inline som strängar: Reanimated kraschar på dynamiska
   editSheet: {
-    backgroundColor: BG, borderTopLeftRadius: 22, borderTopRightRadius: 22,
-    borderWidth: 1, borderColor: BORDER, paddingHorizontal: 20, paddingTop: 10,
+    borderTopLeftRadius: 22, borderTopRightRadius: 22,
+    borderWidth: 1, paddingHorizontal: 20, paddingTop: 10,
     maxHeight: 560,
   },
   editDragArea: { alignItems: 'center', paddingBottom: 4 },
