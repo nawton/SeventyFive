@@ -43,7 +43,7 @@ function timeAgo(iso: string, t: TFn): string {
 
 export function GroupPosts({
   group, me, isOwner,
-  workoutPosts = [], workoutSocial = {},
+  workoutPosts = [], workoutSocial = {}, workoutMeta = {},
   onToggleWorkoutLike = () => {}, onOpenWorkout = () => {}, onOpenWorkoutComments = () => {},
   avatarPressFor = () => undefined, menuFor = () => undefined,
   hasMore = false, loadingMore = false, onLoadMore = () => {}, feedNote,
@@ -54,6 +54,8 @@ export function GroupPosts({
   /** Medlemmarnas pass, blandas in kronologiskt (tomt när flödet är av) */
   workoutPosts?: FeedPost[]
   workoutSocial?: Record<string, PostSocial>
+  /** Granskningens titel/kommentar per inläggs-id */
+  workoutMeta?: Record<string, { title: string | null; note: string | null; photo_path: string | null }>
   onToggleWorkoutLike?: (p: FeedPost) => void
   onOpenWorkout?: (p: FeedPost) => void
   onOpenWorkoutComments?: (p: FeedPost) => void
@@ -313,6 +315,7 @@ export function GroupPosts({
           <FeedWorkoutCard
             key={`w-${item.post.id}`}
             post={item.post}
+            meta={workoutMeta[item.post.id]}
             onOpen={onOpenWorkout}
             onAvatarPress={avatarPressFor(item.post)}
             social={workoutSocial[item.post.id]}

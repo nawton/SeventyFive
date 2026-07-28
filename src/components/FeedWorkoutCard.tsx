@@ -195,8 +195,10 @@ export interface PostSocialState {
   comments: number
 }
 
-export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleLike, onOpenComments, onMenuPress }: {
+export function FeedWorkoutCard({ post, meta, onOpen, onAvatarPress, social, onToggleLike, onOpenComments, onMenuPress }: {
   post: FeedPost
+  /** Granskningens titel och kommentar — ersätter dygnsrubriken när de finns */
+  meta?: { title: string | null; note: string | null } | null
   onOpen: (post: FeedPost) => void
   /** Utelämnas när avataren inte ska leda någonstans (t.ex. på atletens egen sida) */
   onAvatarPress?: () => void
@@ -259,7 +261,8 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
 
       <View style={s.cardDivider} />
 
-      <Text style={s.cardTitle}>{dayPartTitle(post.createdAt)}</Text>
+      <Text style={s.cardTitle}>{meta?.title || dayPartTitle(post.createdAt)}</Text>
+      {meta?.note ? <Text style={s.cardNote} numberOfLines={3}>{meta.note}</Text> : null}
       {post.kind === 'cardio' ? (
         <View style={s.statsRow}>
           <Stat value={post.distanceKm.toFixed(2).replace('.', ',')} label={t('km')} />
@@ -384,6 +387,10 @@ const s = StyleSheet.create({
   cardTitle: {
     color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800',
     paddingHorizontal: 16, paddingTop: 14,
+  },
+  cardNote: {
+    color: TEXT_SECONDARY, fontSize: 14, lineHeight: 19,
+    paddingHorizontal: 16, paddingTop: 4,
   },
   statsRow: {
     flexDirection: 'row', justifyContent: 'space-between',

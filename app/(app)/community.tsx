@@ -29,6 +29,7 @@ import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import {
   FeedWorkoutCard, FeedAvatar, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
 } from '@/components/FeedWorkoutCard'
+import { getPassMetaForPosts } from '@/services/gymPassMeta'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings, THEME_DARK, useCardChrome, ACCENT_CONTRAST } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -115,10 +116,12 @@ export default function CommunityScreen() {
   }, [cardioRows, strengthRows, authors])
 
   // Gillanden/kommentarsantal följer med när inläggen ändras
+  const [passMeta, setPassMeta] = useState<Record<string, { title: string | null; note: string | null; photo_path: string | null }>>({})
   const postIdsKey = posts.map(p => p.id).join(',')
   useEffect(() => {
     if (posts.length === 0) return
     getFeedSocial(posts.map(p => p.id)).then(setSocial).catch(() => {})
+    getPassMetaForPosts(posts).then(setPassMeta).catch(() => {})
     // postIdsKey fångar ändringar i uppsättningen — posts-referensen byts varje build
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postIdsKey])
@@ -333,6 +336,7 @@ export default function CommunityScreen() {
           renderItem={({ item }) => (
             <FeedWorkoutCard
               post={item}
+              meta={passMeta[item.id]}
               onOpen={setSelected}
               social={social[item.id]}
               onToggleLike={() => toggleLike(item)}

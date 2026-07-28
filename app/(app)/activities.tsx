@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { View, Text, StyleSheet, FlatList, Modal } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
@@ -14,6 +14,7 @@ import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import {
   FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
 } from '@/components/FeedWorkoutCard'
+import { getPassMetaForPosts } from '@/services/gymPassMeta'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
@@ -73,6 +74,14 @@ export default function ActivitiesScreen() {
     return () => { alive = false }
   }, [otherId, paramName, paramAvatar]))
 
+  const [passMeta, setPassMeta] = useState<Record<string, { title: string | null; note: string | null; photo_path: string | null }>>({})
+  const postIdsKey = posts.map(p => p.id).join(',')
+  useEffect(() => {
+    if (posts.length === 0) return
+    getPassMetaForPosts(posts).then(setPassMeta).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postIdsKey])
+
   return (
     <SafeScreen style={s.screen}>
       <View style={s.header}>
@@ -106,7 +115,7 @@ export default function ActivitiesScreen() {
         keyExtractor={p => p.id}
         renderItem={({ item }) => (
           // Ingen avatarnavigering — vi är redan på atletens sidor
-          <FeedWorkoutCard post={item} onOpen={setSelected} />
+          <FeedWorkoutCard post={item} meta={passMeta[item.id]} onOpen={setSelected} />
         )}
         contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}

@@ -12,6 +12,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import {
   FeedAvatar, FeedWorkoutCard, workoutToPost, strengthToPosts, mergePosts, type FeedPost,
 } from '@/components/FeedWorkoutCard'
+import { getPassMetaForPosts } from '@/services/gymPassMeta'
 import { GroupEditSheet } from '@/components/GroupEditSheet'
 import { GroupInviteSheet } from '@/components/GroupInviteSheet'
 import { fetchGroupFeedPage, FEED_PAGE_SIZE, type FeedPage } from '@/services/feed'
@@ -214,10 +215,12 @@ export default function GroupScreen() {
       .slice(0, 10)
   }, [board, group])
 
+  const [passMeta, setPassMeta] = useState<Record<string, { title: string | null; note: string | null; photo_path: string | null }>>({})
   const postIdsKey = posts.map(p => p.id).join(',')
   useEffect(() => {
     if (posts.length === 0) return
     getFeedSocial(posts.map(p => p.id)).then(setSocial).catch(() => {})
+    getPassMetaForPosts(posts).then(setPassMeta).catch(() => {})
     // postIdsKey fångar ändringar i uppsättningen — posts-referensen byts varje build
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postIdsKey])
@@ -571,6 +574,7 @@ export default function GroupScreen() {
             isOwner={isOwner}
             workoutPosts={group.show_feed ? posts : []}
             workoutSocial={social}
+            workoutMeta={passMeta}
             onToggleWorkoutLike={toggleLike}
             onOpenWorkout={setSelected}
             onOpenWorkoutComments={openPost}

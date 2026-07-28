@@ -37,6 +37,36 @@ export async function getPassMeta(userId: string, workoutDate: string, passKey =
   return data
 }
 
+/** Titel och kommentar för flödeskorten: en fråga för alla synliga
+    inlägg, RLS filtrerar bort det betraktaren inte får se. Nycklas på
+    inläggets id. */
+export async function getPassMetaForPosts(posts: Array<{
+  id: string
+  kind: string
+  authorId: string
+  workoutDate?: string
+  passKey?: string
+}>): Promise<Record<string, { title: string | null; note: string | null; photo_path: string | null }>> {
+  const gym = posts.filter(p => p.kind === 'strength' && p.workoutDate)
+  if (gym.length === 0) return {}
+  const userIds = [...new Set(gym.map(p => p.authorId))]
+  const { data, error } = await supabase
+    .from('gym_pass_meta')
+    .select('user_id, workout_date, pass_key, title, note, photo_path')
+    .in('user_id', userIds)
+  if (error || !data) return {}
+  const byKey = new Map<string, GymPassMeta>()
+  for (const m of data as GymPassMeta[]) byKey.set(`${m.user_id}|${m.workout_date}|${m.pass_key}`, m)
+  const out: Record<string, { title: string | null; note: string | null; photo_path: string | null }> = {}
+  for (const p of gym) {
+    const m = byKey.get(`${p.authorId}|${p.workoutDate}|${p.passKey ?? ''}`)
+    if (m && (m.title || m.note || m.photo_path)) {
+      out[p.id] = { title: m.title, note: m.note, photo_path: m.photo_path }
+    }
+  }
+  return out
+}
+
 /** Sparar granskningen. Tom titel/kommentar lagras som null, fotot laddas
     upp först så en misslyckad uppladdning aldrig lämnar en rad utan bild. */
 export async function savePassMeta(params: {

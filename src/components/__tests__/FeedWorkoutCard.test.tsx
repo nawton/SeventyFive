@@ -59,4 +59,16 @@ describe('FeedWorkoutCard — gympassets övningsförhandsvisning', () => {
     expect(screen.getByTestId('preview-w1')).toBeOnTheScreen()
     expect(screen.getByTestId('preview-w3')).toBeOnTheScreen()
   })
+
+  it('granskningens titel ersätter dygnsrubriken och kommentaren visas under', () => {
+    render(
+      <FeedWorkoutCard
+        post={POST}
+        meta={{ title: 'Tungt benpass', note: 'Sjukt bra pass' }}
+        onOpen={jest.fn()}
+      />,
+    )
+    expect(screen.getByText('Tungt benpass')).toBeOnTheScreen()
+    expect(screen.getByText('Sjukt bra pass')).toBeOnTheScreen()
+  })
 })
