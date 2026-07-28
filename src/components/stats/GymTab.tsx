@@ -66,7 +66,7 @@ export function GymTab({
   const insets = useSafeAreaInsets()
 
   const [bodyView, setBodyView]                 = useState<'front' | 'back'>('front')
-  const [gymDetail, setGymDetail] = useState<{ name: string; dateLabel: string; planned: string[]; logged: StrengthWorkout[] } | null>(null)
+  const [gymDetail, setGymDetail] = useState<{ name: string; dateLabel: string; planned: string[]; logged: StrengthWorkout[]; workoutDate?: string; passKey?: string } | null>(null)
   const [muscleOpen, setMuscleOpen] = useState(false)
   const [sessionsOpen, setSessionsOpen] = useState(false)
   const [volumeOpen, setVolumeOpen] = useState(false)
@@ -264,15 +264,19 @@ export function GymTab({
   }, [strengthWorkouts])
   const hasGymRecords = recTopLift !== null || recWeekSets > 0
 
-  // Öppnar gympassdetaljen för alla loggade övningar ett visst datum
+  // Öppnar gympassdetaljen för alla loggade övningar ett visst datum.
+  // Delar alla rader en pass-nyckel följer titel/kommentar/foto med.
   function openGymDay(date: string, title: string) {
     const logged = strengthWorkouts.filter(w =>
       (w.data.workout_date ?? toLocalDateString(new Date(w.created_at))) === date)
+    const keys = new Set(logged.map(w => w.data.pass_key ?? ''))
     setGymDetail({
       name: title,
       dateLabel: parseLocalDate(date).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }),
       planned: [],
       logged,
+      workoutDate: date,
+      passKey: keys.size === 1 ? [...keys][0] : '',
     })
   }
 
@@ -286,6 +290,9 @@ export function GymTab({
       logged={gymDetail.logged}
       plannedNames={gymDetail.planned}
       allWorkouts={strengthWorkouts}
+      ownerId={userId ?? undefined}
+      workoutDate={gymDetail.workoutDate}
+      passKey={gymDetail.passKey}
       onClose={() => setGymDetail(null)}
     />
   )
@@ -680,15 +687,24 @@ export function GymTab({
                         style={s.gymRow}
                         activeOpacity={0.7}
                         onPress={() => {
-                          const logged = strengthWorkouts.filter(w => {
+                          const dayRows = strengthWorkouts.filter(w => {
                             const wDate = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
                             return wDate === gs.completedDate && gs.exercises.includes(w.data.exercise_name)
                           })
+                          // Två pass samma dag: nyckeln skiljer dem åt så
+                          // raderna inte dubbleras i båda detaljvyerna
+                          const keys = [...new Set(dayRows.map(w => w.data.pass_key ?? ''))]
+                          const passKey = keys.length === 1 ? keys[0] : ''
+                          const logged = keys.length === 1
+                            ? dayRows
+                            : dayRows.filter(w => (w.data.pass_key ?? '') === passKey)
                           setGymDetail({
                             name: gs.sessionName,
                             dateLabel: new Date(gs.completedDate + 'T12:00:00').toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }),
                             planned: gs.exercises,
-                            logged,
+                            logged: logged.length > 0 ? logged : dayRows,
+                            workoutDate: gs.completedDate,
+                            passKey,
                           })
                         }}
                       >

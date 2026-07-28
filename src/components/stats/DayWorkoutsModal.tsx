@@ -15,6 +15,7 @@ import { getTasksForDay, updateDayTasks, type DaySummary, type TaskItem } from '
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
 import { GymSummaryView } from './GymSummaryView'
+import { supabase } from '@/lib/supabase'
 import { useT, dateLocale } from '@/lib/i18n'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -177,7 +178,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
   // går att dra upp listan över kortet, även med få övningar.
   const [tasks, setTasks] = useState<TaskItem[] | null>(null)
   // Gympassets detaljvy — samma Apple-stil som cardiopassens
-  const [gymDetail, setGymDetail] = useState<{ name: string; planned: string[]; logged: StrengthWorkout[] } | null>(null)
+  const [gymDetail, setGymDetail] = useState<{ name: string; planned: string[]; logged: StrengthWorkout[]; passKey?: string } | null>(null)
   const showTasks = !!tasks && tasks.length > 0
   useEffect(() => {
     if (!challengeId || day.status === 'future') return
@@ -235,6 +236,12 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
 
   const sheetStyle    = useAnimatedStyle(() => ({ top: sheetTop.value }))
   const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropAnim.value }))
+
+  // Ägaren behövs för passmetadatan (titel/kommentar/foto) i detaljvyn
+  const [ownUserId, setOwnUserId] = useState<string | null>(null)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setOwnUserId(data.session?.user.id ?? null)).catch(() => {})
+  }, [])
 
   const date    = dayDate(startDate, day.dayNumber)
   const dateIso = toLocalDateString(date)
@@ -381,21 +388,25 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                       // visas UNDER passet — inte en gång till som egna rader
                       const claimed = new Set<string>()
                       const passBlocks = gymSessions.map(c => {
-                        const sub = dayStrength.filter(w =>
+                        const cand = dayStrength.filter(w =>
                           !claimed.has(w.id) && c.exerciseNames.includes(w.data.exercise_name)
                         )
+                        // Ett block = en pass-nyckel: kör man samma pass två
+                        // gånger samma dag tar första blocket bara sin nyckel
+                        const keys = [...new Set(cand.map(w => w.data.pass_key ?? ''))]
+                        const sub = keys.length <= 1 ? cand : cand.filter(w => (w.data.pass_key ?? '') === keys[0])
                         sub.forEach(w => claimed.add(w.id))
-                        return { c, sub }
+                        return { c, sub, passKey: sub[0]?.data.pass_key ?? '' }
                       })
                       const loose = dayStrength.filter(w => !claimed.has(w.id))
                       return (
                         <>
-                          {passBlocks.map(({ c, sub }, i) => (
+                          {passBlocks.map(({ c, sub, passKey }, i) => (
                             <View key={c.id} style={[(i < passBlocks.length - 1 || loose.length > 0) && s.itemBorder, { paddingVertical: 6 }]}>
                               <TouchableOpacity
                                 style={s.item}
                                 activeOpacity={0.7}
-                                onPress={() => setGymDetail({ name: c.name, planned: c.exerciseNames, logged: sub })}
+                                onPress={() => setGymDetail({ name: c.name, planned: c.exerciseNames, logged: sub, passKey })}
                               >
                                 <View style={s.itemIcon}><Ionicons name="barbell-outline" size={18} color={ACCENT} /></View>
                                 <View style={s.itemBody}>
@@ -468,6 +479,9 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
             logged={gymDetail.logged}
             plannedNames={gymDetail.planned}
             allWorkouts={strengthWorkouts}
+            ownerId={gymDetail.passKey !== undefined ? ownUserId ?? undefined : undefined}
+            workoutDate={gymDetail.passKey !== undefined ? dateIso : undefined}
+            passKey={gymDetail.passKey}
             onClose={() => setGymDetail(null)}
           />
         )}

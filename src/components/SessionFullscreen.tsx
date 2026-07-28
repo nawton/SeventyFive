@@ -415,7 +415,8 @@ export function SessionFullscreen({
         setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
         clearPassStart(`${session.id}:${date}`).catch(() => {})
         clearPassDraft(`${session.id}:${date}`).catch(() => {})
-        snapshotReview([], elapsed, undefined, `${session.id}:${date}:${Date.now()}`)
+        // Inga rader sparas här — metan läggs på dagsnivå (tom nyckel)
+        snapshotReview([], elapsed, undefined, '')
         requestEffort(() => {
           onComplete()
           onClose()

@@ -4,7 +4,7 @@ import { DayWorkoutsModal } from '../stats/DayWorkoutsModal'
 import { getTasksForDay, updateDayTasks, type DaySummary, type TaskItem } from '@/services/dailyLog'
 
 jest.mock('@/lib/supabase', () => ({
-  supabase: { from: jest.fn(), auth: { getSession: jest.fn() }, channel: jest.fn(), removeChannel: jest.fn() },
+  supabase: { from: jest.fn(), auth: { getSession: jest.fn().mockResolvedValue({ data: { session: { user: { id: 'u1' } } } }) }, channel: jest.fn(), removeChannel: jest.fn() },
 }))
 jest.mock('@/services/dailyLog', () => ({
   getTasksForDay: jest.fn(),

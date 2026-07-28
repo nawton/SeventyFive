@@ -50,10 +50,13 @@ export async function getPassMetaForPosts(posts: Array<{
   const gym = posts.filter(p => p.kind === 'strength' && p.workoutDate)
   if (gym.length === 0) return {}
   const userIds = [...new Set(gym.map(p => p.authorId))]
+  const dates = gym.map(p => p.workoutDate!).sort()
   const { data, error } = await supabase
     .from('gym_pass_meta')
     .select('user_id, workout_date, pass_key, title, note, photo_path')
     .in('user_id', userIds)
+    .gte('workout_date', dates[0])
+    .lte('workout_date', dates[dates.length - 1])
   if (error || !data) return {}
   const byKey = new Map<string, GymPassMeta>()
   for (const m of data as GymPassMeta[]) byKey.set(`${m.user_id}|${m.workout_date}|${m.pass_key}`, m)
