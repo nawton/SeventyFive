@@ -26,7 +26,7 @@ beforeEach(() => {
 describe('SetupScheduleScreen', () => {
   it('visar sista steget med de tre punkterna och stängd wizard', () => {
     render(<SetupScheduleScreen />)
-    expect(screen.getByText('STEG 4 AV 4')).toBeOnTheScreen()
+    expect(screen.getByText('STEG 5 AV 5')).toBeOnTheScreen()
     expect(screen.getByText('Välj ditt mål')).toBeOnTheScreen()
     expect(screen.getByText('Veckan planeras åt dig')).toBeOnTheScreen()
     expect(screen.getByText('Färdiga pass')).toBeOnTheScreen()

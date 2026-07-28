@@ -144,7 +144,7 @@ export default function RecommendationScreen() {
 
   return (
     <OnboardingStep
-      step={3}
+      step={4}
       title={t('Välj din nivå')}
       subtitle={t('Nivåerna skiljer sig mycket åt. Läs igenom vad som krävs innan du bestämmer dig.')}
       onBack={() => router.back()}

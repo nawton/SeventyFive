@@ -104,6 +104,9 @@ export const EN_AUTH: Record<string, string> = {
   'Skapa bättre rutiner': 'Create better routines',
   'Ditt svar hjälper oss att forma din utmaning.': 'Your answer helps us shape your challenge.',
   'Välj nivå': 'Choose level',
+  'Vem ska visas i muskelvyerna?': 'Who should appear in the muscle views?',
+  'Statistiken markerar musklerna du tränat på en figur. Välj den som känns som du.': 'Your stats highlight the muscles you trained on a figure. Pick the one that feels like you.',
+  'Påverkar bara figuren i vyerna, aldrig din statistik. Du kan byta när som helst under Allmänt.': 'Only changes the figure in the views, never your stats. You can switch anytime under General.',
 
   // ─── recommendation.tsx ──────────────────────────────────────
   'Något gick fel': 'Something went wrong',

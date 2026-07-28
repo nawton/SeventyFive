@@ -368,7 +368,7 @@ export default function GeneralScreen() {
           />
         </Section>
 
-        <Section title={t('Språk')}>
+        <Section title={t('Anpassning')}>
           <SettingRow
             icon="language-outline"
             label={t('Språk')}

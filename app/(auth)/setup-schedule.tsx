@@ -60,7 +60,7 @@ export default function SetupScheduleScreen() {
   return (
     <>
       <OnboardingStep
-        step={4}
+        step={5}
         title={t('Ditt träningsschema')}
         subtitle={t('Svara på några snabba frågor så bygger vi ett veckoschema med färdiga pass, anpassat efter ditt mål. Du kan ändra allt när som helst.')}
         footer={

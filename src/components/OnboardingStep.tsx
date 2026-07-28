@@ -22,7 +22,7 @@ export const ONB = {
   ORANGE_DEEP: '#FF7A1A',
 } as const
 
-export function OnboardingStep({ step, total = 4, title, subtitle, onBack, scroll, children, footer }: {
+export function OnboardingStep({ step, total = 5, title, subtitle, onBack, scroll, children, footer }: {
   step: number
   total?: number
   title: string
