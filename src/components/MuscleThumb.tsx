@@ -27,10 +27,15 @@ export const MuscleThumb = memo(function MuscleThumb({ slug, size = 52, color, t
   const [bodyH, setBodyH] = useState(0)
   const frac = MUSCLE_CENTER[slug] ?? 0.35
   return (
-    <View style={[
-      s.thumb,
-      { width: size, height: size, borderRadius: size / 2, backgroundColor: `${color}${tintAlpha}` },
-    ]}>
+    // pointerEvents none: SVG-kroppens paths har egna tryckhanterare som
+    // annars sväljer trycket innan det når knappen som omger miniatyren
+    <View
+      pointerEvents="none"
+      style={[
+        s.thumb,
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: `${color}${tintAlpha}` },
+      ]}
+    >
       <View
         onLayout={e => setBodyH(e.nativeEvent.layout.height)}
         style={{ transform: [{ translateY: bodyH ? (0.5 - frac) * bodyH : 0 }] }}

@@ -41,14 +41,57 @@ const GroupBodyThumb = memo(function GroupBodyThumb({ slugs, side, color, scale 
   scale: number
 }) {
   return (
-    <Body
-      data={slugs.map(sl => ({ slug: sl, intensity: 1 as const }))}
-      side={side}
-      gender="male"
-      scale={scale}
-      colors={[color]}
-      defaultFill="#3A3A3C"
-    />
+    <View pointerEvents="none">
+      <Body
+        data={slugs.map(sl => ({ slug: sl, intensity: 1 as const }))}
+        side={side}
+        gender="male"
+        scale={scale}
+        colors={[color]}
+        defaultFill="#3A3A3C"
+      />
+    </View>
+  )
+})
+
+// Hela filterkortet memoiserat med primitiva props — ett tryck ritar bara om
+// de två kort vars aktiv-status ändras, aldrig SVG-kropparna
+const SubFilterCard = memo(function SubFilterCard({ value, label, active, accent, dimText, tintBg, side, slugs, onPick }: {
+  value: Slug | 'all'
+  label: string
+  active: boolean
+  accent: string
+  dimText: string
+  tintBg: string
+  side: 'front' | 'back'
+  slugs: Slug[]
+  onPick: (v: Slug | 'all') => void
+}) {
+  return (
+    <TouchableOpacity
+      style={s.subCard}
+      onPress={() => { Haptics.selectionAsync(); onPick(value) }}
+      activeOpacity={0.75}
+      testID={`subMuscle-${value}`}
+    >
+      <View style={[s.subThumbRing, active && { borderColor: accent }]}>
+        {value === 'all' ? (
+          <View style={[s.subAllThumb, { backgroundColor: tintBg }]}>
+            <GroupBodyThumb slugs={slugs} side={side} color={accent} scale={0.22} />
+          </View>
+        ) : (
+          <MuscleThumb slug={value} size={48} color={accent} />
+        )}
+      </View>
+      <Text
+        style={[s.subCardText, { color: active ? accent : dimText }, active && { fontWeight: '700' }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
   )
 })
 
@@ -320,41 +363,30 @@ export function ExercisePickerSheet({
                   contentContainerStyle={s.subMuscleRow}
                 >
                   {/* Alla: hela gruppens muskler tända i en helkroppsvy */}
-                  <TouchableOpacity
-                    style={s.subCard}
-                    onPress={() => { Haptics.selectionAsync(); setSubMuscle('all') }}
-                    activeOpacity={0.75}
-                    testID="subMuscle-all"
-                  >
-                    <View style={[s.subThumbRing, subMuscle === 'all' && { borderColor: T.ACCENT }]}>
-                      <View style={[s.subAllThumb, { backgroundColor: tint('14') }]}>
-                        <GroupBodyThumb slugs={slugs} side={group.side} color={T.ACCENT} scale={0.22} />
-                      </View>
-                    </View>
-                    <Text style={[s.subCardText, { color: subMuscle === 'all' ? T.ACCENT : T.TEXT_SECONDARY }, subMuscle === 'all' && { fontWeight: '700' }]}>
-                      {t('Alla')}
-                    </Text>
-                  </TouchableOpacity>
+                  <SubFilterCard
+                    value="all"
+                    label={t('Alla')}
+                    active={subMuscle === 'all'}
+                    accent={T.ACCENT}
+                    dimText={T.TEXT_SECONDARY}
+                    tintBg={tint('14')}
+                    side={group.side}
+                    slugs={slugs}
+                    onPick={setSubMuscle}
+                  />
                   {slugs.map(sl => (
-                    <TouchableOpacity
+                    <SubFilterCard
                       key={sl}
-                      style={s.subCard}
-                      onPress={() => { Haptics.selectionAsync(); setSubMuscle(sl) }}
-                      activeOpacity={0.75}
-                      testID={`subMuscle-${sl}`}
-                    >
-                      <View style={[s.subThumbRing, subMuscle === sl && { borderColor: T.ACCENT }]}>
-                        <MuscleThumb slug={sl} size={48} color={T.ACCENT} />
-                      </View>
-                      <Text
-                        style={[s.subCardText, { color: subMuscle === sl ? T.ACCENT : T.TEXT_SECONDARY }, subMuscle === sl && { fontWeight: '700' }]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.8}
-                      >
-                        {t(SLUG_LABELS[sl])}
-                      </Text>
-                    </TouchableOpacity>
+                      value={sl}
+                      label={t(SLUG_LABELS[sl])}
+                      active={subMuscle === sl}
+                      accent={T.ACCENT}
+                      dimText={T.TEXT_SECONDARY}
+                      tintBg={tint('14')}
+                      side={group.side}
+                      slugs={slugs}
+                      onPick={setSubMuscle}
+                    />
                   ))}
                 </ScrollView>
               )
@@ -626,7 +658,9 @@ const s = StyleSheet.create({
   confirmBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 
   // Delmuskelfiltret — SVG-kort som visar VAR muskeln sitter
-  subMuscleBar: { flexGrow: 0, marginBottom: 6 },
+  // Fast höjd: horisontella ScrollViews mäter inte barnhöjd pålitligt,
+  // utan den klipps texten under cirklarna bort
+  subMuscleBar: { flexGrow: 0, height: 88, marginBottom: 6 },
   subMuscleRow: { paddingHorizontal: 20, gap: 10, paddingVertical: 2, paddingBottom: 6, alignItems: 'flex-start' },
   subCard: { alignItems: 'center', gap: 6, width: 70 },
   subThumbRing: {
