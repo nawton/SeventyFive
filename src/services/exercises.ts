@@ -69,11 +69,23 @@ export const DIFFICULTY_COLORS: Record<ExerciseDifficulty, string> = {
 }
 
 export async function getExercises(): Promise<Exercise[]> {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('exercises')
     .select('id, name, description, category, difficulty, video_url, user_id, equipment, primary_muscle, other_muscles, exercise_type')
     .order('category')
     .order('name')
+
+  // 42703 = kolumnerna för egna övningar finns inte ännu (migrationen inte
+  // körd) — fall tillbaka på bibliotekskolumnerna så listan aldrig blir tom
+  if (error && error.code === '42703') {
+    const legacy = await supabase
+      .from('exercises')
+      .select('id, name, description, category, difficulty, video_url')
+      .order('category')
+      .order('name')
+    data = legacy.data as typeof data
+    error = legacy.error
+  }
 
   if (error) throw error
   const exercises: Exercise[] = data ?? []

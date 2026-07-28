@@ -21,6 +21,15 @@ describe('getExercises', () => {
     expect(argsOf(calls, 'exercises', 'order')).toEqual([['category'], ['name']])
   })
 
+  it('utan migrationen (42703) faller hämtningen tillbaka på bibliotekskolumnerna', async () => {
+    const rows = [{ id: 'e1', name: 'Bänkpress', category: 'strength' }]
+    installTables(fromMock, { exercises: [
+      { data: null, error: { code: '42703', message: 'column exercises.user_id does not exist' } },
+      { data: rows, error: null },
+    ] })
+    expect(await getExercises()).toEqual(rows)
+  })
+
   it('null-data blir tom lista och fel kastas vidare', async () => {
     installTables(fromMock, { exercises: { data: null, error: null } })
     expect(await getExercises()).toEqual([])
