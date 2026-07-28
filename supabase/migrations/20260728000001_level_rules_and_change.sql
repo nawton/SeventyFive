@@ -111,7 +111,10 @@ UPDATE task_templates SET
   description = 'Ta ett framstegsfoto varje dag.'
 WHERE level_id = 'a1b2c3d4-0003-0003-0003-000000000003' AND type = 'photo' AND user_id IS NULL;
 
--- Kalla duschen är ny på Extreme — läggs bara till om den saknas
+-- Kalla duschen är ny på Extreme — läggs bara till om den saknas.
+-- EXISTS-vakten mot challenge_levels gör migrationen säker på en tom databas
+-- (vid db reset körs migrationer före seed, då finns nivåerna inte ännu och
+-- seedens uppdaterade mallar tar över istället).
 INSERT INTO task_templates (level_id, type, name, description, target_value, unit)
 SELECT 'a1b2c3d4-0003-0003-0003-000000000003', 'cold_shower', 'Kall dusch',
        'Kall dusch varje morgon.', NULL, NULL
@@ -119,6 +122,10 @@ WHERE NOT EXISTS (
   SELECT 1 FROM task_templates
   WHERE level_id = 'a1b2c3d4-0003-0003-0003-000000000003'
     AND type = 'cold_shower' AND user_id IS NULL
+)
+AND EXISTS (
+  SELECT 1 FROM challenge_levels
+  WHERE id = 'a1b2c3d4-0003-0003-0003-000000000003'
 );
 
 -- ── Visningslistorna (challenge_levels.rules) ────────────────────────────────

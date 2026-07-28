@@ -314,6 +314,39 @@ describe('updateDayTasks', () => {
     })
   })
 
+  it('på Normal räknas dagen som klarad utan valfria foto, läsning och egna regler', async () => {
+    const calls = installTables(fromMock, {
+      user_challenges: { data: { challenge_levels: { slug: 'normal' } } },
+      daily_logs: [{ data: { id: 'log1' } }, { data: null }],
+      task_completions: [{ data: null }, { data: [
+        { completed: true,  task_templates: { type: 'workout' } },
+        { completed: true,  task_templates: { type: 'diet' } },
+        { completed: true,  task_templates: { type: 'water' } },
+        { completed: false, task_templates: { type: 'photo' } },
+        { completed: false, task_templates: { type: 'reading' } },
+        { completed: false, task_templates: { type: 'custom' } },
+      ] }],
+    })
+    expect(await updateDayTasks('ch1', 5, daysAgo(3), [
+      { completionId: 'a', templateId: 't1', completed: true },
+    ])).toBe('completed')
+    expect(argsOf(calls, 'daily_logs', 'update', 1)[0][0]).toMatchObject({ status: 'completed' })
+  })
+
+  it('på Hard är fotot ett krav även vid efterhandsredigering', async () => {
+    installTables(fromMock, {
+      user_challenges: { data: { challenge_levels: { slug: 'hard' } } },
+      daily_logs: [{ data: { id: 'log1' } }, { data: null }],
+      task_completions: [{ data: null }, { data: [
+        { completed: true,  task_templates: { type: 'workout' } },
+        { completed: false, task_templates: { type: 'photo' } },
+      ] }],
+    })
+    expect(await updateDayTasks('ch1', 5, daysAgo(3), [
+      { completionId: 'a', templateId: 't1', completed: true },
+    ])).toBe('failed')
+  })
+
   it('dagens datum med luckor förblir pågående, inte failad', async () => {
     installTables(fromMock, {
       daily_logs: [{ data: { id: 'log1' } }, { data: null }],

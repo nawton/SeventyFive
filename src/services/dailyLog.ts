@@ -324,16 +324,28 @@ export async function updateDayTasks(
     })), { onConflict: 'daily_log_id,task_template_id' })
   if (upsertError) throw upsertError
 
-  // Dagens status följer bockarna: allt i → klarad; annars pågående idag
-  // och missad bakåt i tiden
+  // Dagens status följer bockarna: allt som KRÄVS i → klarad; annars
+  // pågående idag och missad bakåt i tiden. Egna regler räknas aldrig som
+  // krav, och på Normal är foto och läsning valfria enligt nivåreglerna.
+  const { data: ch } = await supabase
+    .from('user_challenges')
+    .select('challenge_levels(slug)')
+    .eq('id', challengeId)
+    .maybeSingle()
+  const slug = (ch as { challenge_levels?: { slug?: string } } | null)?.challenge_levels?.slug
+  const optionalTypes = new Set<string>(
+    slug === 'normal' ? ['custom', 'photo', 'reading'] : ['custom'],
+  )
+
   const { data: all, error: allError } = await supabase
     .from('task_completions')
-    .select('completed')
+    .select('completed, task_templates(type)')
     .eq('daily_log_id', logId)
   if (allError) throw allError
 
-  const rows = all ?? []
-  const allDone = rows.length > 0 && rows.every(r => r.completed)
+  const rows = (all ?? []) as Array<{ completed: boolean; task_templates?: { type?: string } | null }>
+  const gating = rows.filter(r => !optionalTypes.has(r.task_templates?.type ?? ''))
+  const allDone = gating.length > 0 && gating.every(r => r.completed)
   const status = allDone ? 'completed' : date === toLocalDateString() ? 'pending' : 'failed'
   const { error: statusError } = await supabase
     .from('daily_logs')

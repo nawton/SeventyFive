@@ -16,11 +16,11 @@ INSERT INTO challenge_levels (id, slug, display_name, description, rules) VALUES
   'Normal',
   'Perfekt för dig som är redo att bygga en livsstil. Krävande men hållbar.',
   '[
-    {"rule": "Träna 30 minuter om dagen", "icon": "dumbbell"},
-    {"rule": "Drick 2 liter vatten", "icon": "droplet"},
-    {"rule": "Läs 10 sidor", "icon": "book"},
+    {"rule": "4 träningspass i veckan", "icon": "dumbbell"},
     {"rule": "Följ din kostplan", "icon": "utensils"},
-    {"rule": "Ta ett framstegsfoto", "icon": "camera"}
+    {"rule": "Drick 2 liter vatten", "icon": "droplet"},
+    {"rule": "Läsning och progressfoton är valfria", "icon": "book"},
+    {"rule": "En dags marginal per vecka", "icon": "check"}
   ]'
 ),
 (
@@ -29,12 +29,11 @@ INSERT INTO challenge_levels (id, slug, display_name, description, rules) VALUES
   'Hard',
   'För dig som vill testa din gräns på riktigt. Ingen återvändo.',
   '[
-    {"rule": "Träna 45 minuter om dagen", "icon": "dumbbell"},
+    {"rule": "Träningspass varje dag, ett utomhus", "icon": "dumbbell"},
+    {"rule": "Håll din kost, noll fuskmat", "icon": "ban"},
     {"rule": "Drick 3 liter vatten", "icon": "droplet"},
-    {"rule": "Läs 20 sidor", "icon": "book"},
-    {"rule": "Inga socker eller alkohol", "icon": "ban"},
-    {"rule": "Ta ett framstegsfoto", "icon": "camera"},
-    {"rule": "5 minuters kall dusch", "icon": "snowflake"}
+    {"rule": "Läs 10 sidor varje dag", "icon": "book"},
+    {"rule": "Ta ett progressfoto varje dag", "icon": "camera"}
   ]'
 ),
 (
@@ -43,37 +42,37 @@ INSERT INTO challenge_levels (id, slug, display_name, description, rules) VALUES
   'Extreme',
   'Eliten. Byggt för dem som vill förändra vem de är på 75 dagar.',
   '[
-    {"rule": "Träna 60 minuter × 2 per dag", "icon": "dumbbell"},
+    {"rule": "2 träningspass per dag, ett utomhus", "icon": "dumbbell"},
+    {"rule": "Strikt kostplan, inga undantag", "icon": "ban"},
     {"rule": "Drick 4 liter vatten", "icon": "droplet"},
-    {"rule": "Läs 30 sidor", "icon": "book"},
-    {"rule": "Strikt diet, noll kompromisser", "icon": "ban"},
-    {"rule": "Ta ett framstegsfoto", "icon": "camera"},
-    {"rule": "10 minuters kall dusch", "icon": "snowflake"},
-    {"rule": "Skriv en daglig reflektion", "icon": "pen"}
+    {"rule": "Läs 10 sidor varje dag", "icon": "book"},
+    {"rule": "Ta ett progressfoto varje dag", "icon": "camera"},
+    {"rule": "Kall dusch varje morgon", "icon": "snowflake"}
   ]'
 )
 ON CONFLICT (id) DO NOTHING;
 
 -- ── 3. Uppgiftsmallar ─────────────────────────────────────────────────────────
 INSERT INTO task_templates (level_id, type, name, description, target_value, unit) VALUES
-('a1b2c3d4-0001-0001-0001-000000000001', 'workout', 'Träning',       'Minst 30 minuter fysisk aktivitet.',        30,   'minutes'),
+('a1b2c3d4-0001-0001-0001-000000000001', 'workout', 'Träningspass',  'Minst 45 minuter. Fyra pass i veckan är målet, vila övriga dagar.', 45, 'minutes'),
 ('a1b2c3d4-0001-0001-0001-000000000001', 'water',   'Vatten',        'Drick minst 2 liter vatten under dagen.',    2,   'liter'),
-('a1b2c3d4-0001-0001-0001-000000000001', 'reading', 'Läsning',       'Läs minst 10 sidor i en bok.',              10,   'pages'),
-('a1b2c3d4-0001-0001-0001-000000000001', 'diet',    'Kostplan',      'Följ din valda kostplan utan undantag.',  NULL,   NULL),
-('a1b2c3d4-0001-0001-0001-000000000001', 'photo',   'Framstegsfoto', 'Ta ett foto för att dokumentera din förändring.', NULL, NULL),
+('a1b2c3d4-0001-0001-0001-000000000001', 'reading', 'Läsning (valfri)', 'Läs 10 sidor om du vill. Valfri på Normal, dagen godkänns utan.', 10, 'pages'),
+('a1b2c3d4-0001-0001-0001-000000000001', 'diet',    'Kostplan',      'Följ din valda kostplan.',                NULL,   NULL),
+('a1b2c3d4-0001-0001-0001-000000000001', 'photo',   'Framstegsfoto (valfritt)', 'Ta ett foto om du vill. Valfritt på Normal, dagen godkänns utan.', NULL, NULL),
 
-('a1b2c3d4-0002-0002-0002-000000000002', 'workout', 'Träning',       'Minst 45 minuter hårt träningspass.',       45,   'minutes'),
+('a1b2c3d4-0002-0002-0002-000000000002', 'workout', 'Träningspass',  'Minst 45 minuter varje dag. Ett av veckans pass utomhus.', 45, 'minutes'),
 ('a1b2c3d4-0002-0002-0002-000000000002', 'water',   'Vatten',        'Drick minst 3 liter vatten under dagen.',    3,   'liter'),
-('a1b2c3d4-0002-0002-0002-000000000002', 'reading', 'Läsning',       'Läs minst 20 sidor i en bok.',              20,   'pages'),
-('a1b2c3d4-0002-0002-0002-000000000002', 'diet',    'Kostplan, noll socker', 'Inget socker, ingen alkohol.',    NULL,   NULL),
-('a1b2c3d4-0002-0002-0002-000000000002', 'photo',   'Framstegsfoto', 'Ta ett foto för att dokumentera din förändring.', NULL, NULL),
+('a1b2c3d4-0002-0002-0002-000000000002', 'reading', 'Läsning',       'Läs minst 10 sidor i en bok varje dag.',    10,   'pages'),
+('a1b2c3d4-0002-0002-0002-000000000002', 'diet',    'Kost utan fusk', 'Håll din kost. Noll fuskmat.',           NULL,   NULL),
+('a1b2c3d4-0002-0002-0002-000000000002', 'photo',   'Framstegsfoto', 'Ta ett framstegsfoto varje dag.',         NULL,   NULL),
 
-('a1b2c3d4-0003-0003-0003-000000000003', 'workout', 'Pass 1',        'Första träningspasset på minst 60 minuter.', 60,  'minutes'),
-('a1b2c3d4-0003-0003-0003-000000000003', 'workout', 'Pass 2',        'Andra träningspasset på minst 60 minuter.',  60,  'minutes'),
+('a1b2c3d4-0003-0003-0003-000000000003', 'workout', 'Pass 1',        'Första passet, minst 45 minuter. Ett av dagens pass utomhus.', 45, 'minutes'),
+('a1b2c3d4-0003-0003-0003-000000000003', 'workout', 'Pass 2',        'Andra passet, minst 45 minuter.',           45,  'minutes'),
 ('a1b2c3d4-0003-0003-0003-000000000003', 'water',   'Vatten',        'Drick minst 4 liter vatten under dagen.',    4,   'liter'),
-('a1b2c3d4-0003-0003-0003-000000000003', 'reading', 'Läsning',       'Läs minst 30 sidor i en bok.',              30,   'pages'),
-('a1b2c3d4-0003-0003-0003-000000000003', 'diet',    'Strikt diet',   'Noll kompromisser. Ren mat, inga undantag.', NULL, NULL),
-('a1b2c3d4-0003-0003-0003-000000000003', 'photo',   'Framstegsfoto', 'Ta ett foto för att dokumentera din förändring.', NULL, NULL)
+('a1b2c3d4-0003-0003-0003-000000000003', 'reading', 'Läsning',       'Läs minst 10 sidor i en bok varje dag.',    10,   'pages'),
+('a1b2c3d4-0003-0003-0003-000000000003', 'diet',    'Strikt kostplan', 'Inga undantag, ingen fuskmat, ingen alkohol.', NULL, NULL),
+('a1b2c3d4-0003-0003-0003-000000000003', 'photo',   'Framstegsfoto', 'Ta ett framstegsfoto varje dag.',         NULL,   NULL),
+('a1b2c3d4-0003-0003-0003-000000000003', 'cold_shower', 'Kall dusch', 'Kall dusch varje morgon.',               NULL,   NULL)
 ON CONFLICT DO NOTHING;
 
 -- ── 4. Övningar ───────────────────────────────────────────────────────────────

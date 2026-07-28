@@ -9,6 +9,7 @@ import {
 } from 'react-native'
 
 import { BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
+import { StreakFlame } from '@/components/StreakFlame'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,14 +55,18 @@ export function RestartPromptModal({ visible, variant, missedDays, allowContinue
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      // pageSheet kan svepas ner på iOS — den tvingade varianten (Hard och
+      // Extreme) måste vara fullskärm så omstarten inte går att vifta bort
+      presentationStyle={allowContinue ? 'pageSheet' : 'fullScreen'}
       onRequestClose={() => { if (allowContinue) handle('continue') }}
     >
       <View style={styles.screen}>
         <View style={styles.container}>
           <View style={styles.handle} />
 
-          <Text style={styles.emoji}>🔥</Text>
+          <View style={{ alignSelf: 'center' }}>
+            <StreakFlame size={44} />
+          </View>
           <Text style={styles.title}>{title()}</Text>
           <Text style={styles.subtitle}>{subtitle()}</Text>
 
@@ -124,10 +129,6 @@ const styles = StyleSheet.create({
     backgroundColor: BORDER,
     alignSelf: 'center',
     marginBottom: 8,
-  },
-  emoji: {
-    fontSize: 48,
-    textAlign: 'center',
   },
   title: {
     color: TEXT_PRIMARY,
