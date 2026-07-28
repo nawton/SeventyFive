@@ -235,7 +235,7 @@ function ExerciseRow({
           <Animated.View style={[r.row, done && { backgroundColor: doneRowStr }, cardStyle]}>
             <View style={r.text}>
               <Text style={[r.name, done && r.nameDone]} numberOfLines={1}>
-                {ex.exercise_name}
+                {t(ex.exercise_name)}
               </Text>
               {(ex.sets || ex.reps) && (
                 <Text style={r.meta}>
@@ -478,7 +478,7 @@ export function WorkoutSection({
           delayLongPress={400}
         >
           <View style={s.nameRow}>
-            <Text style={s.sessionName}>{session.name}</Text>
+            <Text style={s.sessionName}>{t(session.name)}</Text>
             {hasBody && (
               <Animated.View style={chevronStyle}>
                 <Ionicons name="chevron-down" size={14} color={TEXT_SECONDARY} />

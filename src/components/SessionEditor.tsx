@@ -499,7 +499,7 @@ export function SessionEditor({
                 const isCardio = exInfo?.category === 'cardio'
                 return (
                   <View key={d.key} style={[s.exRow, chip, chip]}>
-                    <Text style={s.exName} numberOfLines={1}>{d.exercise_name}</Text>
+                    <Text style={s.exName} numberOfLines={1}>{t(d.exercise_name)}</Text>
                     {isCardio ? (
                       <View style={s.cardioBadge}>
                         <Ionicons name="walk-outline" size={13} color={ACCENT} />

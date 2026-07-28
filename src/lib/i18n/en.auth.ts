@@ -230,8 +230,8 @@ export const EN_AUTH: Record<string, string> = {
   'Lunch': 'Lunch',
   'Middag': 'Dinner',
   'TRÄNINGSPASS': 'WORKOUTS',
-  'Pass 1': 'Workout 1',
-  'Pass 2': 'Workout 2',
+  'Pass 1': 'Session 1',
+  'Pass 2': 'Session 2',
   'Spara schema': 'Save schedule',
 
   // ─── change-password.tsx ─────────────────────────────────────

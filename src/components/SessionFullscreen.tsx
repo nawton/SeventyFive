@@ -537,7 +537,7 @@ export function SessionFullscreen({
               return (
                 <View key={ex.id} style={s.exBlock}>
                   <View style={s.exNameRow}>
-                    <Text style={s.exName}>{ex.exercise_name}</Text>
+                    <Text style={s.exName}>{t(ex.exercise_name)}</Text>
                     <TouchableOpacity
                       onPress={() => removeExercise(ex.id, ex.exercise_name)}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

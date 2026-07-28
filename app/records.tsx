@@ -580,7 +580,7 @@ export default function RecordsScreen() {
                   <Ionicons name="trophy" size={16} color={GOLD} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.recordName} numberOfLines={1}>{r.exerciseName}</Text>
+                  <Text style={s.recordName} numberOfLines={1}>{t(r.exerciseName)}</Text>
                   <Text style={s.recordMeta}>
                     {r.bestWeightKg} kg × {r.bestWeightReps} · est. 1RM {Math.round(r.bestE1rm)} kg
                   </Text>
@@ -678,7 +678,7 @@ export default function RecordsScreen() {
       >
         <Pressable style={s.modalBackdrop} onPress={() => setHistoryEx(null)}>
           <Pressable style={s.modalCard} onPress={() => {}}>
-            <Text style={s.histTitle} numberOfLines={1}>{historyEx}</Text>
+            <Text style={s.histTitle} numberOfLines={1}>{historyEx ? t(historyEx) : historyEx}</Text>
             <Text style={s.histSub}>{t('Utveckling · est. 1RM (kg)')}</Text>
 
             {historyPts.length >= 2 ? (() => {

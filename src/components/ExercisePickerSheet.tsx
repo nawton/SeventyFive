@@ -142,7 +142,11 @@ export function ExercisePickerSheet({
     ? strengthExes
     : strengthExes.filter(e => getExerciseMuscleGroup(e.name) === selectedGroup)
   const filteredExercises = search.trim()
-    ? groupExercises.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
+    // Sökningen matchar både det lagrade svenska namnet och den visade
+    // engelska översättningen, så "bench" hittar Bänkpress på engelska
+    ? groupExercises.filter(e =>
+        e.name.toLowerCase().includes(search.toLowerCase()) ||
+        t(e.name).toLowerCase().includes(search.toLowerCase()))
     : groupExercises
 
   const gymGroupLabel = t(GYM_GROUPS.find(g => g.key === selectedGroup)?.label ?? '')
@@ -245,7 +249,7 @@ export function ExercisePickerSheet({
                       <View style={s.cardioIconBox}>
                         <Ionicons name={cardioExIcon(ex)} size={22} color="#34C759" />
                       </View>
-                      <Text style={[s.rowName, { flex: 1 }]}>{ex.name}</Text>
+                      <Text style={[s.rowName, { flex: 1 }]}>{t(ex.name)}</Text>
                       <View style={s.addBtn}>
                         <Ionicons name="add" size={20} color={ACCENT} />
                       </View>
@@ -287,7 +291,7 @@ export function ExercisePickerSheet({
                     <View style={[s.exIconBox, on && { backgroundColor: accentAlpha('22') }]}>
                       <Ionicons name="barbell-outline" size={18} color={on ? ACCENT : TEXT_SECONDARY} />
                     </View>
-                    <Text style={[s.rowName, { flex: 1 }, on && { color: ACCENT }]}>{ex.name}</Text>
+                    <Text style={[s.rowName, { flex: 1 }, on && { color: ACCENT }]}>{t(ex.name)}</Text>
                     {multiSelect ? (
                       <View style={[s.checkBox, on && s.checkBoxOn]}>
                         {on && <Ionicons name="checkmark" size={16} color="#000" />}

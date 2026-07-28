@@ -86,7 +86,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
             <Ionicons name="barbell-outline" size={24} color={ACCENT} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{name}</Text>
+            <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{t(name)}</Text>
             <Text style={s.heroSub}>{t('Gympass')}</Text>
           </View>
           <View style={s.donePill}>
@@ -140,7 +140,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
                     onPress={() => setProgressEx(w.data.exercise_name)}
                   >
                     <View style={s.exHead}>
-                      <Text style={s.exName} numberOfLines={1}>{w.data.exercise_name}</Text>
+                      <Text style={s.exName} numberOfLines={1}>{t(w.data.exercise_name)}</Text>
                       {topKg > 0 && (
                         <Text style={s.exTop}>
                           {t('topp {kg} kg', { kg: topKg })}
@@ -190,7 +190,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
         <View style={s.root}>
           <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
             <GlassCircleButton icon="chevron-back" onPress={() => setProgressEx(null)} />
-            <Text style={s.progTitle} numberOfLines={1}>{progressEx}</Text>
+            <Text style={s.progTitle} numberOfLines={1}>{progressEx ? t(progressEx) : progressEx}</Text>
             <View style={{ width: 44 }} />
           </View>
 

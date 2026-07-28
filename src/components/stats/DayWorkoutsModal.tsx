@@ -419,7 +419,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                                 return (
                                   <View key={w.id} style={s.subRow}>
                                     <View style={s.subDot} />
-                                    <Text style={s.subName} numberOfLines={1}>{w.data.exercise_name}</Text>
+                                    <Text style={s.subName} numberOfLines={1}>{t(w.data.exercise_name)}</Text>
                                     <Text style={s.subStat}>
                                       {w.data.sets.length} set · {totalReps} reps{topKg > 0 ? ` · ${topKg} kg` : ''}
                                     </Text>

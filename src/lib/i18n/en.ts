@@ -6,6 +6,7 @@ import { EN_SOCIAL } from './en.social'
 import { EN_PROFILE } from './en.profile'
 import { EN_AUTH } from './en.auth'
 import { EN_CARDIO } from './en.cardio'
+import { EN_EXERCISES } from './en.exercises'
 
 // Sammanslagen ordbok — ett område per fil så flera kan jobba parallellt
 export const EN: Record<string, string> = {
@@ -17,4 +18,5 @@ export const EN: Record<string, string> = {
   ...EN_PROFILE,
   ...EN_AUTH,
   ...EN_CARDIO,
+  ...EN_EXERCISES,
 }
