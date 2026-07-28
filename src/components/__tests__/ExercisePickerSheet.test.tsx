@@ -15,8 +15,8 @@ jest.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'success' },
 }))
 
-const ex = (id: string, name: string, image_path: string | null = null): Exercise => ({
-  id, name, description: null, category: 'strength', difficulty: 'beginner', video_url: null, image_path,
+const ex = (id: string, name: string, image_path: string | null = null, equipment: Exercise['equipment'] = 'barbell'): Exercise => ({
+  id, name, description: null, category: 'strength', difficulty: 'beginner', video_url: null, image_path, equipment,
 })
 
 // Rodd → övre rygg/trapezius, Marklyft → nedre rygg m.m., Bänkpress → bröst
@@ -25,7 +25,7 @@ const EXERCISES = [
   ex('e2', 'Marklyft'),
   ex('e3', 'Bänkpress', 'bankpress.gif'),
   ex('e4', 'Lutande bänkpress'),
-  ex('e5', 'Sidolyft'),
+  ex('e5', 'Sidolyft', null, 'dumbbell'),
   ex('e6', 'Bakre deltalyft'),
 ]
 
@@ -71,6 +71,22 @@ describe('ExercisePickerSheet — infobladet', () => {
 
     expect(screen.getByText('INSTRUCTIONS')).toBeOnTheScreen()
     expect(screen.getByText(EXERCISE_INFO['Bänkpress'].steps[0].en)).toBeOnTheScreen()
+  })
+})
+
+describe('ExercisePickerSheet — utrustningsfiltret', () => {
+  it('filtrerar på redskap och kombineras med muskelfiltret', () => {
+    mount()
+    fireEvent.press(screen.getByTestId('equipFilter'))
+    fireEvent.press(screen.getByTestId('equip-dumbbell'))
+
+    expect(screen.getByText('Sidolyft')).toBeOnTheScreen()
+    expect(screen.queryByText('Bänkpress')).toBeNull()
+
+    // Tillbaka till all utrustning
+    fireEvent.press(screen.getByTestId('equipFilter'))
+    fireEvent.press(screen.getByTestId('equip-all'))
+    expect(screen.getByText('Bänkpress')).toBeOnTheScreen()
   })
 })
 

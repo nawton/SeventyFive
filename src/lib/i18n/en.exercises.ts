@@ -179,6 +179,8 @@ export const EN_EXERCISES: Record<string, string> = {
   'Träningshjul': 'Ab wheel',
 
   'Alla muskler': 'All muscles',
+  'All utrustning': 'All equipment',
+  'Filtrera på utrustning': 'Filter by equipment',
   'Filtrera på muskel': 'Filter by muscle',
 
   // Delmuskelfilter (bröstets och axelns regioner)
