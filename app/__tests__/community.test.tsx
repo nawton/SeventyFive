@@ -3,6 +3,7 @@ import CommunityScreen, { relativeDayLabel, dayPartTitle } from '../(app)/commun
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
+    storage: { from: () => ({ getPublicUrl: (p: string) => ({ data: { publicUrl: `https://test/${p}` } }) }) },
     auth: {
       getSession: jest.fn().mockResolvedValue({
         data: { session: { user: { id: 'u1', email: 'erik@example.com' } } },

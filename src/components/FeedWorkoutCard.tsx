@@ -9,6 +9,7 @@ import { formatPace } from '@/lib/cardioUtils'
 import { fmtTime } from '@/lib/format'
 import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, useCardChrome, accentAlpha, ACCENT } from '@/lib/theme'
 import { useRouteColor } from '@/lib/routeColor'
+import { exerciseImageUrlFor } from '@/lib/exerciseInfo/images'
 import { t, useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
@@ -256,11 +257,40 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
           <Stat value={formatPace(post.distanceKm, post.durationS)} label={t('min/km')} />
         </View>
       ) : (
-        <View style={s.statsRow}>
-          <Stat value={String(post.exercises)} label={t('övningar')} />
-          <Stat value={String(post.sets)} label={t('set')} />
-          <Stat value={post.volumeKg.toLocaleString(dateLocale())} label={t('kg volym')} />
-        </View>
+        <>
+          <View style={s.statsRow}>
+            <Stat value={String(post.exercises)} label={t('övningar')} />
+            <Stat value={String(post.sets)} label={t('set')} />
+            <Stat value={post.volumeKg.toLocaleString(dateLocale())} label={t('kg volym')} />
+          </View>
+
+          {/* De första övningarna direkt i kortet, resten i detaljvyn */}
+          <View style={s.exPreview}>
+            {post.workouts.slice(0, 3).map(w => {
+              const img = exerciseImageUrlFor(w.data.exercise_name)
+              return (
+                <View key={w.id} style={s.exPreviewRow} testID={`preview-${w.id}`}>
+                  {img ? (
+                    <Image source={{ uri: img }} style={s.exPreviewImg} />
+                  ) : (
+                    <View style={s.exPreviewIcon}>
+                      <Ionicons name="barbell-outline" size={16} color={TEXT_SECONDARY} />
+                    </View>
+                  )}
+                  <Text style={s.exPreviewName} numberOfLines={1}>{t(w.data.exercise_name)}</Text>
+                  <Text style={s.exPreviewSets}>{t('{n} set', { n: w.data.sets.length })}</Text>
+                </View>
+              )
+            })}
+            {post.workouts.length > 3 && (
+              <Text style={s.exPreviewMore}>
+                {post.workouts.length === 4
+                  ? t('+ 1 övning till')
+                  : t('+ {n} övningar till', { n: post.workouts.length - 3 })}
+              </Text>
+            )}
+          </View>
+        </>
       )}
 
       {hasRoute && (
@@ -352,6 +382,20 @@ const s = StyleSheet.create({
   stat: { alignItems: 'center', minWidth: 72 },
   statValue: { color: TEXT_PRIMARY, fontSize: 22, fontFamily: NUM_FONT },
   statLabel: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 1 },
+
+  exPreview: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  exPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  exPreviewImg: {
+    width: 40, height: 40, borderRadius: 11, borderWidth: StyleSheet.hairlineWidth,
+    borderColor: BORDER, backgroundColor: '#FFFFFF', resizeMode: 'contain',
+  },
+  exPreviewIcon: {
+    width: 40, height: 40, borderRadius: 11, backgroundColor: accentAlpha('12'),
+    alignItems: 'center', justifyContent: 'center',
+  },
+  exPreviewName: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+  exPreviewSets: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT },
+  exPreviewMore: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', marginLeft: 52 },
 
   mapWrap: { height: 240 },
   map: { flex: 1 },

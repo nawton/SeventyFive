@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, Modal, TouchableOpacity, Dimensions } from 'react-native'
+import { View, Text, Image, StyleSheet, ScrollView, Modal, TouchableOpacity, Dimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
 import Svg, { Polyline, Circle, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { PostSocialBar } from '@/components/PostSocialBar'
 import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
+import { exerciseImageUrlFor } from '@/lib/exerciseInfo/images'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
 import { useStatsColors } from '@/components/stats/statsShared'
@@ -140,6 +141,12 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
                     onPress={() => setProgressEx(w.data.exercise_name)}
                   >
                     <View style={s.exHead}>
+                      {(() => {
+                        const img = exerciseImageUrlFor(w.data.exercise_name)
+                        return img
+                          ? <Image source={{ uri: img }} style={s.exThumb} />
+                          : null
+                      })()}
                       <Text style={s.exName} numberOfLines={1}>{t(w.data.exercise_name)}</Text>
                       {topKg > 0 && (
                         <Text style={s.exTop}>
@@ -316,6 +323,10 @@ const s = StyleSheet.create({
   exBlock: { paddingVertical: 13, gap: 9 },
   exHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   exName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600', flex: 1 },
+  exThumb: {
+    width: 40, height: 40, borderRadius: 11,
+    backgroundColor: '#FFFFFF', resizeMode: 'contain',
+  },
   exTop: { color: ACCENT, fontSize: 12, fontFamily: NUM_FONT_SEMI },
   exUnlogged: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
   setWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },

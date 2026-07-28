@@ -1,6 +1,10 @@
 // Engelska översättningar — svenska texten är nyckeln.
 // Fylls på per skärmområde, saknade nycklar faller tillbaka på svenskan.
 export const EN_SOCIAL: Record<string, string> = {
+  // Flödeskortets övningsförhandsvisning
+  '{n} set': '{n} sets',
+  '+ 1 övning till': '+ 1 more exercise',
+  '+ {n} övningar till': '+ {n} more exercises',
   // --- lib/report.ts ---
   'Tack för din anmälan': 'Thanks for your report',
   'Vi tittar på den så snart vi kan.': "We'll take a look as soon as we can.",
