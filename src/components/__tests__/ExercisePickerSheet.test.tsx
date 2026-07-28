@@ -2,22 +2,26 @@ import { render, screen, fireEvent } from '@testing-library/react-native'
 import { ExercisePickerSheet } from '../ExercisePickerSheet'
 import type { Exercise } from '@/services/exercises'
 
-jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn(), auth: { getSession: jest.fn() } } }))
+jest.mock('@/lib/supabase', () => ({ supabase: {
+  from: jest.fn(),
+  auth: { getSession: jest.fn() },
+  storage: { from: () => ({ getPublicUrl: (p: string) => ({ data: { publicUrl: `https://test/${p}` } }) }) },
+} }))
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),
   notificationAsync: jest.fn(),
   NotificationFeedbackType: { Success: 'success' },
 }))
 
-const ex = (id: string, name: string): Exercise => ({
-  id, name, description: null, category: 'strength', difficulty: 'beginner', video_url: null,
+const ex = (id: string, name: string, image_path: string | null = null): Exercise => ({
+  id, name, description: null, category: 'strength', difficulty: 'beginner', video_url: null, image_path,
 })
 
 // Rodd → övre rygg/trapezius, Marklyft → nedre rygg m.m., Bänkpress → bröst
 const EXERCISES = [
   ex('e1', 'Rodd med skivstång'),
   ex('e2', 'Marklyft'),
-  ex('e3', 'Bänkpress'),
+  ex('e3', 'Bänkpress', 'Barbell_Bench_Press_-_Medium_Grip.jpg'),
   ex('e4', 'Lutande bänkpress'),
   ex('e5', 'Sidolyft'),
   ex('e6', 'Bakre deltalyft'),
@@ -66,6 +70,9 @@ describe('ExercisePickerSheet — delmuskelfiltret', () => {
     mount()
     fireEvent.press(screen.getByText('Bröst'))
     expect(screen.getByText('Bänkpress')).toBeOnTheScreen()
+    // Övning med foto visar bilden, övning utan behåller ikonen
+    expect(screen.getByTestId('exerciseImage-e3')).toBeOnTheScreen()
+    expect(screen.queryByTestId('exerciseImage-e4')).toBeNull()
     expect(screen.getByText('Lutande bänkpress')).toBeOnTheScreen()
 
     fireEvent.press(screen.getByTestId('subMuscle-upper-chest'))

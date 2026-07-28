@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity, Image,
   TextInput, ScrollView, Modal, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native'
 import { Ionicons } from '@/components/Icon'
@@ -10,7 +10,7 @@ import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
 import { MuscleThumb } from '@/components/MuscleThumb'
-import { CATEGORY_LABELS, type Exercise } from '@/services/exercises'
+import { CATEGORY_LABELS, exerciseImageUrl, type Exercise } from '@/services/exercises'
 import { CreateExerciseSheet } from '@/components/CreateExerciseSheet'
 import { getExerciseMuscleGroup, getMusclesForName, SLUG_LABELS, type Slug } from '@/lib/muscles'
 import type { ExerciseCategory } from '@/types/database'
@@ -450,9 +450,17 @@ export function ExercisePickerSheet({
                 const on = multiSelect && multiSel.some(e => e.id === ex.id)
                 return (
                   <TouchableOpacity key={ex.id} style={[s.row, on && s.rowOn]} onPress={() => handleTap(ex)} activeOpacity={0.7}>
-                    <View style={[s.exIconBox, on && { backgroundColor: accentAlpha('22') }]}>
-                      <Ionicons name="barbell-outline" size={18} color={on ? ACCENT : TEXT_SECONDARY} />
-                    </View>
+                    {ex.image_path ? (
+                      <Image
+                        testID={`exerciseImage-${ex.id}`}
+                        source={{ uri: exerciseImageUrl(ex.image_path) }}
+                        style={[s.exImg, on && { borderWidth: 2, borderColor: T.ACCENT }]}
+                      />
+                    ) : (
+                      <View style={[s.exIconBox, on && { backgroundColor: tint('22') }]}>
+                        <Ionicons name="barbell-outline" size={18} color={on ? T.ACCENT : TEXT_SECONDARY} />
+                      </View>
+                    )}
                     <Text style={[s.rowName, { flex: 1 }, on && { color: ACCENT }]}>{t(ex.name)}</Text>
                     {multiSelect ? (
                       <View style={[s.checkBox, on && s.checkBoxOn]}>
@@ -638,6 +646,7 @@ const s = StyleSheet.create({
     width: 44, height: 44, borderRadius: 12,
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
   },
+  exImg: { width: 44, height: 44, borderRadius: 12, backgroundColor: CARD },
   rowName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   addBtn: {
     width: 36, height: 36, borderRadius: 18,

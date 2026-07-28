@@ -24,6 +24,8 @@ export interface Exercise {
   primary_muscle?: Slug | null
   other_muscles?: Slug[] | null
   exercise_type?: ExerciseType | null
+  /** Objektnyckel i Storage-bucketen exercise-images (foton från free-exercise-db) */
+  image_path?: string | null
 }
 
 export const EQUIPMENT_LABELS: Record<ExerciseEquipment, string> = {
@@ -68,10 +70,15 @@ export const DIFFICULTY_COLORS: Record<ExerciseDifficulty, string> = {
   advanced:     '#FF3B4A',
 }
 
+/** Publik URL till övningsfotot i Storage. Bucketen är publik, ingen signering behövs. */
+export function exerciseImageUrl(path: string): string {
+  return supabase.storage.from('exercise-images').getPublicUrl(path).data.publicUrl
+}
+
 export async function getExercises(): Promise<Exercise[]> {
   let { data, error } = await supabase
     .from('exercises')
-    .select('id, name, description, category, difficulty, video_url, user_id, equipment, primary_muscle, other_muscles, exercise_type')
+    .select('id, name, description, category, difficulty, video_url, user_id, equipment, primary_muscle, other_muscles, exercise_type, image_path')
     .order('category')
     .order('name')
 
@@ -124,7 +131,7 @@ export async function createCustomExercise(params: {
       other_muscles: params.otherMuscles,
       exercise_type: params.exerciseType,
     })
-    .select('id, name, description, category, difficulty, video_url, user_id, equipment, primary_muscle, other_muscles, exercise_type')
+    .select('id, name, description, category, difficulty, video_url, user_id, equipment, primary_muscle, other_muscles, exercise_type, image_path')
     .single()
   if (error) throw error
 
