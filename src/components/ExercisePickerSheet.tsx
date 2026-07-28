@@ -11,7 +11,7 @@ import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 import { CATEGORY_LABELS, type Exercise } from '@/services/exercises'
 import { CreateExerciseSheet } from '@/components/CreateExerciseSheet'
-import { getExerciseMuscleGroup, type Slug } from '@/lib/muscles'
+import { getExerciseMuscleGroup, getMusclesForName, SLUG_LABELS, type Slug } from '@/lib/muscles'
 import type { ExerciseCategory } from '@/types/database'
 import { AppTextInput } from '@/components/AppTextInput'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -23,9 +23,9 @@ type GymGroup = { key: string; label: string; side: 'front' | 'back'; slugs: Slu
 const GYM_GROUPS: GymGroup[] = [
   { key: 'chest',     label: 'Bröst',   side: 'front', slugs: ['chest'],                                      color: '#FF6B6B' },
   { key: 'back',      label: 'Rygg',    side: 'back',  slugs: ['upper-back', 'lower-back', 'trapezius'],       color: '#4ECDC4' },
-  { key: 'legs',      label: 'Ben',     side: 'front', slugs: ['quadriceps', 'hamstring', 'gluteal', 'calves'], color: '#45B7D1' },
+  { key: 'legs',      label: 'Ben',     side: 'front', slugs: ['quadriceps', 'hamstring', 'gluteal', 'calves', 'adductors', 'tibialis'], color: '#45B7D1' },
   { key: 'shoulders', label: 'Axlar',   side: 'front', slugs: ['deltoids'],                                    color: '#F7DC6F' },
-  { key: 'arms',      label: 'Armar',   side: 'front', slugs: ['biceps', 'triceps'],                           color: '#A29BFE' },
+  { key: 'arms',      label: 'Armar',   side: 'front', slugs: ['biceps', 'triceps', 'forearm'],                color: '#A29BFE' },
   { key: 'core',      label: 'Mage',    side: 'front', slugs: ['abs', 'obliques'],                             color: '#FD79A8' },
 ]
 
@@ -67,6 +67,8 @@ export function ExercisePickerSheet({
   const startPage: Page = gymOnly ? 'gym' : 'landing'
   const [page, setPage]                   = useState<Page>(startPage)
   const [selectedGroup, setSelectedGroup] = useState('')
+  // Delmuskelfiltret inne i en grupp: 'all' visar hela gruppens övningar
+  const [subMuscle, setSubMuscle]         = useState<Slug | 'all'>('all')
   const [search, setSearch]               = useState('')
   const [pendingEx, setPendingEx]         = useState<Exercise | null>(null)
   // Egna övningar skapade i den här sessionen — läggs ovanpå prop-listan
@@ -81,6 +83,7 @@ export function ExercisePickerSheet({
     if (!visible) {
       setPage(startPage)
       setSelectedGroup('')
+      setSubMuscle('all')
       setSearch('')
       setPendingEx(null)
       setMultiSel([])
@@ -100,7 +103,7 @@ export function ExercisePickerSheet({
   }
 
   function handleBack() {
-    if (page === 'exercises') { setPage('gym'); setSearch('') }
+    if (page === 'exercises') { setPage('gym'); setSearch(''); setSubMuscle('all') }
     // I gym-only-läget finns ingen landing att backa till → stäng istället
     else if (page === 'gym' && gymOnly) handleClose()
     else if (page === 'gym' || page === 'cardio') setPage('landing')
@@ -143,9 +146,12 @@ export function ExercisePickerSheet({
     return strengthExes.filter(e => getExerciseMuscleGroup(e.name) === groupKey).length
   }
 
-  const groupExercises = selectedGroup === 'all'
+  const groupAll = selectedGroup === 'all'
     ? strengthExes
     : strengthExes.filter(e => getExerciseMuscleGroup(e.name) === selectedGroup)
+  const groupExercises = subMuscle === 'all'
+    ? groupAll
+    : groupAll.filter(e => getMusclesForName(e.name).includes(subMuscle))
   const filteredExercises = search.trim()
     // Sökningen matchar både det lagrade svenska namnet och den visade
     // engelska översättningen, så "bench" hittar Bänkpress på engelska
@@ -228,7 +234,7 @@ export function ExercisePickerSheet({
               <TouchableOpacity
                 key={group.key}
                 style={s.groupRow}
-                onPress={() => { setSelectedGroup(group.key); setPage('exercises') }}
+                onPress={() => { setSelectedGroup(group.key); setSubMuscle('all'); setPage('exercises') }}
                 activeOpacity={0.7}
               >
                 <View style={[s.thumbWrap, { backgroundColor: group.color + '14' }]}>
@@ -285,6 +291,38 @@ export function ExercisePickerSheet({
         {/* ── EXERCISES — strength in selected muscle group ─────────── */}
         {page === 'exercises' && (
           <>
+            {(() => {
+              const slugs = GYM_GROUPS.find(g => g.key === selectedGroup)?.slugs ?? []
+              if (slugs.length < 2) return null
+              return (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={s.subMuscleBar}
+                  contentContainerStyle={s.subMuscleRow}
+                >
+                  <TouchableOpacity
+                    style={[s.subChip, subMuscle === 'all' && s.subChipActive]}
+                    onPress={() => { Haptics.selectionAsync(); setSubMuscle('all') }}
+                    activeOpacity={0.75}
+                    testID="subMuscle-all"
+                  >
+                    <Text style={[s.subChipText, subMuscle === 'all' && s.subChipTextActive]}>{t('Alla')}</Text>
+                  </TouchableOpacity>
+                  {slugs.map(sl => (
+                    <TouchableOpacity
+                      key={sl}
+                      style={[s.subChip, subMuscle === sl && s.subChipActive]}
+                      onPress={() => { Haptics.selectionAsync(); setSubMuscle(sl) }}
+                      activeOpacity={0.75}
+                      testID={`subMuscle-${sl}`}
+                    >
+                      <Text style={[s.subChipText, subMuscle === sl && s.subChipTextActive]}>{t(SLUG_LABELS[sl])}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )
+            })()}
             <View style={s.searchBar}>
               <Ionicons name="search-outline" size={17} color={TEXT_SECONDARY} />
               <AppTextInput
@@ -550,6 +588,17 @@ const s = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 10,
   },
   confirmBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+
+  // Delmuskelfiltret
+  subMuscleBar: { flexGrow: 0, marginBottom: 4 },
+  subMuscleRow: { paddingHorizontal: 20, gap: 8, paddingVertical: 2 },
+  subChip: {
+    borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: CARD, borderWidth: 1, borderColor: 'rgba(128,128,128,0.2)',
+  },
+  subChipActive: { backgroundColor: accentAlpha('1E'), borderColor: ACCENT },
+  subChipText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  subChipTextActive: { color: ACCENT, fontWeight: '700' },
 
   // Skapa egen övning
   createRow: {
