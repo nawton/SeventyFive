@@ -14,6 +14,7 @@ import { searchGroups, type Group } from '@/services/groups'
 import {
   BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings, useCardChrome,
 } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // HITTA GRUPPER — sök på namn bland alla grupper, eller skanna en QR-kod.
@@ -25,6 +26,7 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
   onClose: () => void
   onOpenGroup: (group: Group) => void
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const chrome = useCardChrome()
   const [query, setQuery] = useState('')
@@ -67,13 +69,13 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
     const q = query.trim()
     if (q.length < 2) { setResults([]); setSearching(false); return }
     setSearching(true)
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       searchGroups(q)
         .then(setResults)
         .catch(() => setResults([]))
         .finally(() => setSearching(false))
     }, 250)
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [query])
 
   const q = query.trim()
@@ -83,7 +85,7 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
       <SafeScreen style={s.screen}>
         <View style={s.header}>
           <View style={{ width: 40 }} />
-          <Text style={s.headerTitle}>Hitta grupper</Text>
+          <Text style={s.headerTitle}>{t('Hitta grupper')}</Text>
           <GlassCircleButton icon="close" size={40} iconColor={TEXT_PRIMARY}
             onPress={onClose} fallbackStyle={s.iconFallback} />
         </View>
@@ -93,7 +95,7 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
             style={s.search}
             value={query}
             onChangeText={setQuery}
-            placeholder="Sök på gruppens namn"
+            placeholder={t('Sök på gruppens namn')}
             autoFocus
             testID="groupSearchInput"
           />
@@ -101,7 +103,7 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
           <TouchableOpacity style={[s.scanRow, chrome]} activeOpacity={0.75} testID="scanGroup"
             onPress={() => { Haptics.selectionAsync(); setScanOpen(true) }}>
             <Ionicons name="qr-code-outline" size={19} color={T.ACCENT} />
-            <Text style={s.scanText}>Skanna QR-kod</Text>
+            <Text style={s.scanText}>{t('Skanna QR-kod')}</Text>
             <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
           </TouchableOpacity>
 
@@ -116,8 +118,8 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
                 <Text style={s.rowMeta}>
                   {/* Privata gruppers medlemsantal är dolt för utomstående (RLS) */}
                   {g.is_private && g.memberCount === 0
-                    ? 'Privat'
-                    : `${g.memberCount} ${g.memberCount === 1 ? 'medlem' : 'medlemmar'}${g.is_private ? ' · Privat' : ''}`}
+                    ? t('Privat')
+                    : `${g.memberCount === 1 ? t('1 medlem') : t('{n} medlemmar', { n: g.memberCount })}${g.is_private ? ` · ${t('Privat')}` : ''}`}
                   {g.location ? ` · ${g.location}` : ''}
                 </Text>
               </View>
@@ -126,7 +128,7 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
           ))}
 
           {!searching && q.length >= 2 && results.length === 0 && (
-            <Text style={s.empty}>Inga grupper matchade &quot;{q}&quot;.</Text>
+            <Text style={s.empty}>{t('Inga grupper matchade "{q}".', { q })}</Text>
           )}
         </ScrollView>
 

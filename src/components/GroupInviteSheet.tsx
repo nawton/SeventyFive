@@ -14,6 +14,7 @@ import { groupQrValue } from '@/lib/groupQr'
 import { getFollowLists, type FollowProfile } from '@/services/follows'
 import { inviteToGroup, type Group, type GroupMember } from '@/services/groups'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, useThemeStrings } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // BJUD IN TILL GRUPPEN — som förlagan: sök bland dina följare, de som redan
@@ -29,6 +30,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
   onClose: () => void
   onInvited: () => void
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
   const boxEdge = light ? 'rgba(0,0,0,0.28)' : 'rgba(255,255,255,0.4)'
@@ -65,7 +67,9 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
     if (!group) return
     Haptics.selectionAsync()
     Share.share({
-      message: `Häng med i gruppen "${group.name}" i SeventyFive! ${groupQrValue(group.id)}`,
+      message: t('Häng med i gruppen "{name}" i SeventyFive! {url}', {
+        name: group.name, url: groupQrValue(group.id),
+      }),
     }).catch(() => {})
   }
 
@@ -78,7 +82,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
       onInvited()
       onClose()
     } catch {
-      Alert.alert('Kunde inte bjuda in', 'Kontrollera anslutningen och försök igen.')
+      Alert.alert(t('Kunde inte bjuda in'), t('Kontrollera anslutningen och försök igen.'))
     } finally {
       setSending(false)
     }
@@ -94,13 +98,13 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
       <SafeScreen style={s.screen}>
         <View style={s.header}>
           <TouchableOpacity onPress={onClose} hitSlop={8} testID="inviteClose">
-            <Text style={s.headerBtn}>Stäng</Text>
+            <Text style={s.headerBtn}>{t('Stäng')}</Text>
           </TouchableOpacity>
-          <Text style={s.headerTitle}>Bjud in till gruppen</Text>
+          <Text style={s.headerTitle}>{t('Bjud in till gruppen')}</Text>
           <TouchableOpacity onPress={send} hitSlop={8} disabled={selected.size === 0 || sending} testID="inviteSend">
             {sending
               ? <ActivityIndicator size="small" color={T.ACCENT} />
-              : <Text style={[s.headerBtn, { color: T.ACCENT }, selected.size === 0 && { opacity: 0.4 }]}>Bjud in</Text>}
+              : <Text style={[s.headerBtn, { color: T.ACCENT }, selected.size === 0 && { opacity: 0.4 }]}>{t('Bjud in')}</Text>}
           </TouchableOpacity>
         </View>
 
@@ -111,13 +115,13 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
               <View style={s.shareCircle}>
                 <Ionicons name="qr-code-outline" size={24} color={TEXT_PRIMARY} />
               </View>
-              <Text style={s.shareLabel}>QR-kod</Text>
+              <Text style={s.shareLabel}>{t('QR-kod')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.shareAction} onPress={share} activeOpacity={0.7} testID="inviteShare">
               <View style={s.shareCircle}>
                 <Ionicons name="share-outline" size={24} color={TEXT_PRIMARY} />
               </View>
-              <Text style={s.shareLabel}>Dela</Text>
+              <Text style={s.shareLabel}>{t('Dela')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -125,7 +129,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
             style={s.search}
             value={search}
             onChangeText={setSearch}
-            placeholder="Sök bland dina följare"
+            placeholder={t('Sök bland dina följare')}
             testID="inviteSearch"
           />
 
@@ -142,10 +146,10 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
                 testID={`invite-${f.id}`}
               >
                 <FeedAvatar url={f.avatar_url} fallback={(f.name ?? '?').charAt(0).toUpperCase()} size={46} />
-                <Text style={s.rowName} numberOfLines={1}>{f.name ?? 'Namnlös'}</Text>
-                {st === 'accepted' ? <Text style={s.already}>Deltar</Text>
-                  : st === 'invited' ? <Text style={s.already}>Inbjuden</Text>
-                  : st === 'pending' ? <Text style={s.already}>Väntar</Text>
+                <Text style={s.rowName} numberOfLines={1}>{f.name ?? t('Namnlös')}</Text>
+                {st === 'accepted' ? <Text style={s.already}>{t('Deltar')}</Text>
+                  : st === 'invited' ? <Text style={s.already}>{t('Inbjuden')}</Text>
+                  : st === 'pending' ? <Text style={s.already}>{t('Väntar')}</Text>
                   : (
                     <View style={[s.checkbox, { borderColor: on ? T.ACCENT : boxEdge }, on && { backgroundColor: T.ACCENT }]}>
                       {on && <Ionicons name="checkmark" size={15} color={light ? '#fff' : '#000'} />}
@@ -157,7 +161,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
 
           {loaded && followers.length === 0 && (
             <Text style={s.empty}>
-              Inga följare ännu, dela gruppen så kan andra gå med själva.
+              {t('Inga följare ännu, dela gruppen så kan andra gå med själva.')}
             </Text>
           )}
         </ScrollView>
@@ -169,7 +173,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
             <View style={s.qrHeader}>
               <GlassCircleButton icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
                 onPress={() => setQrOpen(false)} fallbackStyle={s.qrIconFallback} />
-              <Text style={s.qrHeaderTitle}>QR-kod</Text>
+              <Text style={s.qrHeaderTitle}>{t('QR-kod')}</Text>
               <View style={{ width: 40 }} />
             </View>
             <View style={s.qrBody}>
@@ -177,7 +181,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
                 <FeedAvatar url={group?.avatar_url ?? null}
                   fallback={(group?.name ?? '?').charAt(0).toUpperCase()} size={84} />
               </TouchableOpacity>
-              <Text style={s.qrTitle}>Skanna för att gå med{'\n'}i {group?.name ?? ''}</Text>
+              <Text style={s.qrTitle}>{t('Skanna för att gå med\ni {name}', { name: group?.name ?? '' })}</Text>
               <View style={s.qrBox}>
                 {group && (
                   <QRCode value={groupQrValue(group.id)} size={244}
@@ -193,7 +197,7 @@ export function GroupInviteSheet({ visible, userId, group, members, onClose, onI
               </View>
               <TouchableOpacity style={[s.qrShareBtn, { borderColor: T.ACCENT }]}
                 onPress={share} activeOpacity={0.8} testID="qrShare">
-                <Text style={[s.qrShareText, { color: T.ACCENT }]}>Dela länk</Text>
+                <Text style={[s.qrShareText, { color: T.ACCENT }]}>{t('Dela länk')}</Text>
               </TouchableOpacity>
             </View>
 

@@ -7,6 +7,7 @@ import { Ionicons } from '@/components/Icon'
 import { parseGroupQr } from '@/lib/groupQr'
 import { getGroup, type Group } from '@/services/groups'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // SKANNA GRUPPENS QR-KOD. Kameramodulen laddas mjukt: saknas den i den
@@ -30,6 +31,7 @@ export function GroupScanSheet({ visible, onClose, onFound, onDismissed }: {
   /** iOS: modalen är helt nedtagen — säkert att stänga nästa modal i kedjan */
   onDismissed?: () => void
 }) {
+  const t = useT()
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} onDismiss={onDismissed}>
       {CameraView && useCameraPermissions
@@ -39,10 +41,9 @@ export function GroupScanSheet({ visible, onClose, onFound, onDismissed }: {
             <Header onClose={onClose} />
             <View style={s.center}>
               <Ionicons name="camera-outline" size={44} color={TEXT_PRIMARY} />
-              <Text style={s.fallbackTitle}>Kameran är inte tillgänglig</Text>
+              <Text style={s.fallbackTitle}>{t('Kameran är inte tillgänglig')}</Text>
               <Text style={s.fallbackBody}>
-                Den här appversionen saknar kameramodulen, installera den senaste
-                byggnationen för att skanna QR-koder.
+                {t('Den här appversionen saknar kameramodulen, installera den senaste byggnationen för att skanna QR-koder.')}
               </Text>
             </View>
           </SafeScreen>
@@ -52,9 +53,10 @@ export function GroupScanSheet({ visible, onClose, onFound, onDismissed }: {
 }
 
 function Header({ onClose }: { onClose: () => void }) {
+  const t = useT()
   return (
     <View style={s.header}>
-      <Text style={s.headerTitle}>Skanna QR-kod</Text>
+      <Text style={s.headerTitle}>{t('Skanna QR-kod')}</Text>
       <GlassCircleButton icon="close" size={40} iconColor={TEXT_PRIMARY}
         onPress={onClose} fallbackStyle={s.iconFallback} />
     </View>
@@ -65,6 +67,7 @@ function ScannerInner({ onClose, onFound }: {
   onClose: () => void
   onFound: (group: Group) => void
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
   const [permission, requestPermission] = useCameraPermissions!()
@@ -83,8 +86,8 @@ function ScannerInner({ onClose, onFound }: {
     if (group) {
       onFound(group)
     } else {
-      Alert.alert('Ingen grupp hittades', 'Koden pekar inte på någon grupp som finns kvar.', [
-        { text: 'OK', onPress: () => { busy.current = false } },
+      Alert.alert(t('Ingen grupp hittades'), t('Koden pekar inte på någon grupp som finns kvar.'), [
+        { text: t('OK'), onPress: () => { busy.current = false } },
       ])
     }
   }
@@ -95,13 +98,13 @@ function ScannerInner({ onClose, onFound }: {
         <Header onClose={onClose} />
         <View style={s.center}>
           <Ionicons name="camera-outline" size={44} color={TEXT_PRIMARY} />
-          <Text style={s.fallbackTitle}>Kameran behöver åtkomst</Text>
+          <Text style={s.fallbackTitle}>{t('Kameran behöver åtkomst')}</Text>
           <Text style={s.fallbackBody}>
-            Ge appen tillgång till kameran för att skanna en grupps QR-kod.
+            {t('Ge appen tillgång till kameran för att skanna en grupps QR-kod.')}
           </Text>
           <TouchableOpacity style={[s.permBtn, { backgroundColor: T.ACCENT }]}
             onPress={() => requestPermission()} activeOpacity={0.85} testID="scanPermission">
-            <Text style={[s.permBtnText, { color: light ? '#FFFFFF' : '#000000' }]}>Ge kameraåtkomst</Text>
+            <Text style={[s.permBtnText, { color: light ? '#FFFFFF' : '#000000' }]}>{t('Ge kameraåtkomst')}</Text>
           </TouchableOpacity>
         </View>
       </SafeScreen>
@@ -120,14 +123,14 @@ function ScannerInner({ onClose, onFound }: {
       {/* Sikte + rubrik ovanpå kameran — alltid ljus text mot kamerabilden */}
       <SafeScreen style={s.overlay}>
         <View style={s.header}>
-          <Text style={[s.headerTitle, { color: '#FFFFFF' }]}>Skanna QR-kod</Text>
+          <Text style={[s.headerTitle, { color: '#FFFFFF' }]}>{t('Skanna QR-kod')}</Text>
           <GlassCircleButton icon="close" size={40} iconColor="#FFFFFF"
             onPress={onClose} fallbackStyle={s.iconFallbackDark} />
         </View>
         <View style={s.frameArea}>
           <View style={s.frame} />
           <Text style={s.hint}>
-            {checking ? 'Hämtar gruppen …' : 'Rikta kameran mot en grupps QR-kod'}
+            {checking ? t('Hämtar gruppen …') : t('Rikta kameran mot en grupps QR-kod')}
           </Text>
         </View>
       </SafeScreen>

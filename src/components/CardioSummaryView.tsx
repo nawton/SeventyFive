@@ -20,6 +20,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassView } from 'expo-glass-effect'
 import { LIQUID_GLASS } from '@/lib/glass'
 import { useRouteColor } from '@/lib/routeColor'
+import { useT } from '@/lib/i18n'
 
 // Apple Fitness-paletten — en neonfärg per mätvärde
 const STAT_YELLOW = '#FFE60A'
@@ -79,6 +80,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   social?: { postKey: string; ownerId: string; onOpenComments?: () => void }
 }) {
   const T = useThemeStrings()
+  const t = useT()
   const routeColor = useRouteColor()
   const chrome = useCardChrome()
   const insets = useSafeAreaInsets()
@@ -163,10 +165,10 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   // Neon på vitt skär sig — ljust läge får djupare, fortfarande popiga toner
   const lightStats = T.TEXT_PRIMARY !== '#FFFFFF'
   const stats: { label: string; value: string; color: string }[] = [
-    { label: `Distans (${unitLabel})`, value: toDisplayDistance(distKm, unit).toFixed(2), color: lightStats ? '#2E86C9' : CARDIO_BLUE },
-    { label: 'Tid',                    value: fmtTime(dur),                            color: lightStats ? '#D68F00' : STAT_YELLOW },
-    { label: `Snitt /${unitLabel}`,    value: fmtPace(avgPaceSec),                     color: lightStats ? '#1FA89C' : STAT_TEAL },
-    { label: 'Kcal',                   value: String(d.calories ?? 0),                    color: lightStats ? '#CE4568' : STAT_PINK },
+    { label: t('Distans ({unit})', { unit: unitLabel }), value: toDisplayDistance(distKm, unit).toFixed(2), color: lightStats ? '#2E86C9' : CARDIO_BLUE },
+    { label: t('Tid'),                 value: fmtTime(dur),                            color: lightStats ? '#D68F00' : STAT_YELLOW },
+    { label: t('Snitt /{unit}', { unit: unitLabel }), value: fmtPace(avgPaceSec),       color: lightStats ? '#1FA89C' : STAT_TEAL },
+    { label: t('Kcal'),                value: String(d.calories ?? 0),                    color: lightStats ? '#CE4568' : STAT_PINK },
   ]
   // Förhandsvisningsregion: rundans mittpunkt, tät zoom
   const midPoint = route.length > 0 ? route[Math.floor(route.length / 2)] : null
@@ -267,10 +269,10 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
             <View style={[s.splitsCard, chrome]}>
               <View style={s.splitsHead}>
                 <Text style={s.splitsTitle}>
-                  Intervaller
-                  {d.intervals_planned ? ` · ${intervals.length} av ${d.intervals_planned}` : ''}
+                  {t('Intervaller')}
+                  {d.intervals_planned ? t(' · {n} av {total}', { n: intervals.length, total: d.intervals_planned }) : ''}
                 </Text>
-                <Text style={s.splitsUnit}>min/{unitLabel}</Text>
+                <Text style={s.splitsUnit}>{t('min/{unit}', { unit: unitLabel })}</Text>
               </View>
               {intervals.map((iv, i) => {
                 const fastest = iv.paceSec > 0 && iv.paceSec === fastestInterval
@@ -306,8 +308,8 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
           {splits.length > 0 && (
             <View style={[s.splitsCard, chrome]}>
               <View style={s.splitsHead}>
-                <Text style={s.splitsTitle}>Kilometersplittar</Text>
-                <Text style={s.splitsUnit}>min/{unitLabel}</Text>
+                <Text style={s.splitsTitle}>{t('Kilometersplittar')}</Text>
+                <Text style={s.splitsUnit}>{t('min/{unit}', { unit: unitLabel })}</Text>
               </View>
               {splits.map((sp, i) => {
                 const fastest = sp.paceSec > 0 && sp.paceSec === fastestSplit
@@ -343,17 +345,17 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
             testID="effortCard"
           >
             <View style={{ flex: 1 }}>
-              <Text style={s.effortHeading}>Ansträngning</Text>
+              <Text style={s.effortHeading}>{t('Ansträngning')}</Text>
               {effort ? (
                 <View style={s.effortValueRow}>
                   <View style={[s.effortCircle, { backgroundColor: effortColor(effort) }]}>
                     <Text style={s.effortCircleText}>{effort}</Text>
                   </View>
-                  <Text style={[s.effortBigLabel, { color: effortColor(effort) }]}>{effortLabel(effort)}</Text>
+                  <Text style={[s.effortBigLabel, { color: effortColor(effort) }]}>{t(effortLabel(effort))}</Text>
                 </View>
               ) : (
                 <Text style={s.effortEmpty}>
-                  {effortReadOnly ? 'Inget betyg satt' : 'Tryck för att betygsätta'}
+                  {effortReadOnly ? t('Inget betyg satt') : t('Tryck för att betygsätta')}
                 </Text>
               )}
             </View>
@@ -369,7 +371,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
               postKey={social.postKey}
               ownerId={social.ownerId}
               onOpenComments={social.onOpenComments}
-              shareText={`${title} · ${String(d.distance_km.toFixed(2)).replace('.', ',')} km på ${fmtTime(d.duration_seconds)}, loggat med SeventyFive`}
+              shareText={t('{title} · {dist} km på {time}, loggat med SeventyFive', { title, dist: String(d.distance_km.toFixed(2)).replace('.', ','), time: fmtTime(d.duration_seconds) })}
             />
           )}
         </Animated.View>
@@ -387,7 +389,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
             <GestureDetector gesture={styleDrag}>
               <View style={s.styleGrip}>
                 <View style={s.sheetHandle} />
-                <Text style={s.sheetTitle}>Välj karta</Text>
+                <Text style={s.sheetTitle}>{t('Välj karta')}</Text>
               </View>
             </GestureDetector>
             <SafeAreaView edges={['bottom']}>
@@ -421,7 +423,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
                         </View>
                       )}
                       <View style={s.mapCardLabelRow}>
-                        <Text style={[s.mapCardLabel, active && { color: ACCENT }]}>{ms.label}</Text>
+                        <Text style={[s.mapCardLabel, active && { color: ACCENT }]}>{t(ms.label)}</Text>
                         {active && <Ionicons name="checkmark-circle" size={15} color={ACCENT} />}
                       </View>
                     </TouchableOpacity>

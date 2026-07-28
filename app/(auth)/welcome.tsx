@@ -20,6 +20,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS,
 } from 'react-native-reanimated'
 import { NUM_FONT } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 const { width } = Dimensions.get('window')
 
@@ -92,12 +93,13 @@ const COPY: Record<SlideKey, { title: string; body: string }> = {
 // ─── Sida 2: utmaningen — dagskortet med alla fem uppgifterna ────────────────
 
 function ChallengeVisual() {
+  const t = useT()
   return (
     <View style={v.mockCard}>
       <View style={v.mockHead}>
         <View>
-          <Text style={v.mockLabel}>DAGENS UPPGIFTER</Text>
-          <Text style={v.mockTitle}>Dag <Text style={v.mockNum}>12</Text> av 75</Text>
+          <Text style={v.mockLabel}>{t('DAGENS UPPGIFTER')}</Text>
+          <Text style={v.mockTitle}>{t('Dag')} <Text style={v.mockNum}>12</Text> {t('av 75')}</Text>
         </View>
         <View style={v.ringBadge}><Text style={v.ringBadgeText}>3/5</Text></View>
       </View>
@@ -105,12 +107,12 @@ function ChallengeVisual() {
       {[
         'Träna 45 minuter', 'Håll din kost', 'Drick 3 liter vatten',
         'Läs 10 sidor', 'Ta ett framstegsfoto',
-      ].map((t, i) => (
-        <View key={t} style={v.mockRow}>
+      ].map((task, i) => (
+        <View key={task} style={v.mockRow}>
           <View style={[v.tick, i < 3 && v.tickOn]}>
             {i < 3 && <Ionicons name="checkmark" size={11} color="#0A1120" />}
           </View>
-          <Text style={[v.mockRowText, i < 3 && v.mockRowDone]}>{t}</Text>
+          <Text style={[v.mockRowText, i < 3 && v.mockRowDone]}>{t(task)}</Text>
         </View>
       ))}
     </View>
@@ -130,17 +132,18 @@ const WEEK = [
 ] as const
 
 function ScheduleVisual() {
+  const t = useT()
   return (
     <View style={v.mockCard}>
-      <Text style={v.mockLabel}>DIN VECKA</Text>
+      <Text style={v.mockLabel}>{t('DIN VECKA')}</Text>
       {WEEK.map(w => (
         <View key={w.day} style={[v.weekRow, 'active' in w && w.active && v.weekRowActive]}>
-          <Text style={[v.weekDay, 'active' in w && w.active && { color: ORANGE }]}>{w.day}</Text>
+          <Text style={[v.weekDay, 'active' in w && w.active && { color: ORANGE }]}>{t(w.day)}</Text>
           <View style={[v.weekIcon, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
             <Ionicons name={w.icon} size={13} color={w.color} />
           </View>
-          <Text style={v.weekPass}>{w.pass}</Text>
-          {'active' in w && w.active && <Text style={v.weekToday}>IDAG</Text>}
+          <Text style={v.weekPass}>{t(w.pass)}</Text>
+          {'active' in w && w.active && <Text style={v.weekToday}>{t('IDAG')}</Text>}
         </View>
       ))}
     </View>
@@ -150,18 +153,19 @@ function ScheduleVisual() {
 // ─── Sida 4: statistiken ─────────────────────────────────────────────────────
 
 function StatsVisual() {
+  const t = useT()
   const bars = [0.3, 0.52, 0.4, 0.66, 0.5, 0.8, 0.92]
   return (
     <View style={{ gap: 12 }}>
       <View style={v.mockCard}>
         <View style={v.mockHead}>
           <View>
-            <Text style={v.mockLabel}>DIN AKTIVITET</Text>
-            <Text style={v.mockTitle}>Dag <Text style={v.mockNum}>42</Text> av 75</Text>
+            <Text style={v.mockLabel}>{t('DIN AKTIVITET')}</Text>
+            <Text style={v.mockTitle}>{t('Dag')} <Text style={v.mockNum}>42</Text> {t('av 75')}</Text>
           </View>
           <View style={v.streakBadge}>
             <Ionicons name="flame" size={13} color={ORANGE} />
-            <Text style={v.streakText}>12 dagar i rad</Text>
+            <Text style={v.streakText}>{t('12 dagar i rad')}</Text>
           </View>
         </View>
         <View style={v.chartRow}>
@@ -174,9 +178,9 @@ function StatsVisual() {
       </View>
       <View style={v.statRow}>
         {[
-          { label: 'Veckans pass', value: '5' },
-          { label: 'Streak', value: '12' },
-          { label: 'Progress', value: '56 %' },
+          { label: t('Veckans pass'), value: '5' },
+          { label: t('Streak'), value: '12' },
+          { label: t('Progress'), value: '56 %' },
         ].map(c => (
           <View key={c.label} style={v.statCard}>
             <Text style={v.statValue}>{c.value}</Text>
@@ -197,19 +201,20 @@ const GROUPS = [
 
 /** Kompakt: ett enda kort så texten och knapparna alltid får plats under */
 function CommunityVisual() {
+  const t = useT()
   return (
     <View style={[v.mockCard, { gap: 11 }]}>
-      <Text style={v.mockLabel}>GRUPPER</Text>
+      <Text style={v.mockLabel}>{t('GRUPPER')}</Text>
       {GROUPS.map(gr => (
         <View key={gr.name} style={v.groupRow}>
           <View style={[v.groupAvatar, { backgroundColor: gr.color + '22' }]}>
             <Text style={[v.groupLetter, { color: gr.color }]}>{gr.letter}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={v.groupName}>{gr.name}</Text>
-            <Text style={v.groupMeta}>{gr.members}</Text>
+            <Text style={v.groupName}>{t(gr.name)}</Text>
+            <Text style={v.groupMeta}>{t(gr.members)}</Text>
           </View>
-          <View style={v.joinPill}><Text style={v.joinPillText}>Gå med</Text></View>
+          <View style={v.joinPill}><Text style={v.joinPillText}>{t('Gå med')}</Text></View>
         </View>
       ))}
       <View style={v.cardDivider} />
@@ -218,8 +223,8 @@ function CommunityVisual() {
           <Text style={[v.groupLetter, { color: ORANGE }]}>E</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={v.groupName}>Elin Berg delade ett pass</Text>
-          <Text style={v.groupMeta}>Löpning · 7,03 km · 5:12 /km</Text>
+          <Text style={v.groupName}>{t('Elin Berg delade ett pass')}</Text>
+          <Text style={v.groupMeta}>{t('Löpning · 7,03 km · 5:12 /km')}</Text>
         </View>
         <Ionicons name="heart" size={16} color="#FF3B4A" />
       </View>
@@ -230,6 +235,7 @@ function CommunityVisual() {
 // ─── Skärmen ─────────────────────────────────────────────────────────────────
 
 export default function Welcome() {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const [index, setIndex] = useState(0)
   const dirRef = useRef<1 | -1>(1)
@@ -330,7 +336,7 @@ export default function Welcome() {
         ) : <View style={{ width: 38 }} />}
         {!isLast ? (
           <TouchableOpacity onPress={() => goTo(SLIDES.length - 1, 1)} activeOpacity={0.7} hitSlop={10} testID="welcomeSkip">
-            <Text style={s.skipText}>Hoppa över</Text>
+            <Text style={s.skipText}>{t('Hoppa över')}</Text>
           </TouchableOpacity>
         ) : <View style={{ width: 38 }} />}
       </View>
@@ -350,9 +356,9 @@ export default function Welcome() {
         </Animated.View>
 
         <Animated.View key={`t-${slideKey}`} entering={FadeInDown.duration(340)} style={s.textArea}>
-          <Text style={s.title}>{COPY[slideKey].title}</Text>
-          <Text style={s.body}>{COPY[slideKey].body}</Text>
-          {slideKey === 'valkommen' && <Text style={s.tagline}>Din resa börjar här.</Text>}
+          <Text style={s.title}>{t(COPY[slideKey].title)}</Text>
+          <Text style={s.body}>{t(COPY[slideKey].body)}</Text>
+          {slideKey === 'valkommen' && <Text style={s.tagline}>{t('Din resa börjar här.')}</Text>}
         </Animated.View>
       </View>
 
@@ -376,7 +382,7 @@ export default function Welcome() {
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 style={s.primaryBtn}
               >
-                <Text style={s.primaryText}>Registrera dig</Text>
+                <Text style={s.primaryText}>{t('Registrera dig')}</Text>
               </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
@@ -385,11 +391,11 @@ export default function Welcome() {
               activeOpacity={0.8}
               testID="welcomeLogin"
             >
-              <Text style={s.outlineText}>Logga in</Text>
+              <Text style={s.outlineText}>{t('Logga in')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.dayLink} onPress={openDaySheet} activeOpacity={0.7}>
               <Ionicons name="calendar-outline" size={14} color={MUTED} />
-              <Text style={s.dayLinkText}>Jag har redan börjat, välj dag</Text>
+              <Text style={s.dayLinkText}>{t('Jag har redan börjat, välj dag')}</Text>
             </TouchableOpacity>
           </Animated.View>
         ) : (
@@ -399,7 +405,7 @@ export default function Welcome() {
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={s.primaryBtn}
             >
-              <Text style={s.primaryText}>Nästa</Text>
+              <Text style={s.primaryText}>{t('Nästa')}</Text>
               <Ionicons name="arrow-forward" size={17} color="#0A1120" />
             </LinearGradient>
           </TouchableOpacity>
@@ -418,8 +424,8 @@ export default function Welcome() {
           <GestureDetector gesture={daySheetDrag}>
           <Animated.View style={[s.sheet, { paddingBottom: 24 + insets.bottom }, daySheetStyle]}>
             <View style={s.sheetHandle} />
-            <Text style={s.sheetTitle}>Vilken dag är du på?</Text>
-            <Text style={s.sheetSub}>Dra i hjulet eller stega dig fram</Text>
+            <Text style={s.sheetTitle}>{t('Vilken dag är du på?')}</Text>
+            <Text style={s.sheetSub}>{t('Dra i hjulet eller stega dig fram')}</Text>
 
             {/* Stora dagsiffran med finjustering */}
             <View style={s.dayReadout}>
@@ -428,9 +434,9 @@ export default function Welcome() {
                 <Ionicons name="remove" size={22} color={OFFWHITE} />
               </TouchableOpacity>
               <View style={s.dayCenter}>
-                <Text style={s.dayWord}>DAG</Text>
+                <Text style={s.dayWord}>{t('DAG')}</Text>
                 <Text style={s.dayBigNum}>{selectedDay}</Text>
-                <Text style={s.dayOf}>av 75</Text>
+                <Text style={s.dayOf}>{t('av 75')}</Text>
               </View>
               <TouchableOpacity style={s.stepBtn} onPress={() => selectDay(selectedDay + 1)}
                 activeOpacity={0.7} testID="dayPlus">
@@ -476,11 +482,11 @@ export default function Welcome() {
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={s.confirmBtn}
                 >
-                  <Text style={s.confirmBtnText}>Fortsätt från dag {selectedDay}</Text>
+                  <Text style={s.confirmBtnText}>{t('Fortsätt från dag {day}', { day: selectedDay })}</Text>
                 </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity style={s.cancelBtn} onPress={dismissDaySheet}>
-                <Text style={s.cancelBtnText}>Avbryt</Text>
+                <Text style={s.cancelBtnText}>{t('Avbryt')}</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

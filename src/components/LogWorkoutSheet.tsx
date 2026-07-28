@@ -5,6 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
+import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, ACCENT, accentAlpha } from '@/lib/theme'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import type { Exercise } from '@/services/exercises'
@@ -34,6 +35,7 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
   /** Tidigare dagar: GPS-cardio går inte i efterhand — hoppa direkt till gym */
   allowCardio?: boolean
 }) {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const [step, setStep] = useState<Step>('choose')
   const [entries, setEntries] = useState<GymEntry[]>([])
@@ -110,9 +112,9 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
     )
   }
 
-  const headerTitle = step === 'choose' ? 'Logga pass'
-    : step === 'cardio' ? 'Välj cardio'
-    : 'Passöversikt'
+  const headerTitle = step === 'choose' ? t('Logga pass')
+    : step === 'cardio' ? t('Välj cardio')
+    : t('Passöversikt')
 
   function back() {
     if (step === 'cardio') setStep('choose')
@@ -142,7 +144,7 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
         {/* ── Val: Gym eller Cardio ── */}
         {step === 'choose' && (
           <View style={s.chooseWrap}>
-            <Text style={s.chooseSub}>Vad vill du logga?</Text>
+            <Text style={s.chooseSub}>{t('Vad vill du logga?')}</Text>
             <View style={s.chooseCards}>
               <TouchableOpacity
                 style={[s.chooseCard, { backgroundColor: accentAlpha('14') }]}
@@ -154,8 +156,8 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
                   <Ionicons name="barbell" size={26} color="#000" />
                 </View>
                 <View style={s.chooseTextWrap}>
-                  <Text style={s.chooseTitle}>Gym</Text>
-                  <Text style={s.chooseHint}>Välj övningar och logga set</Text>
+                  <Text style={s.chooseTitle}>{t('Gym')}</Text>
+                  <Text style={s.chooseHint}>{t('Välj övningar och logga set')}</Text>
                 </View>
                 <View style={[s.chooseArrow, { backgroundColor: accentAlpha('26') }]}>
                   <Ionicons name="arrow-forward" size={15} color={ACCENT} />
@@ -172,8 +174,8 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
                   <Ionicons name="fitness" size={26} color="#fff" />
                 </View>
                 <View style={s.chooseTextWrap}>
-                  <Text style={s.chooseTitle}>Cardio</Text>
-                  <Text style={s.chooseHint}>GPS-pass med karta och tempo</Text>
+                  <Text style={s.chooseTitle}>{t('Cardio')}</Text>
+                  <Text style={s.chooseHint}>{t('GPS-pass med karta och tempo')}</Text>
                 </View>
                 <View style={[s.chooseArrow, { backgroundColor: CARDIO_BLUE + '26' }]}>
                   <Ionicons name="arrow-forward" size={15} color={CARDIO_BLUE} />
@@ -186,12 +188,12 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
         {/* ── Cardio-typ ── */}
         {step === 'cardio' && (
           <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
-            {CARDIO_TYPES.map(t => (
-              <TouchableOpacity key={t.key} style={s.cardioRow} onPress={() => onPickCardio(t.key, t.label)} activeOpacity={0.8}>
+            {CARDIO_TYPES.map(ct => (
+              <TouchableOpacity key={ct.key} style={s.cardioRow} onPress={() => onPickCardio(ct.key, ct.label)} activeOpacity={0.8}>
                 <View style={[s.cardioIcon, { backgroundColor: CARDIO_BLUE + '18' }]}>
-                  <Ionicons name={t.icon} size={22} color={CARDIO_BLUE} />
+                  <Ionicons name={ct.icon} size={22} color={CARDIO_BLUE} />
                 </View>
-                <Text style={s.cardioLabel}>{t.label}</Text>
+                <Text style={s.cardioLabel}>{t(ct.label)}</Text>
                 <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
               </TouchableOpacity>
             ))}
@@ -203,12 +205,12 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
           <View style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 14 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <View>
-                <Text style={s.fieldLabel}>PASSNAMN</Text>
+                <Text style={s.fieldLabel}>{t('PASSNAMN')}</Text>
                 <AppTextInput
                   style={s.nameInput}
                   value={passName}
                   onChangeText={setPassName}
-                  placeholder="t.ex. Push, Ben, Överkropp…"
+                  placeholder={t('t.ex. Push, Ben, Överkropp…')}
                   placeholderTextColor={TEXT_SECONDARY}
                   autoCorrect={false}
                   returnKeyType="done"
@@ -233,7 +235,7 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
               {/* Fler övningar via muskelgruppssidan */}
               <TouchableOpacity style={s.addExBtn} onPress={() => setPickerOpen(true)} activeOpacity={0.8}>
                 <Ionicons name="add" size={19} color={ACCENT} />
-                <Text style={s.addExText}>Lägg till övning</Text>
+                <Text style={s.addExText}>{t('Lägg till övning')}</Text>
               </TouchableOpacity>
             </ScrollView>
             <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
@@ -244,7 +246,7 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
                 activeOpacity={0.85}
               >
                 <Ionicons name="checkmark" size={20} color="#000" />
-                <Text style={s.primaryBtnText}>{saving ? 'Sparar…' : 'Spara pass'}</Text>
+                <Text style={s.primaryBtnText}>{saving ? t('Sparar…') : t('Spara pass')}</Text>
               </TouchableOpacity>
             </View>
           </View>

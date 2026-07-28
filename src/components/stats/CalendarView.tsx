@@ -16,6 +16,7 @@ import type { UnitSystem } from '@/lib/units'
 import { DayWorkoutsModal } from './DayWorkoutsModal'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { useT, dateLocale } from '@/lib/i18n'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
 const GRID_PADDING = 20
@@ -60,6 +61,7 @@ function buildCalendarCells(year: number, month: number): Array<Date | null> {
 }
 
 function Legend() {
+  const t = useT()
   const items = [
     { color: GREEN,                    label: 'Klar' },
     { color: RED,                      label: 'Missad' },
@@ -71,7 +73,7 @@ function Legend() {
       {items.map(item => (
         <View key={item.label} style={s.legendItem}>
           <View style={[s.legendDot, { backgroundColor: item.color }]} />
-          <Text style={s.legendLabel}>{item.label}</Text>
+          <Text style={s.legendLabel}>{t(item.label)}</Text>
         </View>
       ))}
     </View>
@@ -100,6 +102,7 @@ export function CalendarView({
   onDeleteWorkout?: (id: string) => void
   onDayEdited?: () => void
 }) {
+  const t = useT()
   const init  = startDate ? parseLocalDate(startDate) : new Date()
   const [view, setView] = useState(new Date(init.getFullYear(), init.getMonth(), 1))
   const yr    = view.getFullYear()
@@ -120,12 +123,12 @@ export function CalendarView({
   function deleteFsWorkout() {
     const w = fsWorkout
     if (!w) return
-    Alert.alert('Radera träning', 'Det här går inte att ångra.', [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Radera', style: 'destructive', onPress: async () => {
+    Alert.alert(t('Radera träning'), t('Det här går inte att ångra.'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      { text: t('Radera'), style: 'destructive', onPress: async () => {
         const ok = await deleteCardioWorkout(w.id).catch(() => false)
         if (!ok) {
-          Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
+          Alert.alert(t('Kunde inte radera'), t('Kontrollera din uppkoppling och försök igen.'))
           return
         }
         onDeleteWorkout?.(w.id)
@@ -191,7 +194,7 @@ export function CalendarView({
           onPress={() => { Haptics.selectionAsync(); setYearOpen(true) }}
           activeOpacity={0.7}
         >
-          <Text style={s.calMonthLabel}>{MONTHS_SV[mo]} {yr}</Text>
+          <Text style={s.calMonthLabel}>{t(MONTHS_SV[mo])} {yr}</Text>
           <Ionicons name="chevron-down" size={14} color={TEXT_SECONDARY} />
         </TouchableOpacity>
         <TouchableOpacity style={s.calNavBtn} onPress={() => setView(new Date(yr, mo + 1, 1))} activeOpacity={0.7}>
@@ -202,7 +205,7 @@ export function CalendarView({
       <View style={s.calWeekRow}>
         {WEEKDAY_SHORT.map(d => (
           <View key={d} style={s.calWeekCell}>
-            <Text style={s.calWeekLabel}>{d}</Text>
+            <Text style={s.calWeekLabel}>{t(d)}</Text>
           </View>
         ))}
       </View>
@@ -253,7 +256,7 @@ export function CalendarView({
         <View style={s.fullScreen}>
           <View style={s.fullInner}>
           <View style={s.fullHeader}>
-            <Text style={s.fullTitle}>Hela utmaningen</Text>
+            <Text style={s.fullTitle}>{t('Hela utmaningen')}</Text>
             <GlassCircleButton
               icon="close" size={38} iconColor={TEXT_PRIMARY}
               onPress={() => setYearOpen(false)} fallbackStyle={s.yearClose}
@@ -263,14 +266,14 @@ export function CalendarView({
           {/* Fast veckodagsrad */}
           <View style={s.fullWeekRow}>
             {['M','T','O','T','F','L','S'].map((d, i) => (
-              <Text key={i} style={s.fullWeekLabel}>{d}</Text>
+              <Text key={i} style={s.fullWeekLabel}>{t(d)}</Text>
             ))}
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.fullScroll}>
             {challengeMonths.map(({ year, month }) => (
               <View key={`${year}-${month}`} style={s.fullMonth}>
-                <Text style={s.fullMonthTitle}>{MONTHS_SV[month]} {year !== new Date().getFullYear() ? year : ''}</Text>
+                <Text style={s.fullMonthTitle}>{t(MONTHS_SV[month])} {year !== new Date().getFullYear() ? year : ''}</Text>
                 <View style={s.fullGrid}>
                   {buildCalendarCells(year, month).map((date, i) => {
                     if (!date) return <View key={i} style={s.fullDay} />
@@ -342,7 +345,7 @@ export function CalendarView({
               <CardioSummaryView
                 workout={fsWorkout}
                 title={fsWorkout.name}
-                dateLabel={new Date(fsWorkout.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+                dateLabel={new Date(fsWorkout.created_at).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
                 avatarUrl={avatarUrl}
                 unit={unit}
                 onClose={() => setFsWorkout(null)}

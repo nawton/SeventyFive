@@ -7,6 +7,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
 import { TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // SCHEMAINTRO — slide-up som visas på träningssidan så länge schema saknas.
@@ -27,6 +28,7 @@ export function ScheduleIntroSheet({ visible, onCreate, onClose, onNeverShow }: 
   /** "Nej tack, visa inte igen" — tystad för alltid */
   onNeverShow: () => void
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
@@ -74,10 +76,9 @@ export function ScheduleIntroSheet({ visible, onCreate, onClose, onNeverShow }: 
             <View style={[s.iconCircle, { backgroundColor: T.ACCENT }]}>
               <Ionicons name="calendar" size={26} color={light ? '#FFFFFF' : '#000000'} />
             </View>
-            <Text style={[s.title, { color: T.TEXT_PRIMARY }]}>Skapa ditt schema</Text>
+            <Text style={[s.title, { color: T.TEXT_PRIMARY }]}>{t('Skapa ditt schema')}</Text>
             <Text style={s.body}>
-              Kom igång med ett anpassat träningsprogram. Svara på några frågor
-              så bygger vi veckans pass åt dig.
+              {t('Kom igång med ett anpassat träningsprogram. Svara på några frågor så bygger vi veckans pass åt dig.')}
             </Text>
 
             <TouchableOpacity
@@ -86,7 +87,7 @@ export function ScheduleIntroSheet({ visible, onCreate, onClose, onNeverShow }: 
               activeOpacity={0.85}
               testID="scheduleIntroCreate"
             >
-              <Text style={[s.createText, { color: light ? '#FFFFFF' : '#000000' }]}>Skapa schema</Text>
+              <Text style={[s.createText, { color: light ? '#FFFFFF' : '#000000' }]}>{t('Skapa schema')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onNeverShow}
@@ -94,7 +95,7 @@ export function ScheduleIntroSheet({ visible, onCreate, onClose, onNeverShow }: 
               activeOpacity={0.7}
               testID="scheduleIntroNeverShow"
             >
-              <Text style={s.dismissText}>Nej tack, visa inte igen</Text>
+              <Text style={s.dismissText}>{t('Nej tack, visa inte igen')}</Text>
             </TouchableOpacity>
           </Animated.View>
         </GestureDetector>

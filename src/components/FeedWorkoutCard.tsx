@@ -9,6 +9,7 @@ import { formatPace } from '@/lib/cardioUtils'
 import { fmtTime } from '@/lib/format'
 import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, useCardChrome, accentAlpha, ACCENT } from '@/lib/theme'
 import { useRouteColor } from '@/lib/routeColor'
+import { t, useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // FLÖDESKORT — delat mellan community-flödet och atletprofilens
@@ -60,7 +61,7 @@ export function workoutToPost(
     authorId,
     authorName,
     authorAvatar,
-    typeLabel: TYPE_LABELS[w.data.type] ?? 'Cardio',
+    typeLabel: t(TYPE_LABELS[w.data.type] ?? 'Cardio'),
     createdAt: w.created_at,
     distanceKm: w.data.distance_km,
     durationS: w.data.duration_seconds,
@@ -96,7 +97,7 @@ export function strengthToPosts(
       authorId,
       authorName,
       authorAvatar,
-      typeLabel: 'Gympass',
+      typeLabel: t('Gympass'),
       createdAt,
       exercises: dayWorkouts.length,
       sets,
@@ -117,22 +118,22 @@ export function relativeDayLabel(iso: string, now = new Date()): string {
   const days = Math.floor(
     (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
      new Date(then.getFullYear(), then.getMonth(), then.getDate()).getTime()) / 86_400_000)
-  if (days <= 0) return 'idag'
-  if (days === 1) return 'igår'
-  return `${days} dagar sedan`
+  if (days <= 0) return t('idag')
+  if (days === 1) return t('igår')
+  return t('{n} dagar sedan', { n: days })
 }
 
 /** "Torsdag morgon" — veckodag + tid på dygnet, som förlagan rubricerar pass */
 export function dayPartTitle(iso: string): string {
   const d = new Date(iso)
-  const weekday = d.toLocaleDateString('sv-SE', { weekday: 'long' })
+  const weekday = d.toLocaleDateString(dateLocale(), { weekday: 'long' })
   const h = d.getHours()
   const part =
-    h < 4 ? 'natt' :
-    h < 11 ? 'morgon' :
-    h < 13 ? 'lunch' :
-    h < 17 ? 'eftermiddag' :
-    h < 22 ? 'kväll' : 'natt'
+    h < 4 ? t('natt') :
+    h < 11 ? t('morgon') :
+    h < 13 ? t('lunch') :
+    h < 17 ? t('eftermiddag') :
+    h < 22 ? t('kväll') : t('natt')
   return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${part}`
 }
 
@@ -195,6 +196,7 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
   /** ⋯ i övre hörnet — anmälningsmenyn; utelämnas på egna inlägg */
   onMenuPress?: () => void
 }) {
+  const t = useT()
   const chrome = useCardChrome()
   const routeColor = useRouteColor()
   const [localLiked, setLocalLiked] = useState(false)
@@ -249,15 +251,15 @@ export function FeedWorkoutCard({ post, onOpen, onAvatarPress, social, onToggleL
       <Text style={s.cardTitle}>{dayPartTitle(post.createdAt)}</Text>
       {post.kind === 'cardio' ? (
         <View style={s.statsRow}>
-          <Stat value={post.distanceKm.toFixed(2).replace('.', ',')} label="km" />
-          <Stat value={fmtTime(post.durationS)} label="tid" />
-          <Stat value={formatPace(post.distanceKm, post.durationS)} label="min/km" />
+          <Stat value={post.distanceKm.toFixed(2).replace('.', ',')} label={t('km')} />
+          <Stat value={fmtTime(post.durationS)} label={t('tid')} />
+          <Stat value={formatPace(post.distanceKm, post.durationS)} label={t('min/km')} />
         </View>
       ) : (
         <View style={s.statsRow}>
-          <Stat value={String(post.exercises)} label="övningar" />
-          <Stat value={String(post.sets)} label="set" />
-          <Stat value={post.volumeKg.toLocaleString('sv-SE')} label="kg volym" />
+          <Stat value={String(post.exercises)} label={t('övningar')} />
+          <Stat value={String(post.sets)} label={t('set')} />
+          <Stat value={post.volumeKg.toLocaleString(dateLocale())} label={t('kg volym')} />
         </View>
       )}
 

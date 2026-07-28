@@ -1,5 +1,6 @@
 import { Alert, ActionSheetIOS, Platform } from 'react-native'
 import { supabase } from '@/lib/supabase'
+import { t } from '@/lib/i18n'
 
 // =============================================================================
 // ANMÄLNINGAR — delat flöde för grupper, inlägg och användare: välj
@@ -28,36 +29,36 @@ async function submit(targetType: ReportTarget, targetId: string, reason: string
 export function promptReport(targetType: ReportTarget, targetId: string, title: string): void {
   const send = (reason: string) => {
     submit(targetType, targetId, reason)
-      .then(() => Alert.alert('Tack för din anmälan', 'Vi tittar på den så snart vi kan.'))
-      .catch(() => Alert.alert('Kunde inte skicka anmälan', 'Kontrollera anslutningen och försök igen.'))
+      .then(() => Alert.alert(t('Tack för din anmälan'), t('Vi tittar på den så snart vi kan.')))
+      .catch(() => Alert.alert(t('Kunde inte skicka anmälan'), t('Kontrollera anslutningen och försök igen.')))
   }
   if (Platform.OS === 'ios') {
     ActionSheetIOS.showActionSheetWithOptions(
-      { title, options: ['Avbryt', ...REASONS], cancelButtonIndex: 0 },
+      { title, options: [t('Avbryt'), ...REASONS.map(r => t(r))], cancelButtonIndex: 0 },
       i => { if (i > 0) send(REASONS[i - 1]) },
     )
   } else {
-    Alert.alert(title, 'Välj anledning', [
-      { text: 'Avbryt', style: 'cancel' },
-      ...REASONS.map(r => ({ text: r, onPress: () => send(r) })),
+    Alert.alert(title, t('Välj anledning'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      ...REASONS.map(r => ({ text: t(r), onPress: () => send(r) })),
     ])
   }
 }
 
 /** ⋯-menyn på ett inlägg: anmäl inlägget eller dess författare */
 export function postReportMenu(postId: string, authorId: string, authorName: string): void {
-  const reportPost = () => promptReport('post', postId, 'Anmäl inlägget')
-  const reportUser = () => promptReport('user', authorId, `Anmäl ${authorName}`)
+  const reportPost = () => promptReport('post', postId, t('Anmäl inlägget'))
+  const reportUser = () => promptReport('user', authorId, t('Anmäl {name}', { name: authorName }))
   if (Platform.OS === 'ios') {
     ActionSheetIOS.showActionSheetWithOptions(
-      { options: ['Avbryt', 'Anmäl inlägget', `Anmäl ${authorName}`], cancelButtonIndex: 0 },
+      { options: [t('Avbryt'), t('Anmäl inlägget'), t('Anmäl {name}', { name: authorName })], cancelButtonIndex: 0 },
       i => { if (i === 1) reportPost(); else if (i === 2) reportUser() },
     )
   } else {
-    Alert.alert('Inlägg', undefined, [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Anmäl inlägget', onPress: reportPost },
-      { text: `Anmäl ${authorName}`, onPress: reportUser },
+    Alert.alert(t('Inlägg'), undefined, [
+      { text: t('Avbryt'), style: 'cancel' },
+      { text: t('Anmäl inlägget'), onPress: reportPost },
+      { text: t('Anmäl {name}', { name: authorName }), onPress: reportUser },
     ])
   }
 }

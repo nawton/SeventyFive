@@ -10,6 +10,7 @@ import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
 import { useStatsColors } from '@/components/stats/statsShared'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // MILSTOLPEANALYS — öppnas från milstolpe-bannern på Framsteg.
@@ -39,6 +40,7 @@ export function MilestoneAnalysisModal({
   completedSessions: CompletedSessionItem[]
   unit: UnitSystem
 }) {
+  const t = useT()
   // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
   const bodyLight = useColorScheme() === 'light'
   const bodyFill = bodyLight ? '#DFE0E4' : '#2A2A2C'
@@ -115,51 +117,59 @@ export function MilestoneAnalysisModal({
   if (topMissDay) {
     tips.push({
       icon: 'calendar-outline', color: RED,
-      text: `${topMissDay.count} av dina missar har landat på ${topMissDay.weekday}. Planera de dagarna extra noga: bestäm i förväg när passet, läsningen och fotot ska ske.`,
+      text: t('{n} av dina missar har landat på {weekday}. Planera de dagarna extra noga: bestäm i förväg när passet, läsningen och fotot ska ske.', { n: topMissDay.count, weekday: t(topMissDay.weekday) }),
     })
   } else if (missed > 0) {
     tips.push({
       icon: 'alert-circle-outline', color: RED,
-      text: `${missed} ${missed === 1 ? 'missad dag' : 'missade dagar'} hittills. Vanligaste orsaken är att kvällen blir för kort, gör den svåraste uppgiften före lunch.`,
+      text: missed === 1
+        ? t('{n} missad dag hittills. Vanligaste orsaken är att kvällen blir för kort, gör den svåraste uppgiften före lunch.', { n: missed })
+        : t('{n} missade dagar hittills. Vanligaste orsaken är att kvällen blir för kort, gör den svåraste uppgiften före lunch.', { n: missed }),
     })
   } else if (logged >= 3) {
     tips.push({
       icon: 'shield-checkmark-outline', color: GREEN,
-      text: 'Noll missade dagar hittills. Ändra ingenting, rutinen du har fungerar.',
+      text: t('Noll missade dagar hittills. Ändra ingenting, rutinen du har fungerar.'),
     })
   }
   if (thisWeekPasses < prevWeekPasses) {
     tips.push({
       icon: 'trending-down-outline', color: T.ACCENT,
-      text: `${thisWeekPasses} pass senaste 7 dagarna mot ${prevWeekPasses} veckan innan. Boka in nästa pass direkt efter att du läst klart det här.`,
+      text: t('{a} pass senaste 7 dagarna mot {b} veckan innan. Boka in nästa pass direkt efter att du läst klart det här.', { a: thisWeekPasses, b: prevWeekPasses }),
     })
   } else if (thisWeekKm > prevWeekKm && prevWeekKm > 0) {
     tips.push({
       icon: 'trending-up-outline', color: GREEN,
-      text: `Distansen ökar: ${toDisplayDistance(thisWeekKm, unit).toFixed(1)} ${unitLabel} senaste veckan mot ${toDisplayDistance(prevWeekKm, unit).toFixed(1)} veckan innan. Öka högst ~10 % per vecka så håller kroppen.`,
+      text: t('Distansen ökar: {a} {u} senaste veckan mot {b} veckan innan. Öka högst ~10 % per vecka så håller kroppen.', {
+        a: toDisplayDistance(thisWeekKm, unit).toFixed(1), u: unitLabel, b: toDisplayDistance(prevWeekKm, unit).toFixed(1),
+      }),
     })
   }
   if (daysSinceCardio !== null && daysSinceCardio >= 3) {
     tips.push({
       icon: 'walk-outline', color: P.BLUE,
-      text: `${daysSinceCardio} dagar sedan senaste cardiopasset. Ett kort pass idag räcker för att hålla vanan vid liv.`,
+      text: t('{n} dagar sedan senaste cardiopasset. Ett kort pass idag räcker för att hålla vanan vid liv.', { n: daysSinceCardio }),
     })
   }
   if (streak >= 7) {
     tips.push({
       icon: 'flame-outline', color: T.ACCENT,
-      text: `Din streak på ${streak} dagar är din största tillgång. Skydda den: gör aldrig morgondagen beroende av motivation, bara av planen.`,
+      text: t('Din streak på {n} dagar är din största tillgång. Skydda den: gör aldrig morgondagen beroende av motivation, bara av planen.', { n: streak }),
     })
   } else {
     tips.push({
       icon: 'flame-outline', color: T.ACCENT,
-      text: `Streak: ${streak} ${streak === 1 ? 'dag' : 'dagar'}. Ta den till 7 så börjar rutinen sköta sig själv, en dag i taget.`,
+      text: streak === 1
+        ? t('Streak: {n} dag. Ta den till 7 så börjar rutinen sköta sig själv, en dag i taget.', { n: streak })
+        : t('Streak: {n} dagar. Ta den till 7 så börjar rutinen sköta sig själv, en dag i taget.', { n: streak }),
     })
   }
   if (milestone) {
     tips.push({
       icon: 'flag-outline', color: P.TEAL,
-      text: `${milestone.daysLeft === 1 ? 'Bara 1 dag' : `${milestone.daysLeft} dagar`} kvar till "${milestone.label.replace(/!$/, '')}". Sikta bara på den, inte på dag 75.`,
+      text: milestone.daysLeft === 1
+        ? t('Bara 1 dag kvar till "{label}". Sikta bara på den, inte på dag 75.', { label: milestone.label.replace(/!$/, '') })
+        : t('{n} dagar kvar till "{label}". Sikta bara på den, inte på dag 75.', { n: milestone.daysLeft, label: milestone.label.replace(/!$/, '') }),
     })
   }
 
@@ -171,7 +181,7 @@ export function MilestoneAnalysisModal({
       <View style={s.root}>
         <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
           <GlassCircleButton icon="chevron-back" onPress={onClose} />
-          <Text style={s.topTitle}>Analys</Text>
+          <Text style={s.topTitle}>{t('Analys')}</Text>
           <View style={{ width: 44 }} />
         </View>
 
@@ -179,41 +189,41 @@ export function MilestoneAnalysisModal({
           {/* Mot nästa milstolpe */}
           {milestone && (
             <View style={s.readout}>
-              <Text style={s.readoutLabel}>Nästa milstolpe</Text>
+              <Text style={s.readoutLabel}>{t('Nästa milstolpe')}</Text>
               <Text style={s.readoutTitle}>{milestone.label}</Text>
               <View style={s.progressTrack}>
                 <View style={[s.progressFill, { width: `${progressPct}%` as never }]} />
               </View>
               <Text style={s.readoutSub}>
-                Dag {progressDays} av {milestone.day} · {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`}
+                {t('Dag {a} av {b}', { a: progressDays, b: milestone.day })} · {milestone.daysLeft === 1 ? t('1 dag kvar') : t('{n} dagar kvar', { n: milestone.daysLeft })}
               </Text>
             </View>
           )}
 
           {/* Facit hittills */}
-          <Text style={s.sectionHead}>Så har det gått</Text>
+          <Text style={s.sectionHead}>{t('Så har det gått')}</Text>
           <View style={s.card}>
             <View style={[s.dtlRow, { paddingTop: 14 }]}>
               <View style={s.dtlCell}>
-                <Text style={s.dtlLbl}>Klarade dagar</Text>
+                <Text style={s.dtlLbl}>{t('Klarade dagar')}</Text>
                 <Text style={[s.dtlVal, { color: GREEN }]}>{completed}</Text>
               </View>
               <View style={s.dtlCell}>
-                <Text style={s.dtlLbl}>Missade dagar</Text>
+                <Text style={s.dtlLbl}>{t('Missade dagar')}</Text>
                 <Text style={[s.dtlVal, { color: RED }]}>{missed}</Text>
               </View>
             </View>
             <View style={s.dtlSep} />
             <View style={[s.dtlRow, { paddingBottom: 14 }]}>
               <View style={s.dtlCell}>
-                <Text style={s.dtlLbl}>Framgång</Text>
+                <Text style={s.dtlLbl}>{t('Framgång')}</Text>
                 <Text style={[s.dtlVal, { color: P.TEAL }]}>
                   {successRate}
                   <Text style={s.dtlUnit}> %</Text>
                 </Text>
               </View>
               <View style={s.dtlCell}>
-                <Text style={s.dtlLbl}>Längsta streak</Text>
+                <Text style={s.dtlLbl}>{t('Längsta streak')}</Text>
                 <Text style={[s.dtlVal, { color: ACCENT }]}>
                   {longestStreak}
                   <Text style={s.dtlUnit}> DAGAR</Text>
@@ -223,26 +233,26 @@ export function MilestoneAnalysisModal({
           </View>
 
           {/* Senaste veckan */}
-          <Text style={s.sectionHead}>Senaste 7 dagarna</Text>
+          <Text style={s.sectionHead}>{t('Senaste 7 dagarna')}</Text>
           <View style={s.card}>
             <View style={[s.kpiRow, { borderTopWidth: 0 }]}>
-              <Text style={s.kpiLbl}>Träningspass</Text>
+              <Text style={s.kpiLbl}>{t('Träningspass')}</Text>
               <Text style={s.kpiVal}>
                 {thisWeekPasses}
-                <Text style={s.kpiPrev}>  ({prevWeekPasses} veckan innan)</Text>
+                <Text style={s.kpiPrev}>  {t('({n} veckan innan)', { n: prevWeekPasses })}</Text>
               </Text>
             </View>
             <View style={s.kpiRow}>
-              <Text style={s.kpiLbl}>Distans</Text>
+              <Text style={s.kpiLbl}>{t('Distans')}</Text>
               <Text style={s.kpiVal}>
                 {toDisplayDistance(thisWeekKm, unit).toFixed(1)} {unitLabel}
-                <Text style={s.kpiPrev}>  ({toDisplayDistance(prevWeekKm, unit).toFixed(1)} veckan innan)</Text>
+                <Text style={s.kpiPrev}>  {t('({n} veckan innan)', { n: toDisplayDistance(prevWeekKm, unit).toFixed(1) })}</Text>
               </Text>
             </View>
           </View>
 
           {/* Tips */}
-          <Text style={s.sectionHead}>Att tänka på</Text>
+          <Text style={s.sectionHead}>{t('Att tänka på')}</Text>
           <View style={s.card}>
             {tips.map((t, i) => (
               <View key={i} style={[s.tipRow, i > 0 && s.rowBorder]}>

@@ -99,6 +99,7 @@ import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type 
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useStatsColors } from '@/components/stats/statsShared'
+import { useT, dateLocale } from '@/lib/i18n'
 
 const GOLD = '#FFD54F'
 
@@ -119,6 +120,7 @@ function fmtPaceStr(secs: number): string {
 }
 
 export default function RecordsScreen() {
+  const t = useT()
   const P = useStatsColors()
   const T = useThemeStrings()
   const [loading, setLoading]           = useState(true)
@@ -135,6 +137,23 @@ export default function RecordsScreen() {
   const [avatarUrl, setAvatarUrl]       = useState<string | null>(null)
   const [selectedCardio, setSelectedCardio] = useState<CardioWorkout | null>(null)
   const cardioListRef = useRef<CardioWorkout[]>([])
+
+  // Poänghistorikens "detail"-text byggs i lib/levels.ts (rör inte den filen) —
+  // här tolkas den färdiga svenska strängen om till en översatt mall utifrån
+  // vilken poängkälla den hör till, siffran i sig bevaras oförändrad.
+  function pointDetailText(label: string, detail: string): string {
+    if (label === 'Engångsmål') {
+      const m = detail.match(/^(\d+) av (\d+)$/)
+      return m ? t('{n} av {total}', { n: m[1], total: m[2] }) : detail
+    }
+    const n = detail.match(/^\d+/)?.[0]
+    if (!n) return detail
+    if (label === 'Klarade dagar')     return t('{n} dagar', { n })
+    if (label === 'Personliga rekord') return t('{n} rekord', { n })
+    if (label === 'Medaljer')          return t('{n} upplåsta', { n })
+    if (label === 'Schemapass' || label === 'Cardiopass' || label === 'Styrkepass') return t('{n} pass', { n })
+    return detail
+  }
 
   function openCardioRecord(id: string | null) {
     if (!id) return
@@ -334,7 +353,7 @@ export default function RecordsScreen() {
           icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
           onPress={() => router.back()} fallbackStyle={s.iconBtn}
         />
-        <Text style={s.title}>Rekord & medaljer</Text>
+        <Text style={s.title}>{t('Rekord & medaljer')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -343,7 +362,7 @@ export default function RecordsScreen() {
         {/* ── Min nivå ── */}
         <View style={s.levelHero}>
           <MedalBadge tier={level.current.tier} label="75" unlocked size={120} />
-          <Text style={s.levelName}>{level.current.name}</Text>
+          <Text style={s.levelName}>{t(level.current.name)}</Text>
         </View>
 
         {/* Kompakt nivå-slider: progress mot Diamant med tier-markörer längs banan */}
@@ -355,28 +374,28 @@ export default function RecordsScreen() {
               style={[s.tierFill, { width: `${Math.min(100, (points / MAX_THRESHOLD) * 100)}%` as any }]}
             />
           </View>
-          {LEVEL_TIERS.map(t => {
-            const pct     = (t.threshold / MAX_THRESHOLD) * 100
-            const reached = points >= t.threshold
+          {LEVEL_TIERS.map(tier => {
+            const pct     = (tier.threshold / MAX_THRESHOLD) * 100
+            const reached = points >= tier.threshold
             return (
               <TouchableOpacity
-                key={t.id}
+                key={tier.id}
                 style={[s.tierMarker, { left: `${pct}%` as any }]}
                 hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
                 activeOpacity={0.75}
                 onPress={() => openMedal({
-                  tier: t.tier,
+                  tier: tier.tier,
                   label: '75',
-                  title: t.name,
-                  subtitle: `Nivå · ${t.threshold.toLocaleString('sv-SE')} p`,
+                  title: t(tier.name),
+                  subtitle: t('Nivå · {n} p', { n: tier.threshold.toLocaleString(dateLocale()) }),
                   description: reached
-                    ? 'Du har nått den här nivån. Fortsätt samla poäng genom dina dagliga aktiviteter.'
-                    : `Samla ${(t.threshold - points).toLocaleString('sv-SE')} p till för att nå ${t.name}.`,
+                    ? t('Du har nått den här nivån. Fortsätt samla poäng genom dina dagliga aktiviteter.')
+                    : t('Samla {n} p till för att nå {name}.', { n: (tier.threshold - points).toLocaleString(dateLocale()), name: t(tier.name) }),
                   unlocked: reached,
-                  progress: reached ? undefined : `${points.toLocaleString('sv-SE')}/${t.threshold.toLocaleString('sv-SE')} p`,
+                  progress: reached ? undefined : `${points.toLocaleString(dateLocale())}/${tier.threshold.toLocaleString(dateLocale())} p`,
                 })}
               >
-                <MedalBadge tier={t.tier} label="" unlocked={reached} size={24} />
+                <MedalBadge tier={tier.tier} label="" unlocked={reached} size={24} />
               </TouchableOpacity>
             )
           })}
@@ -385,8 +404,8 @@ export default function RecordsScreen() {
         <View style={s.levelPtsRow}>
           <Text style={s.levelPtsBig}>
             {level.next
-              ? `${(level.next.threshold - points).toLocaleString('sv-SE')} p till ${level.next.name}`
-              : 'Högsta nivån nådd!'}
+              ? t('{n} p till {name}', { n: (level.next.threshold - points).toLocaleString(dateLocale()), name: t(level.next.name) })
+              : t('Högsta nivån nådd!')}
           </Text>
           <TouchableOpacity
             style={s.historyBtn}
@@ -394,7 +413,7 @@ export default function RecordsScreen() {
             activeOpacity={0.8}
           >
             <Ionicons name="time-outline" size={14} color={ACCENT} />
-            <Text style={s.historyBtnText}>Poänghistorik</Text>
+            <Text style={s.historyBtnText}>{t('Poänghistorik')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -409,7 +428,7 @@ export default function RecordsScreen() {
                   onPress={() => commitMain(i as 0 | 1)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[s.mainTabText, mainTab === i && s.earnTabTextActive]}>{label}</Text>
+                  <Text style={[s.mainTabText, mainTab === i && s.earnTabTextActive]}>{t(label)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -422,7 +441,7 @@ export default function RecordsScreen() {
         {mainTab === 0 && (<>
         {/* Tjäna poäng — titlarna sitter i korten, nästa kort sticker fram */}
         <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>TJÄNA POÄNG</Text>
+          <Text style={s.sectionTitle}>{t('TJÄNA POÄNG')}</Text>
         </View>
         <ScrollView
           ref={earnPagerRef}
@@ -441,8 +460,8 @@ export default function RecordsScreen() {
                 <Ionicons name="repeat" size={16} color={ACCENT} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.earnCardTitle}>Återkommande</Text>
-                <Text style={s.earnCardSub}>Poäng du kan tjäna varje dag</Text>
+                <Text style={s.earnCardTitle}>{t('Återkommande')}</Text>
+                <Text style={s.earnCardSub}>{t('Poäng du kan tjäna varje dag')}</Text>
               </View>
             </View>
             {POINT_RULES.map((rule, i) => (
@@ -451,8 +470,8 @@ export default function RecordsScreen() {
                   <Ionicons name={rule.icon} size={16} color={ACCENT} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.ruleLabel}>{rule.label}</Text>
-                  <Text style={s.ruleCap}>{rule.cap}</Text>
+                  <Text style={s.ruleLabel}>{t(rule.label)}</Text>
+                  <Text style={s.ruleCap}>{t(rule.cap)}</Text>
                 </View>
                 <Text style={s.rulePts}>{rule.pts} p</Text>
               </View>
@@ -466,8 +485,8 @@ export default function RecordsScreen() {
                 <Ionicons name="checkmark-done" size={16} color="#3BE862" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.earnCardTitle}>Engångsmål</Text>
-                <Text style={s.earnCardSub}>{ONE_TIME_RULES.filter(r => oneTime[r.id]).length} av {ONE_TIME_RULES.length} avklarade</Text>
+                <Text style={s.earnCardTitle}>{t('Engångsmål')}</Text>
+                <Text style={s.earnCardSub}>{t('{a} av {b} avklarade', { a: ONE_TIME_RULES.filter(r => oneTime[r.id]).length, b: ONE_TIME_RULES.length })}</Text>
               </View>
             </View>
             {ONE_TIME_RULES.map((rule, i) => {
@@ -486,7 +505,7 @@ export default function RecordsScreen() {
                   <View style={s.ruleIcon}>
                     <Ionicons name={rule.icon} size={16} color={earned ? '#3BE862' : ACCENT} />
                   </View>
-                  <Text style={[s.ruleLabel, { flex: 1 }]}>{rule.label}</Text>
+                  <Text style={[s.ruleLabel, { flex: 1 }]}>{t(rule.label)}</Text>
                   <Text style={s.rulePts}>{rule.pts} p</Text>
                   {earned ? (
                     <Ionicons name="checkmark-circle" size={18} color="#3BE862" />
@@ -501,7 +520,7 @@ export default function RecordsScreen() {
 
         {/* ── Medaljer ── */}
         <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>MEDALJER</Text>
+          <Text style={s.sectionTitle}>{t('MEDALJER')}</Text>
           <Text style={s.sectionCount}>{unlockedCount}/{achievements.length}</Text>
         </View>
         <View style={s.medalGrid}>
@@ -514,19 +533,19 @@ export default function RecordsScreen() {
                 tier: a.tier,
                 icon: a.icon,
                 imageId: a.id,
-                title: a.title,
-                subtitle: `${TIER_NAMES[a.tier]}-medalj`,
-                description: a.description,
+                title: t(a.title),
+                subtitle: t('{tier}-medalj', { tier: t(TIER_NAMES[a.tier]) }),
+                description: t(a.description),
                 unlocked: a.unlocked,
                 progress: a.progress,
               })}
             >
               <MedalBadge tier={a.tier} icon={a.icon} unlocked={a.unlocked} size={56} imageSource={MEDAL_IMAGES[a.id]} />
               <Text style={[s.medalTitle, !a.unlocked && { color: TEXT_SECONDARY }]} numberOfLines={1}>
-                {a.title}
+                {t(a.title)}
               </Text>
               <Text style={s.medalDesc} numberOfLines={2}>
-                {a.unlocked ? a.description : (a.progress ?? a.description)}
+                {a.unlocked ? t(a.description) : (a.progress ?? t(a.description))}
               </Text>
             </TouchableOpacity>
           ))}
@@ -537,7 +556,7 @@ export default function RecordsScreen() {
         {mainTab === 1 && (<>
         {/* ── Personliga rekord ── */}
         <View style={[s.sectionRow, { marginTop: 8 }]}>
-          <Text style={s.sectionTitle}>PERSONLIGA REKORD</Text>
+          <Text style={s.sectionTitle}>{t('PERSONLIGA REKORD')}</Text>
           {records.length > 0 && <Text style={s.sectionCount}>{records.length}</Text>}
         </View>
 
@@ -545,7 +564,7 @@ export default function RecordsScreen() {
           <View style={s.empty}>
             <Ionicons name="trophy-outline" size={36} color="rgba(255,255,255,0.12)" />
             <Text style={s.emptyText}>
-              Logga vikt på dina styrkeövningar så dyker rekorden upp här.
+              {t('Logga vikt på dina styrkeövningar så dyker rekorden upp här.')}
             </Text>
           </View>
         ) : (
@@ -567,7 +586,7 @@ export default function RecordsScreen() {
                   </Text>
                 </View>
                 <Text style={s.recordDate}>
-                  {new Date(r.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
+                  {new Date(r.date).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}
                 </Text>
                 <Ionicons name="chevron-forward" size={15} color="rgba(255,255,255,0.25)" />
               </TouchableOpacity>
@@ -579,19 +598,19 @@ export default function RecordsScreen() {
         {cardioRecs && (
           <>
             <View style={[s.sectionRow, { marginTop: 8 }]}>
-              <Text style={s.sectionTitle}>CARDIOREKORD</Text>
+              <Text style={s.sectionTitle}>{t('CARDIOREKORD')}</Text>
             </View>
             <View style={s.recordCard}>
               {([
                 {
-                  icon: 'map-outline' as const, color: CARDIO_BLUE, label: 'Längsta pass',
+                  icon: 'map-outline' as const, color: CARDIO_BLUE, label: t('Längsta pass'),
                   id: cardioRecs.longestId,
                   value: cardioRecs.longestKm > 0
                     ? `${toDisplayDistance(cardioRecs.longestKm, unit).toFixed(2).replace('.', ',')} ${distanceUnitLabel(unit)}`
                     : '0',
                 },
                 {
-                  icon: 'flash-outline' as const, color: P.LIME, label: 'Snabbaste km',
+                  icon: 'flash-outline' as const, color: P.LIME, label: t('Snabbaste km'),
                   id: cardioRecs.fastestSplitId ?? cardioRecs.bestPaceId,
                   value: cardioRecs.fastestSplitSec !== Infinity
                     ? fmtPaceStr(cardioRecs.fastestSplitSec)
@@ -600,14 +619,14 @@ export default function RecordsScreen() {
                       : '--:--',
                 },
                 {
-                  icon: 'stopwatch-outline' as const, color: T.ACCENT, label: 'Bästa tempo',
+                  icon: 'stopwatch-outline' as const, color: T.ACCENT, label: t('Bästa tempo'),
                   id: cardioRecs.bestPaceId,
                   value: cardioRecs.bestPaceSec === Infinity
                     ? '--:--'
                     : `${fmtPaceStr(paceForUnit(cardioRecs.bestPaceSec, unit))} /${distanceUnitLabel(unit)}`,
                 },
                 {
-                  icon: 'trending-up-outline' as const, color: GOLD, label: 'Längsta vecka',
+                  icon: 'trending-up-outline' as const, color: GOLD, label: t('Längsta vecka'),
                   id: cardioRecs.biggestWeekBestId,
                   value: cardioRecs.biggestWeekKm > 0
                     ? `${toDisplayDistance(cardioRecs.biggestWeekKm, unit).toFixed(1).replace('.', ',')} ${distanceUnitLabel(unit)}`
@@ -642,7 +661,7 @@ export default function RecordsScreen() {
           <CardioSummaryView
             workout={selectedCardio}
             title={selectedCardio.name}
-            dateLabel={new Date(selectedCardio.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            dateLabel={new Date(selectedCardio.created_at).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
             avatarUrl={avatarUrl}
             unit={unit}
             onClose={() => setSelectedCardio(null)}
@@ -660,7 +679,7 @@ export default function RecordsScreen() {
         <Pressable style={s.modalBackdrop} onPress={() => setHistoryEx(null)}>
           <Pressable style={s.modalCard} onPress={() => {}}>
             <Text style={s.histTitle} numberOfLines={1}>{historyEx}</Text>
-            <Text style={s.histSub}>Utveckling · est. 1RM (kg)</Text>
+            <Text style={s.histSub}>{t('Utveckling · est. 1RM (kg)')}</Text>
 
             {historyPts.length >= 2 ? (() => {
               const CH_W = PAGE_W - 84
@@ -693,8 +712,8 @@ export default function RecordsScreen() {
             })() : (
               <Text style={s.histEmpty}>
                 {historyPts.length === 0
-                  ? 'Laddar…'
-                  : 'Logga övningen fler gånger så ritas utvecklingen här.'}
+                  ? t('Laddar…')
+                  : t('Logga övningen fler gånger så ritas utvecklingen här.')}
               </Text>
             )}
 
@@ -702,7 +721,7 @@ export default function RecordsScreen() {
             {historyPts.slice(-6).reverse().map((p, i, arr) => (
               <View key={p.date} style={[s.histRow, i < arr.length - 1 && s.histRowBorder]}>
                 <Text style={s.histDate}>
-                  {new Date(p.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
+                  {new Date(p.date).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}
                 </Text>
                 <Text style={s.histSets}>{p.sets} set</Text>
                 <Text style={s.histTop}>{p.topKg} kg × {p.topReps}</Text>
@@ -722,8 +741,8 @@ export default function RecordsScreen() {
       >
         <Pressable style={s.modalBackdrop} onPress={() => setBreakdownVisible(false)}>
           <Pressable style={s.modalCard} onPress={() => {}}>
-            <Text style={s.modalTitle}>Dina poäng</Text>
-            <Text style={s.modalSubtitle}>Totalt {points.toLocaleString('sv-SE')} p</Text>
+            <Text style={s.modalTitle}>{t('Dina poäng')}</Text>
+            <Text style={s.modalSubtitle}>{t('Totalt {n} p', { n: points.toLocaleString(dateLocale()) })}</Text>
 
             <View style={{ alignSelf: 'stretch', marginTop: 10 }}>
               {pointSources.map((src, i) => (
@@ -732,19 +751,19 @@ export default function RecordsScreen() {
                     <Ionicons name={src.icon} size={16} color={ACCENT} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.ruleLabel}>{src.label}</Text>
-                    <Text style={s.ruleCap}>{src.detail}</Text>
+                    <Text style={s.ruleLabel}>{t(src.label)}</Text>
+                    <Text style={s.ruleCap}>{pointDetailText(src.label, src.detail)}</Text>
                   </View>
-                  <Text style={s.rulePts}>+{src.pts.toLocaleString('sv-SE')} p</Text>
+                  <Text style={s.rulePts}>+{src.pts.toLocaleString(dateLocale())} p</Text>
                 </View>
               ))}
               {pointSources.length === 0 && (
-                <Text style={s.modalDesc}>Inga poäng ännu. Kom igång med dagens uppgifter!</Text>
+                <Text style={s.modalDesc}>{t('Inga poäng ännu. Kom igång med dagens uppgifter!')}</Text>
               )}
             </View>
 
             <TouchableOpacity style={s.modalClose} onPress={() => setBreakdownVisible(false)} activeOpacity={0.85}>
-              <Text style={s.modalCloseText}>Stäng</Text>
+              <Text style={s.modalCloseText}>{t('Stäng')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -778,14 +797,14 @@ export default function RecordsScreen() {
                   color={selectedMedal.unlocked ? '#3BE862' : TEXT_SECONDARY}
                 />
                 <Text style={[s.statusPillText, selectedMedal.unlocked && { color: '#3BE862' }]}>
-                  {selectedMedal.unlocked ? 'Upplåst' : selectedMedal.progress ?? 'Låst'}
+                  {selectedMedal.unlocked ? t('Upplåst') : selectedMedal.progress ?? t('Låst')}
                 </Text>
               </View>
 
               <Text style={s.modalDesc}>{selectedMedal.description}</Text>
 
               <TouchableOpacity style={s.modalClose} onPress={() => setSelectedMedal(null)} activeOpacity={0.85}>
-                <Text style={s.modalCloseText}>Stäng</Text>
+                <Text style={s.modalCloseText}>{t('Stäng')}</Text>
               </TouchableOpacity>
             </Pressable>
           )}

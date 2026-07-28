@@ -20,6 +20,7 @@ import { CardioSummaryView } from '@/components/CardioSummaryView'
 import { GymSummaryView } from '@/components/stats/GymSummaryView'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { promptReport, postReportMenu } from '@/lib/report'
+import { useT, dateLocale } from '@/lib/i18n'
 import {
   getGroup, getGroupMembers, joinGroup, leaveGroup, approveMember, removeMember, banMember,
   deleteGroup, acceptGroupInvite, updateGroupSettings, transferGroupOwnership,
@@ -51,6 +52,7 @@ const NOTIFY_OPTIONS: Array<{ v: GroupNotifyLevel; title: string; body: string }
 ]
 
 export default function GroupScreen() {
+  const t = useT()
   const params = useLocalSearchParams<{ groupId?: string; name?: string; avatar?: string }>()
   const groupId = typeof params.groupId === 'string' ? params.groupId : null
   // Namn/bild från listan man kom ifrån — toppen ritas direkt medan resten laddar
@@ -166,13 +168,13 @@ export default function GroupScreen() {
     setNotifyLevel(level)
     setGroupNotify(group.id, level).catch(() => {
       setNotifyLevel(prev)
-      Alert.alert('Kunde inte spara', 'Kontrollera anslutningen och försök igen.')
+      Alert.alert(t('Kunde inte spara'), t('Kontrollera anslutningen och försök igen.'))
     })
   }
 
   // Passflödet byggs som i communityt — namn/avatarer från medlemslistan
   const posts = useMemo(() => {
-    const nameOf = (id: string) => members.find(m => m.id === id)?.name ?? 'Namnlös'
+    const nameOf = (id: string) => members.find(m => m.id === id)?.name ?? t('Namnlös')
     const avatarOf = (id: string) => members.find(m => m.id === id)?.avatar_url ?? null
     const cardioPosts = cardioRows.map(r =>
       workoutToPost(r.workout, r.userId, nameOf(r.userId), avatarOf(r.userId)))
@@ -201,9 +203,9 @@ export default function GroupScreen() {
           score: cardioSport ? e.km : passes,
           value: cardioSport
             ? `${km.toFixed(1).replace('.', ',')} km`
-            : `${passes} pass`,
+            : t('{n} pass', { n: passes }),
           meta: cardioSport
-            ? `${passes} pass`
+            ? t('{n} pass', { n: passes })
             : km > 0 ? `${km.toFixed(1).replace('.', ',')} km` : '',
         }
       })
@@ -246,11 +248,11 @@ export default function GroupScreen() {
         ownerName: post.authorName,
         ownerAvatar: post.authorAvatar ?? '',
         kind: post.kind,
-        title: post.kind === 'cardio' ? post.workout.name : 'Gympass',
+        title: post.kind === 'cardio' ? post.workout.name : t('Gympass'),
         createdAt: post.createdAt,
         meta: post.kind === 'cardio'
           ? `${post.distanceKm.toFixed(2).replace('.', ',')} km`
-          : `${post.exercises} övningar`,
+          : t('{n} övningar', { n: post.exercises }),
       },
     } as never)
   }
@@ -264,7 +266,7 @@ export default function GroupScreen() {
       else return
       await load()
     } catch {
-      Alert.alert('Något gick fel', 'Kontrollera anslutningen och försök igen.')
+      Alert.alert(t('Något gick fel'), t('Kontrollera anslutningen och försök igen.'))
     }
   }
 
@@ -276,7 +278,7 @@ export default function GroupScreen() {
       await leaveGroup(group.id, me)
       await load()
     } catch {
-      Alert.alert('Något gick fel', 'Kontrollera anslutningen och försök igen.')
+      Alert.alert(t('Något gick fel'), t('Kontrollera anslutningen och försök igen.'))
     }
   }
 
@@ -289,16 +291,16 @@ export default function GroupScreen() {
       setSettingsOpen(true)
       return
     }
-    promptReport('group', group.id, `Anmäl ${group.name}`)
+    promptReport('group', group.id, t('Anmäl {name}', { name: group.name }))
   }
 
   function confirmDelete() {
     if (!group) return
-    Alert.alert('Radera gruppen?', 'Det här går inte att ångra.', [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Radera', style: 'destructive', onPress: async () => {
+    Alert.alert(t('Radera gruppen?'), t('Det här går inte att ångra.'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      { text: t('Radera'), style: 'destructive', onPress: async () => {
         const ok = await deleteGroup(group.id).then(() => true).catch(() => false)
-        if (!ok) { Alert.alert('Kunde inte radera', 'Försök igen.'); return }
+        if (!ok) { Alert.alert(t('Kunde inte radera'), t('Försök igen.')); return }
         setSettingsOpen(false)
         router.back()
       } },
@@ -310,21 +312,21 @@ export default function GroupScreen() {
     if (!group) return
     const candidates = accepted.filter(m => m.id !== me)
     if (candidates.length === 0) {
-      Alert.alert('Inga andra medlemmar', 'Det finns ingen att överlåta gruppen till ännu.')
+      Alert.alert(t('Inga andra medlemmar'), t('Det finns ingen att överlåta gruppen till ännu.'))
       return
     }
     const pick = (m: GroupMember) => Alert.alert(
-      `Överlåt gruppen till ${m.name ?? 'medlemmen'}?`,
-      'Hen blir ny skapare och du blir vanlig medlem. Det här går inte att ångra själv.',
+      t('Överlåt gruppen till {name}?', { name: m.name ?? t('medlemmen') }),
+      t('Hen blir ny skapare och du blir vanlig medlem. Det här går inte att ångra själv.'),
       [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Överlåt', style: 'destructive', onPress: async () => {
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Överlåt'), style: 'destructive', onPress: async () => {
           try {
             await transferGroupOwnership(group.id, m.id)
             setSettingsOpen(false)
             await load()
           } catch {
-            Alert.alert('Kunde inte överlåta', 'Kontrollera anslutningen och försök igen.')
+            Alert.alert(t('Kunde inte överlåta'), t('Kontrollera anslutningen och försök igen.'))
           }
         } },
       ],
@@ -333,16 +335,16 @@ export default function GroupScreen() {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          title: 'Ny skapare',
-          options: ['Avbryt', ...names.map(m => m.name ?? 'Namnlös')],
+          title: t('Ny skapare'),
+          options: [t('Avbryt'), ...names.map(m => m.name ?? t('Namnlös'))],
           cancelButtonIndex: 0,
         },
         i => { if (i > 0) pick(names[i - 1]) },
       )
     } else {
-      Alert.alert('Ny skapare', undefined, [
-        { text: 'Avbryt', style: 'cancel' },
-        ...names.map(m => ({ text: m.name ?? 'Namnlös', onPress: () => pick(m) })),
+      Alert.alert(t('Ny skapare'), undefined, [
+        { text: t('Avbryt'), style: 'cancel' },
+        ...names.map(m => ({ text: m.name ?? t('Namnlös'), onPress: () => pick(m) })),
       ])
     }
   }
@@ -358,7 +360,7 @@ export default function GroupScreen() {
       if ('show_feed' in patch) await load()
     } catch {
       setGroup(prev)
-      Alert.alert('Kunde inte spara', 'Kontrollera anslutningen och försök igen.')
+      Alert.alert(t('Kunde inte spara'), t('Kontrollera anslutningen och försök igen.'))
     }
   }
 
@@ -370,19 +372,19 @@ export default function GroupScreen() {
       setMembersOpen(false)
       router.push({
         pathname: '/(app)/chat',
-        params: { userId: m.id, name: m.name ?? 'Namnlös', avatar: m.avatar_url ?? '' },
+        params: { userId: m.id, name: m.name ?? t('Namnlös'), avatar: m.avatar_url ?? '' },
       } as never)
     }
-    const report = () => promptReport('user', m.id, `Anmäl ${m.name ?? 'medlemmen'}`)
+    const report = () => promptReport('user', m.id, t('Anmäl {name}', { name: m.name ?? t('medlemmen') }))
     const remove = () => removeMember(group.id, m.id).then(load).catch(() => {})
     const ban = () => banMember(group.id, m.id).then(load).catch(() => {})
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          title: m.name ?? 'Medlem',
+          title: m.name ?? t('Medlem'),
           options: canRemove
-            ? ['Avbryt', 'Skicka meddelande', 'Anmäl medlemmen', 'Ta bort ur gruppen', 'Ta bort och spärra']
-            : ['Avbryt', 'Skicka meddelande', 'Anmäl medlemmen'],
+            ? [t('Avbryt'), t('Skicka meddelande'), t('Anmäl medlemmen'), t('Ta bort ur gruppen'), t('Ta bort och spärra')]
+            : [t('Avbryt'), t('Skicka meddelande'), t('Anmäl medlemmen')],
           cancelButtonIndex: 0,
           destructiveButtonIndex: canRemove ? 4 : undefined,
         },
@@ -394,13 +396,13 @@ export default function GroupScreen() {
         },
       )
     } else {
-      Alert.alert(m.name ?? 'Medlem', undefined, [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Skicka meddelande', onPress: message },
-        { text: 'Anmäl medlemmen', onPress: report },
+      Alert.alert(m.name ?? t('Medlem'), undefined, [
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Skicka meddelande'), onPress: message },
+        { text: t('Anmäl medlemmen'), onPress: report },
         ...(canRemove ? [
-          { text: 'Ta bort ur gruppen', onPress: remove },
-          { text: 'Ta bort och spärra', onPress: ban },
+          { text: t('Ta bort ur gruppen'), onPress: remove },
+          { text: t('Ta bort och spärra'), onPress: ban },
         ] : []),
       ])
     }
@@ -410,13 +412,16 @@ export default function GroupScreen() {
     if (!group) return
     Haptics.selectionAsync()
     Share.share({
-      message: `Kolla in gruppen "${group.name}" i SeventyFive${group.description ? `, ${group.description}` : ''}`,
+      message: t('Kolla in gruppen "{name}" i SeventyFive{desc}', {
+        name: group.name,
+        desc: group.description ? `, ${group.description}` : '',
+      }),
     }).catch(() => {})
   }
 
   const joinLabel = !mine
-    ? (group?.is_private ? 'Begär medlemskap' : 'Gå med')
-    : mine.status === 'invited' ? 'Acceptera inbjudan' : 'Förfrågan skickad'
+    ? (group?.is_private ? t('Begär medlemskap') : t('Gå med'))
+    : mine.status === 'invited' ? t('Acceptera inbjudan') : t('Förfrågan skickad')
   const joinActive = !mine || mine.status === 'invited'
 
   return (
@@ -424,7 +429,7 @@ export default function GroupScreen() {
       <View style={s.header}>
         <GlassCircleButton icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
           onPress={() => router.back()} fallbackStyle={s.iconFallback} />
-        <Text style={s.headerTitle} numberOfLines={1}>{group?.name ?? paramName ?? 'Grupp'}</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>{group?.name ?? paramName ?? t('Grupp')}</Text>
         <GlassCircleButton icon="ellipsis-horizontal" size={40} iconColor={TEXT_PRIMARY}
           onPress={openMenu} fallbackStyle={s.iconFallback} />
       </View>
@@ -439,17 +444,17 @@ export default function GroupScreen() {
           <View style={s.metaRow}>
             <View style={s.metaItem}>
               <Ionicons name={SPORT_ICONS[group?.sport ?? 'all']} size={14} color={TEXT_SECONDARY} />
-              <Text style={s.meta}>{SPORT_LABELS[group?.sport ?? 'all']}</Text>
+              <Text style={s.meta}>{t(SPORT_LABELS[group?.sport ?? 'all'])}</Text>
             </View>
             {loaded && membersVisible && (
               <View style={s.metaItem}>
                 <Ionicons name="people-outline" size={14} color={TEXT_SECONDARY} />
-                <Text style={s.meta}>{accepted.length} {accepted.length === 1 ? 'medlem' : 'medlemmar'}</Text>
+                <Text style={s.meta}>{accepted.length === 1 ? t('1 medlem') : t('{n} medlemmar', { n: accepted.length })}</Text>
               </View>
             )}
             <View style={s.metaItem}>
               <Ionicons name={group?.is_private ? 'lock-closed-outline' : 'earth-outline'} size={14} color={TEXT_SECONDARY} />
-              <Text style={s.meta}>{group?.is_private ? 'Privat' : 'Offentlig'}</Text>
+              <Text style={s.meta}>{group?.is_private ? t('Privat') : t('Offentlig')}</Text>
             </View>
             {group?.location ? (
               <View style={s.metaItem}>
@@ -478,17 +483,17 @@ export default function GroupScreen() {
             contentContainerStyle={s.actionsRow}
           >
             {mine?.status === 'accepted' && (isOwner || group?.allow_member_invites !== false) && (
-              <ActionCircle icon="person-add-outline" label="Bjud in" edge={circleEdge}
+              <ActionCircle icon="person-add-outline" label={t('Bjud in')} edge={circleEdge}
                 onPress={() => { Haptics.selectionAsync(); setInviteOpen(true) }} testID="groupInvite" />
             )}
             {isOwner && (
-              <ActionCircle icon="pencil-outline" label="Redigera" edge={circleEdge}
+              <ActionCircle icon="pencil-outline" label={t('Redigera')} edge={circleEdge}
                 onPress={() => { Haptics.selectionAsync(); setEditOpen(true) }} testID="groupEdit" />
             )}
-            <ActionCircle icon="share-outline" label="Dela" edge={circleEdge}
+            <ActionCircle icon="share-outline" label={t('Dela')} edge={circleEdge}
               onPress={shareGroup} testID="groupShare" />
             {membersVisible && (
-              <ActionCircle icon="people-outline" label="Medlemmar" edge={circleEdge}
+              <ActionCircle icon="people-outline" label={t('Medlemmar')} edge={circleEdge}
                 onPress={() => { Haptics.selectionAsync(); setMembersOpen(true) }}
                 testID="groupMembers" />
             )}
@@ -506,11 +511,11 @@ export default function GroupScreen() {
             </TouchableOpacity>
           )}
           {mine?.status === 'banned' && (
-            <Text style={s.bannedText}>Du har spärrats från den här gruppen av skaparen.</Text>
+            <Text style={s.bannedText}>{t('Du har spärrats från den här gruppen av skaparen.')}</Text>
           )}
           {mine && !isOwner && (mine.status === 'accepted' || mine.status === 'invited') && (
             <TouchableOpacity onPress={declineOrLeave} hitSlop={8}>
-              <Text style={s.leave}>{mine.status === 'invited' ? 'Avböj inbjudan' : 'Lämna gruppen'}</Text>
+              <Text style={s.leave}>{mine.status === 'invited' ? t('Avböj inbjudan') : t('Lämna gruppen')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -518,10 +523,10 @@ export default function GroupScreen() {
         {/* Veckans topplista — bygger på samma flödesdata som passen nedan */}
         {mine?.status === 'accepted' && group?.show_leaderboard && group.show_feed && (
           <>
-            <Text style={s.sectionLabel}>VECKANS TOPPLISTA</Text>
+            <Text style={s.sectionLabel}>{t('VECKANS TOPPLISTA')}</Text>
             <View style={[s.card, chrome]}>
               {leaderboard.length === 0 ? (
-                <Text style={s.boardEmpty}>Inga pass den här veckan ännu.</Text>
+                <Text style={s.boardEmpty}>{t('Inga pass den här veckan ännu.')}</Text>
               ) : leaderboard.map((e, i) => {
                 const m = members.find(mm => mm.id === e.id)
                 return (
@@ -530,7 +535,7 @@ export default function GroupScreen() {
                     <FeedAvatar url={m?.avatar_url ?? null}
                       fallback={(m?.name ?? '?').charAt(0).toUpperCase()} size={34} />
                     <Text style={[s.boardName, e.id === me && { color: T.ACCENT }]} numberOfLines={1}>
-                      {e.id === me ? 'Du' : m?.name ?? 'Namnlös'}
+                      {e.id === me ? t('Du') : m?.name ?? t('Namnlös')}
                     </Text>
                     <View style={{ alignItems: 'flex-end' }}>
                       <Text style={s.boardValue}>{e.value}</Text>
@@ -549,14 +554,14 @@ export default function GroupScreen() {
           <ActivityIndicator style={{ marginTop: 40 }} color={TEXT_SECONDARY} />
         ) : !group ? (
           <View style={{ alignItems: 'center', gap: 12, marginTop: 30 }}>
-            <Text style={s.feedEmpty}>Kunde inte ladda gruppen. Kontrollera anslutningen.</Text>
+            <Text style={s.feedEmpty}>{t('Kunde inte ladda gruppen. Kontrollera anslutningen.')}</Text>
             <TouchableOpacity
               style={[s.joinBtn, { borderColor: T.ACCENT, alignSelf: 'auto', paddingHorizontal: 28 }]}
               activeOpacity={0.8}
               testID="retryLoad"
               onPress={() => { setLoaded(false); load().catch(() => {}) }}
             >
-              <Text style={[s.joinText, { color: T.ACCENT }]}>Försök igen</Text>
+              <Text style={[s.joinText, { color: T.ACCENT }]}>{t('Försök igen')}</Text>
             </TouchableOpacity>
           </View>
         ) : mine?.status === 'accepted' && group ? (
@@ -580,18 +585,18 @@ export default function GroupScreen() {
             loadingMore={loadingMore}
             onLoadMore={loadMore}
             feedNote={!group.show_feed
-              ? `Aktivitetsflödet är avstängt för den här gruppen.${isOwner ? ' Du kan slå på det i gruppinställningarna.' : ''}`
+              ? `${t('Aktivitetsflödet är avstängt för den här gruppen.')}${isOwner ? ` ${t('Du kan slå på det i gruppinställningarna.')}` : ''}`
               : undefined}
           />
         ) : (
           <>
-            <Text style={s.sectionLabel}>FLÖDE</Text>
+            <Text style={s.sectionLabel}>{t('FLÖDE')}</Text>
             <Text style={s.feedEmpty}>
               {mine?.status === 'banned'
-                ? 'Du kan inte se innehållet i den här gruppen.'
+                ? t('Du kan inte se innehållet i den här gruppen.')
                 : group?.is_private
-                  ? 'Gå med i gruppen för att se inlägg och pass.'
-                  : 'Gå med i gruppen så ser du inlägg och pass här.'}
+                  ? t('Gå med i gruppen för att se inlägg och pass.')
+                  : t('Gå med i gruppen så ser du inlägg och pass här.')}
             </Text>
           </>
         )}
@@ -603,20 +608,20 @@ export default function GroupScreen() {
         <SafeScreen style={s.screen}>
           <View style={s.header}>
             <View style={{ width: 40 }} />
-            <Text style={s.headerTitle}>Gruppinställningar</Text>
+            <Text style={s.headerTitle}>{t('Gruppinställningar')}</Text>
             <GlassCircleButton icon="close" size={40} iconColor={TEXT_PRIMARY}
               onPress={() => setSettingsOpen(false)} fallbackStyle={s.iconFallback} />
           </View>
           <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
             {/* Notisnivån är personlig — alla medlemmar ser den */}
-            <Text style={s.sectionLabel}>PUSH-NOTISER FÖR INLÄGG</Text>
+            <Text style={s.sectionLabel}>{t('PUSH-NOTISER FÖR INLÄGG')}</Text>
             <View style={[s.card, chrome]}>
               {NOTIFY_OPTIONS.map((opt, i) => (
                 <TouchableOpacity key={opt.v} style={[s.settingRow, i > 0 && s.rowDivider]}
                   activeOpacity={0.7} onPress={() => pickNotify(opt.v)} testID={`notify-${opt.v}`}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.settingTitle}>{opt.title}</Text>
-                    <Text style={s.settingBody}>{opt.body}</Text>
+                    <Text style={s.settingTitle}>{t(opt.title)}</Text>
+                    <Text style={s.settingBody}>{t(opt.body)}</Text>
                   </View>
                   {notifyLevel === opt.v && (
                     <Ionicons name="checkmark" size={20} color={T.ACCENT} />
@@ -627,11 +632,11 @@ export default function GroupScreen() {
 
             {!isOwner && (
               <>
-                <Text style={s.sectionLabel}>GRUPPEN</Text>
+                <Text style={s.sectionLabel}>{t('GRUPPEN')}</Text>
                 <View style={[s.card, chrome]}>
                   <TouchableOpacity style={s.settingLink} activeOpacity={0.7} testID="memberReport"
-                    onPress={() => group && promptReport('group', group.id, `Anmäl ${group.name}`)}>
-                    <Text style={s.settingTitle}>Anmäl gruppen</Text>
+                    onPress={() => group && promptReport('group', group.id, t('Anmäl {name}', { name: group.name }))}>
+                    <Text style={s.settingTitle}>{t('Anmäl gruppen')}</Text>
                     <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
                   </TouchableOpacity>
                 </View>
@@ -639,14 +644,13 @@ export default function GroupScreen() {
             )}
 
             {isOwner && (<>
-            <Text style={s.sectionLabel}>VISNING</Text>
+            <Text style={s.sectionLabel}>{t('VISNING')}</Text>
             <View style={[s.card, chrome]}>
               <View style={s.settingRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.settingTitle}>Visa aktivitetsflöde</Text>
+                  <Text style={s.settingTitle}>{t('Visa aktivitetsflöde')}</Text>
                   <Text style={s.settingBody}>
-                    Medlemmarnas pass visas på gruppsidan. Avstängt döljer
-                    flödet för alla i gruppen.
+                    {t('Medlemmarnas pass visas på gruppsidan. Avstängt döljer flödet för alla i gruppen.')}
                   </Text>
                 </View>
                 <Switch
@@ -658,11 +662,11 @@ export default function GroupScreen() {
               </View>
               <View style={[s.settingRow, s.rowDivider]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.settingTitle}>Visa veckans topplista</Text>
+                  <Text style={s.settingTitle}>{t('Visa veckans topplista')}</Text>
                   <Text style={s.settingBody}>
-                    Rankar medlemmarna efter veckans
                     {group && ['running', 'cycling', 'walking'].includes(group.sport)
-                      ? ' kilometrar' : ' pass'} på gruppsidan.
+                      ? t('Rankar medlemmarna efter veckans kilometrar på gruppsidan.')
+                      : t('Rankar medlemmarna efter veckans pass på gruppsidan.')}
                   </Text>
                 </View>
                 <Switch
@@ -674,14 +678,13 @@ export default function GroupScreen() {
               </View>
             </View>
 
-            <Text style={s.sectionLabel}>TILLSTÅND</Text>
+            <Text style={s.sectionLabel}>{t('TILLSTÅND')}</Text>
             <View style={[s.card, chrome]}>
               <View style={s.settingRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.settingTitle}>Privat grupp</Text>
+                  <Text style={s.settingTitle}>{t('Privat grupp')}</Text>
                   <Text style={s.settingBody}>
-                    Man begär medlemskap och bara du godkänner nya medlemmar.
-                    Inbjudna går alltid med direkt.
+                    {t('Man begär medlemskap och bara du godkänner nya medlemmar. Inbjudna går alltid med direkt.')}
                   </Text>
                 </View>
                 <Switch
@@ -693,9 +696,9 @@ export default function GroupScreen() {
               </View>
               <View style={[s.settingRow, s.rowDivider]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.settingTitle}>Medlemmar kan bjuda in</Text>
+                  <Text style={s.settingTitle}>{t('Medlemmar kan bjuda in')}</Text>
                   <Text style={s.settingBody}>
-                    Avstängt betyder att bara du kan bjuda in nya medlemmar.
+                    {t('Avstängt betyder att bara du kan bjuda in nya medlemmar.')}
                   </Text>
                 </View>
                 <Switch
@@ -707,10 +710,9 @@ export default function GroupScreen() {
               </View>
               <View style={[s.settingRow, s.rowDivider]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.settingTitle}>Dold grupp</Text>
+                  <Text style={s.settingTitle}>{t('Dold grupp')}</Text>
                   <Text style={s.settingBody}>
-                    Syns inte i sökningen, nya medlemmar hittar gruppen via
-                    QR-koden eller en inbjudan.
+                    {t('Syns inte i sökningen, nya medlemmar hittar gruppen via QR-koden eller en inbjudan.')}
                   </Text>
                 </View>
                 <Switch
@@ -722,9 +724,9 @@ export default function GroupScreen() {
               </View>
               <View style={[s.settingRow, s.rowDivider]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.settingTitle}>Endast du kan skriva inlägg</Text>
+                  <Text style={s.settingTitle}>{t('Endast du kan skriva inlägg')}</Text>
                   <Text style={s.settingBody}>
-                    Medlemmarna kan läsa men inte publicera egna inlägg.
+                    {t('Medlemmarna kan läsa men inte publicera egna inlägg.')}
                   </Text>
                 </View>
                 <Switch
@@ -736,9 +738,9 @@ export default function GroupScreen() {
               </View>
               <View style={[s.settingRow, s.rowDivider]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.settingTitle}>Endast du kan fästa inlägg</Text>
+                  <Text style={s.settingTitle}>{t('Endast du kan fästa inlägg')}</Text>
                   <Text style={s.settingBody}>
-                    Avstängt låter alla medlemmar fästa ett inlägg överst i flödet.
+                    {t('Avstängt låter alla medlemmar fästa ett inlägg överst i flödet.')}
                   </Text>
                 </View>
                 <Switch
@@ -750,27 +752,27 @@ export default function GroupScreen() {
               </View>
             </View>
 
-            <Text style={s.sectionLabel}>GRUPPEN</Text>
+            <Text style={s.sectionLabel}>{t('GRUPPEN')}</Text>
             <View style={[s.card, chrome]}>
               <TouchableOpacity style={s.settingLink} activeOpacity={0.7} testID="settingsEdit"
                 onPress={() => { setSettingsOpen(false); setEditOpen(true) }}>
-                <Text style={s.settingTitle}>Redigera grupp</Text>
+                <Text style={s.settingTitle}>{t('Redigera grupp')}</Text>
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
               <TouchableOpacity style={[s.settingLink, s.rowDivider]} activeOpacity={0.7} testID="settingsMembers"
                 onPress={() => { setSettingsOpen(false); setMembersOpen(true) }}>
-                <Text style={s.settingTitle}>Medlemmar och förfrågningar</Text>
+                <Text style={s.settingTitle}>{t('Medlemmar och förfrågningar')}</Text>
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
               <TouchableOpacity style={[s.settingLink, s.rowDivider]} activeOpacity={0.7} testID="settingsTransfer"
                 onPress={transferOwnership}>
-                <Text style={s.settingTitle}>Överlåt ägarskap</Text>
+                <Text style={s.settingTitle}>{t('Överlåt ägarskap')}</Text>
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={s.deleteRow} onPress={confirmDelete} testID="settingsDelete">
-              <Text style={s.deleteText}>Radera gruppen</Text>
+              <Text style={s.deleteText}>{t('Radera gruppen')}</Text>
             </TouchableOpacity>
             </>)}
           </ScrollView>
@@ -783,7 +785,7 @@ export default function GroupScreen() {
           <CardioSummaryView
             workout={selected.workout}
             title={selected.workout.name}
-            dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            dateLabel={new Date(selected.createdAt).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
             avatarUrl={selected.authorAvatar}
             unit={unit}
             onClose={() => setSelected(null)}
@@ -801,8 +803,8 @@ export default function GroupScreen() {
         )}
         {selected?.kind === 'strength' && (
           <GymSummaryView
-            name="Gympass"
-            dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            name={t('Gympass')}
+            dateLabel={new Date(selected.createdAt).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
             logged={selected.workouts}
             plannedNames={[]}
             allWorkouts={selected.workouts}
@@ -825,26 +827,26 @@ export default function GroupScreen() {
         <SafeScreen style={s.screen}>
           <View style={s.header}>
             <View style={{ width: 40 }} />
-            <Text style={s.headerTitle}>Medlemmar</Text>
+            <Text style={s.headerTitle}>{t('Medlemmar')}</Text>
             <GlassCircleButton icon="close" size={40} iconColor={TEXT_PRIMARY}
               onPress={() => setMembersOpen(false)} fallbackStyle={s.iconFallback} />
           </View>
           <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
             {isOwner && pending.length > 0 && (
               <>
-                <Text style={s.sectionLabel}>VÄNTANDE FÖRFRÅGNINGAR</Text>
+                <Text style={s.sectionLabel}>{t('VÄNTANDE FÖRFRÅGNINGAR')}</Text>
                 <View style={[s.card, chrome]}>
                   {pending.map((m, i) => (
                     <View key={m.id} style={[s.memberRow, i > 0 && s.rowDivider]}>
                       <FeedAvatar url={m.avatar_url} fallback={(m.name ?? '?').charAt(0).toUpperCase()} size={44} />
-                      <Text style={s.memberName} numberOfLines={1}>{m.name ?? 'Namnlös'}</Text>
+                      <Text style={s.memberName} numberOfLines={1}>{m.name ?? t('Namnlös')}</Text>
                       <TouchableOpacity style={[s.pill, { borderColor: T.ACCENT }]} testID={`approve-${m.id}`}
                         onPress={() => approveMember(group!.id, m.id).then(load).catch(() => {})}>
-                        <Text style={[s.pillText, { color: T.ACCENT }]}>Godkänn</Text>
+                        <Text style={[s.pillText, { color: T.ACCENT }]}>{t('Godkänn')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[s.pill, { borderColor: pillEdge }]}
                         onPress={() => removeMember(group!.id, m.id).then(load).catch(() => {})}>
-                        <Text style={s.pillText}>Avböj</Text>
+                        <Text style={s.pillText}>{t('Avböj')}</Text>
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -853,7 +855,7 @@ export default function GroupScreen() {
             )}
 
             <Text style={s.sectionLabel}>
-              {accepted.length} {accepted.length === 1 ? 'MEDLEM' : 'MEDLEMMAR'}
+              {accepted.length === 1 ? t('{n} MEDLEM', { n: accepted.length }) : t('{n} MEDLEMMAR', { n: accepted.length })}
             </Text>
             <View style={[s.card, chrome]}>
               {accepted.map((m, i) => (
@@ -866,15 +868,15 @@ export default function GroupScreen() {
                     setMembersOpen(false)
                     router.push({
                       pathname: '/(app)/athlete',
-                      params: { userId: m.id, name: m.name ?? 'Namnlös', avatar: m.avatar_url ?? '' },
+                      params: { userId: m.id, name: m.name ?? t('Namnlös'), avatar: m.avatar_url ?? '' },
                     } as never)
                   }}
                 >
                   <FeedAvatar url={m.avatar_url} fallback={(m.name ?? '?').charAt(0).toUpperCase()} size={44} />
-                  <Text style={s.memberName} numberOfLines={1}>{m.name ?? 'Namnlös'}</Text>
+                  <Text style={s.memberName} numberOfLines={1}>{m.name ?? t('Namnlös')}</Text>
                   {m.role === 'owner' && (
                     <View style={[s.tag, { backgroundColor: accentAlpha('14') }]}>
-                      <Text style={[s.tagText, { color: T.ACCENT }]}>Skapare</Text>
+                      <Text style={[s.tagText, { color: T.ACCENT }]}>{t('Skapare')}</Text>
                     </View>
                   )}
                   {m.id !== me && (
@@ -889,15 +891,15 @@ export default function GroupScreen() {
             {/* Spärrade — bara skaparen ser och kan häva spärren */}
             {isOwner && banned.length > 0 && (
               <>
-                <Text style={s.sectionLabel}>SPÄRRADE</Text>
+                <Text style={s.sectionLabel}>{t('SPÄRRADE')}</Text>
                 <View style={[s.card, chrome]}>
                   {banned.map((m, i) => (
                     <View key={m.id} style={[s.memberRow, i > 0 && s.rowDivider]}>
                       <FeedAvatar url={m.avatar_url} fallback={(m.name ?? '?').charAt(0).toUpperCase()} size={44} />
-                      <Text style={s.memberName} numberOfLines={1}>{m.name ?? 'Namnlös'}</Text>
+                      <Text style={s.memberName} numberOfLines={1}>{m.name ?? t('Namnlös')}</Text>
                       <TouchableOpacity style={[s.pill, { borderColor: pillEdge }]} testID={`unban-${m.id}`}
                         onPress={() => removeMember(group!.id, m.id).then(load).catch(() => {})}>
-                        <Text style={s.pillText}>Ta bort spärr</Text>
+                        <Text style={s.pillText}>{t('Ta bort spärr')}</Text>
                       </TouchableOpacity>
                     </View>
                   ))}

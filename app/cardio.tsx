@@ -31,6 +31,7 @@ import { saveCardioWorkout, type CardioInterval } from '@/services/workouts'
 import { completeCardioSession } from '@/services/workoutSchedule'
 import { toLocalDateString } from '@/lib/date'
 import { getUnitSystem, toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
+import { useT, dateLocale } from '@/lib/i18n'
 import type { RunSegment } from '@/lib/runProgression'
 import { advanceEngine, createEngineState, spokenSegmentIntro } from '@/lib/intervalEngine'
 import { getSwedishVoices, getCoachVoiceId, setCoachVoiceId, previewVoice, voiceDisplayName, voiceQualityLabel, type CoachVoice } from '@/lib/voice'
@@ -115,6 +116,7 @@ const APPLE_MAP_TYPES: Record<string, 'standard' | 'satellite' | 'mutedStandard'
 
 export default function CardioScreen() {
   const T = useThemeStrings()
+  const t = useT()
   const routeColor = useRouteColor()
   // Skärmen släcks inte medan GPS-skärmen är öppen (som Strava under pass)
   useKeepAwake()
@@ -214,7 +216,7 @@ export default function CardioScreen() {
 
   function countdownFeedback(n: number) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    speak(n === 3 ? 'Tre' : n === 2 ? 'Två' : 'Ett')
+    speak(n === 3 ? t('Tre') : n === 2 ? t('Två') : t('Ett'))
     pulseV.value = 0.3
     pulseV.value = withTiming(1, { duration: 500 })
   }
@@ -471,12 +473,12 @@ export default function CardioScreen() {
     const s = voiceSetRef.current.say
     const dist = distanceRef.current
     const parts: string[] = []
-    if (s.time) parts.push(`Tid: ${spokenTime(elapsedRef.current)}.`)
-    if (s.distance) parts.push(`Distans: ${dist.toFixed(2).replace('.', ' komma ')} kilometer.`)
-    if (s.avgPace && dist > 0.05) parts.push(`Snittempo: ${spokenTime(elapsedRef.current / dist)} per kilometer.`)
-    if (s.curPace && smoothedPaceRef.current > 0) parts.push(`Aktuellt tempo: ${spokenTime(smoothedPaceRef.current)} per kilometer.`)
+    if (s.time) parts.push(t('Tid: {time}.', { time: spokenTime(elapsedRef.current) }))
+    if (s.distance) parts.push(t('Distans: {dist} kilometer.', { dist: dist.toFixed(2).replace('.', ' komma ') }))
+    if (s.avgPace && dist > 0.05) parts.push(t('Snittempo: {pace} per kilometer.', { pace: spokenTime(elapsedRef.current / dist) }))
+    if (s.curPace && smoothedPaceRef.current > 0) parts.push(t('Aktuellt tempo: {pace} per kilometer.', { pace: spokenTime(smoothedPaceRef.current) }))
     if (includeSplit && s.splitPace && splitTimes.current.length > 0) {
-      parts.push(`Senaste kilometern: ${spokenTime(splitTimes.current[splitTimes.current.length - 1])}.`)
+      parts.push(t('Senaste kilometern: {time}.', { time: spokenTime(splitTimes.current[splitTimes.current.length - 1]) }))
     }
     return parts.join(' ')
   }
@@ -575,9 +577,9 @@ export default function CardioScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync()
       if (status !== 'granted') {
         Alert.alert(
-          'Platstjänster krävs',
-          'Aktivera platstjänster för att spåra din träning.',
-          [{ text: 'OK', onPress: () => router.back() }]
+          t('Platstjänster krävs'),
+          t('Aktivera platstjänster för att spåra din träning.'),
+          [{ text: t('OK'), onPress: () => router.back() }]
         )
         return
       }
@@ -665,19 +667,19 @@ export default function CardioScreen() {
     // Talat besked vid start (med mål/första segmentet) respektive återupptagning
     if (elapsedRef.current === 0) {
       if (guidedSegments) {
-        speakGuide(`${selectedExercise.label} startad. ${spokenSegmentIntro(guidedSegments[0])}`)
+        speakGuide(t('{label} startad. {intro}', { label: t(selectedExercise.label), intro: spokenSegmentIntro(guidedSegments[0]) }))
       } else {
         const kmTxt = goalKmNum > 0
-          ? `${(goalKmNum % 1 === 0 ? String(goalKmNum) : goalKmNum.toFixed(1).replace('.', ','))} kilometer`
+          ? t('{n} kilometer', { n: (goalKmNum % 1 === 0 ? String(goalKmNum) : goalKmNum.toFixed(1).replace('.', ',')) })
           : ''
-        const minTxt = goalMinNum > 0 ? `${goalMinNum} minuter` : ''
+        const minTxt = goalMinNum > 0 ? t('{n} minuter', { n: goalMinNum }) : ''
         const goalTxt = kmTxt && minTxt
-          ? ` Mål: ${kmTxt} på ${minTxt}.`
-          : kmTxt ? ` Mål: ${kmTxt}.` : minTxt ? ` Mål: ${minTxt}.` : ''
-        speak(`${selectedExercise.label} startad.${goalTxt}`)
+          ? t(' Mål: {km} på {min}.', { km: kmTxt, min: minTxt })
+          : kmTxt ? t(' Mål: {km}.', { km: kmTxt }) : minTxt ? t(' Mål: {min}.', { min: minTxt }) : ''
+        speak(t('{label} startad.{goal}', { label: t(selectedExercise.label), goal: goalTxt }))
       }
     } else {
-      speak('Återupptar.')
+      speak(t('Återupptar.'))
     }
 
     setStatus('running')
@@ -718,13 +720,13 @@ export default function CardioScreen() {
         // Frys väggklockan: banka in det upplupna och vänta på rörelse
         elapsedBaseRef.current = elapsedRef.current
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-        speak('Autopaus.')
+        speak(t('Autopaus.'))
       }
       // Tidsmål uppnått — säg till en gång
       if (goalMinNum > 0 && !goalMinSaid.current && elapsedRef.current >= goalMinNum * 60) {
         goalMinSaid.current = true
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-        speak(`${goalMinNum} minuter. Tidsmålet är uppnått!`)
+        speak(t('{n} minuter. Tidsmålet är uppnått!', { n: goalMinNum }))
       }
       // Nollställ nu/km om ingen GPS-rörelse på 5 sekunder
       if (paceTs.current > 0 && Date.now() - paceTs.current > 5000) {
@@ -767,7 +769,7 @@ export default function CardioScreen() {
             setAutoPaused(false)
             runStartTs.current = Date.now()   // klockan rullar igen härifrån
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-            speak('Återupptar.')
+            speak(t('Återupptar.'))
           }
 
           // Live pace (exponential moving average)
@@ -799,9 +801,10 @@ export default function CardioScreen() {
             const vs = voiceSetRef.current
             if (vs.distEvery > 0 && splitKm.current % vs.distEvery === 0) {
               const phrase = statusPhrase(false)
-              speak(`Kilometer ${splitKm.current}.${vs.say.splitPace ? ` Senaste kilometern: ${spokenTime(splitTime)}.` : ''} ${phrase}`)
+              const splitPart = vs.say.splitPace ? t(' Senaste kilometern: {time}.', { time: spokenTime(splitTime) }) : ''
+              speak(t('Kilometer {n}.{split} {phrase}', { n: splitKm.current, split: splitPart, phrase }))
             } else if (vs.say.splitPace) {
-              speak(`Kilometer ${splitKm.current}. Senaste kilometern: ${spokenTime(splitTime)}.`)
+              speak(t('Kilometer {n}. Senaste kilometern: {time}.', { n: splitKm.current, time: spokenTime(splitTime) }))
             }
             splitTimes.current.push(splitTime)
             lastSplitElapsed.current = elapsedRef.current
@@ -812,7 +815,7 @@ export default function CardioScreen() {
           if (goalKmNum > 0 && !goalKmSaid.current && newKm >= goalKmNum) {
             goalKmSaid.current = true
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-            speak('Bra jobbat! Distansmålet är uppnått!')
+            speak(t('Bra jobbat! Distansmålet är uppnått!'))
           }
 
           distanceRef.current = newKm
@@ -831,13 +834,13 @@ export default function CardioScreen() {
       // GPS-prenumerationen kunde inte startas — timern rullar ändå,
       // och ett nytt försök görs vid Återuppta
       locationSub.current = null
-      Alert.alert('GPS-problem', 'Kunde inte starta positionsspårningen. Tid loggas, men distans kan saknas.')
+      Alert.alert(t('GPS-problem'), t('Kunde inte starta positionsspårningen. Tid loggas, men distans kan saknas.'))
       return null
     })
   }
 
   function pauseTracking() {
-    speak('Pausat.')
+    speak(t('Pausat.'))
     // Banka in det upplupna — Återuppta startar en ny körsträcka
     elapsedBaseRef.current = elapsedRef.current
     setStatus('paused')
@@ -865,10 +868,14 @@ export default function CardioScreen() {
     // Talad sammanfattning om den är påslagen i röstinställningarna
     if (voiceSetRef.current.say.summary) {
       const dist = distanceRef.current
-      const paceTxt = dist > 0.05 ? ` Snittempo: ${spokenTime(elapsedRef.current / dist)} per kilometer.` : ''
-      speak(`Träning avslutad. Distans: ${dist.toFixed(2).replace('.', ' komma ')} kilometer. Tid: ${spokenTime(elapsedRef.current)}.${paceTxt} Bra jobbat!`)
+      const paceTxt = dist > 0.05 ? t(' Snittempo: {pace} per kilometer.', { pace: spokenTime(elapsedRef.current / dist) }) : ''
+      speak(t('Träning avslutad. Distans: {dist} kilometer. Tid: {time}.{pace} Bra jobbat!', {
+        dist: dist.toFixed(2).replace('.', ' komma '),
+        time: spokenTime(elapsedRef.current),
+        pace: paceTxt,
+      }))
     } else {
-      speak('Träning avslutad. Bra jobbat!')
+      speak(t('Träning avslutad. Bra jobbat!'))
     }
 
     // Splittar: en rad per hel kilometer + ev. påbörjad sista bit
@@ -895,7 +902,7 @@ export default function CardioScreen() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) {
-        Alert.alert('Inte inloggad', 'Du måste vara inloggad för att spara passet.')
+        Alert.alert(t('Inte inloggad'), t('Du måste vara inloggad för att spara passet.'))
         return
       }
 
@@ -923,8 +930,8 @@ export default function CardioScreen() {
           await completeCardioSession(sessionId, session.user.id, date, summary.distanceKm, summary.elapsed)
         } catch (e: any) {
           Alert.alert(
-            'Passet sparades',
-            `…men kunde inte markeras som klart i schemat.\n\n${e?.message ?? e?.code ?? 'Okänt fel'}`,
+            t('Passet sparades'),
+            t('…men kunde inte markeras som klart i schemat.\n\n{error}', { error: e?.message ?? e?.code ?? t('Okänt fel') }),
           )
         }
       }
@@ -933,7 +940,7 @@ export default function CardioScreen() {
       router.back()
     } catch (e: any) {
       // Behåll sammanfattningen så passet inte går förlorat — användaren kan spara igen
-      Alert.alert('Kunde inte spara passet', e?.message ?? 'Kontrollera din anslutning och försök igen.')
+      Alert.alert(t('Kunde inte spara passet'), e?.message ?? t('Kontrollera din anslutning och försök igen.'))
     } finally {
       setSaving(false)
     }
@@ -979,7 +986,7 @@ export default function CardioScreen() {
       {countdown !== null && (
         <Pressable style={styles.countdownOverlay} onPress={() => cancelCountdown()}>
           <Animated.Text style={[styles.countdownNum, { color: T.CARD }, pulseStyle]}>{countdown}</Animated.Text>
-          <Text style={styles.countdownHint}>Tryck för att avbryta</Text>
+          <Text style={styles.countdownHint}>{t('Tryck för att avbryta')}</Text>
         </Pressable>
       )}
 
@@ -1012,7 +1019,7 @@ export default function CardioScreen() {
                   {/* Väderstreck */}
                   {([['N', 0], ['Ö', 90], ['S', 180], ['V', 270]] as const).map(([letter, d]) => (
                     <View key={letter} style={[styles.tickWrap, { transform: [{ rotate: `${d}deg` }] }]}>
-                      <Text style={[styles.dialCardinal, letter === 'N' && { color: '#FF3B4A' }]}>{letter}</Text>
+                      <Text style={[styles.dialCardinal, letter === 'N' && { color: '#FF3B4A' }]}>{t(letter)}</Text>
                     </View>
                   ))}
                 </Animated.View>
@@ -1020,7 +1027,7 @@ export default function CardioScreen() {
                 {/* Fast mitt — grader + väderstreck */}
                 <View style={styles.compassCenter} pointerEvents="none">
                   <Text style={styles.compassDeg}>{headingDeg}°</Text>
-                  <Text style={styles.compassCard}>{cardinalLabel(headingDeg)}</Text>
+                  <Text style={styles.compassCard}>{t(cardinalLabel(headingDeg))}</Text>
                 </View>
               </View>
             </View>
@@ -1038,7 +1045,7 @@ export default function CardioScreen() {
           >
             <Text style={[styles.hudMiniTime, lightCard && { color: '#000' }]}>{formatTime(elapsed)}</Text>
             <View style={styles.hudMiniShow}>
-              <Text style={styles.hudMiniShowText}>Visa statistik</Text>
+              <Text style={styles.hudMiniShowText}>{t('Visa statistik')}</Text>
               <Ionicons name="chevron-down" size={13} color="#fff" />
             </View>
           </GlassPill>
@@ -1055,12 +1062,12 @@ export default function CardioScreen() {
               <Text style={[styles.timerText, lightCard && { color: '#000' }]}>{formatTime(elapsed)}</Text>
               {status === 'paused' && (
                 <View style={styles.pausedBadge}>
-                  <Text style={styles.pausedBadgeText}>PAUSAD</Text>
+                  <Text style={styles.pausedBadgeText}>{t('PAUSAD')}</Text>
                 </View>
               )}
               {status === 'running' && autoPaused && (
                 <View style={styles.pausedBadge}>
-                  <Text style={styles.pausedBadgeText}>AUTOPAUS</Text>
+                  <Text style={styles.pausedBadgeText}>{t('AUTOPAUS')}</Text>
                 </View>
               )}
               {/* GPS-signal — så man förstår varför distansen står stilla */}
@@ -1070,7 +1077,7 @@ export default function CardioScreen() {
                     backgroundColor: gpsCat === 2 ? '#3BE862' : gpsCat === 1 ? '#FFC107' : '#FF3B4A',
                   }]} />
                   <Text style={[styles.gpsText, lightCard && { color: '#777' }]}>
-                    {gpsCat === -1 ? 'Ingen GPS' : gpsCat === 0 ? 'Svag GPS' : 'GPS'}
+                    {gpsCat === -1 ? t('Ingen GPS') : gpsCat === 0 ? t('Svag GPS') : t('GPS')}
                   </Text>
                 </View>
               )}
@@ -1105,11 +1112,11 @@ export default function CardioScreen() {
                       ]}
                       numberOfLines={1}
                     >
-                      {seg ? seg.label : 'Passet klart'}
+                      {seg ? seg.label : t('Passet klart')}
                     </Text>
                     {seg ? (
                       <Text style={[styles.ivBannerRemain, lightCard && { color: '#000' }]}>
-                        {seg.distanceM ? `${Math.ceil(remain / 10) * 10} m kvar` : formatTime(Math.ceil(remain))}
+                        {seg.distanceM ? t('{n} m kvar', { n: Math.ceil(remain / 10) * 10 }) : formatTime(Math.ceil(remain))}
                       </Text>
                     ) : (
                       <Ionicons name="checkmark-circle" size={15} color="#3BE862" />
@@ -1132,19 +1139,19 @@ export default function CardioScreen() {
                 <Text style={[styles.statValue, lightCard && { color: '#000' }]}>
                   {distanceKm > 0.01 ? formatPace(1, paceForUnit(elapsed / distanceKm, unit)) : '--:--'}
                 </Text>
-                <Text style={styles.statLabel}>snitt /{unitLabel}</Text>
+                <Text style={styles.statLabel}>{t('snitt /{unit}', { unit: unitLabel })}</Text>
               </View>
               <View style={[styles.statDivider, lightCard && { backgroundColor: '#E0E0E0' }]} />
               <View style={styles.stat}>
                 <Text style={[styles.statValue, lightCard && { color: '#000' }, currentPaceSec > 0 && { color: CARDIO_ACCENT }]}>
                   {currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '--:--'}
                 </Text>
-                <Text style={styles.statLabel}>nu /{unitLabel}</Text>
+                <Text style={styles.statLabel}>{t('nu /{unit}', { unit: unitLabel })}</Text>
               </View>
               <View style={[styles.statDivider, lightCard && { backgroundColor: '#E0E0E0' }]} />
               <View style={styles.stat}>
                 <Text style={[styles.statValue, lightCard && { color: '#000' }]}>{calories}</Text>
-                <Text style={styles.statLabel}>kcal</Text>
+                <Text style={styles.statLabel}>{t('kcal')}</Text>
               </View>
             </View>
             <Ionicons name="chevron-down" size={14} color={lightCard ? '#999' : '#666'} style={{ marginTop: -2 }} />
@@ -1190,29 +1197,29 @@ export default function CardioScreen() {
             <SafeScreen style={styles.expandedInner} edges={['top']}>
               <TouchableOpacity style={styles.expandedHandleWrap} onPress={closeSplits} activeOpacity={0.7}>
                 <View style={styles.sheetHandle} />
-                <Text style={styles.expandedHint}>Svep höger för detaljvyn</Text>
+                <Text style={styles.expandedHint}>{t('Svep höger för detaljvyn')}</Text>
               </TouchableOpacity>
-              <Text style={styles.splitsPageTitle}>Splits</Text>
+              <Text style={styles.splitsPageTitle}>{t('Splits')}</Text>
               <ScrollView contentContainerStyle={styles.splitsList} showsVerticalScrollIndicator={false}>
                 {/* Pågående kilometer överst, markerad */}
                 <View style={[styles.splitBlock, styles.splitBlockActive]}>
-                  <Text style={styles.splitBlockLabelActive}>Kilometer {splitTimes.current.length + 1}</Text>
+                  <Text style={styles.splitBlockLabelActive}>{t('Kilometer {n}', { n: splitTimes.current.length + 1 })}</Text>
                   <Text style={styles.splitBlockPaceActive}>
                     {currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '0:00'}
-                    <Text style={styles.splitBlockUnitActive}> /{unitLabel}</Text>
+                    <Text style={styles.splitBlockUnitActive}>{t(' /{unit}', { unit: unitLabel })}</Text>
                   </Text>
                   <Text style={styles.splitBlockDistActive}>
-                    {Math.max(0, Math.min(1, distanceKm - splitTimes.current.length)).toFixed(2).replace('.', ',')} av 1,00 km
+                    {t('{val} av 1,00 km', { val: Math.max(0, Math.min(1, distanceKm - splitTimes.current.length)).toFixed(2).replace('.', ',') })}
                   </Text>
                 </View>
                 {[...splitTimes.current].map((sec, i) => ({ sec, km: i + 1 })).reverse().map(sp => (
                   <View key={sp.km} style={styles.splitBlock}>
-                    <Text style={styles.splitBlockLabel}>Kilometer {sp.km}</Text>
+                    <Text style={styles.splitBlockLabel}>{t('Kilometer {n}', { n: sp.km })}</Text>
                     <Text style={styles.splitBlockPace}>
                       {formatPace(1, paceForUnit(sp.sec, unit))}
-                      <Text style={styles.splitBlockUnit}> /{unitLabel}</Text>
+                      <Text style={styles.splitBlockUnit}>{t(' /{unit}', { unit: unitLabel })}</Text>
                     </Text>
-                    <Text style={styles.splitBlockDist}>1,00 km</Text>
+                    <Text style={styles.splitBlockDist}>{t('1,00 km')}</Text>
                   </View>
                 ))}
               </ScrollView>
@@ -1237,7 +1244,7 @@ export default function CardioScreen() {
             <SafeScreen style={styles.expandedInner} edges={['top']}>
               <TouchableOpacity style={styles.expandedHandleWrap} onPress={closeStats} activeOpacity={0.7}>
                 <View style={styles.sheetHandle} />
-                <Text style={styles.expandedHint}>Svep höger för karta · vänster för splits</Text>
+                <Text style={styles.expandedHint}>{t('Svep höger för karta · vänster för splits')}</Text>
               </TouchableOpacity>
 
               {(goalKmNum > 0 || goalMinNum > 0) && (
@@ -1246,7 +1253,7 @@ export default function CardioScreen() {
                     <View style={styles.goalOne}>
                       <View style={styles.goalTextRow}>
                         <Text style={styles.goalText}>
-                          Mål: {toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} {unitLabel}
+                          {t('Mål: {val} {unit}', { val: toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ','), unit: unitLabel })}
                         </Text>
                         <Text style={styles.goalPct}>
                           {Math.min(100, Math.round((distanceKm / goalKmNum) * 100))}%
@@ -1260,7 +1267,7 @@ export default function CardioScreen() {
                   {goalMinNum > 0 && (
                     <View style={styles.goalOne}>
                       <View style={styles.goalTextRow}>
-                        <Text style={styles.goalText}>Mål: {goalMinNum} min</Text>
+                        <Text style={styles.goalText}>{t('Mål: {n} min', { n: goalMinNum })}</Text>
                         <Text style={[styles.goalPct, { color: CARDIO_ACCENT }]}>
                           {Math.min(100, Math.round((elapsed / (goalMinNum * 60)) * 100))}%
                         </Text>
@@ -1319,15 +1326,15 @@ export default function CardioScreen() {
                 <View style={styles.exBlock}>
                   <Text style={styles.exValueBig}>{formatTime(elapsed)}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={styles.exLabel}>Tid</Text>
+                    <Text style={styles.exLabel}>{t('Tid')}</Text>
                     {status === 'paused' && (
                       <View style={styles.pausedBadge}>
-                        <Text style={styles.pausedBadgeText}>PAUSAD</Text>
+                        <Text style={styles.pausedBadgeText}>{t('PAUSAD')}</Text>
                       </View>
                     )}
                     {status === 'running' && autoPaused && (
                       <View style={styles.pausedBadge}>
-                        <Text style={styles.pausedBadgeText}>AUTOPAUS</Text>
+                        <Text style={styles.pausedBadgeText}>{t('AUTOPAUS')}</Text>
                       </View>
                     )}
                   </View>
@@ -1339,14 +1346,14 @@ export default function CardioScreen() {
                   <Text style={[styles.exValueBig, currentPaceSec > 0 && { color: CARDIO_ACCENT }]}>
                     {currentPaceSec > 0 ? formatPace(1, paceForUnit(currentPaceSec, unit)) : '--:--'}
                   </Text>
-                  <Text style={styles.exLabel}>Nu /{unitLabel}</Text>
+                  <Text style={styles.exLabel}>{t('Nu /{unit}', { unit: unitLabel })}</Text>
                 </View>
 
                 <View style={styles.exDivider} />
 
                 <View style={styles.exBlock}>
                   <Text style={styles.exValueBig}>{toDisplayDistance(distanceKm, unit).toFixed(2)}</Text>
-                  <Text style={styles.exLabel}>Distans ({unitLabel})</Text>
+                  <Text style={styles.exLabel}>{t('Distans ({unit})', { unit: unitLabel })}</Text>
                 </View>
 
                 <View style={styles.exDivider} />
@@ -1356,12 +1363,12 @@ export default function CardioScreen() {
                     <Text style={styles.exValueMed}>
                       {distanceKm > 0.01 ? formatPace(1, paceForUnit(elapsed / distanceKm, unit)) : '--:--'}
                     </Text>
-                    <Text style={styles.exLabel}>Snitt /{unitLabel}</Text>
+                    <Text style={styles.exLabel}>{t('Snitt /{unit}', { unit: unitLabel })}</Text>
                   </View>
                   <View style={styles.exDividerV} />
                   <View style={styles.exBlockHalf}>
                     <Text style={styles.exValueMed}>{calories}</Text>
-                    <Text style={styles.exLabel}>Kcal</Text>
+                    <Text style={styles.exLabel}>{t('Kcal')}</Text>
                   </View>
                 </View>
               </View>
@@ -1380,7 +1387,7 @@ export default function CardioScreen() {
             <GestureDetector gesture={sheetDrag}>
               <View style={styles.sheetGrip}>
                 <View style={styles.sheetHandle} />
-                <Text style={styles.sheetTitle}>Välj aktivitet</Text>
+                <Text style={styles.sheetTitle}>{t('Välj aktivitet')}</Text>
               </View>
             </GestureDetector>
             <SafeScreen edges={['bottom']}>
@@ -1400,7 +1407,7 @@ export default function CardioScreen() {
                     <View style={[styles.sheetItemIcon, active && { backgroundColor: CARDIO_ACCENT + '2E' }]}>
                       <Ionicons name={ex.icon} size={22} color={active ? CARDIO_ACCENT : '#999'} />
                     </View>
-                    <Text style={[styles.sheetItemText, active && styles.sheetItemTextActive]}>{ex.label}</Text>
+                    <Text style={[styles.sheetItemText, active && styles.sheetItemTextActive]}>{t(ex.label)}</Text>
                     {active && <Ionicons name="checkmark-circle" size={22} color={CARDIO_ACCENT} style={{ marginLeft: 'auto' }} />}
                   </TouchableOpacity>
                 )
@@ -1419,7 +1426,7 @@ export default function CardioScreen() {
             <GestureDetector gesture={styleDrag}>
               <View style={styles.sheetGrip}>
                 <View style={styles.sheetHandle} />
-                <Text style={styles.sheetTitle}>Välj karta</Text>
+                <Text style={styles.sheetTitle}>{t('Välj karta')}</Text>
               </View>
             </GestureDetector>
             <SafeScreen edges={['bottom']}>
@@ -1452,7 +1459,7 @@ export default function CardioScreen() {
                         </View>
                       )}
                       <View style={styles.mapCardLabelRow}>
-                        <Text style={[styles.mapCardLabel, active && { color: CARDIO_ACCENT }]}>{ms.label}</Text>
+                        <Text style={[styles.mapCardLabel, active && { color: CARDIO_ACCENT }]}>{t(ms.label)}</Text>
                         {active && <Ionicons name="checkmark-circle" size={15} color={CARDIO_ACCENT} />}
                       </View>
                     </TouchableOpacity>
@@ -1472,9 +1479,9 @@ export default function CardioScreen() {
             <View style={styles.summaryCheck}>
               <Ionicons name="checkmark" size={36} color="#fff" />
             </View>
-            <Text style={styles.summaryTitle}>Träning klar!</Text>
+            <Text style={styles.summaryTitle}>{t('Träning klar!')}</Text>
             <Text style={styles.summarySubtitle}>
-              {selectedExercise.label} · {new Date().toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}
+              {t(selectedExercise.label)} · {new Date().toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' })}
             </Text>
 
             <ScrollView
@@ -1486,12 +1493,12 @@ export default function CardioScreen() {
 
             {/* Namnge passet */}
             <View style={styles.nameField}>
-              <Text style={styles.nameFieldLabel}>PASSNAMN</Text>
+              <Text style={styles.nameFieldLabel}>{t('PASSNAMN')}</Text>
               <AppTextInput
                 style={styles.nameFieldInput}
                 value={workoutName}
                 onChangeText={setWorkoutName}
-                placeholder={`T.ex. Morgonrunda (annars "${selectedExercise.label}")`}
+                placeholder={t('T.ex. Morgonrunda (annars "{label}")', { label: t(selectedExercise.label) })}
                 autoCorrect={false}
                 returnKeyType="done"
               />
@@ -1501,14 +1508,14 @@ export default function CardioScreen() {
             <View style={styles.summaryStack}>
               <View style={styles.exBlock}>
                 <Text style={styles.exValueBig}>{formatTime(summary?.elapsed ?? 0)}</Text>
-                <Text style={styles.exLabel}>Tid</Text>
+                <Text style={styles.exLabel}>{t('Tid')}</Text>
               </View>
 
               <View style={styles.exDivider} />
 
               <View style={styles.exBlock}>
                 <Text style={styles.exValueBig}>{toDisplayDistance(summary?.distanceKm ?? 0, unit).toFixed(2)}</Text>
-                <Text style={styles.exLabel}>Distans ({unitLabel})</Text>
+                <Text style={styles.exLabel}>{t('Distans ({unit})', { unit: unitLabel })}</Text>
               </View>
 
               <View style={styles.exDivider} />
@@ -1518,12 +1525,12 @@ export default function CardioScreen() {
                   <Text style={styles.exValueMed}>
                     {(summary?.distanceKm ?? 0) > 0.01 ? formatPace(1, paceForUnit((summary!.elapsed) / (summary!.distanceKm), unit)) : '--:--'}
                   </Text>
-                  <Text style={styles.exLabel}>Snitt /{unitLabel}</Text>
+                  <Text style={styles.exLabel}>{t('Snitt /{unit}', { unit: unitLabel })}</Text>
                 </View>
                 <View style={styles.exDividerV} />
                 <View style={styles.exBlockHalf}>
                   <Text style={styles.exValueMed}>{summary?.calories ?? 0}</Text>
-                  <Text style={styles.exLabel}>Kcal</Text>
+                  <Text style={styles.exLabel}>{t('Kcal')}</Text>
                 </View>
               </View>
             </View>
@@ -1533,7 +1540,7 @@ export default function CardioScreen() {
               const fastest = Math.min(...summary.splits.map(s => s.paceSec))
               return (
                 <View style={styles.splitsWrap}>
-                  <Text style={styles.splitsTitle}>Splittar</Text>
+                  <Text style={styles.splitsTitle}>{t('Splittar')}</Text>
                   {summary.splits.map((sp, i) => (
                     <View key={i} style={styles.splitRow}>
                       <Text style={styles.splitKm}>{sp.label}</Text>
@@ -1556,8 +1563,8 @@ export default function CardioScreen() {
                   <Ionicons name={reached ? 'trophy' : 'flag-outline'} size={16} color={reached ? '#FFD54F' : 'rgba(255,255,255,0.6)'} />
                   <Text style={[styles.summaryGoalText, reached && { color: '#FFD54F' }]}>
                     {reached
-                      ? 'Distansmål uppnått!'
-                      : `${Math.round(pct * 100)}% av distansmålet (${toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ',')} ${unitLabel})`}
+                      ? t('Distansmål uppnått!')
+                      : t('{pct}% av distansmålet ({val} {unit})', { pct: Math.round(pct * 100), val: toDisplayDistance(goalKmNum, unit).toFixed(1).replace('.', ','), unit: unitLabel })}
                   </Text>
                 </View>
               )
@@ -1570,8 +1577,8 @@ export default function CardioScreen() {
                   <Ionicons name={reached ? 'trophy' : 'flag-outline'} size={16} color={reached ? '#FFD54F' : 'rgba(255,255,255,0.6)'} />
                   <Text style={[styles.summaryGoalText, reached && { color: '#FFD54F' }]}>
                     {reached
-                      ? 'Tidsmål uppnått!'
-                      : `${Math.round(pct * 100)}% av tidsmålet (${goalMinNum} min)`}
+                      ? t('Tidsmål uppnått!')
+                      : t('{pct}% av tidsmålet ({n} min)', { pct: Math.round(pct * 100), n: goalMinNum })}
                   </Text>
                 </View>
               )
@@ -1585,8 +1592,8 @@ export default function CardioScreen() {
                     <Ionicons name={all ? 'trophy' : 'flash-outline'} size={16} color={all ? '#FFD54F' : 'rgba(255,255,255,0.6)'} />
                     <Text style={[styles.summaryGoalText, all && { color: '#FFD54F' }]}>
                       {all
-                        ? `Alla ${totalWork} intervaller avklarade!`
-                        : `${engineUi.completedWork} av ${totalWork} intervaller`}
+                        ? t('Alla {n} intervaller avklarade!', { n: totalWork })
+                        : t('{done} av {total} intervaller', { done: engineUi.completedWork, total: totalWork })}
                     </Text>
                   </View>
                   {/* Tempo per intervall — snabbaste markerad */}
@@ -1618,12 +1625,12 @@ export default function CardioScreen() {
                   <View style={[styles.effortBadge, { backgroundColor: effortColor(effort) + '26', borderColor: effortColor(effort) }]}>
                     <Text style={[styles.effortBadgeText, { color: effortColor(effort) }]}>{effort}</Text>
                   </View>
-                  <Text style={styles.effortRowText}>Ansträngning · {effortLabel(effort)}</Text>
+                  <Text style={styles.effortRowText}>{t('Ansträngning · {label}', { label: t(effortLabel(effort)) })}</Text>
                 </>
               ) : (
                 <>
                   <Ionicons name="pulse-outline" size={16} color="rgba(255,255,255,0.6)" />
-                  <Text style={styles.effortRowText}>Betygsätt din ansträngning</Text>
+                  <Text style={styles.effortRowText}>{t('Betygsätt din ansträngning')}</Text>
                 </>
               )}
               <Ionicons name="chevron-forward" size={15} color="rgba(255,255,255,0.35)" />
@@ -1632,7 +1639,7 @@ export default function CardioScreen() {
             {/* Poäng-hint */}
             <View style={styles.summaryPoints}>
               <Ionicons name="star" size={13} color={CARDIO_ACCENT} />
-              <Text style={styles.summaryPointsText}>+30 p mot din nästa nivå</Text>
+              <Text style={styles.summaryPointsText}>{t('+30 p mot din nästa nivå')}</Text>
             </View>
 
             </ScrollView>
@@ -1644,11 +1651,11 @@ export default function CardioScreen() {
               activeOpacity={0.85}
             >
               <Ionicons name="save-outline" size={20} color="#000" />
-              <Text style={styles.summaryBtnText}>{saving ? 'Sparar…' : 'Spara & avsluta'}</Text>
+              <Text style={styles.summaryBtnText}>{saving ? t('Sparar…') : t('Spara & avsluta')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.summaryDiscard} onPress={() => { setSummary(null); router.back() }}>
-              <Text style={styles.summaryDiscardText}>Kasta träningen</Text>
+              <Text style={styles.summaryDiscardText}>{t('Kasta träningen')}</Text>
             </TouchableOpacity>
 
           </View>
@@ -1679,14 +1686,14 @@ export default function CardioScreen() {
                 <Ionicons name="volume-high-outline" size={36} color={CARDIO_ACCENT} />
               </View>
               <Text style={styles.voiceTitle}>
-                {voicePage === 'main' ? 'Röstguidning' : voicePage === 'freq' ? 'Hur ofta?' : voicePage === 'stats' ? 'Vilken statistik?' : 'Röst'}
+                {voicePage === 'main' ? t('Röstguidning') : voicePage === 'freq' ? t('Hur ofta?') : voicePage === 'stats' ? t('Vilken statistik?') : t('Röst')}
               </Text>
             </View>
 
             {voicePage === 'main' && (
               <View style={styles.voiceList}>
                 <View style={styles.voiceRow}>
-                  <Text style={styles.voiceRowLabel}>Aktivera</Text>
+                  <Text style={styles.voiceRowLabel}>{t('Aktivera')}</Text>
                   <Switch
                     value={voiceOn}
                     onValueChange={setVoiceEnabled}
@@ -1697,8 +1704,8 @@ export default function CardioScreen() {
                 {/* Guidningen har egen röst — kan vara på fast statistiken är av */}
                 <View style={styles.voiceRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.voiceRowLabel}>Intervallguidning</Text>
-                    <Text style={styles.voiceRowValue}>Segmentbyten och vila på guidade pass</Text>
+                    <Text style={styles.voiceRowLabel}>{t('Intervallguidning')}</Text>
+                    <Text style={styles.voiceRowValue}>{t('Segmentbyten och vila på guidade pass')}</Text>
                   </View>
                   <Switch
                     value={voiceSet.say.intervals}
@@ -1709,11 +1716,11 @@ export default function CardioScreen() {
                 </View>
                 <TouchableOpacity style={styles.voiceRow} onPress={() => setVoicePage('voice')} activeOpacity={0.7}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.voiceRowLabel}>Röst</Text>
+                    <Text style={styles.voiceRowLabel}>{t('Röst')}</Text>
                     <Text style={styles.voiceRowValue} numberOfLines={1}>
                       {(() => {
                         const v = coachVoices.find(x => x.identifier === coachVoiceId)
-                        return v ? `${voiceDisplayName(v)} · ${voiceQualityLabel(v)}` : 'Automatisk'
+                        return v ? `${voiceDisplayName(v)} · ${voiceQualityLabel(v)}` : t('Automatisk')
                       })()}
                     </Text>
                   </View>
@@ -1721,28 +1728,28 @@ export default function CardioScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.voiceRow} onPress={() => setVoicePage('freq')} activeOpacity={0.7}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.voiceRowLabel}>Hur ofta?</Text>
+                    <Text style={styles.voiceRowLabel}>{t('Hur ofta?')}</Text>
                     <Text style={styles.voiceRowValue}>
                       {[
-                        voiceSet.distEvery > 0 ? `Varje ${voiceSet.distEvery === 1 ? '' : `${voiceSet.distEvery}:e `}kilometer` : null,
-                        voiceSet.timeEvery > 0 ? `var ${voiceSet.timeEvery}:e minut` : null,
-                      ].filter(Boolean).join(' · ') || 'Aldrig'}
+                        voiceSet.distEvery > 0 ? (voiceSet.distEvery === 1 ? t('Varje kilometer') : t('Varje {n}:e kilometer', { n: voiceSet.distEvery })) : null,
+                        voiceSet.timeEvery > 0 ? t('var {n}:e minut', { n: voiceSet.timeEvery }) : null,
+                      ].filter(Boolean).join(' · ') || t('Aldrig')}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color="#666" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.voiceRow} onPress={() => setVoicePage('stats')} activeOpacity={0.7}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.voiceRowLabel}>Vilken statistik?</Text>
+                    <Text style={styles.voiceRowLabel}>{t('Vilken statistik?')}</Text>
                     <Text style={styles.voiceRowValue} numberOfLines={1}>
                       {[
-                        voiceSet.say.time && 'Tid',
-                        voiceSet.say.distance && 'Distans',
-                        voiceSet.say.avgPace && 'Snittempo',
-                        voiceSet.say.curPace && 'Aktuellt tempo',
-                        voiceSet.say.splitPace && 'Split-tempo',
-                        voiceSet.say.summary && 'Sammanfattning',
-                      ].filter(Boolean).join(', ') || 'Ingen'}
+                        voiceSet.say.time && t('Tid'),
+                        voiceSet.say.distance && t('Distans'),
+                        voiceSet.say.avgPace && t('Snittempo'),
+                        voiceSet.say.curPace && t('Aktuellt tempo'),
+                        voiceSet.say.splitPace && t('Split-tempo'),
+                        voiceSet.say.summary && t('Sammanfattning'),
+                      ].filter(Boolean).join(', ') || t('Ingen')}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color="#666" />
@@ -1755,7 +1762,7 @@ export default function CardioScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingHorizontal: 16, gap: 10, paddingBottom: 40 }}
               >
-                <Text style={[styles.voiceHint, { marginBottom: 2 }]}>Tryck på en röst för att välja och provlyssna.</Text>
+                <Text style={[styles.voiceHint, { marginBottom: 2 }]}>{t('Tryck på en röst för att välja och provlyssna.')}</Text>
                 {coachVoices.map(v => {
                   const active = v.identifier === coachVoiceId
                   const quality = voiceQualityLabel(v)
@@ -1785,7 +1792,7 @@ export default function CardioScreen() {
                   )
                 })}
                 {coachVoices.length === 0 && (
-                  <Text style={styles.voiceHint}>Inga svenska röster hittades på enheten.</Text>
+                  <Text style={styles.voiceHint}>{t('Inga svenska röster hittades på enheten.')}</Text>
                 )}
 
                 {/* iOS tillåter inga djuplänkar till undersidor i Inställningar —
@@ -1795,13 +1802,13 @@ export default function CardioScreen() {
                     <View style={styles.voiceAvatar}>
                       <Ionicons name="cloud-download-outline" size={19} color={CARDIO_ACCENT} />
                     </View>
-                    <Text style={styles.voiceRowLabel}>Så får du den mjukaste rösten</Text>
+                    <Text style={styles.voiceRowLabel}>{t('Så får du den mjukaste rösten')}</Text>
                   </View>
                   {[
-                    'Öppna Inställningar på din iPhone',
-                    'Hjälpmedel → Uppläst innehåll → Röster',
-                    'Svenska → Alva → hämta Alva (Premium)',
-                    'Kom tillbaka hit och välj den',
+                    t('Öppna Inställningar på din iPhone'),
+                    t('Hjälpmedel → Uppläst innehåll → Röster'),
+                    t('Svenska → Alva → hämta Alva (Premium)'),
+                    t('Kom tillbaka hit och välj den'),
                   ].map((step, i) => (
                     <View key={i} style={styles.voiceStep}>
                       <View style={styles.voiceStepNum}>
@@ -1817,7 +1824,7 @@ export default function CardioScreen() {
               <View style={styles.voiceList}>
                 <View style={styles.voiceFreqBlock}>
                   <View style={styles.voiceRowPlain}>
-                    <Text style={styles.voiceRowLabel}>Distans</Text>
+                    <Text style={styles.voiceRowLabel}>{t('Distans')}</Text>
                     <Switch
                       value={voiceSet.distEvery > 0}
                       onValueChange={on => updateVoiceSet({ distEvery: on ? 1 : 0 })}
@@ -1835,7 +1842,7 @@ export default function CardioScreen() {
                     </TouchableOpacity>
                     <View style={{ alignItems: 'center' }}>
                       <Text style={styles.voiceStepValue}>{voiceSet.distEvery || 1}</Text>
-                      <Text style={styles.voiceStepUnit}>kilometer</Text>
+                      <Text style={styles.voiceStepUnit}>{t('kilometer')}</Text>
                     </View>
                     <TouchableOpacity
                       style={styles.voiceStepBtn}
@@ -1848,7 +1855,7 @@ export default function CardioScreen() {
                 </View>
                 <View style={styles.voiceFreqBlock}>
                   <View style={styles.voiceRowPlain}>
-                    <Text style={styles.voiceRowLabel}>Tid</Text>
+                    <Text style={styles.voiceRowLabel}>{t('Tid')}</Text>
                     <Switch
                       value={voiceSet.timeEvery > 0}
                       onValueChange={on => updateVoiceSet({ timeEvery: on ? 5 : 0 })}
@@ -1866,7 +1873,7 @@ export default function CardioScreen() {
                     </TouchableOpacity>
                     <View style={{ alignItems: 'center' }}>
                       <Text style={styles.voiceStepValue}>{voiceSet.timeEvery || 5}</Text>
-                      <Text style={styles.voiceStepUnit}>minuter</Text>
+                      <Text style={styles.voiceStepUnit}>{t('minuter')}</Text>
                     </View>
                     <TouchableOpacity
                       style={styles.voiceStepBtn}
@@ -1891,7 +1898,7 @@ export default function CardioScreen() {
                   { key: 'summary' as const,   label: 'Sammanfattning vid avslut' },
                 ]).map(opt => (
                   <View key={opt.key} style={styles.voiceRow}>
-                    <Text style={styles.voiceRowLabel}>{opt.label}</Text>
+                    <Text style={styles.voiceRowLabel}>{t(opt.label)}</Text>
                     <Switch
                       value={voiceSet.say[opt.key]}
                       onValueChange={on => updateVoiceSet({ say: { [opt.key]: on } })}
@@ -1914,12 +1921,12 @@ export default function CardioScreen() {
               <View style={styles.goalIconCircle}>
                 <Ionicons name="flag-outline" size={28} color={CARDIO_ACCENT} />
               </View>
-              <Text style={styles.goalModalTitle}>Sätt mål</Text>
+              <Text style={styles.goalModalTitle}>{t('Sätt mål')}</Text>
             </View>
 
             <View style={styles.voiceFreqBlock}>
               <View style={styles.voiceRowPlain}>
-                <Text style={styles.voiceRowLabel}>Distans</Text>
+                <Text style={styles.voiceRowLabel}>{t('Distans')}</Text>
                 <Switch
                   value={goalKmDraft > 0}
                   onValueChange={on => setGoalKmDraft(on ? 5 : 0)}
@@ -1953,7 +1960,7 @@ export default function CardioScreen() {
 
             <View style={styles.voiceFreqBlock}>
               <View style={styles.voiceRowPlain}>
-                <Text style={styles.voiceRowLabel}>Tid</Text>
+                <Text style={styles.voiceRowLabel}>{t('Tid')}</Text>
                 <Switch
                   value={goalMinDraft > 0}
                   onValueChange={on => setGoalMinDraft(on ? 30 : 0)}
@@ -1971,7 +1978,7 @@ export default function CardioScreen() {
                 </TouchableOpacity>
                 <View style={{ alignItems: 'center' }}>
                   <Text style={styles.voiceStepValue}>{goalMinDraft || 30}</Text>
-                  <Text style={styles.voiceStepUnit}>minuter</Text>
+                  <Text style={styles.voiceStepUnit}>{t('minuter')}</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.voiceStepBtn}
@@ -1984,13 +1991,13 @@ export default function CardioScreen() {
             </View>
 
             <TouchableOpacity style={styles.goalModalSave} onPress={saveGoal} activeOpacity={0.85}>
-              <Text style={styles.goalModalSaveText}>Spara mål</Text>
+              <Text style={styles.goalModalSaveText}>{t('Spara mål')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.goalModalClear}
               onPress={() => { setGoalKmNum(0); setGoalMinNum(0); setGoalModalOpen(false) }}
             >
-              <Text style={styles.goalModalClearText}>Inget mål</Text>
+              <Text style={styles.goalModalClearText}>{t('Inget mål')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -2004,9 +2011,9 @@ export default function CardioScreen() {
               <View style={styles.goalIconCircle}>
                 <Ionicons name="flash" size={26} color={CARDIO_ACCENT} />
               </View>
-              <Text style={styles.goalModalTitle}>Passets upplägg</Text>
+              <Text style={styles.goalModalTitle}>{t('Passets upplägg')}</Text>
               <Text style={styles.infoSheetSub}>
-                Följ guidningen, rösten och bannern säger till när det är dags att växla
+                {t('Följ guidningen, rösten och bannern säger till när det är dags att växla')}
               </Text>
             </View>
             <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
@@ -2036,7 +2043,7 @@ export default function CardioScreen() {
                       <Text style={[styles.infoPlanTarget, isWork && { color: CARDIO_ACCENT }]}>{target}</Text>
                       {isWork && seg.paceSecLo && (
                         <Text style={styles.infoPlanPace}>
-                          ca {formatPace(1, paceForUnit(seg.paceSecLo, unit))}
+                          {t('ca')} {formatPace(1, paceForUnit(seg.paceSecLo, unit))}
                           {seg.paceSecHi && seg.paceSecHi !== seg.paceSecLo ? `–${formatPace(1, paceForUnit(seg.paceSecHi, unit))}` : ''} /{unitLabel}
                         </Text>
                       )}
@@ -2046,7 +2053,7 @@ export default function CardioScreen() {
               })}
             </ScrollView>
             <TouchableOpacity style={styles.goalModalSave} onPress={() => setInfoSheet(null)}>
-              <Text style={styles.goalModalSaveText}>Jag är redo</Text>
+              <Text style={styles.goalModalSaveText}>{t('Jag är redo')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -2060,22 +2067,22 @@ export default function CardioScreen() {
               <View style={styles.goalIconCircle}>
                 <Ionicons name={selectedExercise.icon} size={26} color={CARDIO_ACCENT} />
               </View>
-              <Text style={styles.goalModalTitle}>{selectedExercise.label}</Text>
+              <Text style={styles.goalModalTitle}>{t(selectedExercise.label)}</Text>
             </View>
-            <Text style={styles.infoSheetDesc}>{ACTIVITY_INFO[exercise].desc}</Text>
-            <Text style={styles.infoSheetTipsHead}>TÄNK PÅ</Text>
+            <Text style={styles.infoSheetDesc}>{t(ACTIVITY_INFO[exercise].desc)}</Text>
+            <Text style={styles.infoSheetTipsHead}>{t('TÄNK PÅ')}</Text>
             <View style={{ gap: 10 }}>
               {ACTIVITY_INFO[exercise].tips.map((tip, i) => (
                 <View key={i} style={styles.infoTipRow}>
                   <View style={styles.infoTipDot}>
                     <Ionicons name="checkmark" size={11} color={CARDIO_ACCENT} />
                   </View>
-                  <Text style={styles.infoTipText}>{tip}</Text>
+                  <Text style={styles.infoTipText}>{t(tip)}</Text>
                 </View>
               ))}
             </View>
             <TouchableOpacity style={styles.goalModalSave} onPress={() => setInfoSheet(null)}>
-              <Text style={styles.goalModalSaveText}>Jag är redo</Text>
+              <Text style={styles.goalModalSaveText}>{t('Jag är redo')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -2113,8 +2120,8 @@ export default function CardioScreen() {
                 >
                   <Ionicons name={selectedExercise.icon} size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
-                    <Text style={styles.idleCellLabel}>Aktivitet</Text>
-                    <Text style={styles.idleCellValue}>{selectedExercise.label}</Text>
+                    <Text style={styles.idleCellLabel}>{t('Aktivitet')}</Text>
+                    <Text style={styles.idleCellValue}>{t(selectedExercise.label)}</Text>
                   </View>
                   {guided && <Ionicons name="information-circle-outline" size={14} color="rgba(255,255,255,0.4)" />}
                 </TouchableOpacity>
@@ -2126,18 +2133,18 @@ export default function CardioScreen() {
                 >
                   <Ionicons name="flag-outline" size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
-                    <Text style={styles.idleCellLabel}>{guided ? 'Upplägg' : 'Mål'}</Text>
+                    <Text style={styles.idleCellLabel}>{guided ? t('Upplägg') : t('Mål')}</Text>
                     <Text style={styles.idleCellValue} numberOfLines={1}>
                       {guided
                         ? totalWork > 1
-                          ? `${totalWork} intervaller`
-                          : 'Följer passet'
+                          ? t('{n} intervaller', { n: totalWork })
+                          : t('Följer passet')
                         : goalKmNum > 0 || goalMinNum > 0
                           ? [
                               goalKmNum > 0 ? `${String(goalKmNum).replace('.', ',')} ${unitLabel}` : null,
                               goalMinNum > 0 ? `${goalMinNum} min` : null,
                             ].filter(Boolean).join(' · ')
-                          : 'Inget'}
+                          : t('Inget')}
                     </Text>
                   </View>
                   {guided && <Ionicons name="information-circle-outline" size={14} color="rgba(255,255,255,0.4)" />}
@@ -2148,13 +2155,13 @@ export default function CardioScreen() {
                 <TouchableOpacity style={styles.idleCell} onPress={() => { setVoicePage('main'); setVoiceModalOpen(true) }} activeOpacity={0.75}>
                   <Ionicons name={voiceOn ? 'volume-high-outline' : 'volume-mute-outline'} size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
-                    <Text style={styles.idleCellLabel}>Röstguidning</Text>
+                    <Text style={styles.idleCellLabel}>{t('Röstguidning')}</Text>
                     <Text style={styles.idleCellValue} numberOfLines={1}>
-                      {!voiceOn ? 'Av'
+                      {!voiceOn ? t('Av')
                         : [
                             voiceSet.distEvery > 0 ? `${voiceSet.distEvery} km` : null,
                             voiceSet.timeEvery > 0 ? `${voiceSet.timeEvery} min` : null,
-                          ].filter(Boolean).join(' · ') || 'På'}
+                          ].filter(Boolean).join(' · ') || t('På')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -2162,9 +2169,9 @@ export default function CardioScreen() {
                 <TouchableOpacity style={styles.idleCell} onPress={openStyleSheet} activeOpacity={0.75}>
                   <Ionicons name="layers-outline" size={20} color={CARDIO_ACCENT} />
                   <View style={styles.idleCellText}>
-                    <Text style={styles.idleCellLabel}>Karta</Text>
+                    <Text style={styles.idleCellLabel}>{t('Karta')}</Text>
                     <Text style={styles.idleCellValue}>
-                      {MAP_STYLES.find(m => m.key === activeStyle)?.label ?? 'Karta'}
+                      {t(MAP_STYLES.find(m => m.key === activeStyle)?.label ?? 'Karta')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -2173,26 +2180,26 @@ export default function CardioScreen() {
               </View>
 
               <TouchableOpacity style={styles.startWide} onPress={beginCountdown} activeOpacity={0.85}>
-                <Text style={styles.startWideText}>Start</Text>
+                <Text style={styles.startWideText}>{t('Start')}</Text>
               </TouchableOpacity>
             </View>
           ) : status === 'running' ? (
             // Under passet: bara en bred pausknapp
             <TouchableOpacity style={styles.pausePill} onPress={pauseTracking} activeOpacity={0.85}>
               <Ionicons name="pause" size={24} color="#fff" />
-              <Text style={styles.pausePillText}>Pausa</Text>
+              <Text style={styles.pausePillText}>{t('Pausa')}</Text>
             </TouchableOpacity>
           ) : (
             // Pausad: bred Återuppta, mindre Avsluta så man inte råkar avsluta
             <>
               <TouchableOpacity style={[styles.pausePill, { flex: 2 }]} onPress={startTracking} activeOpacity={0.85}>
                 <Ionicons name="play" size={22} color="#fff" style={{ marginLeft: 2 }} />
-                <Text style={styles.pausePillText}>Återuppta</Text>
+                <Text style={styles.pausePillText}>{t('Återuppta')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={[styles.finishPill, lightCard && { backgroundColor: '#E5E5EA' }, lightCard && { backgroundColor: '#E5E5EA' }]} onPress={handleFinish} activeOpacity={0.85}>
                 <Ionicons name="stop" size={18} color="#fff" />
-                <Text style={styles.finishPillText}>Avsluta</Text>
+                <Text style={styles.finishPillText}>{t('Avsluta')}</Text>
               </TouchableOpacity>
             </>
           )}

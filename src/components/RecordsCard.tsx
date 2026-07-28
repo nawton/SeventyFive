@@ -6,6 +6,7 @@ import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARD_BORDER, useCardChrome 
 import { MedalBadge } from '@/components/MedalBadge'
 import { getAchievementSummary, type AchievementSummary } from '@/services/achievementSummary'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // REKORD & MEDALJER — Runna Levels-stil: tre överlappande medaljhexagoner,
@@ -14,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 // =============================================================================
 
 export function RecordsCard() {
+  const t = useT()
   const chrome = useCardChrome()
   const [summary, setSummary] = useState<AchievementSummary | null>(null)
 
@@ -40,11 +42,11 @@ export function RecordsCard() {
         <View style={s.medalFront}><MedalBadge tier="gold" unlocked size={56} /></View>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={s.title}>Rekord & medaljer</Text>
+        <Text style={s.title}>{t('Rekord & medaljer')}</Text>
         <Text style={s.sub}>
           {summary
-            ? `${summary.medalsUnlocked} av ${summary.medalsTotal} medaljer · ${summary.recordCount} rekord`
-            : 'Samla poäng. Nå dina mål.'}
+            ? t('{a} av {b} medaljer · {c} rekord', { a: summary.medalsUnlocked, b: summary.medalsTotal, c: summary.recordCount })
+            : t('Samla poäng. Nå dina mål.')}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />

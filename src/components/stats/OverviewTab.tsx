@@ -15,9 +15,11 @@ import { STATS_SCREEN_W, BLUE, RED, YELLOW, nextMilestone, s , useStatsColors} f
 import { CalendarView } from './CalendarView'
 import { DayWorkoutsModal } from './DayWorkoutsModal'
 import { MilestoneAnalysisModal } from './MilestoneAnalysisModal'
+import { useT, dateLocale } from '@/lib/i18n'
 
 
 function RingChart({ currentDay, completedDays }: { currentDay: number; completedDays: number }) {
+  const t = useT()
   const P = useStatsColors()
   const R = 48
   const C = 2 * Math.PI * R
@@ -60,7 +62,7 @@ function RingChart({ currentDay, completedDays }: { currentDay: number; complete
         textAnchor="middle" fontSize={11}
         fill={TEXT_SECONDARY} fontFamily="-apple-system,sans-serif"
       >
-        av 75
+        {t('av 75')}
       </SvgText>
     </Svg>
   )
@@ -92,6 +94,7 @@ export function OverviewTab({
   /** Efter en efterhandsredigering av en dags uppgifter — ladda om statistiken */
   onDayEdited?: () => void
 }) {
+  const t = useT()
   const P = useStatsColors()
   const unitLabel = distanceUnitLabel(unit)
   // Milstolpekortet: orange ton hör mörka läget till — i ljust blir det ett
@@ -145,30 +148,30 @@ export function OverviewTab({
         >
           <>
             {/* Ring chart */}
-            <Text style={s.sectionHead}>Utmaningen</Text>
+            <Text style={s.sectionHead}>{t('Utmaningen')}</Text>
             <View style={[s.card, s.cardPlain]}>
               <View style={s.ringWrap}>
                 <RingChart currentDay={currentDay} completedDays={completedDays} />
                 <View style={s.ringInfo}>
                   <View>
-                    <Text style={s.ringDay}>Dag {currentDay}</Text>
+                    <Text style={s.ringDay}>{t('Dag {n}', { n: currentDay })}</Text>
                     <Text style={s.ringOfN}>
-                      {currentDay > 0 ? Math.round((currentDay / 75) * 100) : 0}% av utmaningen
+                      {t('{pct}% av utmaningen', { pct: currentDay > 0 ? Math.round((currentDay / 75) * 100) : 0 })}
                     </Text>
                   </View>
                   <View style={s.ringRows}>
                     <View style={s.ringRow}>
-                      <Text style={s.ringRowLabel}>Klarade dagar</Text>
+                      <Text style={s.ringRowLabel}>{t('Klarade dagar')}</Text>
                       <Text style={[s.ringRowVal, { color: GREEN }]}>{completedDays} ✓</Text>
                     </View>
                     {!isEarlyDays && (
                       <>
                         <View style={s.ringRow}>
-                          <Text style={s.ringRowLabel}>Missade dagar</Text>
+                          <Text style={s.ringRowLabel}>{t('Missade dagar')}</Text>
                           <Text style={[s.ringRowVal, { color: P.RED }]}>{missedDays}</Text>
                         </View>
                         <View style={s.ringRow}>
-                          <Text style={s.ringRowLabel}>Framgång</Text>
+                          <Text style={s.ringRowLabel}>{t('Framgång')}</Text>
                           <Text style={[s.ringRowVal, { color: ACCENT }]}>
                             {currentDay > 1 ? Math.round((completedDays / (currentDay - 1)) * 100) : 0}%
                           </Text>
@@ -185,10 +188,10 @@ export function OverviewTab({
               <TouchableOpacity style={[s.milestone, msCardOverride]} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)}>
                 <View style={[s.msIcon, msIconOverride]}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
-                  <Text style={[s.msEyebrow, msEyebrowColor]}>NÄSTA MILSTOLPE</Text>
+                  <Text style={[s.msEyebrow, msEyebrowColor]}>{t('NÄSTA MILSTOLPE')}</Text>
                   <Text style={s.msTitle}>{milestone.label}</Text>
                   <Text style={s.msSub}>
-                    {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`} · Du är på väg!
+                    {milestone.daysLeft === 1 ? t('1 dag kvar') : t('{n} dagar kvar', { n: milestone.daysLeft })} · {t('Du är på väg!')}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={17} color={ACCENT} />
@@ -196,15 +199,15 @@ export function OverviewTab({
             )}
 
             {/* Din vecka — tvärsummering över cardio och gym */}
-            <Text style={s.sectionHead}>Din vecka</Text>
+            <Text style={s.sectionHead}>{t('Din vecka')}</Text>
             <View style={[s.card, s.cardPlain]}>
               <View style={[s.dtlRow, { paddingTop: 0 }]}>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Träningspass</Text>
+                  <Text style={s.dtlLbl}>{t('Träningspass')}</Text>
                   <Text style={[s.dtlVal, { color: ACCENT }]}>{weekReport.passes}</Text>
                 </View>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Distans</Text>
+                  <Text style={s.dtlLbl}>{t('Distans')}</Text>
                   <Text style={[s.dtlVal, { color: P.BLUE }]}>
                     {toDisplayDistance(weekReport.km, unit).toFixed(1).replace('.', ',')}
                     <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
@@ -214,14 +217,14 @@ export function OverviewTab({
               <View style={s.dtlSep} />
               <View style={[s.dtlRow, { paddingBottom: 0 }]}>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Volym</Text>
+                  <Text style={s.dtlLbl}>{t('Volym')}</Text>
                   <Text style={[s.dtlVal, { color: P.YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {Math.round(weekReport.volume).toLocaleString('sv-SE')}
+                    {Math.round(weekReport.volume).toLocaleString(dateLocale())}
                     <Text style={s.dtlUnit}> KG</Text>
                   </Text>
                 </View>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Klarade dagar</Text>
+                  <Text style={s.dtlLbl}>{t('Klarade dagar')}</Text>
                   <Text style={[s.dtlVal, { color: GREEN }]}>{weekReport.daysCleared}</Text>
                 </View>
               </View>
@@ -232,10 +235,10 @@ export function OverviewTab({
               <TouchableOpacity style={[s.milestone, msCardOverride]} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)}>
                 <View style={[s.msIcon, msIconOverride]}><Text style={s.msEmoji}>🏔</Text></View>
                 <View style={s.msBody}>
-                  <Text style={[s.msEyebrow, msEyebrowColor]}>NÄSTA MILSTOLPE</Text>
+                  <Text style={[s.msEyebrow, msEyebrowColor]}>{t('NÄSTA MILSTOLPE')}</Text>
                   <Text style={s.msTitle}>{milestone.label}</Text>
                   <Text style={s.msSub}>
-                    {milestone.daysLeft === 1 ? '1 dag kvar' : `${milestone.daysLeft} dagar kvar`} · Håll ut
+                    {milestone.daysLeft === 1 ? t('1 dag kvar') : t('{n} dagar kvar', { n: milestone.daysLeft })} · {t('Håll ut')}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={17} color={ACCENT} />
@@ -243,7 +246,7 @@ export function OverviewTab({
             )}
 
             {/* Calendar */}
-            <Text style={s.sectionHead}>Kalender</Text>
+            <Text style={s.sectionHead}>{t('Kalender')}</Text>
             <CalendarView
               days={days}
               startDate={startDate}

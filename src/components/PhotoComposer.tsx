@@ -16,6 +16,7 @@ import { Ionicons } from '@/components/Icon'
 
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT } from '@/lib/i18n'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ interface Props {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function PhotoComposer({ visible, imageUri, dayNumber, onCancel, onSave }: Props) {
+  const t = useT()
   const [caption, setCaption] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -60,9 +62,9 @@ export function PhotoComposer({ visible, imageUri, dayNumber, onCancel, onSave }
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={onCancel} disabled={saving} hitSlop={12}>
-            <Text style={styles.cancelText}>Avbryt</Text>
+            <Text style={styles.cancelText}>{t('Avbryt')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Dag {dayNumber}</Text>
+          <Text style={styles.headerTitle}>{t('Dag {n}', { n: dayNumber })}</Text>
           <TouchableOpacity
             style={[styles.saveButton, saving && styles.disabled]}
             onPress={handleSave}
@@ -71,7 +73,7 @@ export function PhotoComposer({ visible, imageUri, dayNumber, onCancel, onSave }
           >
             {saving
               ? <ActivityIndicator color="#000" size="small" />
-              : <Text style={styles.saveButtonText}>Spara</Text>
+              : <Text style={styles.saveButtonText}>{t('Spara')}</Text>
             }
           </TouchableOpacity>
         </View>
@@ -84,11 +86,11 @@ export function PhotoComposer({ visible, imageUri, dayNumber, onCancel, onSave }
           <View style={styles.captionCard}>
             <View style={styles.captionHeader}>
               <Ionicons name="create-outline" size={16} color={TEXT_SECONDARY} />
-              <Text style={styles.captionLabel}>Om dagen</Text>
+              <Text style={styles.captionLabel}>{t('Om dagen')}</Text>
             </View>
             <AppTextInput
               style={styles.input}
-              placeholder="Hur kändes dagen eller passet? Skriv några rader..."
+              placeholder={t('Hur kändes dagen eller passet? Skriv några rader...')}
               placeholderTextColor="#444"
               value={caption}
               onChangeText={setCaption}

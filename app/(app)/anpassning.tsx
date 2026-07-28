@@ -21,6 +21,7 @@ import {
   getLastMapCoord, getFiveKTime,
 } from '@/lib/prefs'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // ANPASSNING — samlade stil- och beteendeinställningar:
@@ -77,6 +78,7 @@ function SwitchRow({ icon, label, hint, value, onChange, last }: {
 }
 
 export default function AnpassningScreen() {
+  const t = useT()
   // Ruttfärgen på kartorna — blå standard, byts här
   const [routeKey, setRouteKey] = useState<RouteColorKey>('blue')
   useEffect(() => { getRouteColorKey().then(setRouteKey) }, [])
@@ -135,13 +137,13 @@ export default function AnpassningScreen() {
       const count = await updateRunPaces(userId, fiveKTotal)
       setSavedFiveK(fiveKTotal)
       Alert.alert(
-        'Testtid uppdaterad',
+        t('Testtid uppdaterad'),
         count > 0
-          ? `Tempoförslagen i ${count} pass har räknats om efter din nya tid.`
-          : 'Tiden är sparad, den används när du skapar din nästa löpplan.',
+          ? t('Tempoförslagen i {count} pass har räknats om efter din nya tid.', { count })
+          : t('Tiden är sparad, den används när du skapar din nästa löpplan.'),
       )
     } catch (e: any) {
-      Alert.alert('Kunde inte uppdatera', e.message)
+      Alert.alert(t('Kunde inte uppdatera'), e.message)
     } finally {
       setSavingFiveK(false)
     }
@@ -160,25 +162,25 @@ export default function AnpassningScreen() {
           <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
             <Ionicons name="chevron-back" size={26} color={TEXT_PRIMARY} />
           </TouchableOpacity>
-          <Text style={s.title}>Anpassning</Text>
+          <Text style={s.title}>{t('Anpassning')}</Text>
         </View>
 
         {/* Utseende */}
-        <Section title="Utseende">
+        <Section title={t('Utseende')}>
           <TouchableOpacity style={s.row} onPress={() => setThemeOpen(true)} activeOpacity={0.6}>
             <Ionicons name="moon-outline" size={20} color={TEXT_SECONDARY} />
-            <Text style={[s.rowLabel, { flex: 1 }]}>Tema</Text>
-            <Text style={s.rowValue}>{themeMode === 'dark' ? 'Mörkt' : 'Ljust'}</Text>
+            <Text style={[s.rowLabel, { flex: 1 }]}>{t('Tema')}</Text>
+            <Text style={s.rowValue}>{themeMode === 'dark' ? t('Mörkt') : t('Ljust')}</Text>
             <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
           </TouchableOpacity>
         </Section>
 
         {/* Navbar */}
-        <Section title="Navbar">
+        <Section title={t('Navbar')}>
           <SwitchRow
             icon="resize-outline"
-            label="Minimera vid scroll"
-            hint="Pillen krymper när du scrollar ner och växer vid scroll upp"
+            label={t('Minimera vid scroll')}
+            hint={t('Pillen krymper när du scrollar ner och växer vid scroll upp')}
             value={navShrink}
             onChange={v => { setNavShrink(v); setTabBarShrinkEnabled(v) }}
             last
@@ -186,30 +188,30 @@ export default function AnpassningScreen() {
         </Section>
 
         {/* Enheter */}
-        <Section title="Enheter">
+        <Section title={t('Enheter')}>
           <View style={s.segBlock}>
             <View style={s.segLabelRow}>
               <Ionicons name="speedometer-outline" size={20} color={TEXT_SECONDARY} />
-              <Text style={s.rowLabel}>Distans och tempo</Text>
+              <Text style={s.rowLabel}>{t('Distans och tempo')}</Text>
             </View>
             <GlassSegment
               value={unit}
               options={[
-                { key: 'metric',   label: 'Kilometer' },
-                { key: 'imperial', label: 'Miles' },
+                { key: 'metric',   label: t('Kilometer') },
+                { key: 'imperial', label: t('Miles') },
               ]}
               onChange={u => { setUnit(u); setUnitSystem(u).catch(() => {}) }}
             />
-            <Text style={s.segHint}>Gäller i hela appen: pass, statistik och rekord</Text>
+            <Text style={s.segHint}>{t('Gäller i hela appen: pass, statistik och rekord')}</Text>
           </View>
         </Section>
 
         {/* Cardio */}
-        <Section title="Cardio">
+        <Section title={t('Cardio')}>
           <View style={[s.segBlock, s.rowBorder]}>
             <View style={s.segLabelRow}>
               <Ionicons name="color-palette-outline" size={20} color={TEXT_SECONDARY} />
-              <Text style={s.rowLabel}>Ruttfärg</Text>
+              <Text style={s.rowLabel}>{t('Ruttfärg')}</Text>
             </View>
             <View style={s.swatchRow}>
               {ROUTE_COLORS.map(c => (
@@ -226,12 +228,12 @@ export default function AnpassningScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            <Text style={s.segHint}>Färgen på din rutt på alla kartor</Text>
+            <Text style={s.segHint}>{t('Färgen på din rutt på alla kartor')}</Text>
           </View>
           <View style={[s.segBlock, s.rowBorder]}>
             <View style={s.segLabelRow}>
               <Ionicons name="map-outline" size={20} color={TEXT_SECONDARY} />
-              <Text style={s.rowLabel}>Standardkarta</Text>
+              <Text style={s.rowLabel}>{t('Standardkarta')}</Text>
             </View>
             {/* Samma kartkort med förhandsbilder som i löpvyns "Välj karta" */}
             <View style={s.mapGrid}>
@@ -263,20 +265,20 @@ export default function AnpassningScreen() {
                       </View>
                     )}
                     <View style={s.mapCardLabelRow}>
-                      <Text style={[s.mapCardLabel, active && { color: CARDIO_BLUE }]}>{ms.label}</Text>
+                      <Text style={[s.mapCardLabel, active && { color: CARDIO_BLUE }]}>{t(ms.label)}</Text>
                       {active && <Ionicons name="checkmark-circle" size={15} color={CARDIO_BLUE} />}
                     </View>
                   </TouchableOpacity>
                 )
               })}
             </View>
-            <Text style={s.segHint}>Kartan som visas när du startar ett cardiopass</Text>
+            <Text style={s.segHint}>{t('Kartan som visas när du startar ett cardiopass')}</Text>
           </View>
           {/* 5 km-tid — räknar om löpplanens tempoförslag utan omgenerering */}
           <View style={[s.segBlock, s.rowBorder]}>
             <View style={s.segLabelRow}>
               <Ionicons name="stopwatch-outline" size={20} color={TEXT_SECONDARY} />
-              <Text style={s.rowLabel}>Min 5 km-tid</Text>
+              <Text style={s.rowLabel}>{t('Min 5 km-tid')}</Text>
             </View>
             <View style={s.fiveKRow}>
               <AppTextInput
@@ -302,19 +304,19 @@ export default function AnpassningScreen() {
                 onPress={saveFiveK}
                 activeOpacity={0.8}
               >
-                <Text style={s.fiveKBtnText}>{savingFiveK ? 'Sparar…' : 'Uppdatera'}</Text>
+                <Text style={s.fiveKBtnText}>{savingFiveK ? t('Sparar…') : t('Uppdatera')}</Text>
               </TouchableOpacity>
             </View>
             <Text style={fiveKImplausible ? s.fiveKWarn : s.segHint}>
               {fiveKImplausible
-                ? 'Ange hela 5 km-tiden (12–90 min), inte ditt tempo.'
-                : 'Sprungit ett nytt test? Tempoförslagen i din löpplan räknas om direkt, progressionen påverkas inte.'}
+                ? t('Ange hela 5 km-tiden (12–90 min), inte ditt tempo.')
+                : t('Sprungit ett nytt test? Tempoförslagen i din löpplan räknas om direkt, progressionen påverkas inte.')}
             </Text>
           </View>
           <SwitchRow
             icon="volume-high-outline"
-            label="Röstguidning"
-            hint="Läser upp start, kilometersplittar och mål under passet"
+            label={t('Röstguidning')}
+            hint={t('Läser upp start, kilometersplittar och mål under passet')}
             value={voice}
             onChange={v => { setVoice(v); setVoiceCues(v).catch(() => {}) }}
             last
@@ -329,12 +331,11 @@ export default function AnpassningScreen() {
             <TouchableOpacity onPress={() => setThemeOpen(false)} hitSlop={10}>
               <Ionicons name="chevron-back" size={26} color={TEXT_PRIMARY} />
             </TouchableOpacity>
-            <Text style={s.title}>Tema</Text>
+            <Text style={s.title}>{t('Tema')}</Text>
           </View>
           <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
             <Text style={s.themeIntro}>
-              Mörkt är appens standardläge. I ljust läge ligger texten direkt
-              på ljus botten med vita ytor och tunna linjer.
+              {t('Mörkt är appens standardläge. I ljust läge ligger texten direkt på ljus botten med vita ytor och tunna linjer.')}
             </Text>
             {([
               { mode: 'dark' as const, title: 'Mörkt', body: 'Appens vanliga utseende.' },
@@ -348,8 +349,8 @@ export default function AnpassningScreen() {
                 testID={`theme-${opt.mode}`}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={s.themeOptionTitle}>{opt.title}</Text>
-                  <Text style={s.themeOptionBody}>{opt.body}</Text>
+                  <Text style={s.themeOptionTitle}>{t(opt.title)}</Text>
+                  <Text style={s.themeOptionBody}>{t(opt.body)}</Text>
                 </View>
                 <View style={[s.themeRadio, themeMode === opt.mode && { borderColor: T.ACCENT }]}>
                   {themeMode === opt.mode && <View style={[s.themeRadioDot, { backgroundColor: T.ACCENT }]} />}

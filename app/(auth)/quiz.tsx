@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import { LinearGradient } from 'expo-linear-gradient'
 import { OnboardingStep, ONB } from '@/components/OnboardingStep'
+import { useT } from '@/lib/i18n'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ const QUESTIONS: Question[] = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function QuizScreen() {
+  const t = useT()
   const { startDay } = useLocalSearchParams<{ startDay?: string }>()
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Partial<QuizAnswers>>({})
@@ -77,8 +79,8 @@ export default function QuizScreen() {
   return (
     <OnboardingStep
       step={step + 1}
-      title={current.question}
-      subtitle="Ditt svar hjälper oss att forma din utmaning."
+      title={t(current.question)}
+      subtitle={t('Ditt svar hjälper oss att forma din utmaning.')}
       // Steg 1 kan inte backa — kontot är redan skapat, välkomstsidan är passerad
       onBack={step > 0 ? () => setStep((s) => s - 1) : undefined}
       footer={
@@ -88,7 +90,7 @@ export default function QuizScreen() {
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={[s.nextButton, !selected && { opacity: 0.35 }]}
           >
-            <Text style={s.nextButtonText}>{isLast ? 'Välj nivå' : 'Nästa'}</Text>
+            <Text style={s.nextButtonText}>{isLast ? t('Välj nivå') : t('Nästa')}</Text>
             <Ionicons name="arrow-forward" size={17} color={ONB.NAVY} />
           </LinearGradient>
         </TouchableOpacity>
@@ -107,7 +109,7 @@ export default function QuizScreen() {
               <Ionicons name={option.icon} size={20} color={isSelected ? ONB.ORANGE : ONB.MUTED} />
             </View>
             <Text style={[s.optionLabel, isSelected && s.optionLabelSelected]}>
-              {option.label}
+              {t(option.label)}
             </Text>
             <View style={[s.radio, isSelected && s.radioSelected]}>
               {isSelected && <Ionicons name="checkmark" size={13} color={ONB.NAVY} />}

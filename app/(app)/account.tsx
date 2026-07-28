@@ -17,6 +17,7 @@ import { GlassView } from 'expo-glass-effect'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { Picker } from '@react-native-picker/picker'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // PROFILINSTÄLLNINGAR — namn, födelsedatum, kön, vikt, längd och konto.
@@ -118,6 +119,7 @@ const FIRST_NAME_DONE_ID = 'firstNameDoneAccessory'
 const LAST_NAME_DONE_ID  = 'lastNameDoneAccessory'
 
 export default function AccountScreen() {
+  const t = useT()
   const chrome = useCardChrome()
   const [userId, setUserId] = useState<string | null>(null)
   const [email, setEmail]   = useState('')
@@ -230,9 +232,9 @@ export default function AccountScreen() {
     else if (sheet === 'height') saveHeight()
   }
 
-  const birthLabel  = birthDate ?? 'Ej angivet'
-  const weightLabel = weightKg != null ? `${String(weightKg).replace('.', ',')} kg` : 'Ej specificerad'
-  const heightLabel = heightCm != null ? `${heightCm} cm` : 'Ej specificerad'
+  const birthLabel  = birthDate ?? t('Ej angivet')
+  const weightLabel = weightKg != null ? `${String(weightKg).replace('.', ',')} kg` : t('Ej specificerad')
+  const heightLabel = heightCm != null ? `${heightCm} cm` : t('Ej specificerad')
 
   return (
     <SafeScreen style={styles.screen}>
@@ -246,7 +248,7 @@ export default function AccountScreen() {
           onPress={() => router.back()}
           fallbackStyle={styles.iconBtnFallback}
         />
-        <Text style={styles.title}>Profilinställningar</Text>
+        <Text style={styles.title}>{t('Profilinställningar')}</Text>
         <GlassCircleButton
           icon="checkmark"
           size={40}
@@ -259,7 +261,7 @@ export default function AccountScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.rowsCard}>
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Förnamn</Text>
+            <Text style={styles.rowLabel}>{t('Förnamn')}</Text>
             <AppTextInput
               style={styles.rowInput}
               value={first}
@@ -268,12 +270,12 @@ export default function AccountScreen() {
               onBlur={saveNames}
               returnKeyType="done"
               onSubmitEditing={doneEditingNames}
-              placeholder="Lägg till"
+              placeholder={t('Lägg till')}
             />
           </View>
           <View style={styles.rowDivider} />
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Efternamn</Text>
+            <Text style={styles.rowLabel}>{t('Efternamn')}</Text>
             <AppTextInput
               style={styles.rowInput}
               value={last}
@@ -282,26 +284,26 @@ export default function AccountScreen() {
               onBlur={saveNames}
               returnKeyType="done"
               onSubmitEditing={doneEditingNames}
-              placeholder="Lägg till"
+              placeholder={t('Lägg till')}
             />
           </View>
           <View style={styles.rowDivider} />
-          <Row label="Födelsedatum" value={birthLabel} onPress={openBirth} chevron={false} />
+          <Row label={t('Födelsedatum')} value={birthLabel} onPress={openBirth} chevron={false} />
           <View style={styles.rowDivider} />
-          <Row label="Kön" value={gender ?? 'Ej angivet'} onPress={() => router.push('/gender' as never)} />
+          <Row label={t('Kön')} value={gender ? t(gender) : t('Ej angivet')} onPress={() => router.push('/gender' as never)} />
           <View style={styles.rowDivider} />
-          <Row label="Vikt" value={weightLabel} onPress={openWeight} chevron={false} />
+          <Row label={t('Vikt')} value={weightLabel} onPress={openWeight} chevron={false} />
           <View style={styles.rowDivider} />
-          <Row label="Längd" value={heightLabel} onPress={openHeight} chevron={false} />
+          <Row label={t('Längd')} value={heightLabel} onPress={openHeight} chevron={false} />
           <View style={styles.rowDivider} />
-          <Row label="Språk" value="Svenska" locked />
+          <Row label={t('Språk')} value={t('Svenska')} locked />
         </View>
 
-        <Text style={styles.sectionLabel}>KONTO</Text>
+        <Text style={styles.sectionLabel}>{t('KONTO')}</Text>
         <View style={styles.rowsCard}>
-          <Row label="Lösenord" value="••••••••" onPress={() => router.push('/change-password?from=profile' as never)} />
+          <Row label={t('Lösenord')} value="••••••••" onPress={() => router.push('/change-password?from=profile' as never)} />
           <View style={styles.rowDivider} />
-          <Row label="E-post" value={email} locked />
+          <Row label={t('E-post')} value={email} locked />
         </View>
       </ScrollView>
 

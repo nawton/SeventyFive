@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
+import { useT } from '@/lib/i18n'
 import { GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, ACCENT, accentAlpha } from '@/lib/theme'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 import { completeExercise, updateSessionExercise, addSingleExerciseToSession, deleteSessionExercise } from '@/services/workoutSchedule'
@@ -56,6 +57,7 @@ export function SessionFullscreen({
   onSaved?: () => void
   onClose: () => void
 }) {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const exercises = session?.exercises ?? []
 
@@ -135,7 +137,7 @@ export function SessionFullscreen({
   function startPass() {
     if (!session) return
     if (isFuture) {
-      Alert.alert('Framtida pass', 'Du kan starta passet först på passdagen.')
+      Alert.alert(t('Framtida pass'), t('Du kan starta passet först på passdagen.'))
       return
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -262,10 +264,10 @@ export function SessionFullscreen({
   const [addExOpen, setAddExOpen] = useState(false)
 
   function removeExercise(exId: string, name: string) {
-    Alert.alert('Ta bort övning', `Ta bort ${name} från passet?`, [
-      { text: 'Avbryt', style: 'cancel' },
+    Alert.alert(t('Ta bort övning'), t('Ta bort {name} från passet?', { name }), [
+      { text: t('Avbryt'), style: 'cancel' },
       {
-        text: 'Ta bort', style: 'destructive',
+        text: t('Ta bort'), style: 'destructive',
         onPress: async () => {
           await deleteSessionExercise(exId).catch(() => {})
           onSaved?.()
@@ -338,15 +340,15 @@ export function SessionFullscreen({
   function confirmFinish() {
     if (!session || saving) return
     if (isFuture) {
-      Alert.alert('Framtida pass', 'Passet kan slutföras först på passdagen.')
+      Alert.alert(t('Framtida pass'), t('Passet kan slutföras först på passdagen.'))
       return
     }
     if (isCompleted) { finish(); return }
-    const anySets = collectSets().some(t => t.validSets.length > 0)
+    const anySets = collectSets().some(row => row.validSets.length > 0)
     if (!anySets) { finish(); return }
-    Alert.alert('Är du klar med passet?', 'Passet markeras som avklarat och dina set sparas.', [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Slutför', onPress: () => finish() },
+    Alert.alert(t('Är du klar med passet?'), t('Passet markeras som avklarat och dina set sparas.'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      { text: t('Slutför'), onPress: () => finish() },
     ])
   }
 
@@ -360,17 +362,17 @@ export function SessionFullscreen({
     // Helt tomt pass: Markera klart loggar de planerade seten — annars står
     // passet som avklarat med tom statistik ("Ej loggad" på framsteg)
     const planned = collectSets(true)
-    if (planned.some(t => t.validSets.length > 0)) {
-      Alert.alert('Inga set ifyllda', 'Markera passet som klart? De planerade seten loggas då åt dig.', [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Markera klart', onPress: () => { void saveAndFinish(planned) } },
+    if (planned.some(row => row.validSets.length > 0)) {
+      Alert.alert(t('Inga set ifyllda'), t('Markera passet som klart? De planerade seten loggas då åt dig.'), [
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Markera klart'), onPress: () => { void saveAndFinish(planned) } },
       ])
       return
     }
 
-    Alert.alert('Inga set ifyllda', 'Vill du markera passet som klart utan att logga set?', [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Markera klart', onPress: () => {
+    Alert.alert(t('Inga set ifyllda'), t('Vill du markera passet som klart utan att logga set?'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      { text: t('Markera klart'), onPress: () => {
         setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
         clearPassStart(`${session.id}:${date}`).catch(() => {})
         clearPassDraft(`${session.id}:${date}`).catch(() => {})
@@ -403,9 +405,9 @@ export function SessionFullscreen({
           category: (exInfo?.category === 'mobility' || exInfo?.category === 'hiit') ? exInfo.category : 'strength',
           sets: validSets,
           workoutDate: date,
-        }).catch((e: Error) => { saveErrors.push(`${ex.exercise_name} · set: ${e.message}`); return false })
+        }).catch((e: Error) => { saveErrors.push(t('{name} · set: {msg}', { name: ex.exercise_name, msg: e.message })); return false })
         await completeExercise(ex.id, userId, date)
-          .catch((e: Error) => { saveErrors.push(`${ex.exercise_name} · avbockning: ${e.message}`) })
+          .catch((e: Error) => { saveErrors.push(t('{name} · avbockning: {msg}', { name: ex.exercise_name, msg: e.message })) })
         // Spegla till passets rad — bara för engångspass (mallar lämnas orörda)
         if (isOneTime) {
           const repsStr = validSets.every(r => r.reps === validSets[0].reps)
@@ -414,7 +416,7 @@ export function SessionFullscreen({
           await updateSessionExercise(ex.id, validSets.length, repsStr).catch(() => {})
         }
         const pr = findNewPR(records.find(r => r.exerciseName === ex.exercise_name), validSets)
-        if (pr) prs.push(`${ex.exercise_name}: ${pr.weightKg} kg × ${pr.reps}`)
+        if (pr) prs.push(t('{name}: {kg} kg × {reps}', { name: ex.exercise_name, kg: pr.weightKg, reps: pr.reps }))
       }
 
       cancelRest()
@@ -429,10 +431,10 @@ export function SessionFullscreen({
       const totalReps = savedSets.reduce((s, r) => s + r.reps, 0)
       const summaryLines = [
         totalKgLifted > 0
-          ? `Totalt lyft: ${Math.round(totalKgLifted).toLocaleString('sv-SE')} kg`
+          ? t('Totalt lyft: {kg} kg', { kg: Math.round(totalKgLifted).toLocaleString('sv-SE') })
           : null,
-        `${savedSets.length} set · ${totalReps} reps`,
-        ...(prs.length > 0 ? ['', '🏆 Nya personliga rekord:', ...prs] : []),
+        t('{n} set · {m} reps', { n: savedSets.length, m: totalReps }),
+        ...(prs.length > 0 ? ['', t('🏆 Nya personliga rekord:'), ...prs] : []),
       ].filter((l): l is string => l !== null)
 
       const wrapUp = () => {
@@ -441,13 +443,13 @@ export function SessionFullscreen({
           console.warn('Sparfel vid Slutför:', saveErrors)
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
           setTimeout(() => Alert.alert(
-            'Allt sparades inte',
-            'Passet markerades som klart men delar av loggen kunde inte sparas:\n\n' + saveErrors.join('\n'),
+            t('Allt sparades inte'),
+            t('Passet markerades som klart men delar av loggen kunde inte sparas:') + '\n\n' + saveErrors.join('\n'),
           ), 400)
           return
         }
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-        setTimeout(() => Alert.alert('Pass sparat 💪', summaryLines.join('\n')), 400)
+        setTimeout(() => Alert.alert(t('Pass sparat 💪'), summaryLines.join('\n')), 400)
       }
       if (!isCompleted) {
         // Nytt avklarat pass → betygsätt ansträngningen innan vi stänger
@@ -475,13 +477,13 @@ export function SessionFullscreen({
           {isCompleted && (
             <TouchableOpacity onPress={onUncomplete} style={s.doneBadge} activeOpacity={0.8}>
               <Ionicons name="checkmark-circle" size={14} color={GREEN} />
-              <Text style={s.doneBadgeText}>Klar</Text>
+              <Text style={s.doneBadgeText}>{t('Klar')}</Text>
             </TouchableOpacity>
           )}
           {/* Starta → Slutför → Spara (avklarade pass går att komplettera) */}
           {!isCompleted && !started ? (
             <TouchableOpacity onPress={startPass} style={[s.finishBtn, s.startBtn]} activeOpacity={0.85}>
-              <Text style={s.finishText}>Starta</Text>
+              <Text style={s.finishText}>{t('Starta')}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -493,7 +495,7 @@ export function SessionFullscreen({
               {saving ? (
                 <ActivityIndicator size="small" color={isCompleted ? '#000' : '#fff'} />
               ) : (
-                <Text style={[s.finishText, !isCompleted && s.stopText]}>{isCompleted ? 'Spara' : 'Slutför'}</Text>
+                <Text style={[s.finishText, !isCompleted && s.stopText]}>{isCompleted ? t('Spara') : t('Slutför')}</Text>
               )}
             </TouchableOpacity>
           )}
@@ -502,16 +504,16 @@ export function SessionFullscreen({
         {/* ── Statistikrad: tid + vilotidsinställning ── */}
         <View style={s.statsRow}>
           <View style={s.stat}>
-            <Text style={s.statLabel}>Tid</Text>
+            <Text style={s.statLabel}>{t('Tid')}</Text>
             <Text style={[s.statValue, { color: ACCENT }]}>
               {isCompleted ? (finalDur != null ? fmtClock(finalDur) : '–') : fmtClock(elapsed)}
             </Text>
           </View>
           {isCompleted && passEffort != null && (
             <View style={[s.stat, { marginLeft: 28 }]}>
-              <Text style={s.statLabel}>Ansträngning</Text>
+              <Text style={s.statLabel}>{t('Ansträngning')}</Text>
               <Text style={[s.statValue, { color: effortColor(passEffort) }]}>
-                {passEffort} · {effortLabel(passEffort)}
+                {passEffort} · {t(effortLabel(passEffort))}
               </Text>
             </View>
           )}
@@ -546,9 +548,9 @@ export function SessionFullscreen({
                   </View>
 
                   <View style={s.tableHead}>
-                    <Text style={[s.th, { width: 36 }]}>SET</Text>
-                    <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>REPS</Text>
-                    <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>KG</Text>
+                    <Text style={[s.th, { width: 36 }]}>{t('SET')}</Text>
+                    <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>{t('REPS')}</Text>
+                    <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>{t('KG')}</Text>
                     <View style={{ width: 40 }} />
                   </View>
 
@@ -590,7 +592,7 @@ export function SessionFullscreen({
                   <View style={s.setBtnRow}>
                     <TouchableOpacity style={s.addSetBtn} onPress={() => addSet(ex.id)} activeOpacity={0.75}>
                       <Ionicons name="add" size={16} color={TEXT_PRIMARY} />
-                      <Text style={s.addSetText}>Lägg till set</Text>
+                      <Text style={s.addSetText}>{t('Lägg till set')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[s.addSetBtn, rows.length <= 1 && { opacity: 0.35 }]}
@@ -599,18 +601,18 @@ export function SessionFullscreen({
                       activeOpacity={0.75}
                     >
                       <Ionicons name="remove" size={16} color={TEXT_PRIMARY} />
-                      <Text style={s.addSetText}>Ta bort set</Text>
+                      <Text style={s.addSetText}>{t('Ta bort set')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               )
             })}
-            {exercises.length === 0 && <Text style={s.empty}>Inga övningar i passet</Text>}
+            {exercises.length === 0 && <Text style={s.empty}>{t('Inga övningar i passet')}</Text>}
 
             {/* Lägg till övning i passet */}
             <TouchableOpacity style={s.addExBtn} onPress={() => setAddExOpen(true)} activeOpacity={0.8}>
               <Ionicons name="add-circle-outline" size={19} color={ACCENT} />
-              <Text style={s.addExText}>Lägg till övning</Text>
+              <Text style={s.addExText}>{t('Lägg till övning')}</Text>
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -640,10 +642,10 @@ export function SessionFullscreen({
             />
             <View style={[s.restSheet, { paddingBottom: insets.bottom + 20 }]}>
               <View style={s.restSheetHandle} />
-              <Text style={s.restSheetTitle}>Vilotider</Text>
-              <Text style={s.restSheetSub}>Startar automatiskt när du bockar av ett set</Text>
+              <Text style={s.restSheetTitle}>{t('Vilotider')}</Text>
+              <Text style={s.restSheetSub}>{t('Startar automatiskt när du bockar av ett set')}</Text>
 
-              <Text style={s.restSectionLabel}>MELLAN SET</Text>
+              <Text style={s.restSectionLabel}>{t('MELLAN SET')}</Text>
               <View style={s.restStepRow}>
                 <TouchableOpacity style={s.restStepBtn} onPress={() => chooseRest(restDefault - 15)} activeOpacity={0.75}>
                   <Ionicons name="remove" size={20} color={TEXT_PRIMARY} />
@@ -654,8 +656,8 @@ export function SessionFullscreen({
                 </TouchableOpacity>
               </View>
 
-              <Text style={s.restSectionLabel}>MELLAN ÖVNINGAR</Text>
-              <Text style={s.restSectionHint}>Används när sista setet i en övning bockas av</Text>
+              <Text style={s.restSectionLabel}>{t('MELLAN ÖVNINGAR')}</Text>
+              <Text style={s.restSectionHint}>{t('Används när sista setet i en övning bockas av')}</Text>
               <View style={s.restStepRow}>
                 <TouchableOpacity style={s.restStepBtn} onPress={() => chooseExRest(exRestDefault - 15)} activeOpacity={0.75}>
                   <Ionicons name="remove" size={20} color={TEXT_PRIMARY} />
@@ -667,7 +669,7 @@ export function SessionFullscreen({
               </View>
 
               <TouchableOpacity style={s.restSheetDone} onPress={() => setRestSheetOpen(false)} activeOpacity={0.85}>
-                <Text style={s.restSheetDoneText}>Klar</Text>
+                <Text style={s.restSheetDoneText}>{t('Klar')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -677,7 +679,7 @@ export function SessionFullscreen({
         {restLeft !== null && (
           <View style={[s.restBar, { marginBottom: insets.bottom + 10 }]}>
             <Text style={[s.restBarTime, restLeft === 0 && { color: GREEN }]}>
-              {restLeft === 0 ? 'Klar!' : fmtClock(restLeft)}
+              {restLeft === 0 ? t('Klar!') : fmtClock(restLeft)}
             </Text>
             <View style={s.restBarTrack}>
               <View style={[s.restBarFill, { width: `${Math.min(100, (restLeft / restTotal) * 100)}%` as never }]} />

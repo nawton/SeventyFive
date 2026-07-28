@@ -9,6 +9,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Ionicons } from '@/components/Icon'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
+import { useT, dateLocale } from '@/lib/i18n'
 import { NUM_FONT, useThemeStrings } from '@/lib/theme'
 
 // Samma marinblå palett som onboardingen — guiden är en del av samma resa
@@ -123,6 +124,7 @@ export function ScheduleWizard({
   onClose:  () => void
   onFinish: (result: WizardResult) => void
 }) {
+  const t = useT()
   // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
   const bodyLight = useColorScheme() === 'light'
   const bodyFill = bodyLight ? '#DFE0E4' : '#2A2A2C'
@@ -236,26 +238,26 @@ export function ScheduleWizard({
 
   const footer: { label: string; disabled: boolean; onPress: () => void } = (() => {
     switch (step) {
-      case 'goal':             return { label: 'Fortsätt', disabled: !goal,
+      case 'goal':             return { label: t('Fortsätt'), disabled: !goal,
         onPress: () => goal && setStep(goal === 'running' ? 'running-distance' : 'muscle-plan') }
-      case 'running-distance': return { label: 'Fortsätt', disabled: !runDistance,
+      case 'running-distance': return { label: t('Fortsätt'), disabled: !runDistance,
         onPress: () => runDistance && setStep('running-profile') }
-      case 'running-profile':  return { label: 'Fortsätt', disabled: !runExperience,
+      case 'running-profile':  return { label: t('Fortsätt'), disabled: !runExperience,
         onPress: () => runExperience && setStep('running-test') }
       // 5 km-tiden är OBLIGATORISK — tempozonerna i hela planen bygger på den
-      case 'running-test':     return { label: 'Fortsätt', disabled: !fiveKPlausible,
+      case 'running-test':     return { label: t('Fortsätt'), disabled: !fiveKPlausible,
         onPress: () => fiveKPlausible && setStep('running-race') }
-      case 'running-race':     return { label: raceValid ? 'Fortsätt' : 'Hoppa över', disabled: false,
+      case 'running-race':     return { label: raceValid ? t('Fortsätt') : t('Hoppa över'), disabled: false,
         onPress: () => setStep('days') }
-      case 'muscle-plan':      return { label: 'Fortsätt', disabled: !musclePlan,
+      case 'muscle-plan':      return { label: t('Fortsätt'), disabled: !musclePlan,
         onPress: () => musclePlan && setStep(musclePlan === 'focus' ? 'muscle-focus' : 'days') }
-      case 'muscle-focus':     return { label: 'Fortsätt', disabled: focusGroups.length === 0,
+      case 'muscle-focus':     return { label: t('Fortsätt'), disabled: focusGroups.length === 0,
         onPress: () => focusGroups.length > 0 && setStep('days') }
-      case 'days':             return { label: 'Fortsätt', disabled: weekdays.length === 0,
+      case 'days':             return { label: t('Fortsätt'), disabled: weekdays.length === 0,
         onPress: () => weekdays.length > 0 && setStep('limitations') }
-      case 'limitations':      return { label: 'Fortsätt', disabled: false,
+      case 'limitations':      return { label: t('Fortsätt'), disabled: false,
         onPress: () => setStep('summary') }
-      case 'summary':          return { label: 'Starta träning', disabled: false, onPress: finishWizard }
+      case 'summary':          return { label: t('Starta träning'), disabled: false, onPress: finishWizard }
     }
   })()
 
@@ -272,7 +274,7 @@ export function ScheduleWizard({
               color={TEXT_PRIMARY}
             />
           </TouchableOpacity>
-          <Text style={s.headerTitle}>Skapa ditt schema</Text>
+          <Text style={s.headerTitle}>{t('Skapa ditt schema')}</Text>
           <Text style={s.headerStep}>{stepIdx + 1}/{stepFlow.length}</Text>
         </View>
 
@@ -297,8 +299,8 @@ export function ScheduleWizard({
           {/* ── STEP: MÅL ──────────────────────────────────────────────── */}
           {step === 'goal' && (
             <>
-              <Text style={s.stepTitle}>Vad är ditt mål?</Text>
-              <Text style={s.stepSub}>Välj det mål som passar dig bäst just nu.</Text>
+              <Text style={s.stepTitle}>{t('Vad är ditt mål?')}</Text>
+              <Text style={s.stepSub}>{t('Välj det mål som passar dig bäst just nu.')}</Text>
 
               <TouchableOpacity
                 style={[s.bigCard, goal === 'running' && s.bigCardActive]}
@@ -310,9 +312,9 @@ export function ScheduleWizard({
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.bigCardTitle, goal === 'running' && { color: ACCENT }]}>
-                    Springa ett avstånd
+                    {t('Springa ett avstånd')}
                   </Text>
-                  <Text style={s.bigCardSub}>Träna mot ett specifikt löpmål</Text>
+                  <Text style={s.bigCardSub}>{t('Träna mot ett specifikt löpmål')}</Text>
                 </View>
                 {goal === 'running' && <Ionicons name="checkmark-circle" size={24} color={ACCENT} />}
               </TouchableOpacity>
@@ -327,9 +329,9 @@ export function ScheduleWizard({
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.bigCardTitle, goal === 'muscle' && { color: ACCENT }]}>
-                    Bygga muskler
+                    {t('Bygga muskler')}
                   </Text>
-                  <Text style={s.bigCardSub}>Styrketräning anpassat efter dig</Text>
+                  <Text style={s.bigCardSub}>{t('Styrketräning anpassat efter dig')}</Text>
                 </View>
                 {goal === 'muscle' && <Ionicons name="checkmark-circle" size={24} color={ACCENT} />}
               </TouchableOpacity>
@@ -340,8 +342,8 @@ export function ScheduleWizard({
           {/* ── STEP: LÖPAVSTÅND — stora sifferkort i 2×2 ────────────── */}
           {step === 'running-distance' && (
             <>
-              <Text style={s.stepTitle}>Vilket avstånd{'\n'}siktar du på?</Text>
-              <Text style={s.stepSub}>Hela programmet byggs runt ditt mål.</Text>
+              <Text style={s.stepTitle}>{t('Vilket avstånd\nsiktar du på?')}</Text>
+              <Text style={s.stepSub}>{t('Hela programmet byggs runt ditt mål.')}</Text>
 
               <View style={s.distGrid}>
                 {RUN_OPTIONS.map(opt => {
@@ -357,8 +359,8 @@ export function ScheduleWizard({
                         <Text style={[s.distNum, selected && { color: ACCENT }]}>{opt.num}</Text>
                         <Text style={[s.distUnit, selected && { color: ACCENT }]}>K</Text>
                       </View>
-                      <Text style={s.distLabel}>{opt.label}</Text>
-                      <Text style={s.distSub}>{opt.sub}</Text>
+                      <Text style={s.distLabel}>{t(opt.label)}</Text>
+                      <Text style={s.distSub}>{t(opt.sub)}</Text>
                       {selected && (
                         <View style={s.distCheck}>
                           <MaterialCommunityIcons name="check-bold" size={13} color="#000" />
@@ -374,8 +376,8 @@ export function ScheduleWizard({
           {/* ── STEP: ERFARENHET ─────────────────────────────────────── */}
           {step === 'running-profile' && (
             <>
-              <Text style={s.stepTitle}>Hur van löpare{'\n'}är du?</Text>
-              <Text style={s.stepSub}>Startnivå och ökningstakt anpassas efter din erfarenhet.</Text>
+              <Text style={s.stepTitle}>{t('Hur van löpare\när du?')}</Text>
+              <Text style={s.stepSub}>{t('Startnivå och ökningstakt anpassas efter din erfarenhet.')}</Text>
 
               {EXPERIENCE_OPTIONS.map((opt, level) => {
                 const selected = runExperience === opt.key
@@ -394,8 +396,8 @@ export function ScheduleWizard({
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.optTitle, selected && { color: ACCENT }]}>{opt.label}</Text>
-                      <Text style={s.optSub}>{opt.sub}</Text>
+                      <Text style={[s.optTitle, selected && { color: ACCENT }]}>{t(opt.label)}</Text>
+                      <Text style={s.optSub}>{t(opt.sub)}</Text>
                     </View>
                     {/* Nivåstaplar — fylls i takt med erfarenheten */}
                     <View style={s.expBars}>
@@ -419,9 +421,9 @@ export function ScheduleWizard({
           {/* ── STEP: 5 KM-TEST — obligatoriskt, tempozonerna bygger på det ── */}
           {step === 'running-test' && (
             <>
-              <Text style={s.stepTitle}>Hur snabbt springer{'\n'}du 5 km?</Text>
+              <Text style={s.stepTitle}>{t('Hur snabbt springer\ndu 5 km?')}</Text>
               <Text style={s.stepSub}>
-                Tempozonerna i varje pass, lugnt, tempo, intervaller, räknas ut från din tid, så planen blir din och ingen annans.
+                {t('Tempozonerna i varje pass, lugnt, tempo, intervaller, räknas ut från din tid, så planen blir din och ingen annans.')}
               </Text>
 
               <View style={s.testCardBig}>
@@ -436,7 +438,7 @@ export function ScheduleWizard({
                       returnKeyType="done"
                       placeholder="28"
                     />
-                    <Text style={s.testUnit}>MINUTER</Text>
+                    <Text style={s.testUnit}>{t('MINUTER')}</Text>
                   </View>
                   <Text style={s.testColonBig}>:</Text>
                   <View style={s.testCol}>
@@ -448,13 +450,13 @@ export function ScheduleWizard({
                       returnKeyType="done"
                       placeholder="30"
                     />
-                    <Text style={s.testUnit}>SEKUNDER</Text>
+                    <Text style={s.testUnit}>{t('SEKUNDER')}</Text>
                   </View>
                 </View>
                 <Text style={fiveKImplausible ? s.testWarn : s.testHint}>
                   {fiveKImplausible
-                    ? 'Det där ser ut som ett tempo, inte en totaltid, ange hela tiden för 5 km, t.ex. 28:30.'
-                    : 'Osäker? Ta ett hederligt ungefär, du kan uppdatera tiden när som helst under Anpassning.'}
+                    ? t('Det där ser ut som ett tempo, inte en totaltid, ange hela tiden för 5 km, t.ex. 28:30.')
+                    : t('Osäker? Ta ett hederligt ungefär, du kan uppdatera tiden när som helst under Anpassning.')}
                 </Text>
               </View>
             </>
@@ -463,9 +465,9 @@ export function ScheduleWizard({
           {/* ── STEP: LOPP — tävlingsdag väljs i planens sista vecka ──── */}
           {step === 'running-race' && (
             <>
-              <Text style={s.stepTitle}>Avsluta med{'\n'}ett lopp?</Text>
+              <Text style={s.stepTitle}>{t('Avsluta med\nett lopp?')}</Text>
               <Text style={s.stepSub}>
-                Välj tävlingsdag i planens sista vecka, passen trappar ner de två sista veckorna och schemat slutar med loppet.
+                {t('Välj tävlingsdag i planens sista vecka, passen trappar ner de två sista veckorna och schemat slutar med loppet.')}
               </Text>
 
               <View style={s.testCardBig}>
@@ -482,10 +484,10 @@ export function ScheduleWizard({
                         activeOpacity={0.75}
                       >
                         <Text style={[s.raceDayName, selected && { color: ACCENT }]}>
-                          {d.toLocaleDateString('sv-SE', { weekday: 'short' }).replace('.', '').toUpperCase()}
+                          {d.toLocaleDateString(dateLocale(), { weekday: 'short' }).replace('.', '').toUpperCase()}
                         </Text>
                         <Text style={[s.raceDayDate, selected && { color: ACCENT }]}>
-                          {d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')}
+                          {d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '')}
                         </Text>
                       </TouchableOpacity>
                     )
@@ -493,8 +495,8 @@ export function ScheduleWizard({
                 </View>
                 <Text style={s.testHint}>
                   {raceValid
-                    ? 'Inga träningspass på eller efter tävlingsdagen, då är det bara loppet som gäller.'
-                    : 'Frivilligt, hoppa över om du inte har ett lopp på gång. Tryck igen för att ångra ett val.'}
+                    ? t('Inga träningspass på eller efter tävlingsdagen, då är det bara loppet som gäller.')
+                    : t('Frivilligt, hoppa över om du inte har ett lopp på gång. Tryck igen för att ångra ett val.')}
                 </Text>
               </View>
             </>
@@ -503,8 +505,8 @@ export function ScheduleWizard({
           {/* ── STEP: MUSKELPLAN ─────────────────────────────────────── */}
           {step === 'muscle-plan' && (
             <>
-              <Text style={s.stepTitle}>Hur vill du träna?</Text>
-              <Text style={s.stepSub}>Välj ett upplägg som passar dina mål.</Text>
+              <Text style={s.stepTitle}>{t('Hur vill du träna?')}</Text>
+              <Text style={s.stepSub}>{t('Välj ett upplägg som passar dina mål.')}</Text>
 
               {/* Body SVG — front + back side by side */}
               <View style={s.bodyRow}>
@@ -531,11 +533,11 @@ export function ScheduleWizard({
                 activeOpacity={0.8}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={s.planRecommended}>Rekommenderat</Text>
+                  <Text style={s.planRecommended}>{t('Rekommenderat')}</Text>
                   <Text style={[s.planTitle, musclePlan === 'everything' && { color: ACCENT }]}>
-                    Träna allt
+                    {t('Träna allt')}
                   </Text>
-                  <Text style={s.planSub}>Balanserat program för hela kroppen</Text>
+                  <Text style={s.planSub}>{t('Balanserat program för hela kroppen')}</Text>
                 </View>
                 {musclePlan === 'everything' && <Ionicons name="checkmark-circle" size={24} color={ACCENT} />}
               </TouchableOpacity>
@@ -547,9 +549,9 @@ export function ScheduleWizard({
               >
                 <View style={{ flex: 1 }}>
                   <Text style={[s.planTitle, musclePlan === 'focus' && { color: ACCENT }]}>
-                    Fokusera
+                    {t('Fokusera')}
                   </Text>
-                  <Text style={s.planSub}>Välj 1–2 muskelgrupper att prioritera</Text>
+                  <Text style={s.planSub}>{t('Välj 1–2 muskelgrupper att prioritera')}</Text>
                 </View>
                 {musclePlan === 'focus' && <Ionicons name="checkmark-circle" size={24} color={ACCENT} />}
               </TouchableOpacity>
@@ -560,9 +562,9 @@ export function ScheduleWizard({
           {/* ── STEP: VÄLJ MUSKELFOKUS ───────────────────────────────── */}
           {step === 'muscle-focus' && (
             <>
-              <Text style={s.stepTitle}>Välj fokusområden</Text>
+              <Text style={s.stepTitle}>{t('Välj fokusområden')}</Text>
               <Text style={s.stepSub}>
-                Välj upp till 2 muskelgrupper att prioritera.
+                {t('Välj upp till 2 muskelgrupper att prioritera.')}
               </Text>
 
               {/* Dynamic body SVG */}
@@ -601,7 +603,7 @@ export function ScheduleWizard({
                     >
                       <View style={[s.muscleDot, { backgroundColor: mg.color }]} />
                       <Text style={[s.muscleChipText, selected && { color: mg.color }]}>
-                        {mg.label}
+                        {t(mg.label)}
                       </Text>
                       {selected && <Ionicons name="checkmark" size={14} color={mg.color} />}
                     </TouchableOpacity>
@@ -615,9 +617,9 @@ export function ScheduleWizard({
           {/* ── STEP: VÄLJ TRÄNINGSDAGAR ─────────────────────────────── */}
           {step === 'days' && (
             <>
-              <Text style={s.stepTitle}>Vilka dagar vill du träna?</Text>
+              <Text style={s.stepTitle}>{t('Vilka dagar vill du träna?')}</Text>
               <Text style={s.stepSub}>
-                Välj de dagar som passar din vecka, passen läggs på dagarna du bockar i.
+                {t('Välj de dagar som passar din vecka, passen läggs på dagarna du bockar i.')}
               </Text>
 
               {WEEKDAY_OPTIONS.map(opt => {
@@ -629,7 +631,7 @@ export function ScheduleWizard({
                     onPress={() => toggleWeekday(opt.value)}
                     activeOpacity={0.8}
                   >
-                    <Text style={[s.dayRowLabel, selected && { color: ACCENT }]}>{opt.label}</Text>
+                    <Text style={[s.dayRowLabel, selected && { color: ACCENT }]}>{t(opt.label)}</Text>
                     <View style={[s.dayCheck, selected && s.dayCheckActive]}>
                       {selected && <Ionicons name="checkmark" size={13} color="#000" />}
                     </View>
@@ -639,8 +641,8 @@ export function ScheduleWizard({
 
               <Text style={s.daysHint}>
                 {weekdays.length === 0
-                  ? 'Välj minst en dag'
-                  : `${weekdays.length} pass per vecka`}
+                  ? t('Välj minst en dag')
+                  : t('{n} pass per vecka', { n: weekdays.length })}
               </Text>
 
             </>
@@ -649,9 +651,9 @@ export function ScheduleWizard({
           {/* ── STEP: BESVÄR/SKADOR ──────────────────────────────────── */}
           {step === 'limitations' && (
             <>
-              <Text style={s.stepTitle}>Har du några besvär?</Text>
+              <Text style={s.stepTitle}>{t('Har du några besvär?')}</Text>
               <Text style={s.stepSub}>
-                Vi byter ut övningar som belastar känsliga områden. Hoppa över om inget stämmer.
+                {t('Vi byter ut övningar som belastar känsliga områden. Hoppa över om inget stämmer.')}
               </Text>
 
               {LIMITATION_OPTIONS.map(opt => {
@@ -670,7 +672,7 @@ export function ScheduleWizard({
                         color={selected ? ACCENT : TEXT_SECONDARY}
                       />
                     </View>
-                    <Text style={[s.optTitle, { flex: 1 }, selected && { color: ACCENT }]}>{opt.label}</Text>
+                    <Text style={[s.optTitle, { flex: 1 }, selected && { color: ACCENT }]}>{t(opt.label)}</Text>
                     {selected && <Ionicons name="checkmark-circle" size={22} color={ACCENT} />}
                   </TouchableOpacity>
                 )
@@ -685,7 +687,7 @@ export function ScheduleWizard({
                   <Ionicons name="checkmark-done-outline" size={24} color={limitations.length === 0 ? ACCENT : TEXT_SECONDARY} />
                 </View>
                 <Text style={[s.optTitle, { flex: 1 }, limitations.length === 0 && { color: ACCENT }]}>
-                  Inga besvär
+                  {t('Inga besvär')}
                 </Text>
                 {limitations.length === 0 && <Ionicons name="checkmark-circle" size={22} color={ACCENT} />}
               </TouchableOpacity>
@@ -702,31 +704,33 @@ export function ScheduleWizard({
                 </View>
               </View>
 
-              <Text style={s.summaryTitle}>Ditt schema är klart!</Text>
+              <Text style={s.summaryTitle}>{t('Ditt schema är klart!')}</Text>
               <Text style={s.summarySub}>
                 {goal === 'running'
-                  ? `Vi skapar ett löpprogram anpassat för ${RUN_OPTIONS.find(o => o.key === runDistance)?.label ?? ''}.`
+                  ? t('Vi skapar ett löpprogram anpassat för {distance}.', { distance: t(RUN_OPTIONS.find(o => o.key === runDistance)?.label ?? '') })
                   : musclePlan === 'everything'
-                  ? 'Vi skapar ett balanserat styrkeprogram som tränar hela kroppen.'
-                  : `Vi skapar ett program med fokus på ${focusGroups
-                      .map(k => MUSCLE_GROUPS.find(m => m.key === k)?.label ?? '')
-                      .join(' och ')}.`}
+                  ? t('Vi skapar ett balanserat styrkeprogram som tränar hela kroppen.')
+                  : t('Vi skapar ett program med fokus på {groups}.', {
+                      groups: focusGroups
+                        .map(k => t(MUSCLE_GROUPS.find(m => m.key === k)?.label ?? ''))
+                        .join(` ${t('och')} `),
+                    })}
               </Text>
 
               {/* Preview row */}
               <View style={s.summaryCards}>
                 <View style={s.summaryCard}>
                   <Ionicons name="calendar-outline" size={24} color={ACCENT} />
-                  <Text style={s.summaryCardTitle}>Veckoschema</Text>
-                  <Text style={s.summaryCardSub}>{Math.max(weekdays.length, 1)} pass per vecka</Text>
+                  <Text style={s.summaryCardTitle}>{t('Veckoschema')}</Text>
+                  <Text style={s.summaryCardSub}>{t('{n} pass per vecka', { n: Math.max(weekdays.length, 1) })}</Text>
                 </View>
                 <View style={s.summaryCard}>
                   <Ionicons name={goal === 'running' && raceValid ? 'flag-outline' : 'bar-chart-outline'} size={24} color={ACCENT} />
-                  <Text style={s.summaryCardTitle}>{goal === 'running' && raceValid ? 'Mot loppet' : 'Progression'}</Text>
+                  <Text style={s.summaryCardTitle}>{goal === 'running' && raceValid ? t('Mot loppet') : t('Progression')}</Text>
                   <Text style={s.summaryCardSub}>
                     {goal === 'running' && raceValid
-                      ? `Passen växer fram till loppet ${new Date(raceDateStr).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}`
-                      : 'Passen växer vecka för vecka i 16 veckor'}
+                      ? t('Passen växer fram till loppet {date}', { date: new Date(raceDateStr).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' }) })
+                      : t('Passen växer vecka för vecka i 16 veckor')}
                   </Text>
                 </View>
               </View>
@@ -734,13 +738,13 @@ export function ScheduleWizard({
               {/* Passtyperna som ingår — så temporun inte är grekiska */}
               {goal === 'running' && (
                 <View style={s.typeList}>
-                  <Text style={s.typeListTitle}>Det här ingår i din plan</Text>
+                  <Text style={s.typeListTitle}>{t('Det här ingår i din plan')}</Text>
                   {[...new Set(plannedRunTypes(runDistance ?? '5k', Math.max(weekdays.length, 1)))].map(name => (
                     <View key={name} style={s.typeRow}>
                       <View style={s.typeDot} />
                       <View style={{ flex: 1 }}>
                         <Text style={s.typeName}>{name}</Text>
-                        <Text style={s.typeDesc}>{RUN_SESSION_INFO[name] ?? ''}</Text>
+                        <Text style={s.typeDesc}>{t(RUN_SESSION_INFO[name] ?? '')}</Text>
                       </View>
                     </View>
                   ))}

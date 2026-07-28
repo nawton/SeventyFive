@@ -26,6 +26,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import Body from 'react-native-body-highlighter'
+import { useT } from '@/lib/i18n'
 import { getMusclesForName, bestSideForMuscles, SLUG_LABELS, getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings, ACCENT, accentAlpha, THEME_DARK } from '@/lib/theme'
 import { toLocalDateString, weekdayOf } from '@/lib/date'
@@ -102,6 +103,7 @@ export function SessionEditor({
   initialDate?:  Date
   allowDelete?:  boolean
 }) {
+  const t = useT()
   // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
   const bodyLight = useColorScheme() === 'light'
   const bodyFill = bodyLight ? '#DFE0E4' : '#2A2A2C'
@@ -253,7 +255,7 @@ export function SessionEditor({
       return !d.sets.trim() || !d.reps.trim()
     })
     if (missing) {
-      Alert.alert('Ange set och reps', `"${missing.exercise_name}" saknar set eller reps.`)
+      Alert.alert(t('Ange set och reps'), t('"{name}" saknar set eller reps.', { name: missing.exercise_name }))
       return
     }
     setSaving(true)
@@ -283,7 +285,7 @@ export function SessionEditor({
       onSaved()
       dismissEditor()
     } catch (e: any) {
-      Alert.alert('Kunde inte spara', e.message)
+      Alert.alert(t('Kunde inte spara'), e.message)
     } finally {
       setSaving(false)
     }
@@ -291,10 +293,10 @@ export function SessionEditor({
 
   async function handleDelete() {
     if (!session) return
-    Alert.alert('Ta bort pass', `Ta bort "${session.name}"?`, [
-      { text: 'Avbryt', style: 'cancel' },
+    Alert.alert(t('Ta bort pass'), t('Ta bort "{name}"?', { name: session.name }), [
+      { text: t('Avbryt'), style: 'cancel' },
       {
-        text: 'Ta bort',
+        text: t('Ta bort'),
         style: 'destructive',
         onPress: async () => {
           setDeleting(true)
@@ -303,7 +305,7 @@ export function SessionEditor({
             onSaved()
             dismissEditor()
           } catch (e: any) {
-            Alert.alert('Fel', e.message)
+            Alert.alert(t('Fel'), e.message)
           } finally {
             setDeleting(false)
           }
@@ -335,7 +337,7 @@ export function SessionEditor({
             <TouchableOpacity onPress={dismissEditor} style={s.iconBtn} activeOpacity={0.7}>
               <Ionicons name="close" size={22} color={TEXT_PRIMARY} />
             </TouchableOpacity>
-            <Text style={s.title}>{session ? 'Redigera pass' : 'Nytt pass'}</Text>
+            <Text style={s.title}>{session ? t('Redigera pass') : t('Nytt pass')}</Text>
             {session && allowDelete ? (
               <TouchableOpacity onPress={handleDelete} style={s.iconBtn} activeOpacity={0.7} disabled={deleting}>
                 {deleting
@@ -355,22 +357,22 @@ export function SessionEditor({
           >
             {/* ── Session type toggle ── */}
             <View style={s.field}>
-              <Text style={s.label}>TYP AV PASS</Text>
+              <Text style={s.label}>{t('TYP AV PASS')}</Text>
               <View style={s.typeToggle}>
-                {(['gym', 'cardio'] as const).map(t => (
+                {(['gym', 'cardio'] as const).map(kind => (
                   <TouchableOpacity
-                    key={t}
-                    style={[s.typeBtn, chip, sessionType === t && s.typeBtnActive]}
-                    onPress={() => setSessionType(t)}
+                    key={kind}
+                    style={[s.typeBtn, chip, sessionType === kind && s.typeBtnActive]}
+                    onPress={() => setSessionType(kind)}
                     activeOpacity={0.8}
                   >
                     <Ionicons
-                      name={t === 'gym' ? 'barbell-outline' : 'fitness-outline'}
+                      name={kind === 'gym' ? 'barbell-outline' : 'fitness-outline'}
                       size={14}
-                      color={sessionType === t ? '#000' : TEXT_SECONDARY}
+                      color={sessionType === kind ? '#000' : TEXT_SECONDARY}
                     />
-                    <Text style={[s.typeBtnText, sessionType === t && s.typeBtnTextActive]}>
-                      {t === 'gym' ? 'Gympass' : 'Cardio'}
+                    <Text style={[s.typeBtnText, sessionType === kind && s.typeBtnTextActive]}>
+                      {kind === 'gym' ? t('Gympass') : t('Cardio')}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -378,12 +380,12 @@ export function SessionEditor({
             </View>
 
             <View style={s.field}>
-              <Text style={s.label}>NAMN</Text>
+              <Text style={s.label}>{t('NAMN')}</Text>
               <AppTextInput
                 style={[s.input, chip, chip]}
                 value={name}
                 onChangeText={setName}
-                placeholder="t.ex. Push-dag, Benen…"
+                placeholder={t('t.ex. Push-dag, Benen…')}
                 placeholderTextColor={TEXT_SECONDARY}
                 autoCorrect={false}
                 returnKeyType="next"
@@ -391,12 +393,12 @@ export function SessionEditor({
             </View>
 
             <View style={s.field}>
-              <Text style={s.label}>NOTAT</Text>
+              <Text style={s.label}>{t('NOTAT')}</Text>
               <AppTextInput
                 style={[s.input, chip, s.inputMultiline]}
                 value={notes}
                 onChangeText={setNotes}
-                placeholder="Lägg till ett meddelande eller notat…"
+                placeholder={t('Lägg till ett meddelande eller notat…')}
                 placeholderTextColor={TEXT_SECONDARY}
                 autoCorrect={false}
                 multiline
@@ -407,7 +409,7 @@ export function SessionEditor({
             </View>
 
             <View style={s.field}>
-              <Text style={s.label}>DAG</Text>
+              <Text style={s.label}>{t('DAG')}</Text>
               <View style={s.dayRow}>
                 {WEEKDAYS.map((d, i) => {
                   const num    = i + 1
@@ -419,7 +421,7 @@ export function SessionEditor({
                       onPress={() => toggleDay(num)}
                       activeOpacity={0.7}
                     >
-                      <Text style={[s.dayText, active && s.dayTextActive]}>{d}</Text>
+                      <Text style={[s.dayText, active && s.dayTextActive]}>{t(d)}</Text>
                     </TouchableOpacity>
                   )
                 })}
@@ -436,12 +438,12 @@ export function SessionEditor({
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={s.repeatLabelRow}>
-                    <Text style={[s.repeatLabel, repeat && s.repeatLabelActive]}>Upprepa varje vecka</Text>
+                    <Text style={[s.repeatLabel, repeat && s.repeatLabelActive]}>{t('Upprepa varje vecka')}</Text>
                     <TouchableOpacity
                       onPress={() => Alert.alert(
-                        'Upprepa varje vecka',
-                        'På: passet visas automatiskt varje vald veckodag och fortsätter tills du tar bort det.\n\nAv: passet visas bara en enda gång, på den dag du väljer.',
-                        [{ text: 'OK' }],
+                        t('Upprepa varje vecka'),
+                        t('På: passet visas automatiskt varje vald veckodag och fortsätter tills du tar bort det.\n\nAv: passet visas bara en enda gång, på den dag du väljer.'),
+                        [{ text: t('OK') }],
                       )}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
@@ -451,9 +453,9 @@ export function SessionEditor({
                   <Text style={s.repeatSub}>
                     {repeat
                       ? weekdays.length > 0
-                        ? weekdays.sort().map(d => WEEKDAYS[d - 1]).join(', ')
-                        : 'Välj dagar ovan'
-                      : 'Passet visas bara den valda dagen'}
+                        ? weekdays.sort().map(d => t(WEEKDAYS[d - 1])).join(', ')
+                        : t('Välj dagar ovan')
+                      : t('Passet visas bara den valda dagen')}
                   </Text>
                 </View>
                 <View style={[s.swToggle, repeat && s.swToggleActive]}>
@@ -465,7 +467,7 @@ export function SessionEditor({
             {/* ── Cardio type picker ── */}
             {sessionType === 'cardio' && (
               <View style={s.field}>
-                <Text style={s.label}>AKTIVITET</Text>
+                <Text style={s.label}>{t('AKTIVITET')}</Text>
                 <View style={s.cardioTypeGrid}>
                   {CARDIO_TYPES.map(ct => (
                     <TouchableOpacity
@@ -480,7 +482,7 @@ export function SessionEditor({
                         color={cardioType === ct.key ? '#000' : TEXT_SECONDARY}
                       />
                       <Text style={[s.cardioTypeTxt, cardioType === ct.key && s.cardioTypeTxtActive]}>
-                        {ct.label}
+                        {t(ct.label)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -491,7 +493,7 @@ export function SessionEditor({
             {/* ── Gym exercises ── */}
             {sessionType === 'gym' && (
             <View style={s.field}>
-              <Text style={s.label}>ÖVNINGAR</Text>
+              <Text style={s.label}>{t('ÖVNINGAR')}</Text>
               {drafts.map(d => {
                 const exInfo   = exercises.find(e => e.name === d.exercise_name)
                 const isCardio = exInfo?.category === 'cardio'
@@ -501,7 +503,7 @@ export function SessionEditor({
                     {isCardio ? (
                       <View style={s.cardioBadge}>
                         <Ionicons name="walk-outline" size={13} color={ACCENT} />
-                        <Text style={s.cardioBadgeText}>Cardio</Text>
+                        <Text style={s.cardioBadgeText}>{t('Cardio')}</Text>
                       </View>
                     ) : (
                       <>
@@ -509,7 +511,7 @@ export function SessionEditor({
                           style={s.exSmall}
                           value={d.sets}
                           onChangeText={v => updateDraft(d.key, 'sets', v)}
-                          placeholder="Set"
+                          placeholder={t('Set')}
                           placeholderTextColor={TEXT_SECONDARY}
                           keyboardType="number-pad"
                           returnKeyType="done"
@@ -518,7 +520,7 @@ export function SessionEditor({
                           style={[s.exSmall, { width: 70 }]}
                           value={d.reps}
                           onChangeText={v => updateDraft(d.key, 'reps', v)}
-                          placeholder="Reps"
+                          placeholder={t('Reps')}
                           placeholderTextColor={TEXT_SECONDARY}
                           returnKeyType="done"
                         />
@@ -532,7 +534,7 @@ export function SessionEditor({
               })}
               <TouchableOpacity style={s.pickerToggle} onPress={() => setShowPicker(true)} activeOpacity={0.8}>
                 <Ionicons name="add" size={17} color={ACCENT} />
-                <Text style={s.pickerToggleText}>Lägg till övning</Text>
+                <Text style={s.pickerToggleText}>{t('Lägg till övning')}</Text>
               </TouchableOpacity>
             </View>
             )}
@@ -545,7 +547,7 @@ export function SessionEditor({
             >
               {saving
                 ? <ActivityIndicator color="#000" />
-                : <Text style={s.saveBtnText}>Spara pass</Text>}
+                : <Text style={s.saveBtnText}>{t('Spara pass')}</Text>}
             </TouchableOpacity>
           </ScrollView>
 
@@ -597,18 +599,18 @@ export function SessionEditor({
               <ScrollView contentContainerStyle={s.infoScroll} showsVerticalScrollIndicator={false}>
                 <View style={s.badgeRow}>
                   <View style={s.categoryBadge}>
-                    <Text style={s.categoryBadgeText}>{infoEx ? CATEGORY_LABELS[infoEx.category] : ''}</Text>
+                    <Text style={s.categoryBadgeText}>{infoEx ? t(CATEGORY_LABELS[infoEx.category]) : ''}</Text>
                   </View>
                   <View style={[s.diffBadge, { backgroundColor: diffColor + '22' }]}>
                     <Text style={[s.diffBadgeText, { color: diffColor }]}>
-                      {infoEx ? DIFFICULTY_LABELS[infoEx.difficulty] : ''}
+                      {infoEx ? t(DIFFICULTY_LABELS[infoEx.difficulty]) : ''}
                     </Text>
                   </View>
                 </View>
 
                 <View style={[s.infoCard, chip, chip]}>
                   <View style={s.infoCardTitleRow}>
-                    <Text style={s.infoCardTitle}>Muskelgrupper</Text>
+                    <Text style={s.infoCardTitle}>{t('Muskelgrupper')}</Text>
                     <View style={s.toggle}>
                       {(['front', 'back'] as const).map(side => (
                         <TouchableOpacity
@@ -618,7 +620,7 @@ export function SessionEditor({
                           activeOpacity={0.8}
                         >
                           <Text style={[s.toggleText, infoBodyView === side && s.toggleTextActive]}>
-                            {side === 'front' ? 'Fram' : 'Bak'}
+                            {side === 'front' ? t('Fram') : t('Bak')}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -639,18 +641,18 @@ export function SessionEditor({
                     <View style={s.muscleChips}>
                       {muscles.map(slug => (
                         <View key={slug} style={s.muscleChip}>
-                          <Text style={s.muscleChipText}>{SLUG_LABELS[slug]}</Text>
+                          <Text style={s.muscleChipText}>{t(SLUG_LABELS[slug])}</Text>
                         </View>
                       ))}
                     </View>
                   ) : (
-                    <Text style={s.noMuscles}>Inga muskler mappade för denna övning</Text>
+                    <Text style={s.noMuscles}>{t('Inga muskler mappade för denna övning')}</Text>
                   )}
                 </View>
 
                 {infoEx?.description ? (
                   <View style={[s.infoCard, chip, chip]}>
-                    <Text style={s.infoCardTitle}>Beskrivning</Text>
+                    <Text style={s.infoCardTitle}>{t('Beskrivning')}</Text>
                     <Text style={s.infoDesc}>{infoEx.description}</Text>
                   </View>
                 ) : null}

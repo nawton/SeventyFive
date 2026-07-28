@@ -11,6 +11,7 @@ import { getUnitSystem, toDisplayDistance, distanceUnitLabel, type UnitSystem } 
 import { parseRunTarget, buildRunSegments, paceRangeForUnit } from '@/lib/runProgression'
 import { buildParts, estimateMinutes, fmtNum } from '@/lib/runWorkoutParts'
 import { RUN_SESSION_INFO } from '@/services/scheduleGenerator'
+import { useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // PASS-DETALJ FÖR GENERERADE LÖPPASS — öppnas när man startar ett schemalagt
@@ -27,6 +28,7 @@ const TYPE_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
 }
 
 export default function RunWorkoutScreen() {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{
     sessionId?: string
@@ -56,7 +58,7 @@ export default function RunWorkoutScreen() {
   const icon     = TYPE_ICON[params.cardioType ?? 'running'] ?? 'fitness-outline'
 
   const dateLabel = params.date
-    ? parseLocalDate(params.date).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
+    ? parseLocalDate(params.date).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })
     : null
 
   const headline = target.kind === 'distance' && target.km != null
@@ -98,7 +100,7 @@ export default function RunWorkoutScreen() {
           icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
           onPress={() => router.back()} fallbackStyle={s.iconBtn}
         />
-        <Text style={s.topTitle}>Vecka {week + 1}</Text>
+        <Text style={s.topTitle}>{t('Vecka {n}', { n: week + 1 })}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -114,7 +116,7 @@ export default function RunWorkoutScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-              {name}
+              {t(name)}
             </Text>
             {headline && (
               <Text style={s.heroTarget}>
@@ -142,13 +144,13 @@ export default function RunWorkoutScreen() {
           {target.cutback && (
             <View style={s.metaChip}>
               <Ionicons name="leaf-outline" size={15} color={CARDIO_BLUE} />
-              <Text style={s.metaChipText}>Lugnare vecka</Text>
+              <Text style={s.metaChipText}>{t('Lugnare vecka')}</Text>
             </View>
           )}
           {target.taper && (
             <View style={s.metaChip}>
               <Ionicons name="flag-outline" size={15} color={CARDIO_BLUE} />
-              <Text style={s.metaChipText}>Nedtrappning inför loppet</Text>
+              <Text style={s.metaChipText}>{t('Nedtrappning inför loppet')}</Text>
             </View>
           )}
         </View>
@@ -157,12 +159,12 @@ export default function RunWorkoutScreen() {
         {info && (
           <View style={s.infoCard}>
             <Ionicons name="bulb-outline" size={17} color={CARDIO_BLUE} />
-            <Text style={s.infoText}>{info}</Text>
+            <Text style={s.infoText}>{t(info)}</Text>
           </View>
         )}
 
         {/* ── Upplägg ── */}
-        <Text style={s.sectionHead}>Upplägg</Text>
+        <Text style={s.sectionHead}>{t('Upplägg')}</Text>
         <View style={s.partsCard}>
           {parts.map((p, i) => (
             <View key={i} style={[s.partRow, i > 0 && s.partBorder]}>
@@ -179,7 +181,7 @@ export default function RunWorkoutScreen() {
         </View>
 
         <Text style={s.progressNote}>
-          Passet växer vecka för vecka, det här är målet för vecka {week + 1} i din plan.
+          {t('Passet växer vecka för vecka, det här är målet för vecka {n} i din plan.', { n: week + 1 })}
         </Text>
       </ScrollView>
 
@@ -187,7 +189,7 @@ export default function RunWorkoutScreen() {
       <View style={[s.ctaWrap, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity style={s.startBtn} onPress={startRun} activeOpacity={0.88}>
           <Ionicons name="play" size={17} color="#000" />
-          <Text style={s.startBtnText}>Starta passet</Text>
+          <Text style={s.startBtnText}>{t('Starta passet')}</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { ScheduleWizard, type WizardResult } from '@/components/ScheduleWizard'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { OnboardingStep, ONB } from '@/components/OnboardingStep'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // Sista onboarding-steget: bygg veckoschemat med samma wizard som i appen.
@@ -40,6 +41,7 @@ const FEATURES = [
 ]
 
 export default function SetupScheduleScreen() {
+  const t = useT()
   const [wizardVisible, setWizardVisible] = useState(false)
 
   async function handleWizardFinish(result: WizardResult) {
@@ -48,9 +50,9 @@ export default function SetupScheduleScreen() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) { router.replace('/(auth)/login'); return }
       const count = await generateScheduleFromWizard(session.user.id, result)
-      Alert.alert('Schema skapat', `${count} pass har lagts till i ditt veckoschema.`)
+      Alert.alert(t('Schema skapat'), t('{count} pass har lagts till i ditt veckoschema.', { count }))
     } catch (e: any) {
-      Alert.alert('Kunde inte skapa schemat', e.message)
+      Alert.alert(t('Kunde inte skapa schemat'), e.message)
     }
     router.replace('/(app)/dashboard')
   }
@@ -59,8 +61,8 @@ export default function SetupScheduleScreen() {
     <>
       <OnboardingStep
         step={4}
-        title="Ditt träningsschema"
-        subtitle="Svara på några snabba frågor så bygger vi ett veckoschema med färdiga pass, anpassat efter ditt mål. Du kan ändra allt när som helst."
+        title={t('Ditt träningsschema')}
+        subtitle={t('Svara på några snabba frågor så bygger vi ett veckoschema med färdiga pass, anpassat efter ditt mål. Du kan ändra allt när som helst.')}
         footer={
           <>
             <TouchableOpacity onPress={() => setWizardVisible(true)} activeOpacity={0.85}>
@@ -69,7 +71,7 @@ export default function SetupScheduleScreen() {
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 style={styles.primaryButton}
               >
-                <Text style={styles.primaryButtonText}>Bygg mitt schema</Text>
+                <Text style={styles.primaryButtonText}>{t('Bygg mitt schema')}</Text>
                 <Ionicons name="arrow-forward" size={17} color={ONB.NAVY} />
               </LinearGradient>
             </TouchableOpacity>
@@ -79,7 +81,7 @@ export default function SetupScheduleScreen() {
               onPress={() => router.replace('/(app)/dashboard')}
               activeOpacity={0.7}
             >
-              <Text style={styles.skipText}>Hoppa över, ställ in senare</Text>
+              <Text style={styles.skipText}>{t('Hoppa över, ställ in senare')}</Text>
             </TouchableOpacity>
           </>
         }
@@ -90,8 +92,8 @@ export default function SetupScheduleScreen() {
               <Ionicons name={f.icon} size={22} color={f.color} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.featureTitle}>{f.title}</Text>
-              <Text style={styles.featureText}>{f.text}</Text>
+              <Text style={styles.featureTitle}>{t(f.title)}</Text>
+              <Text style={styles.featureText}>{t(f.text)}</Text>
             </View>
           </View>
         ))}

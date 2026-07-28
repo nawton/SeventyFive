@@ -55,6 +55,7 @@ import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import type { UserChallengeWithLevel } from '@/types/database'
+import { useT } from '@/lib/i18n'
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,7 @@ const GRID_COLS = 3
 const GRID_GAP = 3
 
 export default function ProfileScreen() {
+  const t = useT()
   const onScrollShrink = useTabBarShrinkOnScroll()
   const { width: screenW } = useWindowDimensions()
   const cellSize = Math.floor((screenW - 40 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS)
@@ -191,10 +193,10 @@ export default function ProfileScreen() {
   // ── Lägg till foto ──────────────────────────────────────────────────────────
 
   function handleAddPhoto() {
-    Alert.alert('Nytt framstegsfoto', undefined, [
-      { text: 'Ta foto', onPress: () => pickImage('camera') },
-      { text: 'Välj från biblioteket', onPress: () => pickImage('library') },
-      { text: 'Avbryt', style: 'cancel' },
+    Alert.alert(t('Nytt framstegsfoto'), undefined, [
+      { text: t('Ta foto'), onPress: () => pickImage('camera') },
+      { text: t('Välj från biblioteket'), onPress: () => pickImage('library') },
+      { text: t('Avbryt'), style: 'cancel' },
     ])
   }
 
@@ -202,7 +204,7 @@ export default function ProfileScreen() {
     if (source === 'camera') {
       const { status } = await ImagePicker.requestCameraPermissionsAsync()
       if (status !== 'granted') {
-        Alert.alert('Åtkomst nekad', 'Tillåt kameraåtkomst i Inställningar.')
+        Alert.alert(t('Åtkomst nekad'), t('Tillåt kameraåtkomst i Inställningar.'))
         return
       }
       const result = await ImagePicker.launchCameraAsync({ quality: 0.8 })
@@ -213,7 +215,7 @@ export default function ProfileScreen() {
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
       if (status !== 'granted') {
-        Alert.alert('Åtkomst nekad', 'Tillåt åtkomst till fotobiblioteket i Inställningar.')
+        Alert.alert(t('Åtkomst nekad'), t('Tillåt åtkomst till fotobiblioteket i Inställningar.'))
         return
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -242,7 +244,7 @@ export default function ProfileScreen() {
       await markPhotoTaskDone()
       setPhotos(await getProgressPhotos(userId))
     } catch (e: any) {
-      Alert.alert('Något gick fel', e.message)
+      Alert.alert(t('Något gick fel'), e.message)
     }
   }
 
@@ -285,7 +287,7 @@ export default function ProfileScreen() {
       setPhotos(remaining)
       await syncPhotoTaskAfterDelete(remaining)
     } catch (e: any) {
-      Alert.alert('Något gick fel', e.message)
+      Alert.alert(t('Något gick fel'), e.message)
     }
   }
 
@@ -325,28 +327,30 @@ export default function ProfileScreen() {
           <TouchableOpacity style={[s.quickBtn, chrome]} activeOpacity={0.75}
             onPress={() => setMuscleOpen(true)} testID="muscleBtn">
             <Ionicons name="body-outline" size={19} color={ACCENT} />
-            <Text style={s.quickBtnText}>Muskler</Text>
+            <Text style={s.quickBtnText}>{t('Muskler')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[s.quickBtn, chrome]} activeOpacity={0.75}
             onPress={() => router.push('/records' as never)} testID="recordsBtn">
             <Ionicons name="trophy-outline" size={19} color={ACCENT} />
-            <Text style={s.quickBtnText}>Rekord</Text>
+            <Text style={s.quickBtnText}>{t('Rekord')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={s.sectionHeadRow}>
           <View style={{ flex: 1 }}>
-            <Text style={s.sectionHead}>Framstegsfoton</Text>
+            <Text style={s.sectionHead}>{t('Framstegsfoton')}</Text>
             <Text style={s.sectionSub}>
               {photos.length > 0
-                ? `${photos.length} ${photos.length === 1 ? 'foto' : 'foton'} · ${new Set(photos.map(p => p.dayNumber)).size} av ${currentDay} dagar`
-                : 'Ta ett foto varje dag, om 75 dagar har du hela resan här.'}
+                ? (photos.length === 1
+                    ? t('{n} foto · {days} av {total} dagar', { n: photos.length, days: new Set(photos.map(p => p.dayNumber)).size, total: currentDay })
+                    : t('{n} foton · {days} av {total} dagar', { n: photos.length, days: new Set(photos.map(p => p.dayNumber)).size, total: currentDay }))
+                : t('Ta ett foto varje dag, om 75 dagar har du hela resan här.')}
             </Text>
           </View>
           {photos.length >= 2 && (
             <TouchableOpacity style={s.compareChip} activeOpacity={0.8} onPress={() => setCompareOpen(true)}>
               <Ionicons name="git-compare-outline" size={15} color={ACCENT} />
-              <Text style={s.compareChipText}>Jämför</Text>
+              <Text style={s.compareChipText}>{t('Jämför')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -378,7 +382,7 @@ export default function ProfileScreen() {
             color={hasTodayPhoto ? GREEN : ACCENT}
           />
           <Text style={[s.addTileText, hasTodayPhoto && s.addTileTextDone]}>
-            {hasTodayPhoto ? 'Dagens taget' : 'Dagens foto'}
+            {hasTodayPhoto ? t('Dagens taget') : t('Dagens foto')}
           </Text>
         </TouchableOpacity>
       )
@@ -398,7 +402,7 @@ export default function ProfileScreen() {
           </View>
         )}
         <View style={s.gridBadge}>
-          <Text style={s.gridBadgeText}>Dag {photo.dayNumber}</Text>
+          <Text style={s.gridBadgeText}>{t('Dag {n}', { n: photo.dayNumber })}</Text>
         </View>
         {!!photo.caption && (
           <View style={s.gridCaptionDot}>
@@ -422,7 +426,7 @@ export default function ProfileScreen() {
       {/* Fast topp: titel + notisklocka står stilla, allt under uppdateras */}
       <View style={s.fixedTop}>
         <View style={s.topRow}>
-          <Text style={s.title}>Profil</Text>
+          <Text style={s.title}>{t('Profil')}</Text>
           <View>
             <GlassCircleButton
               icon="notifications-outline"
@@ -488,7 +492,7 @@ export default function ProfileScreen() {
         userId={userId}
         workouts={strengthWorkouts}
         weekStart={toLocalDateString(startOfWeek())}
-        weekLabel="Denna vecka"
+        weekLabel={t('Denna vecka')}
         day={null}
         dayLabel={null}
       />

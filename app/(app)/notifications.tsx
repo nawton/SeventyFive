@@ -20,6 +20,9 @@ import { setNotifSeenAt, getNotifSeenAt } from '@/lib/prefs'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useThemeStrings, THEME_DARK } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
+
+type TFn = (sv: string, vars?: Record<string, string | number>) => string
 
 // =============================================================================
 // NOTISER — notiscentret, nås från klockan på profilfliken. Idag:
@@ -33,6 +36,7 @@ function RequestRow({ person, onAccept, onDecline }: {
   onAccept: (id: string) => void
   onDecline: (id: string) => void
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const pillEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)'
   return (
@@ -42,7 +46,7 @@ function RequestRow({ person, onAccept, onDecline }: {
         activeOpacity={0.7}
         onPress={() => router.push({
           pathname: '/(app)/athlete',
-          params: { userId: person.id, name: person.name ?? 'Namnlös', avatar: person.avatar_url ?? '' },
+          params: { userId: person.id, name: person.name ?? t('Namnlös'), avatar: person.avatar_url ?? '' },
         } as never)}
       >
         <FeedAvatar
@@ -51,8 +55,8 @@ function RequestRow({ person, onAccept, onDecline }: {
           size={52}
         />
         <View style={{ flex: 1 }}>
-          <Text style={s.requestName} numberOfLines={1}>{person.name ?? 'Namnlös'}</Text>
-          <Text style={s.rowMeta}>vill följa dig och se din statistik</Text>
+          <Text style={s.requestName} numberOfLines={1}>{person.name ?? t('Namnlös')}</Text>
+          <Text style={s.rowMeta}>{t('vill följa dig och se din statistik')}</Text>
         </View>
       </TouchableOpacity>
       <TouchableOpacity
@@ -61,7 +65,7 @@ function RequestRow({ person, onAccept, onDecline }: {
         activeOpacity={0.8}
         testID={`accept-${person.id}`}
       >
-        <Text style={s.pillAcceptText}>Godkänn</Text>
+        <Text style={s.pillAcceptText}>{t('Godkänn')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[s.pill, { borderColor: pillEdge }]}
@@ -69,7 +73,7 @@ function RequestRow({ person, onAccept, onDecline }: {
         activeOpacity={0.8}
         testID={`decline-${person.id}`}
       >
-        <Text style={s.pillText}>Avböj</Text>
+        <Text style={s.pillText}>{t('Avböj')}</Text>
       </TouchableOpacity>
     </View>
   )
@@ -79,6 +83,7 @@ function GroupRow({ item, onAnswer }: {
   item: GroupNotification
   onAnswer: (item: GroupNotification, accept: boolean) => void
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const pillEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)'
   const isRequest = item.kind === 'request'
@@ -96,8 +101,8 @@ function GroupRow({ item, onAnswer }: {
         />
         <View style={{ flex: 1 }}>
           <Text style={s.rowName} numberOfLines={2}>
-            <Text style={{ fontWeight: '800' }}>{item.from?.name ?? 'Någon'}</Text>
-            {isRequest ? ' vill gå med i ' : ' bjöd in dig till '}
+            <Text style={{ fontWeight: '800' }}>{item.from?.name ?? t('Någon')}</Text>
+            {isRequest ? t(' vill gå med i ') : t(' bjöd in dig till ')}
             <Text style={{ fontWeight: '800' }}>{item.group.name}</Text>
           </Text>
         </View>
@@ -108,7 +113,7 @@ function GroupRow({ item, onAnswer }: {
         activeOpacity={0.8}
         testID={`groupYes-${item.group.id}-${item.from?.id ?? 'x'}`}
       >
-        <Text style={s.pillAcceptText}>{isRequest ? 'Godkänn' : 'Gå med'}</Text>
+        <Text style={s.pillAcceptText}>{isRequest ? t('Godkänn') : t('Gå med')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[s.pill, { borderColor: pillEdge }]}
@@ -116,35 +121,36 @@ function GroupRow({ item, onAnswer }: {
         activeOpacity={0.8}
         testID={`groupNo-${item.group.id}-${item.from?.id ?? 'x'}`}
       >
-        <Text style={s.pillText}>Avböj</Text>
+        <Text style={s.pillText}>{t('Avböj')}</Text>
       </TouchableOpacity>
     </View>
   )
 }
 
 /** "gillade ditt gympass/inlägg/pass" utifrån inläggsnyckeln */
-function likeLabel(postKey: string): string {
-  if (postKey.startsWith('gym-')) return 'gillade ditt gympass'
-  if (postKey.startsWith('grp-')) return 'gillade ditt inlägg'
-  return 'gillade ditt pass'
+function likeLabel(postKey: string, t: TFn): string {
+  if (postKey.startsWith('gym-')) return t('gillade ditt gympass')
+  if (postKey.startsWith('grp-')) return t('gillade ditt inlägg')
+  return t('gillade ditt pass')
 }
 
 /** "" / " och 1 annan" / " och 3 andra" — grupperade händelser */
-function othersSuffix(n: number): string {
+function othersSuffix(n: number, t: TFn): string {
   if (n <= 0) return ''
-  return n === 1 ? ' och 1 annan' : ` och ${n} andra`
+  return n === 1 ? t(' och 1 annan') : t(' och {n} andra', { n })
 }
 
-function timeAgo(iso: string, now = new Date()): string {
+function timeAgo(iso: string, t: TFn, now = new Date()): string {
   const mins = Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000))
-  if (mins < 1) return 'nu'
-  if (mins < 60) return `${mins} min`
+  if (mins < 1) return t('nu')
+  if (mins < 60) return t('{n} min', { n: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} h`
-  return `${Math.floor(hours / 24)} d`
+  if (hours < 24) return t('{n} h', { n: hours })
+  return t('{n} d', { n: Math.floor(hours / 24) })
 }
 
 export default function NotificationsScreen() {
+  const t = useT()
   const [requests, setRequests] = useState<FollowProfile[]>([])
   const [socialItems, setSocialItems] = useState<SocialNotification[]>([])
   const [groupItems, setGroupItems] = useState<GroupNotification[]>([])
@@ -231,7 +237,7 @@ export default function NotificationsScreen() {
           onPress={() => router.back()}
           fallbackStyle={s.iconBtnFallback}
         />
-        <Text style={s.title}>Notiser</Text>
+        <Text style={s.title}>{t('Notiser')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -250,7 +256,7 @@ export default function NotificationsScreen() {
           return (
             <>
               {showDivider && (
-                <Text style={[s.sectionHead, { marginTop: 16, marginBottom: 2 }]}>Tidigare</Text>
+                <Text style={[s.sectionHead, { marginTop: 16, marginBottom: 2 }]}>{t('Tidigare')}</Text>
               )}
               <View style={[s.row, earlier && hasNew && { opacity: 0.55 }]}>
                 <TouchableOpacity
@@ -258,7 +264,7 @@ export default function NotificationsScreen() {
                   activeOpacity={0.7}
                   onPress={() => router.push({
                     pathname: '/(app)/athlete',
-                    params: { userId: item.from.id, name: item.from.name ?? 'Namnlös', avatar: item.from.avatar_url ?? '' },
+                    params: { userId: item.from.id, name: item.from.name ?? t('Namnlös'), avatar: item.from.avatar_url ?? '' },
                   } as never)}
                 >
                   <FeedAvatar
@@ -268,13 +274,13 @@ export default function NotificationsScreen() {
                   />
                   <View style={{ flex: 1 }}>
                     <Text style={s.rowName} numberOfLines={2}>
-                      <Text style={{ fontWeight: '800' }}>{item.from.name ?? 'Namnlös'}</Text>
-                      {othersSuffix(item.others)}
+                      <Text style={{ fontWeight: '800' }}>{item.from.name ?? t('Namnlös')}</Text>
+                      {othersSuffix(item.others, t)}
                       {item.kind === 'like'
-                        ? ` ${likeLabel(item.postKey)}`
+                        ? ` ${likeLabel(item.postKey, t)}`
                         : item.postKey.startsWith('grp-')
-                          ? ' kommenterade ditt inlägg'
-                          : ' kommenterade ditt pass'}
+                          ? t(' kommenterade ditt inlägg')
+                          : t(' kommenterade ditt pass')}
                     </Text>
                     {item.kind === 'comment' && !!item.body && (
                       <Text style={s.rowComment} numberOfLines={2}>”{item.body}”</Text>
@@ -286,7 +292,7 @@ export default function NotificationsScreen() {
                       size={16}
                       color={item.kind === 'like' ? '#FF3B4A' : TEXT_SECONDARY}
                     />
-                    <Text style={s.rowTime}>{timeAgo(item.createdAt)}</Text>
+                    <Text style={s.rowTime}>{timeAgo(item.createdAt, t)}</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -297,7 +303,7 @@ export default function NotificationsScreen() {
           <>
             {requests.length > 0 && (
               <>
-                <Text style={s.sectionHead}>Vänförfrågningar</Text>
+                <Text style={s.sectionHead}>{t('Vänförfrågningar')}</Text>
                 {requests.map((person, i) => (
                   <View key={person.id}>
                     {i > 0 && <View style={s.rowDivider} />}
@@ -308,7 +314,7 @@ export default function NotificationsScreen() {
             )}
             {groupItems.length > 0 && (
               <>
-                <Text style={[s.sectionHead, requests.length > 0 && { marginTop: 18 }]}>Grupper</Text>
+                <Text style={[s.sectionHead, requests.length > 0 && { marginTop: 18 }]}>{t('Grupper')}</Text>
                 {groupItems.map((item, i) => (
                   <View key={`${item.kind}-${item.group.id}-${item.from?.id ?? 'x'}`}>
                     {i > 0 && <View style={s.rowDivider} />}
@@ -318,7 +324,7 @@ export default function NotificationsScreen() {
               </>
             )}
             {socialItems.length > 0 && (
-              <Text style={[s.sectionHead, (requests.length > 0 || groupItems.length > 0) && { marginTop: 18 }]}>Aktivitet</Text>
+              <Text style={[s.sectionHead, (requests.length > 0 || groupItems.length > 0) && { marginTop: 18 }]}>{t('Aktivitet')}</Text>
             )}
           </>
         }
@@ -328,9 +334,9 @@ export default function NotificationsScreen() {
         ListEmptyComponent={loaded && requests.length === 0 && groupItems.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="notifications-outline" size={44} color={TEXT_SECONDARY} />
-            <Text style={s.emptyTitle}>Inga notiser ännu</Text>
+            <Text style={s.emptyTitle}>{t('Inga notiser ännu')}</Text>
             <Text style={s.emptyBody}>
-              Här samlas vänförfrågningar, gruppinbjudningar, gillanden och kommentarer.
+              {t('Här samlas vänförfrågningar, gruppinbjudningar, gillanden och kommentarer.')}
             </Text>
           </View>
         ) : null}

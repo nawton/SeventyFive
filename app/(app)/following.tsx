@@ -13,6 +13,7 @@ import {
 import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useThemeStrings } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // FÖLJARE/FÖLJER — riktiga listor ur follows-tabellen: eget namn i headern,
@@ -31,6 +32,7 @@ function PersonRow({ person, pillState, ownId, onToggle }: {
   ownId: string | null
   onToggle: (id: string, state: PillState) => void
 }) {
+  const t = useT()
   const isSelf = person.id === ownId
   // Ramar som schemasträngar — dynamiska fryser fel, vit-alfa syns inte ljust
   const T = useThemeStrings()
@@ -42,7 +44,7 @@ function PersonRow({ person, pillState, ownId, onToggle }: {
         activeOpacity={0.7}
         onPress={() => router.push({
           pathname: '/(app)/athlete',
-          params: { userId: person.id, name: person.name ?? 'Namnlös', avatar: person.avatar_url ?? '' },
+          params: { userId: person.id, name: person.name ?? t('Namnlös'), avatar: person.avatar_url ?? '' },
         } as never)}
       >
         <FeedAvatar
@@ -50,7 +52,7 @@ function PersonRow({ person, pillState, ownId, onToggle }: {
           fallback={(person.name ?? '?').charAt(0).toUpperCase()}
           size={52}
         />
-        <Text style={s.rowName} numberOfLines={1}>{person.name ?? 'Namnlös'}</Text>
+        <Text style={s.rowName} numberOfLines={1}>{person.name ?? t('Namnlös')}</Text>
       </TouchableOpacity>
       {/* Man kan inte följa sig själv — egna raden får ingen pill */}
       {!isSelf && (
@@ -61,7 +63,7 @@ function PersonRow({ person, pillState, ownId, onToggle }: {
           testID={`follow-${person.id}`}
         >
           <Text style={[s.followPillText, pillState === 'none' && s.followPillTextInvite]}>
-            {pillState === 'following' ? 'Följer' : pillState === 'requested' ? 'Förfrågad' : 'Följ'}
+            {pillState === 'following' ? t('Följer') : pillState === 'requested' ? t('Förfrågad') : t('Följ')}
           </Text>
         </TouchableOpacity>
       )}
@@ -70,6 +72,7 @@ function PersonRow({ person, pillState, ownId, onToggle }: {
 }
 
 export default function FollowingScreen() {
+  const t = useT()
   // Räknarna på profilen skickar med vilken flik som ska öppnas — synkas
   // vid varje ändring eftersom skärmen ligger kvar monterad i navigatorn.
   // userId satt = någon ANNANS listor (nås från deras profil när man följer)
@@ -171,7 +174,7 @@ export default function FollowingScreen() {
           onPress={() => router.back()}
           fallbackStyle={s.iconBtnFallback}
         />
-        <Text style={s.title} numberOfLines={1}>{name || 'Community'}</Text>
+        <Text style={s.title} numberOfLines={1}>{name || t('Community')}</Text>
         <GlassCircleButton
           icon="search"
           size={40}
@@ -184,13 +187,13 @@ export default function FollowingScreen() {
       <View style={s.tabsRow}>
         <TouchableOpacity style={s.tabBtn} onPress={() => switchTab('followers')} activeOpacity={0.8}>
           <Text style={[s.tabText, tab === 'followers' && s.tabTextActive]}>
-            {followers.length} Följare
+            {t('{n} Följare', { n: followers.length })}
           </Text>
           <View style={[s.tabLine, tab === 'followers' && s.tabLineActive]} />
         </TouchableOpacity>
         <TouchableOpacity style={s.tabBtn} onPress={() => switchTab('following')} activeOpacity={0.8}>
           <Text style={[s.tabText, tab === 'following' && s.tabTextActive]}>
-            {followingList.length} Följer
+            {t('{n} Följer', { n: followingList.length })}
           </Text>
           <View style={[s.tabLine, tab === 'following' && s.tabLineActive]} />
         </TouchableOpacity>
@@ -219,10 +222,10 @@ export default function FollowingScreen() {
           <View style={s.empty}>
             <Ionicons name="people-outline" size={44} color={TEXT_SECONDARY} />
             <Text style={s.emptyTitle}>
-              {tab === 'followers' ? 'Inga följare ännu' : 'Du följer ingen ännu'}
+              {tab === 'followers' ? t('Inga följare ännu') : t('Du följer ingen ännu')}
             </Text>
             <Text style={s.emptyBody}>
-              Sök upp vänner med förstoringsglaset och börja följa varandra.
+              {t('Sök upp vänner med förstoringsglaset och börja följa varandra.')}
             </Text>
           </View>
         }

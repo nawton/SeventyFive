@@ -10,22 +10,24 @@ import {
   getConversations, subscribeToMessages, type Conversation,
 } from '@/services/messages'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // MEDDELANDEN, samtalslistan: senaste meddelandet per person, olästa
 // markerade. Nya samtal startas från en profil eller en medlemslista.
 // =============================================================================
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: (sv: string, vars?: Record<string, string | number>) => string): string {
   const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000))
-  if (mins < 1) return 'nu'
-  if (mins < 60) return `${mins} min`
+  if (mins < 1) return t('nu')
+  if (mins < 60) return t('{n} min', { n: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} h`
-  return `${Math.floor(hours / 24)} d`
+  if (hours < 24) return t('{n} h', { n: hours })
+  return t('{n} d', { n: Math.floor(hours / 24) })
 }
 
 export default function ChatsScreen() {
+  const t = useT()
   const T = useThemeStrings()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -50,7 +52,7 @@ export default function ChatsScreen() {
       <View style={s.header}>
         <GlassCircleButton icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
           onPress={() => router.back()} fallbackStyle={s.iconFallback} />
-        <Text style={s.headerTitle}>Meddelanden</Text>
+        <Text style={s.headerTitle}>{t('Meddelanden')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -64,24 +66,24 @@ export default function ChatsScreen() {
           <TouchableOpacity style={s.row} activeOpacity={0.7} testID={`chat-${item.userId}`}
             onPress={() => router.push({
               pathname: '/(app)/chat',
-              params: { userId: item.userId, name: item.name ?? 'Namnlös', avatar: item.avatar_url ?? '' },
+              params: { userId: item.userId, name: item.name ?? t('Namnlös'), avatar: item.avatar_url ?? '' },
             } as never)}>
             <FeedAvatar url={item.avatar_url}
               fallback={(item.name ?? '?').charAt(0).toUpperCase()} size={50} />
             <View style={{ flex: 1 }}>
-              <Text style={s.rowName} numberOfLines={1}>{item.name ?? 'Namnlös'}</Text>
+              <Text style={s.rowName} numberOfLines={1}>{item.name ?? t('Namnlös')}</Text>
               <Text style={[s.rowPreview, item.unread > 0 && { color: TEXT_PRIMARY, fontWeight: '600' }]}
                 numberOfLines={1}>
-                {item.lastFromMe ? 'Du: ' : ''}
-                {item.lastBody || (item.lastHasImage ? '📷 Bild' : '')}
+                {item.lastFromMe ? t('Du: ') : ''}
+                {item.lastBody || (item.lastHasImage ? t('📷 Bild') : '')}
               </Text>
             </View>
             <View style={s.rowRight}>
-              <Text style={s.rowTime}>{timeAgo(item.lastAt)}</Text>
+              <Text style={s.rowTime}>{timeAgo(item.lastAt, t)}</Text>
               {item.unread > 0 && (
                 <View style={[s.unreadBadge, { backgroundColor: T.ACCENT }]}>
                   <Text style={[s.unreadText, { color: T.TEXT_PRIMARY === '#FFFFFF' ? '#000000' : '#FFFFFF' }]}>
-                    {item.unread > 9 ? '9+' : item.unread}
+                    {item.unread > 9 ? t('9+') : item.unread}
                   </Text>
                 </View>
               )}
@@ -91,9 +93,9 @@ export default function ChatsScreen() {
         ListEmptyComponent={loaded ? (
           <View style={s.empty}>
             <Ionicons name="chatbubbles-outline" size={44} color={TEXT_SECONDARY} />
-            <Text style={s.emptyTitle}>Inga meddelanden ännu</Text>
+            <Text style={s.emptyTitle}>{t('Inga meddelanden ännu')}</Text>
             <Text style={s.emptyBody}>
-              Starta ett samtal från någons profil eller från en grupps medlemslista.
+              {t('Starta ett samtal från någons profil eller från en grupps medlemslista.')}
             </Text>
           </View>
         ) : null}

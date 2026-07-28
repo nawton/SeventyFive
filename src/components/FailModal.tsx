@@ -18,6 +18,7 @@ import Animated, {
 import { Ionicons } from '@/components/Icon'
 import { RED, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // RAPPORTERA MISSAD DAG — dragbar bottom sheet. Ärlighet med krav: dagen
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export function FailModal({ visible, onClose, onConfirm }: Props) {
+  const t = useT()
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const [excuse, setExcuse] = useState('')
@@ -105,18 +107,17 @@ export function FailModal({ visible, onClose, onConfirm }: Props) {
                 <View style={s.iconCircle}>
                   <Ionicons name="flag-outline" size={24} color={RED} />
                 </View>
-                <Text style={[s.title, { color: T.TEXT_PRIMARY }]}>Rapportera dagen som missad</Text>
+                <Text style={[s.title, { color: T.TEXT_PRIMARY }]}>{t('Rapportera dagen som missad')}</Text>
                 <Text style={s.sub}>
-                  Var ärlig mot dig själv. Dagen kan bara rapporteras med en plan
-                  för hur imorgon blir bättre.
+                  {t('Var ärlig mot dig själv. Dagen kan bara rapporteras med en plan för hur imorgon blir bättre.')}
                 </Text>
               </View>
             </GestureDetector>
 
-            <Text style={s.fieldLabel}>VAD HÄNDE?</Text>
+            <Text style={s.fieldLabel}>{t('VAD HÄNDE?')}</Text>
             <AppTextInput
               style={[s.input, { color: T.TEXT_PRIMARY }]}
-              placeholder="Jag missade för att …"
+              placeholder={t('Jag missade för att …')}
               placeholderTextColor="rgba(128,128,128,0.6)"
               value={excuse}
               onChangeText={setExcuse}
@@ -125,10 +126,10 @@ export function FailModal({ visible, onClose, onConfirm }: Props) {
               testID="failExcuse"
             />
 
-            <Text style={s.fieldLabel}>DIN PLAN FÖR IMORGON</Text>
+            <Text style={s.fieldLabel}>{t('DIN PLAN FÖR IMORGON')}</Text>
             <AppTextInput
               style={[s.input, { color: T.TEXT_PRIMARY }]}
-              placeholder="Imorgon gör jag istället …"
+              placeholder={t('Imorgon gör jag istället …')}
               placeholderTextColor="rgba(128,128,128,0.6)"
               value={plan}
               onChangeText={setPlan}
@@ -146,12 +147,12 @@ export function FailModal({ visible, onClose, onConfirm }: Props) {
             >
               {loading
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={s.submitButtonText}>Rapportera missad dag</Text>
+                : <Text style={s.submitButtonText}>{t('Rapportera missad dag')}</Text>
               }
             </TouchableOpacity>
 
             <TouchableOpacity style={s.cancelButton} onPress={onClose} activeOpacity={0.7}>
-              <Text style={s.cancelText}>Avbryt</Text>
+              <Text style={s.cancelText}>{t('Avbryt')}</Text>
             </TouchableOpacity>
           </Animated.View>
         </KeyboardAvoidingView>

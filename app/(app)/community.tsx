@@ -21,6 +21,7 @@ import {
 } from '@/services/social'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { postReportMenu } from '@/lib/report'
+import { useT, dateLocale } from '@/lib/i18n'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
@@ -76,6 +77,7 @@ function EmptyState({ icon, title, body, ctaLabel, onCta }: {
 }
 
 export default function CommunityScreen() {
+  const t = useT()
   const [segment, setSegment] = useState<Segment>('feed')
   const [filter, setFilter] = useState<Filter>('all')
   const [loaded, setLoaded] = useState(false)
@@ -97,7 +99,7 @@ export default function CommunityScreen() {
   const onScroll = useTabBarShrinkOnScroll()
 
   const posts = useMemo(() => {
-    const nameOf = (id: string) => authors[id]?.name ?? 'Namnlös'
+    const nameOf = (id: string) => authors[id]?.name ?? t('Namnlös')
     const avatarOf = (id: string) => authors[id]?.avatar ?? null
     const cardioPosts = cardioRows.map(r =>
       workoutToPost(r.workout, r.userId, nameOf(r.userId), avatarOf(r.userId)))
@@ -131,11 +133,11 @@ export default function CommunityScreen() {
         ownerName: post.authorName,
         ownerAvatar: post.authorAvatar ?? '',
         kind: post.kind,
-        title: post.kind === 'cardio' ? post.workout.name : 'Gympass',
+        title: post.kind === 'cardio' ? post.workout.name : t('Gympass'),
         createdAt: post.createdAt,
         meta: post.kind === 'cardio'
           ? `${post.distanceKm.toFixed(2).replace('.', ',')} km`
-          : `${post.exercises} övningar`,
+          : t('{n} övningar', { n: post.exercises }),
       },
     } as never)
   }
@@ -154,12 +156,12 @@ export default function CommunityScreen() {
     ])
     const map: Record<string, { name: string; avatar: string | null }> = {
       [uid]: {
-        name: profile?.name || session.user.email?.split('@')[0] || 'Jag',
+        name: profile?.name || session.user.email?.split('@')[0] || t('Jag'),
         avatar: profile?.avatar_url ?? null,
       },
     }
     for (const p of lists.following) {
-      map[p.id] = { name: p.name ?? 'Namnlös', avatar: p.avatar_url }
+      map[p.id] = { name: p.name ?? t('Namnlös'), avatar: p.avatar_url }
     }
     setAuthors(map)
     setCardioRows(page.cardio)
@@ -246,7 +248,7 @@ export default function CommunityScreen() {
         <View style={{ flex: 1 }}>
           <GlassSegment
             value={segment}
-            options={[{ key: 'feed', label: 'Flöde' }, { key: 'groups', label: 'Grupper' }]}
+            options={[{ key: 'feed', label: t('Flöde') }, { key: 'groups', label: t('Grupper') }]}
             onChange={setSegment}
             tint={null}
           />
@@ -282,16 +284,16 @@ export default function CommunityScreen() {
               style={[s.groupActionBtn, { borderColor: T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)' }]}
               onPress={() => setGroupSearchOpen(true)} activeOpacity={0.8} testID="searchGroups">
               <Ionicons name="search" size={15} color={TEXT_PRIMARY} />
-              <Text style={s.groupActionText}>Sök grupper</Text>
+              <Text style={s.groupActionText}>{t('Sök grupper')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.groupActionBtn, s.groupActionAccent]}
               onPress={() => setWizardOpen(true)} activeOpacity={0.85} testID="createGroup">
               <Ionicons name="add" size={17} color={ACCENT_CONTRAST} />
-              <Text style={[s.groupActionText, { color: ACCENT_CONTRAST }]}>Skapa</Text>
+              <Text style={[s.groupActionText, { color: ACCENT_CONTRAST }]}>{t('Skapa')}</Text>
             </TouchableOpacity>
           </View>
 
-          {myGroups.length > 0 && <Text style={s.groupsLabel}>MINA GRUPPER</Text>}
+          {myGroups.length > 0 && <Text style={s.groupsLabel}>{t('MINA GRUPPER')}</Text>}
           {myGroups.map(g => (
             <TouchableOpacity
               key={g.id}
@@ -304,10 +306,10 @@ export default function CommunityScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={s.groupName} numberOfLines={1}>{g.name}</Text>
                 <Text style={s.groupMeta}>
-                  {g.myStatus === 'pending' ? 'Förfrågan skickad'
-                    : g.myStatus === 'invited' ? 'Inbjuden, tryck för att svara'
-                    : `${g.memberCount} ${g.memberCount === 1 ? 'medlem' : 'medlemmar'}`}
-                  {g.is_private ? ' · Privat' : ''}
+                  {g.myStatus === 'pending' ? t('Förfrågan skickad')
+                    : g.myStatus === 'invited' ? t('Inbjuden, tryck för att svara')
+                    : g.memberCount === 1 ? t('1 medlem') : t('{n} medlemmar', { n: g.memberCount })}
+                  {g.is_private ? ` · ${t('Privat')}` : ''}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
@@ -317,10 +319,9 @@ export default function CommunityScreen() {
           {myGroups.length === 0 && (
             <View style={s.groupsEmpty}>
               <Ionicons name="people-outline" size={44} color={TEXT_SECONDARY} />
-              <Text style={s.groupsEmptyTitle}>Inga grupper ännu</Text>
+              <Text style={s.groupsEmptyTitle}>{t('Inga grupper ännu')}</Text>
               <Text style={s.groupsEmptyBody}>
-                Skapa en grupp och peppa varandra genom utmaningen, eller sök
-                upp en som redan finns.
+                {t('Skapa en grupp och peppa varandra genom utmaningen, eller sök upp en som redan finns.')}
               </Text>
             </View>
           )}
@@ -382,7 +383,7 @@ export default function CommunityScreen() {
                     activeOpacity={0.8}
                   >
                     {f.icon && <Ionicons name={f.icon} size={14} color={on ? ACCENT : TEXT_PRIMARY} />}
-                    <Text style={[s.chipText, on && s.chipTextActive]}>{f.label}</Text>
+                    <Text style={[s.chipText, on && s.chipTextActive]}>{t(f.label)}</Text>
                   </TouchableOpacity>
                 )
               })}
@@ -391,13 +392,13 @@ export default function CommunityScreen() {
           ListEmptyComponent={loaded ? (
             <EmptyState
               icon="megaphone-outline"
-              title={filter === 'strength' ? 'Inga gympass i flödet'
-                : filter === 'cardio' ? 'Inga cardio-pass i flödet'
-                : 'Inget i flödet ännu'}
+              title={filter === 'strength' ? t('Inga gympass i flödet')
+                : filter === 'cardio' ? t('Inga cardio-pass i flödet')
+                : t('Inget i flödet ännu')}
               body={filter === 'all'
-                ? 'Dina och dina vänners pass dyker upp här. Hitta vänner och börja följa varandra!'
-                : 'Passen dyker upp här så fort de loggas.'}
-              ctaLabel={filter === 'all' ? 'Hitta vänner' : undefined}
+                ? t('Dina och dina vänners pass dyker upp här. Hitta vänner och börja följa varandra!')
+                : t('Passen dyker upp här så fort de loggas.')}
+              ctaLabel={filter === 'all' ? t('Hitta vänner') : undefined}
               onCta={filter === 'all'
                 ? () => router.push('/(app)/search-users' as never)
                 : undefined}
@@ -413,7 +414,7 @@ export default function CommunityScreen() {
           <CardioSummaryView
             workout={selected.workout}
             title={selected.workout.name}
-            dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            dateLabel={new Date(selected.createdAt).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
             avatarUrl={selected.authorAvatar}
             unit={unit}
             onClose={() => setSelected(null)}
@@ -431,8 +432,8 @@ export default function CommunityScreen() {
         )}
         {selected?.kind === 'strength' && (
           <GymSummaryView
-            name="Gympass"
-            dateLabel={new Date(selected.createdAt).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            name={t('Gympass')}
+            dateLabel={new Date(selected.createdAt).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
             logged={selected.workouts}
             plannedNames={[]}
             allWorkouts={selected.workouts}

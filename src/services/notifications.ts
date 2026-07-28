@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications'
 import { SchedulableTriggerInputTypes } from 'expo-notifications'
+import { t } from '@/lib/i18n'
 
 // =============================================================================
 // DAGLIGA PÅMINNELSER
@@ -16,16 +17,16 @@ export async function scheduleDailyReminders(): Promise<void> {
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'Ny dag i utmaningen 💪',
-      body: 'Kolla in dagens uppgifter och planera in ditt pass.',
+      title: t('Ny dag i utmaningen 💪'),
+      body: t('Kolla in dagens uppgifter och planera in ditt pass.'),
     },
     trigger: { type: SchedulableTriggerInputTypes.DAILY, ...MORNING },
   })
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'Tappa inte din streak 🔥',
-      body: 'Har du bockat av allt idag? Det är inte försent än.',
+      title: t('Tappa inte din streak 🔥'),
+      body: t('Har du bockat av allt idag? Det är inte försent än.'),
     },
     trigger: { type: SchedulableTriggerInputTypes.DAILY, ...EVENING },
   })

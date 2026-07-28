@@ -27,6 +27,7 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, accent
 import { SubscriptionCard } from '@/components/SubscriptionCard'
 import { RecordsCard } from '@/components/RecordsCard'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { useT } from '@/lib/i18n'
 
 const AVATAR_SECTIONS = [
   { label: 'Träning',    items: ['💪', '🏋️', '🏃', '🧘', '🥊', '🚴', '🤸', '🏊'] },
@@ -35,6 +36,7 @@ const AVATAR_SECTIONS = [
 ]
 
 export default function EditProfileScreen() {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const [name, setName]       = useState('')
   const [email, setEmail]     = useState('')
@@ -108,7 +110,7 @@ export default function EditProfileScreen() {
   async function pickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') {
-      Alert.alert('Åtkomst nekad', 'Tillåt åtkomst till fotobiblioteket i Inställningar.')
+      Alert.alert(t('Åtkomst nekad'), t('Tillåt åtkomst till fotobiblioteket i Inställningar.'))
       return
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -141,7 +143,7 @@ export default function EditProfileScreen() {
       }
       await updateProfile(userId, { avatar_url: avatarUrl })
     } catch (e: any) {
-      Alert.alert('Något gick fel', e.message)
+      Alert.alert(t('Något gick fel'), e.message)
     } finally {
       setSaving(false)
     }
@@ -176,7 +178,7 @@ export default function EditProfileScreen() {
           onPress={() => router.back()}
           fallbackStyle={styles.iconBtnFallback}
         />
-        <Text style={styles.title}>Profil</Text>
+        <Text style={styles.title}>{t('Profil')}</Text>
         <View style={styles.headerSpacer}>
           {saving && <ActivityIndicator color={ACCENT} size="small" />}
         </View>
@@ -200,20 +202,20 @@ export default function EditProfileScreen() {
                 <Ionicons name="pencil" size={13} color="#fff" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.previewName}>{name || 'Ditt namn'}</Text>
+            <Text style={styles.previewName}>{name || t('Ditt namn')}</Text>
             <Text style={styles.previewEmail}>{email}</Text>
             <TouchableOpacity
               style={styles.editPill}
               onPress={() => router.push('/account' as never)}
               activeOpacity={0.85}
             >
-              <Text style={styles.editPillText}>REDIGERA PROFIL</Text>
+              <Text style={styles.editPillText}>{t('REDIGERA PROFIL')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* ── Abonnemang — premiumbannern leder till paywallen ── */}
           <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>ABONNEMANG</Text>
+            <Text style={styles.fieldLabel}>{t('ABONNEMANG')}</Text>
             <SubscriptionCard name={name} />
           </View>
 
@@ -224,7 +226,7 @@ export default function EditProfileScreen() {
 
           {/* ── Min träning — genvägar till det man återkommer till ── */}
           <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>MIN TRÄNING</Text>
+            <Text style={styles.fieldLabel}>{t('MIN TRÄNING')}</Text>
             <View style={styles.rowsCard}>
               <TouchableOpacity
                 style={styles.row}
@@ -234,7 +236,7 @@ export default function EditProfileScreen() {
                 <View style={styles.rowIconBox}>
                   <Ionicons name="calendar-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
-                <Text style={styles.rowLabel}>Veckoschema</Text>
+                <Text style={styles.rowLabel}>{t('Veckoschema')}</Text>
                 <View style={{ flex: 1 }} />
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
@@ -243,14 +245,14 @@ export default function EditProfileScreen() {
 
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => Alert.alert('Kommer snart', 'Hitta lopp nära dig och koppla dem direkt till din träningsplan.')}
+                onPress={() => Alert.alert(t('Kommer snart'), t('Hitta lopp nära dig och koppla dem direkt till din träningsplan.'))}
                 activeOpacity={0.7}
               >
                 <View style={styles.rowIconBox}>
                   <Ionicons name="flag-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
-                <Text style={styles.rowLabel}>Hitta ett lopp</Text>
-                <Text style={styles.rowValue} numberOfLines={1}>Kommer snart</Text>
+                <Text style={styles.rowLabel}>{t('Hitta ett lopp')}</Text>
+                <Text style={styles.rowValue} numberOfLines={1}>{t('Kommer snart')}</Text>
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
             </View>
@@ -258,7 +260,7 @@ export default function EditProfileScreen() {
 
           {/* ── Inställningar — några riktiga, resten växer fram ── */}
           <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>INSTÄLLNINGAR</Text>
+            <Text style={styles.fieldLabel}>{t('INSTÄLLNINGAR')}</Text>
             <View style={styles.rowsCard}>
               <TouchableOpacity
                 style={styles.row}
@@ -268,7 +270,7 @@ export default function EditProfileScreen() {
                 <View style={styles.rowIconBox}>
                   <Ionicons name="options-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
-                <Text style={styles.rowLabel}>Anpassning</Text>
+                <Text style={styles.rowLabel}>{t('Anpassning')}</Text>
                 <View style={{ flex: 1 }} />
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
@@ -284,7 +286,7 @@ export default function EditProfileScreen() {
                 <View style={styles.rowIconBox}>
                   <Ionicons name="settings-outline" size={17} color={TEXT_SECONDARY} />
                 </View>
-                <Text style={styles.rowLabel}>Allmänt</Text>
+                <Text style={styles.rowLabel}>{t('Allmänt')}</Text>
                 <View style={{ flex: 1 }} />
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
@@ -298,10 +300,10 @@ export default function EditProfileScreen() {
               <TouchableOpacity
                 style={styles.row}
                 onPress={() => {
-                  Alert.alert('Logga ut', 'Är du säker på att du vill logga ut? Din data sparas.', [
-                    { text: 'Avbryt', style: 'cancel' },
+                  Alert.alert(t('Logga ut'), t('Är du säker på att du vill logga ut? Din data sparas.'), [
+                    { text: t('Avbryt'), style: 'cancel' },
                     {
-                      text: 'Logga ut',
+                      text: t('Logga ut'),
                       style: 'destructive',
                       onPress: async () => {
                         // Inga pushnotiser till en utloggad enhet
@@ -317,7 +319,7 @@ export default function EditProfileScreen() {
                 <View style={[styles.rowIconBox, { backgroundColor: 'rgba(255,69,58,0.14)' }]}>
                   <Ionicons name="log-out-outline" size={17} color="#FF453A" />
                 </View>
-                <Text style={[styles.rowLabel, { color: '#FF453A' }]}>Logga ut</Text>
+                <Text style={[styles.rowLabel, { color: '#FF453A' }]}>{t('Logga ut')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -344,7 +346,7 @@ export default function EditProfileScreen() {
             <GestureDetector gesture={sheetPan}>
               <View>
                 <View style={styles.sheetHandle} />
-                <Text style={styles.sheetTitle}>Välj profilbild</Text>
+                <Text style={styles.sheetTitle}>{t('Välj profilbild')}</Text>
               </View>
             </GestureDetector>
 
@@ -355,7 +357,7 @@ export default function EditProfileScreen() {
                 <View style={styles.quickIcon}>
                   <Ionicons name="image-outline" size={24} color={TEXT_PRIMARY} />
                 </View>
-                <Text style={styles.quickLabel}>Foto</Text>
+                <Text style={styles.quickLabel}>{t('Foto')}</Text>
               </TouchableOpacity>
 
               {/* Initials */}
@@ -370,20 +372,20 @@ export default function EditProfileScreen() {
                   </Text>
                 </View>
                 <Text style={[styles.quickLabel, !photoUri && !emoji && { color: ACCENT }]}>
-                  Bokstav
+                  {t('Bokstav')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Divider */}
             <View style={styles.sheetDivider} />
-            <Text style={styles.emojiHeader}>EMOJI</Text>
+            <Text style={styles.emojiHeader}>{t('EMOJI')}</Text>
 
             {/* Emoji grid */}
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 240 }}>
               {AVATAR_SECTIONS.map(section => (
                 <View key={section.label} style={styles.emojiSection}>
-                  <Text style={styles.sectionLabel}>{section.label}</Text>
+                  <Text style={styles.sectionLabel}>{t(section.label)}</Text>
                   <View style={styles.emojiGrid}>
                     {section.items.map(e => (
                       <TouchableOpacity
@@ -402,7 +404,7 @@ export default function EditProfileScreen() {
 
             {/* Cancel */}
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)} activeOpacity={0.7}>
-              <Text style={styles.cancelText}>Avbryt</Text>
+              <Text style={styles.cancelText}>{t('Avbryt')}</Text>
             </TouchableOpacity>
           </View>
           </Animated.View>

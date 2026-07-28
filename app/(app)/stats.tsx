@@ -34,6 +34,7 @@ import { deleteCardioWorkout } from '@/services/workouts'
 import { BG, ACCENT, useThemeStrings } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
+import { useT, dateLocale } from '@/lib/i18n'
 
 const TAB_BAR_W = STATS_SCREEN_W - GRID_PADDING * 2
 const SEG_W     = TAB_BAR_W / 3      // en flik-kolumns bredd
@@ -50,6 +51,7 @@ const TABS: Array<{ key: StatsTab; label: string; icon: React.ComponentProps<typ
 ]
 
 export default function StatsScreen() {
+  const t = useT()
   const P = useStatsColors()
   const T = useThemeStrings()
   const onScrollShrink = useTabBarShrinkOnScroll()
@@ -88,14 +90,14 @@ export default function StatsScreen() {
   function deleteSelectedWorkout() {
     const w = selectedWorkout
     if (!w) return
-    Alert.alert('Radera träning', 'Det här går inte att ångra.', [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Radera', style: 'destructive', onPress: async () => {
+    Alert.alert(t('Radera träning'), t('Det här går inte att ångra.'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      { text: t('Radera'), style: 'destructive', onPress: async () => {
         setWorkouts(prev => prev.filter(x => x.id !== w.id))
         setSelectedWorkout(null)
         const ok = await deleteCardioWorkout(w.id).catch(() => false)
         if (!ok) {
-          Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
+          Alert.alert(t('Kunde inte radera'), t('Kontrollera din uppkoppling och försök igen.'))
           loadStats()
         }
       } },
@@ -148,7 +150,7 @@ export default function StatsScreen() {
   function handleDeleteWorkout(id: string) {
     setWorkouts(prev => prev.filter(w => w.id !== id))
     const restore = () => {
-      Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
+      Alert.alert(t('Kunde inte radera'), t('Kontrollera din uppkoppling och försök igen.'))
       loadStats()
     }
     deleteCardioWorkout(id).then(ok => { if (!ok) restore() }).catch(restore)
@@ -161,7 +163,7 @@ export default function StatsScreen() {
       await deleteCompletion(id)
       return true
     } catch {
-      Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
+      Alert.alert(t('Kunde inte radera'), t('Kontrollera din uppkoppling och försök igen.'))
       loadStats()
       return false
     }
@@ -239,13 +241,13 @@ export default function StatsScreen() {
     return (
       <View style={[s.centered, { backgroundColor: BG }]}>
         <Ionicons name="cloud-offline-outline" size={36} color="#4A4A50" />
-        <Text style={s.errorText}>Kunde inte ladda din statistik</Text>
+        <Text style={s.errorText}>{t('Kunde inte ladda din statistik')}</Text>
         <TouchableOpacity
           style={s.retryBtn}
           onPress={() => { setLoading(true); loadStats() }}
           activeOpacity={0.8}
         >
-          <Text style={s.retryBtnText}>Försök igen</Text>
+          <Text style={s.retryBtnText}>{t('Försök igen')}</Text>
         </TouchableOpacity>
       </View>
     )
@@ -255,9 +257,9 @@ export default function StatsScreen() {
   return (
     <SafeScreen style={s.screen} edges={['top']}>
       <View style={s.header}>
-        <Text style={s.title}>Framsteg</Text>
+        <Text style={s.title}>{t('Framsteg')}</Text>
         <Text style={s.subtitle}>
-          {currentDay > 0 ? `Dag ${currentDay} av 75${levelName ? ` · ${levelName}` : ''}` : levelName}
+          {currentDay > 0 ? `${t('Dag {n} av 75', { n: currentDay })}${levelName ? ` · ${levelName}` : ''}` : levelName}
         </Text>
       </View>
 
@@ -272,7 +274,7 @@ export default function StatsScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={[s.compactLabel, activeTab === tab.key && s.compactLabelActive]}>
-                  {tab.label}
+                  {t(tab.label)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -350,7 +352,7 @@ export default function StatsScreen() {
           <CardioSummaryView
             workout={selectedWorkout}
             title={selectedWorkout.name}
-            dateLabel={new Date(selectedWorkout.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            dateLabel={new Date(selectedWorkout.created_at).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
             avatarUrl={avatarUrl}
             unit={unit}
             onClose={() => setSelectedWorkout(null)}

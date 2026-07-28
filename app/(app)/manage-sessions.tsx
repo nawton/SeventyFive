@@ -12,6 +12,7 @@ import {
   useColorScheme,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
+import { t, useT, dateLocale } from '@/lib/i18n'
 import { useFocusEffect, router } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import Animated, { FadeInDown } from 'react-native-reanimated'
@@ -72,10 +73,10 @@ function sessionIcon(sess: WorkoutSession): {
 
 function cardioLabel(type: string | null): string {
   switch (type) {
-    case 'cycling':  return 'Cykling'
-    case 'interval': return 'Intervall'
-    case 'walking':  return 'Promenad'
-    default:         return 'Löpning'
+    case 'cycling':  return t('Cykling')
+    case 'interval': return t('Intervall')
+    case 'walking':  return t('Promenad')
+    default:         return t('Löpning')
   }
 }
 
@@ -94,6 +95,7 @@ function DayCard({
   onPress:     () => void
   onLongPress: () => void
 }) {
+  const t = useT()
   const hasSession    = daySessions.length > 0
   const exerciseCount = daySessions.reduce((n, s) => n + s.exercises.length, 0)
   const firstCardio   = daySessions.find(x => x.session_type === 'cardio')
@@ -120,7 +122,7 @@ function DayCard({
       {/* Day label */}
       <View style={s.cardTop}>
         <Text style={[s.dayShort, isToday && s.dayShortToday]}>
-          {DAY_SHORT[dayNum - 1]}
+          {t(DAY_SHORT[dayNum - 1])}
         </Text>
         {isToday && <View style={s.todayDot} />}
       </View>
@@ -139,19 +141,19 @@ function DayCard({
               )
             })}
             {daySessions.length > 3 && (
-              <Text style={s.moreText}>+{daySessions.length - 3} pass till</Text>
+              <Text style={s.moreText}>{t('+{n} pass till', { n: daySessions.length - 3 })}</Text>
             )}
           </View>
           <Text style={s.metaText}>
             {[
-              exerciseCount > 0 && `${exerciseCount} övningar`,
+              exerciseCount > 0 && t('{n} övningar', { n: exerciseCount }),
               firstCardio && cardioLabel(firstCardio.cardio_type),
             ].filter(Boolean).join(' · ')}
           </Text>
         </>
       ) : (
         <>
-          <Text style={s.restLabel}>Vilodag</Text>
+          <Text style={s.restLabel}>{t('Vilodag')}</Text>
           <View style={s.addCircle}>
             <Ionicons name="add" size={14} color={ACCENT} />
           </View>
@@ -164,6 +166,7 @@ function DayCard({
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function ManageSessionsScreen() {
+  const t = useT()
   const [sessions, setSessions]           = useState<WorkoutSession[]>([])
   const [exercises, setExercises]         = useState<Exercise[]>([])
   const [userId, setUserId]               = useState<string | null>(null)
@@ -228,10 +231,10 @@ export default function ManageSessionsScreen() {
     }
 
     // Multiple sessions — let user pick
-    const options = ['Avbryt', ...daySessions.map(displayName), '+ Nytt pass']
+    const options = [t('Avbryt'), ...daySessions.map(displayName), t('+ Nytt pass')]
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
-        { title: DAY_FULL[dayNum - 1], options, cancelButtonIndex: 0 },
+        { title: t(DAY_FULL[dayNum - 1]), options, cancelButtonIndex: 0 },
         i => {
           if (i === 0) return
           if (i === daySessions.length + 1) { openCreate(dayNum); return }
@@ -239,10 +242,10 @@ export default function ManageSessionsScreen() {
         },
       )
     } else {
-      Alert.alert(DAY_FULL[dayNum - 1], 'Välj pass att redigera', [
+      Alert.alert(t(DAY_FULL[dayNum - 1]), t('Välj pass att redigera'), [
         ...daySessions.map(s => ({ text: displayName(s), onPress: () => openEdit(s) })),
-        { text: '+ Nytt pass', onPress: () => openCreate(dayNum) },
-        { text: 'Avbryt', style: 'cancel' as const },
+        { text: t('+ Nytt pass'), onPress: () => openCreate(dayNum) },
+        { text: t('Avbryt'), style: 'cancel' as const },
       ])
     }
   }
@@ -252,11 +255,11 @@ export default function ManageSessionsScreen() {
     if (daySessions.length === 0) { openCreate(dayNum); return }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    const options = ['Avbryt', ...daySessions.map(s => `Ta bort "${displayName(s)}"`), '+ Nytt pass']
+    const options = [t('Avbryt'), ...daySessions.map(s => t('Ta bort "{name}"', { name: displayName(s) })), t('+ Nytt pass')]
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          title: DAY_FULL[dayNum - 1],
+          title: t(DAY_FULL[dayNum - 1]),
           options,
           destructiveButtonIndex: daySessions.map((_, i) => i + 1),
           cancelButtonIndex: 0,
@@ -267,26 +270,26 @@ export default function ManageSessionsScreen() {
           const sess = daySessions[i - 1]
           if (userId) {
             deleteSessionWithSkips(userId, sess.id)
-              .catch(() => Alert.alert('Kunde inte ta bort passet', 'Kontrollera din anslutning och försök igen.'))
+              .catch(() => Alert.alert(t('Kunde inte ta bort passet'), t('Kontrollera din anslutning och försök igen.')))
               .finally(() => loadData(userId!))
           }
         },
       )
     } else {
-      Alert.alert(DAY_FULL[dayNum - 1], 'Välj åtgärd', [
+      Alert.alert(t(DAY_FULL[dayNum - 1]), t('Välj åtgärd'), [
         ...daySessions.map(sess => ({
-          text: `Ta bort "${displayName(sess)}"`,
+          text: t('Ta bort "{name}"', { name: displayName(sess) }),
           style: 'destructive' as const,
           onPress: () => {
             if (userId) {
               deleteSessionWithSkips(userId, sess.id)
-                .catch(() => Alert.alert('Kunde inte ta bort passet', 'Kontrollera din anslutning och försök igen.'))
+                .catch(() => Alert.alert(t('Kunde inte ta bort passet'), t('Kontrollera din anslutning och försök igen.')))
                 .finally(() => loadData(userId!))
             }
           },
         })),
-        { text: '+ Nytt pass', onPress: () => openCreate(dayNum) },
-        { text: 'Avbryt', style: 'cancel' as const },
+        { text: t('+ Nytt pass'), onPress: () => openCreate(dayNum) },
+        { text: t('Avbryt'), style: 'cancel' as const },
       ])
     }
   }
@@ -302,7 +305,7 @@ export default function ManageSessionsScreen() {
     const newest = cardio.reduce((a, b) => (a.created_at > b.created_at ? a : b))
     const end = new Date(newest.created_at)
     end.setDate(end.getDate() + PLAN_WEEKS * 7)
-    return end.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
+    return end.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '')
   })()
 
   return (
@@ -314,7 +317,7 @@ export default function ManageSessionsScreen() {
           icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
           onPress={() => router.navigate('/(app)/add')} fallbackStyle={s.iconBtn}
         />
-        <Text style={s.title}>Veckoschema</Text>
+        <Text style={s.title}>{t('Veckoschema')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -325,16 +328,16 @@ export default function ManageSessionsScreen() {
           <Animated.View entering={FadeInDown.duration(350)} style={s.summaryRow}>
             <View style={s.summaryChip}>
               <Ionicons name="barbell-outline" size={13} color={ACCENT} />
-              <Text style={s.summaryText}>{totalSessions} pass</Text>
+              <Text style={s.summaryText}>{t('{n} pass', { n: totalSessions })}</Text>
             </View>
             <View style={s.summaryChip}>
               <Ionicons name="calendar-outline" size={13} color={ACCENT} />
-              <Text style={s.summaryText}>{scheduledDays} dagar/vecka</Text>
+              <Text style={s.summaryText}>{t('{n} dagar/vecka', { n: scheduledDays })}</Text>
             </View>
             {planEndLabel && (
               <View style={[s.summaryChip, s.summaryChipBlue]}>
                 <Ionicons name="flag-outline" size={13} color={CARDIO_BLUE} />
-                <Text style={[s.summaryText, { color: CARDIO_BLUE }]}>Löpplan till {planEndLabel}</Text>
+                <Text style={[s.summaryText, { color: CARDIO_BLUE }]}>{t('Löpplan till {date}', { date: planEndLabel })}</Text>
               </View>
             )}
           </Animated.View>
@@ -352,8 +355,8 @@ export default function ManageSessionsScreen() {
                 <Ionicons name="calendar" size={22} color="#000" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.ctaTitle}>Inget schema ännu</Text>
-                <Text style={s.ctaSub}>Tryck för att skapa ett anpassat träningsschema</Text>
+                <Text style={s.ctaTitle}>{t('Inget schema ännu')}</Text>
+                <Text style={s.ctaSub}>{t('Tryck för att skapa ett anpassat träningsschema')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#000" />
             </TouchableOpacity>
@@ -379,7 +382,7 @@ export default function ManageSessionsScreen() {
           ))}
         </View>
 
-        <Text style={s.hint}>Tryck på en dag för att redigera · Håll in för att ta bort</Text>
+        <Text style={s.hint}>{t('Tryck på en dag för att redigera · Håll in för att ta bort')}</Text>
 
       </ScrollView>
 
@@ -405,9 +408,9 @@ export default function ManageSessionsScreen() {
             await deleteRepeatingSessions(userId)
             const count = await generateScheduleFromWizard(userId, result)
             await loadData(userId)
-            Alert.alert('Schema skapat', `${count} pass har lagts till i ditt veckoschema.`)
+            Alert.alert(t('Schema skapat'), t('{count} pass har lagts till i ditt veckoschema.', { count }))
           } catch (e: any) {
-            Alert.alert('Kunde inte skapa schemat', e.message)
+            Alert.alert(t('Kunde inte skapa schemat'), e.message)
           }
         }}
       />

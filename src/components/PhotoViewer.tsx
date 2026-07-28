@@ -8,6 +8,7 @@ import { Ionicons } from '@/components/Icon'
 import { RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI } from '@/lib/theme'
 import { GlassCircleButton } from '@/components/GlassButton'
 import type { ProgressPhotoItem } from '@/services/progressPhotos'
+import { useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // FOTOVISAREN — fullskärm över dagboken: svep i sidled mellan foton,
@@ -17,7 +18,7 @@ import type { ProgressPhotoItem } from '@/services/progressPhotos'
 const SCREEN_W = Dimensions.get('window').width
 
 function fmtDate(createdAt: string): string {
-  return new Date(createdAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(createdAt).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 export function PhotoViewer({ photos, initialIndex, onClose, onDelete }: {
@@ -27,6 +28,7 @@ export function PhotoViewer({ photos, initialIndex, onClose, onDelete }: {
   onClose: () => void
   onDelete: (photo: ProgressPhotoItem) => void
 }) {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const [index, setIndex] = useState(0)
   const listRef = useRef<FlatList<ProgressPhotoItem>>(null)
@@ -48,10 +50,10 @@ export function PhotoViewer({ photos, initialIndex, onClose, onDelete }: {
 
   function confirmDelete() {
     if (!current) return
-    Alert.alert('Vill du verkligen ta bort?', 'Fotot och texten tas bort permanent. Det går inte att ångra.', [
-      { text: 'Avbryt', style: 'cancel' },
+    Alert.alert(t('Vill du verkligen ta bort?'), t('Fotot och texten tas bort permanent. Det går inte att ångra.'), [
+      { text: t('Avbryt'), style: 'cancel' },
       {
-        text: 'Ta bort', style: 'destructive',
+        text: t('Ta bort'), style: 'destructive',
         onPress: () => {
           onDelete(current)
           if (photos.length <= 1) onClose()
@@ -95,7 +97,7 @@ export function PhotoViewer({ photos, initialIndex, onClose, onDelete }: {
           <GlassCircleButton icon="chevron-back" onPress={onClose} />
           {current && (
             <Text style={s.topTitle}>
-              Dag <Text style={s.topTitleNum}>{current.dayNumber}</Text>
+              {t('Dag')} <Text style={s.topTitleNum}>{current.dayNumber}</Text>
             </Text>
           )}
           <GlassCircleButton icon="trash-outline" iconColor={RED} onPress={confirmDelete} />
@@ -107,7 +109,7 @@ export function PhotoViewer({ photos, initialIndex, onClose, onDelete }: {
             {!!current.caption && <Text style={s.caption}>{current.caption}</Text>}
             <Text style={s.date}>
               {fmtDate(current.createdAt)}
-              {photos.length > 1 ? `  ·  ${index + 1} av ${photos.length}` : ''}
+              {photos.length > 1 ? `  ·  ${t('{a} av {b}', { a: index + 1, b: photos.length })}` : ''}
             </Text>
           </View>
         )}

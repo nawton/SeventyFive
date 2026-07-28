@@ -29,6 +29,7 @@ import {
 } from '@/lib/units'
 import { getVoiceCues, setVoiceCues, getCardioGoal, setCardioGoal, getBodyWeightKg, setBodyWeightKg } from '@/lib/prefs'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT, dateLocale } from '@/lib/i18n'
 
 const SCREEN_W    = Dimensions.get('window').width
 const GOAL_PAGE_W = SCREEN_W - 40   // scrollens padding är 20 per sida
@@ -107,6 +108,7 @@ function fmtTime(secs: number): string {
 }
 
 export default function CardioSessionScreen() {
+  const t = useT()
   const params = useLocalSearchParams<{
     sessionId?: string
     name?: string
@@ -186,7 +188,7 @@ export default function CardioSessionScreen() {
   }, [type])
 
   const dateLabel = params.date
-    ? parseLocalDate(params.date).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
+    ? parseLocalDate(params.date).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })
     : null
 
   // Förval i visningsenheten
@@ -235,10 +237,10 @@ export default function CardioSessionScreen() {
           <View style={s.heroIcon}>
             <Ionicons name={meta.icon} size={34} color={CARDIO_BLUE} />
           </View>
-          <Text style={s.heroTitle}>{params.name ?? meta.label}</Text>
+          <Text style={s.heroTitle}>{t(params.name ?? meta.label)}</Text>
           <View style={s.heroMetaRow}>
             <View style={s.typePill}>
-              <Text style={s.typePillText}>{meta.label.toUpperCase()}</Text>
+              <Text style={s.typePillText}>{t(meta.label).toUpperCase()}</Text>
             </View>
             {!!params.notes && <Text style={s.heroNotes}>{params.notes}</Text>}
           </View>
@@ -246,8 +248,8 @@ export default function CardioSessionScreen() {
 
         {/* ── Mål för passet: en tile i taget, svep mellan distans och tid ── */}
         <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>MÅL FÖR PASSET</Text>
-          <Text style={s.sectionOptional}>Valfritt</Text>
+          <Text style={s.sectionTitle}>{t('MÅL FÖR PASSET')}</Text>
+          <Text style={s.sectionOptional}>{t('Valfritt')}</Text>
         </View>
         <GHScrollView
           horizontal
@@ -261,7 +263,7 @@ export default function CardioSessionScreen() {
           contentContainerStyle={{ paddingHorizontal: 20, gap: GOAL_GAP }}
         >
           <View style={[s.goalTile, { width: GOAL_PAGE_W }, goalKm > 0 && s.goalTileActive]}>
-            <Text style={s.goalTileLabel}>DISTANS</Text>
+            <Text style={s.goalTileLabel}>{t('DISTANS')}</Text>
             <TouchableOpacity onPress={() => openEdit('dist')} activeOpacity={0.7}>
               <Text style={[s.goalTileValue, goalKm > 0 && { color: CARDIO_BLUE }]}>
                 {goalDist > 0 ? goalDist.toFixed(1).replace('.', ',') : '0'}
@@ -291,7 +293,7 @@ export default function CardioSessionScreen() {
                 activeOpacity={0.75}
               >
                 <Ionicons name="pencil" size={11} color={CARDIO_BLUE} />
-                <Text style={[s.presetText, { color: CARDIO_BLUE }]}>Egen</Text>
+                <Text style={[s.presetText, { color: CARDIO_BLUE }]}>{t('Egen')}</Text>
               </TouchableOpacity>
             </View>
             <GoalSlider
@@ -304,7 +306,7 @@ export default function CardioSessionScreen() {
           </View>
 
           <View style={[s.goalTile, { width: GOAL_PAGE_W }, goalMin > 0 && s.goalTileActive]}>
-            <Text style={s.goalTileLabel}>TID</Text>
+            <Text style={s.goalTileLabel}>{t('TID')}</Text>
             <TouchableOpacity onPress={() => openEdit('time')} activeOpacity={0.7}>
               <Text style={[s.goalTileValue, goalMin > 0 && { color: CARDIO_BLUE }]}>
                 {goalMin > 0 ? goalMin : '0'}
@@ -328,7 +330,7 @@ export default function CardioSessionScreen() {
                 activeOpacity={0.75}
               >
                 <Ionicons name="pencil" size={11} color={CARDIO_BLUE} />
-                <Text style={[s.presetText, { color: CARDIO_BLUE }]}>Egen</Text>
+                <Text style={[s.presetText, { color: CARDIO_BLUE }]}>{t('Egen')}</Text>
               </TouchableOpacity>
             </View>
             <GoalSlider value={goalMin} max={90} step={5} onChange={setGoalMin} gestureRef={minSliderRef} />
@@ -343,7 +345,7 @@ export default function CardioSessionScreen() {
         </View>
 
         {/* ── Senast ── */}
-        <Text style={s.sectionTitle}>SENAST DU {meta.label === 'Cykling' ? 'CYKLADE' : meta.label === 'Promenad' ? 'PROMENERADE' : 'SPRANG'}</Text>
+        <Text style={s.sectionTitle}>{t('SENAST DU {verb}', { verb: meta.label === 'Cykling' ? t('CYKLADE') : meta.label === 'Promenad' ? t('PROMENERADE') : t('SPRANG') })}</Text>
         <View style={s.card}>
           {last ? (
             <View style={s.lastRow}>
@@ -354,7 +356,7 @@ export default function CardioSessionScreen() {
               <View style={s.lastDivider} />
               <View style={s.lastStat}>
                 <Text style={s.lastValue}>{fmtTime(last.data.duration_seconds)}</Text>
-                <Text style={s.lastLabel}>tid</Text>
+                <Text style={s.lastLabel}>{t('tid')}</Text>
               </View>
               <View style={s.lastDivider} />
               <View style={s.lastStat}>
@@ -363,18 +365,18 @@ export default function CardioSessionScreen() {
                     ? fmtTime(Math.round(paceForUnit(last.data.duration_seconds / last.data.distance_km, unit)))
                     : '--:--'}
                 </Text>
-                <Text style={s.lastLabel}>/{unitLabel}</Text>
+                <Text style={s.lastLabel}>{t('/{unit}', { unit: unitLabel })}</Text>
               </View>
             </View>
           ) : (
-            <Text style={s.lastEmpty}>Inget tidigare pass av den här typen. Dags att sätta ribban!</Text>
+            <Text style={s.lastEmpty}>{t('Inget tidigare pass av den här typen. Dags att sätta ribban!')}</Text>
           )}
         </View>
 
         {/* ── Poäng-hint ── */}
         <View style={s.pointsRow}>
           <Ionicons name="star-outline" size={14} color={CARDIO_BLUE} />
-          <Text style={s.pointsText}>GPS-spårat pass ger 30 p · max 1 per dag</Text>
+          <Text style={s.pointsText}>{t('GPS-spårat pass ger 30 p · max 1 per dag')}</Text>
         </View>
 
       </ScrollView>
@@ -384,12 +386,12 @@ export default function CardioSessionScreen() {
         <KeyboardAvoidingView style={s.editBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditTarget(null)} />
           <View style={s.editCard}>
-            <Text style={s.editTitle}>{editTarget === 'dist' ? `Distans (${unitLabel})` : 'Tid (min)'}</Text>
+            <Text style={s.editTitle}>{editTarget === 'dist' ? t('Distans ({unit})', { unit: unitLabel }) : t('Tid (min)')}</Text>
             <AppTextInput
               style={s.editInput}
               value={editValue}
               onChangeText={setEditValue}
-              placeholder={editTarget === 'dist' ? `t.ex. 7,5` : 't.ex. 45'}
+              placeholder={editTarget === 'dist' ? t('t.ex. 7,5') : t('t.ex. 45')}
               placeholderTextColor={TEXT_SECONDARY}
               keyboardType="decimal-pad"
               returnKeyType="done"
@@ -402,10 +404,10 @@ export default function CardioSessionScreen() {
                 onPress={() => { setEditValue(''); Haptics.selectionAsync() }}
                 activeOpacity={0.75}
               >
-                <Text style={s.editClearText}>Rensa</Text>
+                <Text style={s.editClearText}>{t('Rensa')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.editSaveBtn} onPress={saveEdit} activeOpacity={0.85}>
-                <Text style={s.editSaveText}>Spara</Text>
+                <Text style={s.editSaveText}>{t('Spara')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -416,9 +418,9 @@ export default function CardioSessionScreen() {
       <Modal visible={settingsOpen} transparent animationType="fade" onRequestClose={() => setSettingsOpen(false)}>
         <Pressable style={s.editBackdrop} onPress={() => setSettingsOpen(false)}>
           <Pressable style={s.editCard} onPress={() => {}}>
-            <Text style={s.editTitle}>Inställningar</Text>
+            <Text style={s.editTitle}>{t('Inställningar')}</Text>
 
-            <Text style={s.settingLabel}>ENHET</Text>
+            <Text style={s.settingLabel}>{t('ENHET')}</Text>
             <View style={s.unitRow}>
               {([['metric', 'Kilometer'], ['imperial', 'Miles']] as const).map(([key, label]) => (
                 <TouchableOpacity
@@ -427,12 +429,12 @@ export default function CardioSessionScreen() {
                   onPress={() => chooseUnit(key)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[s.unitBtnText, unit === key && s.unitBtnTextActive]}>{label}</Text>
+                  <Text style={[s.unitBtnText, unit === key && s.unitBtnTextActive]}>{t(label)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={s.settingLabel}>RÖSTGUIDNING</Text>
+            <Text style={s.settingLabel}>{t('RÖSTGUIDNING')}</Text>
             <View style={s.unitRow}>
               {([[true, 'På'], [false, 'Av']] as const).map(([key, label]) => (
                 <TouchableOpacity
@@ -446,12 +448,12 @@ export default function CardioSessionScreen() {
                     size={15}
                     color={voiceOn === key ? CARDIO_BLUE : TEXT_SECONDARY}
                   />
-                  <Text style={[s.unitBtnText, voiceOn === key && s.unitBtnTextActive]}>{label}</Text>
+                  <Text style={[s.unitBtnText, voiceOn === key && s.unitBtnTextActive]}>{t(label)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={s.settingLabel}>VIKT, FÖR KALORIBERÄKNINGEN</Text>
+            <Text style={s.settingLabel}>{t('VIKT, FÖR KALORIBERÄKNINGEN')}</Text>
             <View style={s.weightRow}>
               <AppTextInput
                 style={s.weightInput}
@@ -475,7 +477,7 @@ export default function CardioSessionScreen() {
               activeOpacity={0.85}
             >
               <Ionicons name="checkmark" size={17} color="#fff" />
-              <Text style={s.editSaveText}>Spara</Text>
+              <Text style={s.editSaveText}>{t('Spara')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -485,7 +487,7 @@ export default function CardioSessionScreen() {
       <View style={s.startWrap} pointerEvents="box-none">
         <TouchableOpacity style={s.startBtn} onPress={handleStart} activeOpacity={0.9}>
           <Ionicons name="play" size={18} color="#fff" />
-          <Text style={s.startBtnText}>Starta {meta.label.toLowerCase()}</Text>
+          <Text style={s.startBtnText}>{t('Starta {activity}', { activity: t(meta.label).toLowerCase() })}</Text>
         </TouchableOpacity>
       </View>
     </SafeScreen>

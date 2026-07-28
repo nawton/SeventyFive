@@ -1,6 +1,7 @@
 import { Linking } from 'react-native'
 import * as Speech from 'expo-speech'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { t, getLanguage } from '@/lib/i18n'
 
 // =============================================================================
 // Coachrösten. iOS standardröst är kompaktvarianten (robotig) — här listas
@@ -31,7 +32,7 @@ export function voiceDisplayName(v: CoachVoice): string {
 
 export function voiceQualityLabel(v: CoachVoice): string {
   const r = rank(v)
-  return r === 2 ? 'Premium' : r === 1 ? 'Förbättrad' : 'Standard'
+  return r === 2 ? t('Premium') : r === 1 ? t('Förbättrad') : t('Standard')
 }
 
 /** Direkt till iOS röstinställningar — privata schemat funkar på de flesta
@@ -78,8 +79,8 @@ export function setCoachVoiceId(id: string): void {
 
 export function previewVoice(id: string): void {
   Speech.stop()
-  Speech.speak('Så här låter jag. En kilometer avklarad, håll tempot!', {
-    language: 'sv-SE',
+  Speech.speak(t('Så här låter jag. En kilometer avklarad, håll tempot!'), {
+    language: getLanguage() === 'en' ? 'en-US' : 'sv-SE',
     voice: id,
   })
 }

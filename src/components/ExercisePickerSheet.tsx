@@ -7,6 +7,7 @@ import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
+import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 import { CATEGORY_LABELS, type Exercise } from '@/services/exercises'
 import { getExerciseMuscleGroup, type Slug } from '@/lib/muscles'
@@ -59,6 +60,7 @@ export function ExercisePickerSheet({
   multiSelect?: boolean
   onConfirmMulti?: (exs: Exercise[]) => void
 }) {
+  const t = useT()
   const insets = useSafeAreaInsets()
   // Gym-pass startar direkt på muskelgrupperna; annars på typvalet
   const startPage: Page = gymOnly ? 'gym' : 'landing'
@@ -143,13 +145,13 @@ export function ExercisePickerSheet({
     ? groupExercises.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
     : groupExercises
 
-  const gymGroupLabel = GYM_GROUPS.find(g => g.key === selectedGroup)?.label ?? ''
+  const gymGroupLabel = t(GYM_GROUPS.find(g => g.key === selectedGroup)?.label ?? '')
   // I gym-only-läget är gym-sidan roten → visa stäng-ikon, inte bakåtpil
   const showBack      = page !== 'landing' && !(gymOnly && page === 'gym')
-  const headerTitle   = page === 'gym' ? (gymOnly ? 'Lägg till övning' : 'Gym')
-    : page === 'cardio'    ? 'Cardio'
+  const headerTitle   = page === 'gym' ? (gymOnly ? t('Lägg till övning') : t('Gym'))
+    : page === 'cardio'    ? t('Cardio')
     : page === 'exercises' ? gymGroupLabel
-    : 'Lägg till övning'
+    : t('Lägg till övning')
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
@@ -173,22 +175,22 @@ export function ExercisePickerSheet({
         {/* ── LANDING ─────────────────────────────────────────────── */}
         {page === 'landing' && (
           <View style={s.landingContainer}>
-            <Text style={s.landingSub}>Välj typ av övning</Text>
+            <Text style={s.landingSub}>{t('Välj typ av övning')}</Text>
             <View style={s.landingCards}>
               <TouchableOpacity style={s.landingCard} onPress={() => setPage('gym')} activeOpacity={0.8}>
                 <View style={[s.landingIcon, { backgroundColor: 'rgba(255,149,0,0.18)' }]}>
                   <Ionicons name="barbell" size={44} color={ACCENT} />
                 </View>
-                <Text style={s.landingCardTitle}>Gym</Text>
-                <Text style={s.landingCardSub}>Styrketräning</Text>
+                <Text style={s.landingCardTitle}>{t('Gym')}</Text>
+                <Text style={s.landingCardSub}>{t('Styrketräning')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={s.landingCard} onPress={() => setPage('cardio')} activeOpacity={0.8}>
                 <View style={[s.landingIcon, { backgroundColor: 'rgba(52,199,89,0.18)' }]}>
                   <Ionicons name="heart" size={44} color="#34C759" />
                 </View>
-                <Text style={s.landingCardTitle}>Cardio</Text>
-                <Text style={s.landingCardSub}>Kondition & rörlighet</Text>
+                <Text style={s.landingCardTitle}>{t('Cardio')}</Text>
+                <Text style={s.landingCardSub}>{t('Kondition & rörlighet')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -215,8 +217,8 @@ export function ExercisePickerSheet({
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.groupLabel}>{group.label}</Text>
-                  <Text style={s.groupCount}>{gymGroupCount(group.key)} övningar</Text>
+                  <Text style={s.groupLabel}>{t(group.label)}</Text>
+                  <Text style={s.groupCount}>{t('{n} övningar', { n: gymGroupCount(group.key) })}</Text>
                 </View>
                 {multiSelect && multiSel.filter(e => getExerciseMuscleGroup(e.name) === group.key).length > 0 && (
                   <View style={s.groupSelBadge}>
@@ -237,7 +239,7 @@ export function ExercisePickerSheet({
               if (catExes.length === 0) return null
               return (
                 <View key={cat}>
-                  <Text style={s.sectionHeader}>{CATEGORY_LABELS[cat].toUpperCase()}</Text>
+                  <Text style={s.sectionHeader}>{t(CATEGORY_LABELS[cat]).toUpperCase()}</Text>
                   {catExes.map(ex => (
                     <TouchableOpacity key={ex.id} style={s.row} onPress={() => handleTap(ex)} activeOpacity={0.7}>
                       <View style={s.cardioIconBox}>
@@ -264,7 +266,7 @@ export function ExercisePickerSheet({
                 style={s.searchInput}
                 value={search}
                 onChangeText={setSearch}
-                placeholder="Sök övning…"
+                placeholder={t('Sök övning…')}
                 placeholderTextColor={TEXT_SECONDARY}
                 autoCorrect={false}
                 autoCapitalize="none"
@@ -299,7 +301,7 @@ export function ExercisePickerSheet({
                 )
               })}
               {filteredExercises.length === 0 && (
-                <Text style={s.emptyText}>Inga övningar hittades</Text>
+                <Text style={s.emptyText}>{t('Inga övningar hittades')}</Text>
               )}
             </ScrollView>
           </>
@@ -311,7 +313,7 @@ export function ExercisePickerSheet({
             <TouchableOpacity style={s.multiBtn} onPress={confirmMulti} activeOpacity={0.85}>
               <Ionicons name="checkmark" size={20} color="#000" />
               <Text style={s.multiBtnText}>
-                Klar · {multiSel.length} {multiSel.length === 1 ? 'övning' : 'övningar'}
+                {t('Klar · {n} {unit}', { n: multiSel.length, unit: multiSel.length === 1 ? t('övning') : t('övningar') })}
               </Text>
             </TouchableOpacity>
           </View>
@@ -332,10 +334,10 @@ export function ExercisePickerSheet({
             <View style={[s.promptSheet, { paddingBottom: insets.bottom + 20 }]}>
               <View style={s.promptHandle} />
               <Text style={s.promptTitle} numberOfLines={1}>{pendingEx.name}</Text>
-              <Text style={s.promptSub}>Ange set och reps för passet</Text>
+              <Text style={s.promptSub}>{t('Ange set och reps för passet')}</Text>
               <View style={s.promptFields}>
                 <View style={s.promptField}>
-                  <Text style={s.promptLabel}>SET</Text>
+                  <Text style={s.promptLabel}>{t('SET')}</Text>
                   <AppTextInput
                     style={s.promptInput}
                     value={sets}
@@ -348,7 +350,7 @@ export function ExercisePickerSheet({
                 </View>
                 <View style={s.promptDivider} />
                 <View style={s.promptField}>
-                  <Text style={s.promptLabel}>REPS</Text>
+                  <Text style={s.promptLabel}>{t('REPS')}</Text>
                   <AppTextInput
                     style={s.promptInput}
                     value={reps}
@@ -361,7 +363,7 @@ export function ExercisePickerSheet({
                 </View>
               </View>
               <TouchableOpacity style={s.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
-                <Text style={s.confirmBtnText}>Lägg till i pass</Text>
+                <Text style={s.confirmBtnText}>{t('Lägg till i pass')}</Text>
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>

@@ -13,6 +13,7 @@ import {
   getSubscription, isPremium, startCheckout, openBillingPortal,
   FREE_SUBSCRIPTION, type Subscription,
 } from '@/services/subscription'
+import { useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // PREMIUM — paywallen. Lugn, luftig och centrerad (Runna-känslan): krona,
@@ -22,10 +23,11 @@ import {
 
 function fmtDate(iso: string | null): string {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
+  return new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' })
 }
 
 export default function PremiumScreen() {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const [sub, setSub] = useState<Subscription | null>(null)
   const [firstName, setFirstName] = useState('')
@@ -55,7 +57,7 @@ export default function PremiumScreen() {
       await startCheckout(plan)
       reload()
     } catch (e) {
-      Alert.alert('Kunde inte starta betalningen', (e as Error).message)
+      Alert.alert(t('Kunde inte starta betalningen'), (e as Error).message)
     } finally {
       setBusy(false)
     }
@@ -68,7 +70,7 @@ export default function PremiumScreen() {
       await openBillingPortal()
       reload()
     } catch (e) {
-      Alert.alert('Kunde inte öppna kundportalen', (e as Error).message)
+      Alert.alert(t('Kunde inte öppna kundportalen'), (e as Error).message)
     } finally {
       setBusy(false)
     }
@@ -102,11 +104,11 @@ export default function PremiumScreen() {
           <ActivityIndicator color={MINT} style={{ marginTop: 40 }} />
         ) : premium ? (
           <>
-            <Text style={s.title}>Du har Premium</Text>
+            <Text style={s.title}>{t('Du har Premium')}</Text>
             <Text style={s.subtitle}>
               {sub.cancel_at_period_end
-                ? `Avslutas ${fmtDate(sub.current_period_end)}, förnyas inte`
-                : `Förnyas ${fmtDate(sub.current_period_end)}`}
+                ? t('Avslutas {date}, förnyas inte', { date: fmtDate(sub.current_period_end) })
+                : t('Förnyas {date}', { date: fmtDate(sub.current_period_end) })}
             </Text>
 
             <View style={s.benefits}>
@@ -115,15 +117,15 @@ export default function PremiumScreen() {
                   <View style={s.checkCircle}>
                     <Ionicons name="checkmark" size={14} color={GREEN} />
                   </View>
-                  <Text style={s.benefitText}>{b}</Text>
+                  <Text style={s.benefitText}>{t(b)}</Text>
                 </View>
               ))}
             </View>
           </>
         ) : (
           <>
-            <Text style={s.title}>Lås upp din{'\n'}personliga träningsplan</Text>
-            <Text style={s.subtitle}>{firstName ? `${firstName}, kom igång idag` : 'Kom igång idag'}</Text>
+            <Text style={s.title}>{t('Lås upp din')}{'\n'}{t('personliga träningsplan')}</Text>
+            <Text style={s.subtitle}>{firstName ? t('{name}, kom igång idag', { name: firstName }) : t('Kom igång idag')}</Text>
 
             <View style={s.benefits}>
               {PREMIUM_BENEFITS.map(b => (
@@ -131,7 +133,7 @@ export default function PremiumScreen() {
                   <View style={s.checkCircle}>
                     <Ionicons name="checkmark" size={14} color={GREEN} />
                   </View>
-                  <Text style={s.benefitText}>{b}</Text>
+                  <Text style={s.benefitText}>{t(b)}</Text>
                 </View>
               ))}
             </View>
@@ -148,10 +150,10 @@ export default function PremiumScreen() {
                     activeOpacity={0.85}
                   >
                     <View style={s.planHead}>
-                      <Text style={s.planTitle}>{p.title}</Text>
+                      <Text style={s.planTitle}>{t(p.title)}</Text>
                       {p.badge && (
                         <View style={s.saveBadge}>
-                          <Text style={s.saveBadgeText}>{p.badge}</Text>
+                          <Text style={s.saveBadgeText}>{t(p.badge)}</Text>
                         </View>
                       )}
                     </View>
@@ -178,12 +180,12 @@ export default function PremiumScreen() {
           >
             {busy
               ? <ActivityIndicator color="#04211C" />
-              : <Text style={s.ctaText}>{premium ? 'Hantera abonnemang' : 'Kom igång nu'}</Text>}
+              : <Text style={s.ctaText}>{premium ? t('Hantera abonnemang') : t('Kom igång nu')}</Text>}
           </TouchableOpacity>
           <Text style={s.footerNote}>
             {premium
-              ? 'Byt kort, se kvitton eller säg upp, via Stripe'
-              : 'Avsluta när du vill, hanteras säkert av Stripe'}
+              ? t('Byt kort, se kvitton eller säg upp, via Stripe')
+              : t('Avsluta när du vill, hanteras säkert av Stripe')}
           </Text>
         </View>
       )}

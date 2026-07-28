@@ -6,6 +6,7 @@ import { useColorScheme } from 'react-native'
 import { BG, CARD, BORDER, ORANGE, ACCENT, ACCENT_CONTRAST, DIVIDER, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI } from '@/lib/theme'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { t, dateLocale } from '@/lib/i18n'
 
 export const GRID_PADDING = 20
 export const STATS_SCREEN_W = Dimensions.get('window').width
@@ -37,11 +38,11 @@ export function getWeekBounds(offset: number): { start: string; end: string; lab
   mon.setDate(mon.getDate() + offset * 7)
   const sun = new Date(mon)
   sun.setDate(mon.getDate() + 6)
-  const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
+  const fmt = (d: Date) => d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })
   return {
     start: toLocalDateString(mon),
     end:   toLocalDateString(sun),
-    label: offset === 0 ? 'Denna vecka' : `${fmt(mon)} till ${fmt(sun)}`,
+    label: offset === 0 ? t('Denna vecka') : t('{a} till {b}', { a: fmt(mon), b: fmt(sun) }),
   }
 }
 
@@ -62,22 +63,22 @@ function nextMilestone(completed: number): { day: number; label: string; daysLef
   ]
   const next = stones.find(s => s.day > completed)
   if (!next) return null
-  return { ...next, daysLeft: next.day - completed }
+  return { ...next, label: t(next.label), daysLeft: next.day - completed }
 }
 
 export function monthLabel(dateStr: string): string {
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' })
 }
 
 /** "idag", "igår", veckodag inom en vecka, annars datumet */
 export function sessDateLabel(dateStr: string): string {
   const today = toLocalDateString()
-  if (dateStr === today) return 'idag'
+  if (dateStr === today) return t('idag')
   const diff = Math.round(
     (new Date(today + 'T12:00:00').getTime() - new Date(dateStr + 'T12:00:00').getTime()) / 86400000,
   )
-  if (diff === 1) return 'igår'
-  if (diff > 1 && diff < 7) return new Date(dateStr + 'T12:00:00').toLocaleDateString('sv-SE', { weekday: 'long' })
+  if (diff === 1) return t('igår')
+  if (diff > 1 && diff < 7) return new Date(dateStr + 'T12:00:00').toLocaleDateString(dateLocale(), { weekday: 'long' })
   return dateStr
 }
 

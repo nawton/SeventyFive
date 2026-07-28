@@ -15,6 +15,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 
 
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, ACCENT_CONTRAST, CARD_BORDER } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT } from '@/lib/i18n'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,7 @@ interface Props {
 // tillbaka under tröskeln och stängs förbi den. Fälten sköter tangentbordet.
 
 export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props) {
+  const t = useT()
   const [book, setBook] = useState('')
   const [pages, setPages] = useState('')
   const [saving, setSaving] = useState(false)
@@ -87,20 +89,20 @@ export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props
                 <View>
                   <View style={styles.handle} />
                   <Text style={styles.emoji}>📖</Text>
-                  <Text style={styles.title}>Logga läsning</Text>
+                  <Text style={styles.title}>{t('Logga läsning')}</Text>
                   <Text style={styles.subtitle}>
                     {targetPages
-                      ? `Minst ${targetPages} sidor i en riktig bok, inte poddar eller artiklar.`
-                      : 'Vad läste du idag?'}
+                      ? t('Minst {n} sidor i en riktig bok, inte poddar eller artiklar.', { n: targetPages })
+                      : t('Vad läste du idag?')}
                   </Text>
                 </View>
               </GestureDetector>
 
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>BOK</Text>
+                <Text style={styles.fieldLabel}>{t('BOK')}</Text>
                 <AppTextInput
                   style={styles.input}
-                  placeholder="Boktitel (valfritt)"
+                  placeholder={t('Boktitel (valfritt)')}
                   value={book}
                   onChangeText={setBook}
                   returnKeyType="next"
@@ -108,7 +110,7 @@ export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props
               </View>
 
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>SIDOR</Text>
+                <Text style={styles.fieldLabel}>{t('SIDOR')}</Text>
                 <AppTextInput
                   style={styles.input}
                   placeholder={targetPages ? String(targetPages) : '10'}
@@ -127,12 +129,12 @@ export function ReadingLogModal({ visible, targetPages, onClose, onSave }: Props
               >
                 {saving
                   ? <ActivityIndicator color="#000" />
-                  : <Text style={styles.saveButtonText}>Markera som läst</Text>
+                  : <Text style={styles.saveButtonText}>{t('Markera som läst')}</Text>
                 }
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={saving}>
-                <Text style={styles.cancelText}>Avbryt</Text>
+                <Text style={styles.cancelText}>{t('Avbryt')}</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

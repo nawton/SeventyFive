@@ -8,6 +8,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
+import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT_SEMI, CARDIO_BLUE, useThemeStrings, ACCENT } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import { planEndDateStr, type WorkoutSession } from '@/services/workoutSchedule'
@@ -142,6 +143,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
   /** Tävlingsdatum — cardio-planen slutar dagen efter loppet */
   raceDate:         string | null
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -419,7 +421,7 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
         <TouchableOpacity onPress={prevMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="chevron-back" size={18} color={TEXT_SECONDARY} />
         </TouchableOpacity>
-        <Text style={s.monthTitle}>{MONTH_NAMES[viewMonth]} {viewYear}</Text>
+        <Text style={s.monthTitle}>{t(MONTH_NAMES[viewMonth])} {viewYear}</Text>
         <TouchableOpacity onPress={nextMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
         </TouchableOpacity>
@@ -457,11 +459,11 @@ export const CollapsibleCalendar = memo(function CollapsibleCalendar({
       <Animated.View style={[s.legend, legendStyle]}>
         <View style={s.legendItem}>
           <View style={[s.dot, { backgroundColor: ACCENT }]} />
-          <Text style={s.legendText}>Gym</Text>
+          <Text style={s.legendText}>{t('Gym')}</Text>
         </View>
         <View style={s.legendItem}>
           <View style={[s.dot, { backgroundColor: CARDIO_BLUE }]} />
-          <Text style={s.legendText}>Kondition</Text>
+          <Text style={s.legendText}>{t('Kondition')}</Text>
         </View>
       </Animated.View>
 

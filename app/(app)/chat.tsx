@@ -25,6 +25,7 @@ import {
 import { blockUser } from '@/services/blocks'
 import { promptReport } from '@/lib/report'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
+import { useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // CHATT, tråden med EN person: bubblor (egna i accent till höger, deras
@@ -33,9 +34,10 @@ import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/t
 // =============================================================================
 
 export default function ChatScreen() {
+  const t = useT()
   const params = useLocalSearchParams<{ userId?: string; name?: string; avatar?: string }>()
   const otherId = typeof params.userId === 'string' ? params.userId : null
-  const otherName = typeof params.name === 'string' && params.name ? params.name : 'Chatt'
+  const otherName = typeof params.name === 'string' && params.name ? params.name : t('Chatt')
   const otherAvatar = typeof params.avatar === 'string' && params.avatar ? params.avatar : null
   const T = useThemeStrings()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
@@ -104,8 +106,8 @@ export default function ChatScreen() {
     } catch {
       setMessages(prev => prev.filter(m => m.id !== temp.id))
       setDraft(body); setImageUri(image)
-      Alert.alert('Kunde inte skicka',
-        'Ni behöver följa varandra eller vara med i samma grupp för att skicka meddelanden.')
+      Alert.alert(t('Kunde inte skicka'),
+        t('Ni behöver följa varandra eller vara med i samma grupp för att skicka meddelanden.'))
     } finally {
       setSending(false)
     }
@@ -115,22 +117,22 @@ export default function ChatScreen() {
       innehållet visas */
   function chatMenu() {
     if (!otherId) return
-    const report = () => promptReport('user', otherId, `Anmäl ${otherName}`)
+    const report = () => promptReport('user', otherId, t('Anmäl {name}', { name: otherName }))
     const block = () => Alert.alert(
-      `Blockera ${otherName}?`,
-      'Ni kan inte längre se varandra, följa varandra eller skicka meddelanden.',
+      t('Blockera {name}?', { name: otherName }),
+      t('Ni kan inte längre se varandra, följa varandra eller skicka meddelanden.'),
       [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Blockera', style: 'destructive', onPress: () => {
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Blockera'), style: 'destructive', onPress: () => {
           blockUser(otherId).then(() => router.back()).catch(() =>
-            Alert.alert('Kunde inte blockera', 'Kontrollera anslutningen och försök igen.'))
+            Alert.alert(t('Kunde inte blockera'), t('Kontrollera anslutningen och försök igen.')))
         } },
       ],
     )
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Avbryt', 'Anmäl användaren', 'Blockera'],
+          options: [t('Avbryt'), t('Anmäl användaren'), t('Blockera')],
           cancelButtonIndex: 0,
           destructiveButtonIndex: 2,
         },
@@ -138,9 +140,9 @@ export default function ChatScreen() {
       )
     } else {
       Alert.alert(otherName, undefined, [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Anmäl användaren', onPress: report },
-        { text: 'Blockera', onPress: block },
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Anmäl användaren'), onPress: report },
+        { text: t('Blockera'), onPress: block },
       ])
     }
   }
@@ -263,7 +265,7 @@ export default function ChatScreen() {
                 {/* Tiden gömd utanför kanten — glider fram vid vänsterdrag */}
                 <View style={s.timeReveal} pointerEvents="none">
                   <Text style={s.timeRevealText}>
-                    {new Date(item.created_at).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(item.created_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                 </View>
               </Animated.View>
@@ -272,7 +274,7 @@ export default function ChatScreen() {
           ListEmptyComponent={
             <View style={s.emptyFlip}>
               <Text style={s.emptyText}>
-                Inga meddelanden ännu, säg hej till {otherName.split(' ')[0]}!
+                {t('Inga meddelanden ännu, säg hej till {name}!', { name: otherName.split(' ')[0] })}
               </Text>
             </View>
           }
@@ -294,8 +296,8 @@ export default function ChatScreen() {
           <AppTextInput
             style={s.input}
             value={draft}
-            onChangeText={t => setDraft(t.slice(0, 2000))}
-            placeholder="Skriv ett meddelande…"
+            onChangeText={v => setDraft(v.slice(0, 2000))}
+            placeholder={t('Skriv ett meddelande…')}
             multiline
             testID="chatDraft"
           />
@@ -331,7 +333,7 @@ export default function ChatScreen() {
             </View>
             {reactFor?.sender_id === me && (
               <TouchableOpacity onPress={deleteFromSheet} hitSlop={8} style={s.reactDelete} testID="reactDelete">
-                <Text style={s.reactDeleteText}>Radera meddelandet</Text>
+                <Text style={s.reactDeleteText}>{t('Radera meddelandet')}</Text>
               </TouchableOpacity>
             )}
           </View>

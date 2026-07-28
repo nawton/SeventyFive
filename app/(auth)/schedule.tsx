@@ -14,6 +14,7 @@ import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { saveSchedule, getSchedule } from '@/services/schedule'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,6 +127,7 @@ function TemplateCard({
   selected: boolean
   onSelect: () => void
 }) {
+  const t = useT()
   return (
     <TouchableOpacity
       style={[styles.templateCard, selected && styles.templateCardSelected]}
@@ -134,15 +136,15 @@ function TemplateCard({
     >
       {selected && <View style={styles.templateAccent} />}
       <Text style={[styles.templateName, selected && styles.templateNameSelected]}>
-        {template.name}
+        {t(template.name)}
       </Text>
       <Text style={styles.templateTagline} numberOfLines={2}>
-        {template.tagline}
+        {t(template.tagline)}
       </Text>
       <View style={styles.templateFooter}>
         <Ionicons name="sunny-outline" size={12} color={selected ? ACCENT : TEXT_SECONDARY} />
         <Text style={[styles.templateWake, selected && styles.templateWakeSelected]}>
-          {template.wakeLabel}
+          {t(template.wakeLabel)}
         </Text>
       </View>
     </TouchableOpacity>
@@ -221,6 +223,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 // Nås numera bara från Inställningar — onboardingen använder setup-schedule
 // (tiderna här kopplas till notiser när dev-builden är på plats)
 export default function ScheduleScreen() {
+  const t = useT()
   const defaultTpl = TEMPLATES[1] // Morgonkrigaren
   const [selectedTemplate, setSelectedTemplate] = useState<string>(defaultTpl.id)
   const [loading, setLoading] = useState(false)
@@ -296,7 +299,7 @@ export default function ScheduleScreen() {
 
       router.replace('/(app)/dashboard')
     } catch (e: any) {
-      Alert.alert('Något gick fel', e.message)
+      Alert.alert(t('Något gick fel'), e.message)
     } finally {
       setSaving(false)
     }
@@ -318,16 +321,16 @@ export default function ScheduleScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.stepLabel}>DITT SCHEMA</Text>
-          <Text style={styles.title}>Bygg din dag</Text>
+          <Text style={styles.stepLabel}>{t('DITT SCHEMA')}</Text>
+          <Text style={styles.title}>{t('Bygg din dag')}</Text>
           <Text style={styles.subtitle}>
-            Välj en mall eller anpassa ditt eget schema. Du kan ändra när som helst.
+            {t('Välj en mall eller anpassa ditt eget schema. Du kan ändra när som helst.')}
           </Text>
         </View>
 
         {/* Template picker */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>VÄLJ MALL</Text>
+          <Text style={styles.sectionTitle}>{t('VÄLJ MALL')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -345,9 +348,9 @@ export default function ScheduleScreen() {
         </View>
 
         {/* Wake time */}
-        <SectionCard title="VÄCKNINGSTID">
+        <SectionCard title={t('VÄCKNINGSTID')}>
           <TimePicker
-            label="Jag vaknar"
+            label={t('Jag vaknar')}
             icon="sunny-outline"
             time={wakeTime}
             onChange={setWakeTime}
@@ -355,19 +358,19 @@ export default function ScheduleScreen() {
         </SectionCard>
 
         {/* Meals */}
-        <SectionCard title="MÅLTIDER">
-          <TimePicker label="Frukost" icon="cafe-outline"       time={breakfast} onChange={setBreakfast} />
+        <SectionCard title={t('MÅLTIDER')}>
+          <TimePicker label={t('Frukost')} icon="cafe-outline"       time={breakfast} onChange={setBreakfast} />
           <View style={styles.divider} />
-          <TimePicker label="Lunch"   icon="restaurant-outline" time={lunch}     onChange={setLunch} />
+          <TimePicker label={t('Lunch')}   icon="restaurant-outline" time={lunch}     onChange={setLunch} />
           <View style={styles.divider} />
-          <TimePicker label="Middag"  icon="moon-outline"       time={dinner}    onChange={setDinner} />
+          <TimePicker label={t('Middag')}  icon="moon-outline"       time={dinner}    onChange={setDinner} />
         </SectionCard>
 
         {/* Workouts */}
-        <SectionCard title="TRÄNINGSPASS">
-          <TimePicker label="Pass 1" icon="barbell-outline" time={workout1} onChange={setWorkout1} />
+        <SectionCard title={t('TRÄNINGSPASS')}>
+          <TimePicker label={t('Pass 1')} icon="barbell-outline" time={workout1} onChange={setWorkout1} />
           <View style={styles.divider} />
-          <TimePicker label="Pass 2" icon="barbell-outline" time={workout2} onChange={setWorkout2} />
+          <TimePicker label={t('Pass 2')} icon="barbell-outline" time={workout2} onChange={setWorkout2} />
         </SectionCard>
 
         {/* Actions */}
@@ -379,7 +382,7 @@ export default function ScheduleScreen() {
         >
           {saving
             ? <ActivityIndicator color="#000" />
-            : <Text style={styles.saveButtonText}>Spara schema</Text>
+            : <Text style={styles.saveButtonText}>{t('Spara schema')}</Text>
           }
         </TouchableOpacity>
 

@@ -8,6 +8,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
+import { t, useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // VOLYM I DETALJ — samma mönster som Distans-detaljvyn men för lyft volym:
@@ -51,8 +52,8 @@ function buildBuckets(workouts: StrengthWorkout[], res: Res, offset: number): Bu
       const key = toLocalDateString(d)
       return {
         key,
-        label: ['M', 'T', 'O', 'T', 'F', 'L', 'S'][i],
-        fullLabel: d.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' }),
+        label: t(['M', 'T', 'O', 'T', 'F', 'L', 'S'][i]),
+        fullLabel: d.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }),
         volume: 0, sets: 0, days: new Set<string>(),
         isCurrent: key === today,
       }
@@ -72,7 +73,7 @@ function buildBuckets(workouts: StrengthWorkout[], res: Res, offset: number): Bu
       return {
         key,
         label: String(wn),
-        fullLabel: `Vecka ${wn}`,
+        fullLabel: t('Vecka {n}', { n: wn }),
         volume: 0, sets: 0, days: new Set<string>(),
         isCurrent: key === thisMon,
       }
@@ -88,8 +89,8 @@ function buildBuckets(workouts: StrengthWorkout[], res: Res, offset: number): Bu
     const key = `${d.getFullYear()}-${d.getMonth()}`
     return {
       key,
-      label: d.toLocaleDateString('sv-SE', { month: 'short' }).replace('.', ''),
-      fullLabel: d.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' }),
+      label: d.toLocaleDateString(dateLocale(), { month: 'short' }).replace('.', ''),
+      fullLabel: d.toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' }),
       volume: 0, sets: 0, days: new Set<string>(),
       isCurrent: key === nowKey,
     }
@@ -103,22 +104,22 @@ function buildBuckets(workouts: StrengthWorkout[], res: Res, offset: number): Bu
 
 function pageLabel(res: Res, buckets: Bucket[], offset: number): string {
   if (res === 'day') {
-    if (offset === 0) return 'Denna vecka'
+    if (offset === 0) return t('Denna vecka')
     const first = parseLocalDate(buckets[0].key)
     const last  = parseLocalDate(buckets[6].key)
     const sameMonth = first.getMonth() === last.getMonth()
     const fmt = (d: Date, withMonth: boolean) =>
-      withMonth ? d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '') : String(d.getDate())
+      withMonth ? d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '') : String(d.getDate())
     return `${fmt(first, !sameMonth)}–${fmt(last, true)}`
   }
   const last = buckets[buckets.length - 1]
-  if (res === 'week') return `V${buckets[0].label} – V${last.label}`
+  if (res === 'week') return t('V{a} – V{b}', { a: buckets[0].label, b: last.label })
   const short = (b: Bucket) => b.fullLabel.replace(/^(\w{3})\w*/, '$1')
   return `${short(buckets[0])} – ${short(last)}`
 }
 
 function fmtKg(v: number): string {
-  return Math.round(v).toLocaleString('sv-SE')
+  return Math.round(v).toLocaleString(dateLocale())
 }
 
 export function VolumeDetailModal({ visible, onClose, workouts }: {
@@ -126,6 +127,7 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
   onClose: () => void
   workouts: StrengthWorkout[]
 }) {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const [res, setRes] = useState<Res>('day')
   const [offset, setOffset] = useState(0)
@@ -140,12 +142,12 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
   const best = buckets.reduce<Bucket | null>((b, x) => (x.volume > (b?.volume ?? 0) ? x : b), null)
 
   const shown = sel ?? {
-    fullLabel: 'Totalt',
+    fullLabel: t('Totalt'),
     volume: periodVolume,
     sets: periodSets,
   }
 
-  const resAvgLabel = res === 'day' ? 'Snitt per aktiv dag' : res === 'week' ? 'Snitt per aktiv vecka' : 'Snitt per aktiv månad'
+  const resAvgLabel = res === 'day' ? t('Snitt per aktiv dag') : res === 'week' ? t('Snitt per aktiv vecka') : t('Snitt per aktiv månad')
 
   function changeRes(r: Res) { setRes(r); setOffset(0); setSelKey(null) }
   function nav(dir: -1 | 1) { setOffset(o => Math.min(0, o + dir)); setSelKey(null) }
@@ -155,7 +157,7 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
       <View style={s.root}>
         <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
           <GlassCircleButton icon="chevron-back" onPress={onClose} />
-          <Text style={s.topTitle}>Volym</Text>
+          <Text style={s.topTitle}>{t('Volym')}</Text>
           <View style={{ width: 44 }} />
         </View>
 
@@ -163,9 +165,9 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
           <GlassSegment
             value={res}
             options={[
-              { key: 'day',   label: 'Dag' },
-              { key: 'week',  label: 'Vecka' },
-              { key: 'month', label: 'Månad' },
+              { key: 'day',   label: t('Dag') },
+              { key: 'week',  label: t('Vecka') },
+              { key: 'month', label: t('Månad') },
             ]}
             onChange={changeRes}
           />
@@ -244,7 +246,7 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
           </View>
 
           {/* Nyckeltal för sidan */}
-          <Text style={s.sectionHead}>Nyckeltal</Text>
+          <Text style={s.sectionHead}>{t('Nyckeltal')}</Text>
           <View style={s.card}>
             {([
               {
@@ -252,14 +254,14 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
                 value: activeCount > 0 ? `${fmtKg(periodVolume / activeCount)} kg` : '–',
               },
               {
-                label: res === 'day' ? 'Bästa dagen' : res === 'week' ? 'Bästa veckan' : 'Bästa månaden',
+                label: res === 'day' ? t('Bästa dagen') : res === 'week' ? t('Bästa veckan') : t('Bästa månaden'),
                 value: best && best.volume > 0 ? `${best.fullLabel} · ${fmtKg(best.volume)} kg` : '–',
               },
               {
-                label: res === 'day' ? 'Aktiva dagar' : res === 'week' ? 'Aktiva veckor' : 'Aktiva månader',
-                value: `${activeCount} av ${buckets.length}`,
+                label: res === 'day' ? t('Aktiva dagar') : res === 'week' ? t('Aktiva veckor') : t('Aktiva månader'),
+                value: t('{a} av {b}', { a: activeCount, b: buckets.length }),
               },
-              { label: 'Set under perioden', value: String(periodSets) },
+              { label: t('Set under perioden'), value: String(periodSets) },
             ]).map((r, i) => (
               <View key={r.label} style={[s.kpiRow, i > 0 && s.rowBorder]}>
                 <Text style={s.kpiLbl}>{r.label}</Text>

@@ -5,6 +5,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { BG, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, THEME_DARK, THEME_LIGHT, useThemeStrings, ACCENT } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // BETYGSÄTT DIN ANSTRÄNGNING (RPE 1–10)
@@ -78,6 +79,7 @@ export function EffortRating({ visible, initial, onDone }: Props) {
 
   // Hooks måste ligga FÖRE den tidiga returnen — annars "fewer hooks than expected"
   const T = useThemeStrings()
+  const t = useT()
   const light = useColorScheme() === 'light'
   // Ofyllda staplar och hoppa över-knappen: vit-alfa syns inte på ljus botten
   const dimBar = light ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.14)'
@@ -96,8 +98,8 @@ export function EffortRating({ visible, initial, onDone }: Props) {
         style={StyleSheet.absoluteFill}
       />
 
-      <Text style={s.title}>Betygsätt din{'\n'}ansträngning</Text>
-      <Text style={s.sub}>Hur kändes passet?</Text>
+      <Text style={s.title}>{t('Betygsätt din\nansträngning')}</Text>
+      <Text style={s.sub}>{t('Hur kändes passet?')}</Text>
 
       <View style={s.readout}>
         {sel ? (
@@ -105,10 +107,10 @@ export function EffortRating({ visible, initial, onDone }: Props) {
             <View style={[s.numBadge, { backgroundColor: accent + '26', borderColor: accent }]}>
               <Text style={[s.numText, { color: accent }]}>{sel}</Text>
             </View>
-            <Text style={s.readoutLabel}>{effortLabel(sel)}</Text>
+            <Text style={s.readoutLabel}>{t(effortLabel(sel))}</Text>
           </>
         ) : (
-          <Text style={s.readoutHint}>Dra eller tryck på staplarna</Text>
+          <Text style={s.readoutHint}>{t('Dra eller tryck på staplarna')}</Text>
         )}
       </View>
 
@@ -139,7 +141,7 @@ export function EffortRating({ visible, initial, onDone }: Props) {
 
       <View style={s.btnRow}>
         <TouchableOpacity style={[s.skipBtn, light && { backgroundColor: 'rgba(0,0,0,0.06)' }]} onPress={() => onDone(null)} activeOpacity={0.7}>
-          <Text style={s.skipText}>Hoppa över</Text>
+          <Text style={s.skipText}>{t('Hoppa över')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[s.doneBtn, { backgroundColor: sel ? accent : DIVIDER }]}
@@ -147,7 +149,7 @@ export function EffortRating({ visible, initial, onDone }: Props) {
           activeOpacity={0.8}
           disabled={!sel}
         >
-          <Text style={[s.doneText, !sel && { color: TEXT_SECONDARY }]}>Klar</Text>
+          <Text style={[s.doneText, !sel && { color: TEXT_SECONDARY }]}>{t('Klar')}</Text>
         </TouchableOpacity>
       </View>
     </Animated.View>

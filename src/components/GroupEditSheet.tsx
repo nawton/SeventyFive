@@ -18,6 +18,7 @@ import { updateGroup, type Group, type GroupSport } from '@/services/groups'
 import {
   BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings, THEME_DARK,
 } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // REDIGERA GRUPP — allt på en sida som förlagan: bild med penna, namn,
@@ -32,6 +33,7 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
   onClose: () => void
   onSaved: (group: Group) => void
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
   const radioEdge = light ? 'rgba(0,0,0,0.28)' : 'rgba(255,255,255,0.4)'
@@ -111,7 +113,7 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
       })
       onSaved(saved)
     } catch {
-      Alert.alert('Kunde inte spara ändringarna', 'Kontrollera anslutningen och försök igen.')
+      Alert.alert(t('Kunde inte spara ändringarna'), t('Kontrollera anslutningen och försök igen.'))
     } finally {
       setSaving(false)
     }
@@ -126,11 +128,11 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
         <View style={s.header}>
           <GlassCircleButton icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
             onPress={onClose} fallbackStyle={s.iconFallback} />
-          <Text style={s.headerTitle}>Redigera grupp</Text>
+          <Text style={s.headerTitle}>{t('Redigera grupp')}</Text>
           <TouchableOpacity onPress={save} hitSlop={8} disabled={!canSave} testID="editSave">
             {saving
               ? <ActivityIndicator size="small" color={T.ACCENT} />
-              : <Text style={[s.saveText, { color: T.ACCENT }, !canSave && { opacity: 0.4 }]}>Spara</Text>}
+              : <Text style={[s.saveText, { color: T.ACCENT }, !canSave && { opacity: 0.4 }]}>{t('Spara')}</Text>}
           </TouchableOpacity>
         </View>
 
@@ -144,25 +146,25 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
             </View>
           </TouchableOpacity>
 
-          <Text style={s.label}>GRUPPENS NAMN</Text>
+          <Text style={s.label}>{t('GRUPPENS NAMN')}</Text>
           <AppTextInput
             style={s.input}
             value={name}
-            onChangeText={t => setName(t.slice(0, 80))}
-            placeholder="Ge din grupp ett namn"
+            onChangeText={v => setName(v.slice(0, 80))}
+            placeholder={t('Ge din grupp ett namn')}
             testID="editName"
           />
 
-          <Text style={s.label}>SPORT</Text>
+          <Text style={s.label}>{t('SPORT')}</Text>
           <TouchableOpacity style={s.pickerRow} onPress={pickSport} activeOpacity={0.7} testID="editSport">
             <Ionicons name={sportOption.icon} size={19} color={T.ACCENT} />
-            <Text style={s.pickerText}>{sportOption.label}</Text>
+            <Text style={s.pickerText}>{t(sportOption.label)}</Text>
             <Ionicons name="chevron-down" size={16} color={TEXT_SECONDARY} />
           </TouchableOpacity>
 
           <View style={s.labelRow}>
-            <Text style={s.label}>GRUPPTYP</Text>
-            <Text style={s.labelHint}>Välj upp till 3</Text>
+            <Text style={s.label}>{t('GRUPPTYP')}</Text>
+            <Text style={s.labelHint}>{t('Välj upp till 3')}</Text>
           </View>
           <View style={s.tagWrap}>
             {TAGS.map(tag => {
@@ -171,27 +173,27 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
                 <TouchableOpacity key={tag}
                   style={[s.tagChip, { borderColor: on ? T.ACCENT : chipEdge }]}
                   activeOpacity={0.7} onPress={() => toggleTag(tag)} testID={`editTag-${tag}`}>
-                  <Text style={[s.tagChipText, on && { color: T.ACCENT }]}>{tag}</Text>
+                  <Text style={[s.tagChipText, on && { color: T.ACCENT }]}>{t(tag)}</Text>
                 </TouchableOpacity>
               )
             })}
           </View>
 
-          <Text style={s.label}>BESKRIVNING</Text>
+          <Text style={s.label}>{t('BESKRIVNING')}</Text>
           <AppTextInput
             style={[s.input, s.inputMulti]}
             value={description}
-            onChangeText={t => setDescription(t.slice(0, 500))}
-            placeholder="Vad handlar gruppen om?"
+            onChangeText={v => setDescription(v.slice(0, 500))}
+            placeholder={t('Vad handlar gruppen om?')}
             multiline
             testID="editDesc"
           />
-          <Text style={s.counter}>{500 - description.length} tecken återstår</Text>
+          <Text style={s.counter}>{t('{n} tecken återstår', { n: 500 - description.length })}</Text>
 
-          <Text style={s.label}>INTEGRITET</Text>
+          <Text style={s.label}>{t('INTEGRITET')}</Text>
           {[
-            { v: false, title: 'Offentlig' },
-            { v: true, title: 'Privat' },
+            { v: false, title: t('Offentlig') },
+            { v: true, title: t('Privat') },
           ].map(opt => {
             const on = isPrivate === opt.v
             return (
@@ -207,14 +209,14 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
           })}
 
           <View style={s.labelRow}>
-            <Text style={s.label}>PLATS</Text>
-            <Text style={s.labelHint}>Valfritt, tomt betyder Global</Text>
+            <Text style={s.label}>{t('PLATS')}</Text>
+            <Text style={s.labelHint}>{t('Valfritt, tomt betyder Global')}</Text>
           </View>
           <AppTextInput
             style={s.input}
             value={location}
             onChangeText={setLocation}
-            placeholder="t.ex. Skövde"
+            placeholder={t('t.ex. Skövde')}
             testID="editLocation"
           />
         </ScrollView>
@@ -231,7 +233,7 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
                 <GestureDetector gesture={pan}>
                   <View style={s.sheet}>
                     <View style={s.handle} />
-                    <Text style={s.sheetTitle}>Sport</Text>
+                    <Text style={s.sheetTitle}>{t('Sport')}</Text>
                     {SPORTS.map(sp => {
                       const on = sport === sp.key
                       return (
@@ -239,7 +241,7 @@ export function GroupEditSheet({ visible, userId, group, onClose, onSaved }: {
                           onPress={() => { Haptics.selectionAsync(); setSport(sp.key); closeSport() }}
                           testID={`sportOpt-${sp.key}`}>
                           <Ionicons name={sp.icon} size={20} color={T.ACCENT} />
-                          <Text style={s.sheetRowText}>{sp.label}</Text>
+                          <Text style={s.sheetRowText}>{t(sp.label)}</Text>
                           <View style={[s.radio, { borderColor: on ? T.ACCENT : radioEdge }]}>
                             {on && <View style={[s.radioDot, { backgroundColor: T.ACCENT }]} />}
                           </View>

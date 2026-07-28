@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@/components/Icon'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // ONBOARDINGRAMEN — gemensam layout för alla steg efter registreringen:
@@ -33,6 +34,7 @@ export function OnboardingStep({ step, total = 4, title, subtitle, onBack, scrol
   children: React.ReactNode
   footer: React.ReactNode
 }) {
+  const t = useT()
   const insets = useSafeAreaInsets()
   return (
     <View style={s.screen}>
@@ -53,7 +55,7 @@ export function OnboardingStep({ step, total = 4, title, subtitle, onBack, scrol
       </View>
 
       <View style={s.body}>
-        <Text style={s.stepLabel}>STEG {step} AV {total}</Text>
+        <Text style={s.stepLabel}>{t('STEG {step} AV {total}', { step, total })}</Text>
         <Text style={s.title}>{title}</Text>
         {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
         {scroll ? (

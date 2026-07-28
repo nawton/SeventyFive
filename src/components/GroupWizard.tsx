@@ -15,6 +15,7 @@ import {
   BG, CARD, ACCENT, ACCENT_CONTRAST, TEXT_PRIMARY, TEXT_SECONDARY,
   useThemeStrings, THEME_DARK, accentAlpha,
 } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // SKAPA GRUPP — femstegsguiden (sport → taggar → namn/bild/beskrivning →
@@ -40,6 +41,7 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
   onClose: () => void
   onCreated: (group: Group) => void
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
   const radioEdge = light ? 'rgba(0,0,0,0.28)' : 'rgba(255,255,255,0.4)'
@@ -95,25 +97,25 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
       reset()
       onCreated(saved)
     } catch {
-      Alert.alert('Kunde inte skapa gruppen', 'Kontrollera anslutningen och försök igen.')
+      Alert.alert(t('Kunde inte skapa gruppen'), t('Kontrollera anslutningen och försök igen.'))
     } finally {
       setSaving(false)
     }
   }
 
   const titles = [
-    'Välj gruppens sport',
-    'Vad beskriver din grupp bäst?',
-    'Anpassa gruppen',
-    'Privat eller offentlig?',
-    'Var finns gruppen?',
+    t('Välj gruppens sport'),
+    t('Vad beskriver din grupp bäst?'),
+    t('Anpassa gruppen'),
+    t('Privat eller offentlig?'),
+    t('Var finns gruppen?'),
   ]
   const intros = [
-    'Håll gruppen bred med Alla sporter eller välj en specifik sporttyp.',
-    'Välj upp till tre taggar så andra förstår vad gruppen handlar om.',
-    'Ge gruppen ett namn, en bild och en beskrivning.',
-    'Du bestämmer vem som kan gå med.',
-    'Välj Global om gruppen inte hör till en specifik plats.',
+    t('Håll gruppen bred med Alla sporter eller välj en specifik sporttyp.'),
+    t('Välj upp till tre taggar så andra förstår vad gruppen handlar om.'),
+    t('Ge gruppen ett namn, en bild och en beskrivning.'),
+    t('Du bestämmer vem som kan gå med.'),
+    t('Välj Global om gruppen inte hör till en specifik plats.'),
   ]
 
   return (
@@ -150,8 +152,8 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
                   <Ionicons name={sp.icon} size={21} color={T.ACCENT} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.optionTitle}>{sp.label}</Text>
-                  {sp.desc ? <Text style={s.optionBody}>{sp.desc}</Text> : null}
+                  <Text style={s.optionTitle}>{t(sp.label)}</Text>
+                  {sp.desc ? <Text style={s.optionBody}>{t(sp.desc)}</Text> : null}
                 </View>
                 <View style={[s.radio, { borderColor: on ? T.ACCENT : radioEdge }]}>
                   {on && <View style={[s.radioDot, { backgroundColor: T.ACCENT }]} />}
@@ -167,7 +169,7 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
               <TouchableOpacity key={tag}
                 style={[s.tagCard, { borderColor: on ? T.ACCENT : cardEdge }]}
                 activeOpacity={0.7} onPress={() => toggleTag(tag)} testID={`tag-${tag}`}>
-                <Text style={s.optionTitle}>{tag}</Text>
+                <Text style={s.optionTitle}>{t(tag)}</Text>
                 <View style={[s.checkbox, { borderColor: on ? T.ACCENT : radioEdge }, on && { backgroundColor: T.ACCENT }]}>
                   {on && <Ionicons name="checkmark" size={14} color={light ? '#fff' : '#000'} />}
                 </View>
@@ -184,7 +186,7 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
                 ) : (
                   <>
                     <Ionicons name="image-outline" size={30} color={TEXT_SECONDARY} />
-                    <Text style={s.imageTileText}>Ladda upp bild</Text>
+                    <Text style={s.imageTileText}>{t('Ladda upp bild')}</Text>
                   </>
                 )}
                 <View style={[s.imagePencil, { backgroundColor: T.ACCENT }]}>
@@ -193,38 +195,38 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
               </TouchableOpacity>
 
               <View style={s.fieldHead}>
-                <Text style={s.fieldLabel}>GRUPPENS NAMN</Text>
-                <Text style={s.fieldReq}>Obligatoriskt</Text>
+                <Text style={s.fieldLabel}>{t('GRUPPENS NAMN')}</Text>
+                <Text style={s.fieldReq}>{t('Obligatoriskt')}</Text>
               </View>
               <AppTextInput
                 style={s.input}
                 value={name}
-                onChangeText={t => setName(t.slice(0, 80))}
-                placeholder="Ge din grupp ett namn"
+                onChangeText={v => setName(v.slice(0, 80))}
+                placeholder={t('Ge din grupp ett namn')}
                 testID="groupName"
               />
-              <Text style={s.counter}>{80 - name.length} tecken återstår</Text>
+              <Text style={s.counter}>{t('{n} tecken återstår', { n: 80 - name.length })}</Text>
 
-              <Text style={[s.fieldLabel, { marginTop: 14 }]}>BESKRIVNING</Text>
+              <Text style={[s.fieldLabel, { marginTop: 14 }]}>{t('BESKRIVNING')}</Text>
               <AppTextInput
                 style={[s.input, s.inputMulti]}
                 value={description}
-                onChangeText={t => setDescription(t.slice(0, 500))}
-                placeholder="Vad handlar gruppen om?"
+                onChangeText={v => setDescription(v.slice(0, 500))}
+                placeholder={t('Vad handlar gruppen om?')}
                 multiline
                 testID="groupDesc"
               />
-              <Text style={s.counter}>{500 - description.length} tecken återstår</Text>
+              <Text style={s.counter}>{t('{n} tecken återstår', { n: 500 - description.length })}</Text>
             </>
           )}
 
           {/* ── 4. Privat/offentlig ── */}
           {step === 3 && (
             <>
-              <Text style={s.sectionLabel}>INTEGRITET</Text>
+              <Text style={s.sectionLabel}>{t('INTEGRITET')}</Text>
               {[
-                { v: false, title: 'Offentlig', body: 'Alla i SeventyFive kan gå med i gruppen direkt och se dess medlemmar.' },
-                { v: true, title: 'Privat', body: 'Man begär medlemskap, och bara du som skapare godkänner nya medlemmar.' },
+                { v: false, title: t('Offentlig'), body: t('Alla i SeventyFive kan gå med i gruppen direkt och se dess medlemmar.') },
+                { v: true, title: t('Privat'), body: t('Man begär medlemskap, och bara du som skapare godkänner nya medlemmar.') },
               ].map(opt => {
                 const on = isPrivate === opt.v
                 return (
@@ -251,7 +253,7 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
                 activeOpacity={0.7} onPress={() => { Haptics.selectionAsync(); setUseLocation(false) }} testID="loc-global">
                 <View style={s.locRow}>
                   <Ionicons name="earth-outline" size={20} color={T.ACCENT} />
-                  <Text style={s.optionTitle}>Global</Text>
+                  <Text style={s.optionTitle}>{t('Global')}</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
@@ -259,7 +261,7 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
                 activeOpacity={0.7} onPress={() => { Haptics.selectionAsync(); setUseLocation(true) }} testID="loc-place">
                 <View style={s.locRow}>
                   <Ionicons name="location-outline" size={20} color={T.ACCENT} />
-                  <Text style={s.optionTitle}>En specifik plats</Text>
+                  <Text style={s.optionTitle}>{t('En specifik plats')}</Text>
                 </View>
               </TouchableOpacity>
               {useLocation && (
@@ -267,7 +269,7 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
                   style={[s.input, { marginTop: 4 }]}
                   value={location}
                   onChangeText={setLocation}
-                  placeholder="t.ex. Skövde"
+                  placeholder={t('t.ex. Skövde')}
                   testID="groupLocation"
                 />
               )}
@@ -277,7 +279,7 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
 
         {/* ── Footer ── */}
         <View style={s.footer}>
-          <Text style={s.footerHint}>Du kan alltid ändra detta senare</Text>
+          <Text style={s.footerHint}>{t('Du kan alltid ändra detta senare')}</Text>
           <TouchableOpacity
             style={[s.nextBtn, (!canNext || saving) && { opacity: 0.4 }]}
             onPress={next}
@@ -287,7 +289,7 @@ export function GroupWizard({ visible, userId, onClose, onCreated }: {
           >
             {saving
               ? <ActivityIndicator color={light ? '#fff' : '#000'} />
-              : <Text style={s.nextBtnText}>{step === STEPS - 1 ? 'Skapa grupp' : 'Nästa'}</Text>}
+              : <Text style={s.nextBtnText}>{step === STEPS - 1 ? t('Skapa grupp') : t('Nästa')}</Text>}
           </TouchableOpacity>
         </View>
         </KeyboardAvoidingView>

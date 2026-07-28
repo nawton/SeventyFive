@@ -79,6 +79,7 @@ import { TAB_CONTENT_PAD } from '@/lib/glass'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import { BG, BORDER, CARD, TEXT_PRIMARY, useThemeStrings, ACCENT, accentAlpha, CARD_BORDER } from '@/lib/theme'
 import { getWorkoutsForDate, getCardioWorkoutsForDate } from '@/services/workouts'
+import { t, useT } from '@/lib/i18n'
 
 const NUM_FONT  = 'Nunito_700Bold'
 const SCENE_BG  = BG
@@ -129,16 +130,17 @@ function levelRuleIcon(rule: string): React.ComponentProps<typeof Ionicons>['nam
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function getGreeting(): string {
   const h = new Date().getHours()
-  if (h < 5)  return 'God natt'
-  if (h < 12) return 'God morgon'
-  if (h < 17) return 'God eftermiddag'
-  if (h < 21) return 'God kväll'
-  return 'God natt'
+  if (h < 5)  return t('God natt')
+  if (h < 12) return t('God morgon')
+  if (h < 17) return t('God eftermiddag')
+  if (h < 21) return t('God kväll')
+  return t('God natt')
 }
 
 
 // ── Progress Ring ──────────────────────────────────────────────────────────────
 function ProgressRing({ completed, total }: { completed: number; total: number }) {
+  const t = useT()
   const progress   = useSharedValue(0)
   const isComplete = total > 0 && completed === total
   const T = useThemeStrings()
@@ -177,7 +179,7 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
       <View style={s.ringCenter}>
         <Text style={[s.ringNum, { color: ringColor }]}>{completed}</Text>
         <Text style={s.ringDenom}>/{total}</Text>
-        <Text style={s.ringLabel}>KLART</Text>
+        <Text style={s.ringLabel}>{t('KLART')}</Text>
       </View>
     </View>
   )
@@ -185,6 +187,7 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
 
 // ── Dashboard Screen ───────────────────────────────────────────────────────────
 export default function DashboardScreen() {
+  const t = useT()
   const onScrollShrink = useTabBarShrinkOnScroll()
   // Gradienter kräver strängfärger — välj par efter aktuellt tema
   const lightMode = useColorScheme() === 'light'
@@ -402,10 +405,10 @@ export default function DashboardScreen() {
         if (active.challenge_levels?.slug === 'normal' && missedWithinWeeklyMargin(missed)) {
           await acknowledgeMissedDays(active, missed)
           Alert.alert(
-            'Marginalen räddade dig',
+            t('Marginalen räddade dig'),
             missed.length === 1
-              ? `Dag ${missed[0]} räknas som missad, men på Normal har du en dags marginal per vecka. Utmaningen fortsätter.`
-              : `Dagarna ${missed.join(', ')} räknas som missade, men marginalen på Normal täcker dem. Utmaningen fortsätter.`,
+              ? t('Dag {n} räknas som missad, men på Normal har du en dags marginal per vecka. Utmaningen fortsätter.', { n: missed[0] })
+              : t('Dagarna {days} räknas som missade, men marginalen på Normal täcker dem. Utmaningen fortsätter.', { days: missed.join(', ') }),
           )
         } else {
           setMissedDays(missed)
@@ -459,11 +462,11 @@ export default function DashboardScreen() {
     // (avbockat schemapass, GPS-runda eller loggad övning)
     if (task.type === 'workout' && !task.completed && !hasActivityToday) {
       Alert.alert(
-        'Inget pass loggat idag',
-        'Kör ett pass först, allt räknas! Inget gym? Ta ett hemmapass: armhävningar, situps och utfall, eller en rask promenad med GPS:en igång.',
+        t('Inget pass loggat idag'),
+        t('Kör ett pass först, allt räknas! Inget gym? Ta ett hemmapass: armhävningar, situps och utfall, eller en rask promenad med GPS:en igång.'),
         [
-          { text: 'Senare', style: 'cancel' },
-          { text: 'Logga pass', onPress: () => router.push('/(app)/add') },
+          { text: t('Senare'), style: 'cancel' },
+          { text: t('Logga pass'), onPress: () => router.push('/(app)/add') },
         ],
       )
       return
@@ -481,22 +484,22 @@ export default function DashboardScreen() {
     const slug = challenge?.challenge_levels?.slug
     if (slug !== 'normal') {
       Alert.alert(
-        'Dagens framstegsfoto',
-        `Framstegsfotot är en av reglerna på ${levelName || 'din nivå'}: ett foto varje dag.`,
+        t('Dagens framstegsfoto'),
+        t('Framstegsfotot är en av reglerna på {level}: ett foto varje dag.', { level: levelName || t('din nivå') }),
         [
-          { text: 'Avbryt', style: 'cancel' },
-          { text: 'Ta foto', onPress: () => router.push({ pathname: '/(app)/profile', params: { action: 'addPhoto' } }) },
+          { text: t('Avbryt'), style: 'cancel' },
+          { text: t('Ta foto'), onPress: () => router.push({ pathname: '/(app)/profile', params: { action: 'addPhoto' } }) },
         ],
       )
       return
     }
     Alert.alert(
-      'Dagens framstegsfoto',
-      'Vill du ta ett foto nu eller hoppa över idag? På Normal godkänns dagen även utan foto.',
+      t('Dagens framstegsfoto'),
+      t('Vill du ta ett foto nu eller hoppa över idag? På Normal godkänns dagen även utan foto.'),
       [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Hoppa över idag', onPress: () => applyTaskUpdate(task, true, { ...task.details, skipped: true }) },
-        { text: 'Ta foto', onPress: () => router.push({ pathname: '/(app)/profile', params: { action: 'addPhoto' } }) },
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Hoppa över idag'), onPress: () => applyTaskUpdate(task, true, { ...task.details, skipped: true }) },
+        { text: t('Ta foto'), onPress: () => router.push({ pathname: '/(app)/profile', params: { action: 'addPhoto' } }) },
       ],
     )
   }
@@ -517,20 +520,20 @@ export default function DashboardScreen() {
   //    På Normal är läsningen valfri och kan hoppas över utan att dagen missas ──
   function handleReadingPress(task: TaskItem) {
     if (task.completed) {
-      Alert.alert('Ta bort läsloggen?', 'Uppgiften markeras som ej klar.', [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Ta bort', style: 'destructive', onPress: () => applyTaskUpdate(task, false, null) },
+      Alert.alert(t('Ta bort läsloggen?'), t('Uppgiften markeras som ej klar.'), [
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Ta bort'), style: 'destructive', onPress: () => applyTaskUpdate(task, false, null) },
       ])
       return
     }
     if (challenge?.challenge_levels?.slug === 'normal') {
       Alert.alert(
-        'Dagens läsning',
-        'Läsningen är valfri på Normal. Logga det du läst eller hoppa över idag.',
+        t('Dagens läsning'),
+        t('Läsningen är valfri på Normal. Logga det du läst eller hoppa över idag.'),
         [
-          { text: 'Avbryt', style: 'cancel' },
-          { text: 'Hoppa över idag', onPress: () => applyTaskUpdate(task, true, { ...task.details, skipped: true }) },
-          { text: 'Logga läsning', onPress: () => setReadingTask(task) },
+          { text: t('Avbryt'), style: 'cancel' },
+          { text: t('Hoppa över idag'), onPress: () => applyTaskUpdate(task, true, { ...task.details, skipped: true }) },
+          { text: t('Logga läsning'), onPress: () => setReadingTask(task) },
         ],
       )
       return
@@ -597,26 +600,26 @@ export default function DashboardScreen() {
       const updated = await getOrCreateTaskCompletions(dailyLogId, challenge.level_id, userId, challenge.id)
       setTasks(updated)
     } catch (e) {
-      Alert.alert('Fel', 'Kunde inte spara regeln.')
+      Alert.alert(t('Fel'), t('Kunde inte spara regeln.'))
       throw e // håll sheeten öppen så användaren kan försöka igen
     }
   }
 
   function handleDeleteRule(task: TaskItem) {
     Alert.alert(
-      'Ta bort regel',
-      `Vill du ta bort "${task.name}"? Regeln och dess historik försvinner.`,
+      t('Ta bort regel'),
+      t('Vill du ta bort "{name}"? Regeln och dess historik försvinner.', { name: task.name }),
       [
-        { text: 'Avbryt', style: 'cancel' },
+        { text: t('Avbryt'), style: 'cancel' },
         {
-          text: 'Ta bort',
+          text: t('Ta bort'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteCustomRule(task.templateId)
               setTasks(prev => prev.filter(t => t.completionId !== task.completionId))
             } catch {
-              Alert.alert('Fel', 'Kunde inte ta bort regeln.')
+              Alert.alert(t('Fel'), t('Kunde inte ta bort regeln.'))
             }
           },
         },
@@ -645,13 +648,13 @@ export default function DashboardScreen() {
     return (
       <View style={s.centered}>
         <Ionicons name="cloud-offline-outline" size={36} color="#4A4A50" />
-        <Text style={s.errorText}>Kunde inte ladda dagens uppgifter</Text>
+        <Text style={s.errorText}>{t('Kunde inte ladda dagens uppgifter')}</Text>
         <TouchableOpacity
           style={s.retryBtn}
           onPress={() => { setLoading(true); loadDashboard() }}
           activeOpacity={0.8}
         >
-          <Text style={s.retryBtnText}>Försök igen</Text>
+          <Text style={s.retryBtnText}>{t('Försök igen')}</Text>
         </TouchableOpacity>
       </View>
     )
@@ -724,14 +727,14 @@ export default function DashboardScreen() {
                   <Text style={s.levelBadgeText}>{levelName.toUpperCase()}</Text>
                 </View>
               ) : null}
-              <Text style={s.dayLabel}>DAG</Text>
+              <Text style={s.dayLabel}>{t('DAG')}</Text>
               <View style={s.dayRow}>
                 <Text style={s.dayNum}>{currentDay}</Text>
                 <Text style={s.dayOf}>/75</Text>
               </View>
               <View style={s.heroPctRow}>
                 <Text style={s.heroPct}>{challengePct}%</Text>
-                <Text style={s.heroPctSuffix}> av utmaningen</Text>
+                <Text style={s.heroPctSuffix}> {t('av utmaningen')}</Text>
               </View>
               <View style={s.heroBar}>
                 <View style={[s.heroBarFill, { width: `${challengePct}%` as any }]} />
@@ -757,10 +760,10 @@ export default function DashboardScreen() {
             <Ionicons name="notifications" size={16} color={ACCENT} />
             <Text style={s.pulseText} numberOfLines={1}>
               {[
-                pulseCount > 0 ? `${pulseCount} ${pulseCount === 1 ? 'ny händelse' : 'nya händelser'}` : '',
-                pulseRequests > 0 ? `${pulseRequests} ${pulseRequests === 1 ? 'vänförfrågan' : 'vänförfrågningar'}` : '',
-                pulseGroups > 0 ? `${pulseGroups} ${pulseGroups === 1 ? 'gruppnotis' : 'gruppnotiser'}` : '',
-                pulseMsgs > 0 ? `${pulseMsgs} ${pulseMsgs === 1 ? 'oläst meddelande' : 'olästa meddelanden'}` : '',
+                pulseCount > 0 ? `${pulseCount} ${pulseCount === 1 ? t('ny händelse') : t('nya händelser')}` : '',
+                pulseRequests > 0 ? `${pulseRequests} ${pulseRequests === 1 ? t('vänförfrågan') : t('vänförfrågningar')}` : '',
+                pulseGroups > 0 ? `${pulseGroups} ${pulseGroups === 1 ? t('gruppnotis') : t('gruppnotiser')}` : '',
+                pulseMsgs > 0 ? `${pulseMsgs} ${pulseMsgs === 1 ? t('oläst meddelande') : t('olästa meddelanden')}` : '',
               ].filter(Boolean).join(' · ')}
             </Text>
             <Ionicons name="chevron-forward" size={15} color={TEXT_SECONDARY} />
@@ -771,7 +774,7 @@ export default function DashboardScreen() {
         {hasAnySchedule && (
           <>
             <View style={s.sectionRow}>
-              <Text style={s.sectionTitle}>DAGENS PASS</Text>
+              <Text style={s.sectionTitle}>{t('DAGENS PASS')}</Text>
             </View>
             <View style={[s.todayCard, chrome]}>
               {todaySessions.length === 0 ? (
@@ -780,8 +783,8 @@ export default function DashboardScreen() {
                     <Ionicons name="moon-outline" size={19} color={TEXT_SECONDARY} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.todayName}>Vilodag</Text>
-                    <Text style={s.todaySub}>Inga pass planerade idag</Text>
+                    <Text style={s.todayName}>{t('Vilodag')}</Text>
+                    <Text style={s.todaySub}>{t('Inga pass planerade idag')}</Text>
                   </View>
                 </View>
               ) : todaySessions.map((sess, i) => {
@@ -801,7 +804,7 @@ export default function DashboardScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={[s.todayName, done && s.todayNameDone]} numberOfLines={1}>{name}</Text>
                       <Text style={s.todaySub}>
-                        {isCardio ? 'Cardiopass' : `${sess.exercises.length} övningar`}
+                        {isCardio ? t('Cardiopass') : t('{n} övningar', { n: sess.exercises.length })}
                       </Text>
                     </View>
                     {done
@@ -816,7 +819,7 @@ export default function DashboardScreen() {
 
         {/* ── Tasks section header ── */}
         <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>DAGENS UPPGIFTER</Text>
+          <Text style={s.sectionTitle}>{t('DAGENS UPPGIFTER')}</Text>
           <View style={[s.countBadge, { borderColor: lightMode ? 'transparent' : '#1E1E21' }, allDone && s.countBadgeDone]}>
             <Text style={[s.countText, allDone && s.countTextDone]}>
               {completedCount}/{standardTasks.length}
@@ -838,7 +841,7 @@ export default function DashboardScreen() {
                   counter={{
                     value: glasses,
                     goal,
-                    unit: 'glas',
+                    unit: t('glas'),
                     onPlus: () => handleWater(task, +1),
                     onMinus: () => handleWater(task, -1),
                   }}
@@ -854,7 +857,7 @@ export default function DashboardScreen() {
                   onPress={() => handleReadingPress(task)}
                   metaLabel={
                     task.completed && d?.pages
-                      ? `${d.pages} sidor${d.book ? ` · ${d.book}` : ''}`
+                      ? `${t('{n} sidor', { n: d.pages })}${d.book ? ` · ${d.book}` : ''}`
                       : undefined
                   }
                 />
@@ -876,7 +879,7 @@ export default function DashboardScreen() {
             key={task.completionId}
             task={task}
             onPress={() => handlePhotoPress(task)}
-            metaLabel={task.completed ? (task.details?.skipped ? 'Överhoppat idag' : undefined) : 'Läggs till i profilen'}
+            metaLabel={task.completed ? (task.details?.skipped ? t('Överhoppat idag') : undefined) : t('Läggs till i profilen')}
             fullWidth
           />
         ))}
@@ -884,12 +887,12 @@ export default function DashboardScreen() {
         {/* ── Regler ── */}
         <View style={s.sectionRow}>
           <TouchableOpacity style={s.rulesToggle} onPress={toggleRules} activeOpacity={0.7} hitSlop={8}>
-            <Text style={s.sectionTitle}>REGLER</Text>
+            <Text style={s.sectionTitle}>{t('REGLER')}</Text>
             <Ionicons name={rulesOpen ? 'chevron-up' : 'chevron-down'} size={15} color={TEXT_SECONDARY} />
           </TouchableOpacity>
           <TouchableOpacity style={s.addRuleChip} onPress={openAddRule} activeOpacity={0.8}>
             <Ionicons name="add" size={13} color={ACCENT} />
-            <Text style={s.addRuleChipText}>Lägg till</Text>
+            <Text style={s.addRuleChipText}>{t('Lägg till')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -950,7 +953,7 @@ export default function DashboardScreen() {
         {levelRules.length === 0 && customTasks.length === 0 && (
           <TouchableOpacity style={[s.rulesEmptyCard, lightMode && { borderColor: 'rgba(0,0,0,0.18)' }]} onPress={openAddRule} activeOpacity={0.8}>
             <Ionicons name="add-circle-outline" size={20} color="#3A3A40" />
-            <Text style={s.rulesEmptyText}>Lägg till en egen daglig regel</Text>
+            <Text style={s.rulesEmptyText}>{t('Lägg till en egen daglig regel')}</Text>
           </TouchableOpacity>
         )}
 
@@ -961,11 +964,11 @@ export default function DashboardScreen() {
             onPress={() => setFailVisible(true)}
             activeOpacity={0.7}
           >
-            <Text style={s.failBtnText}>Rapportera dag missad</Text>
+            <Text style={s.failBtnText}>{t('Rapportera dag missad')}</Text>
           </TouchableOpacity>
         )}
         {dayFailed && (
-          <Text style={s.dayFailedText}>Dagen är rapporterad som missad.</Text>
+          <Text style={s.dayFailedText}>{t('Dagen är rapporterad som missad.')}</Text>
         )}
 
       </ScrollView>

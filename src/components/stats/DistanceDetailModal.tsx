@@ -11,6 +11,7 @@ import { fmtPace, fmtDuration } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
 import { useStatsColors } from '@/components/stats/statsShared'
+import { t, useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // DISTANS I DETALJ — öppnas när man trycker på distansgrafen på Framsteg.
@@ -61,8 +62,8 @@ function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Buck
       const key = toLocalDateString(d)
       return {
         key,
-        label: ['M', 'T', 'O', 'T', 'F', 'L', 'S'][i],
-        fullLabel: d.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' }),
+        label: t(['M', 'T', 'O', 'T', 'F', 'L', 'S'][i]),
+        fullLabel: d.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }),
         run: 0, cycle: 0, walk: 0, total: 0, passes: 0, secs: 0, cals: 0, longest: 0,
         isCurrent: key === today,
       }
@@ -82,7 +83,7 @@ function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Buck
       return {
         key,
         label: String(wn),
-        fullLabel: `Vecka ${wn}`,
+        fullLabel: t('Vecka {n}', { n: wn }),
         run: 0, cycle: 0, walk: 0, total: 0, passes: 0, secs: 0, cals: 0, longest: 0,
         isCurrent: key === thisMon,
       }
@@ -98,8 +99,8 @@ function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Buck
     const key = `${d.getFullYear()}-${d.getMonth()}`
     return {
       key,
-      label: d.toLocaleDateString('sv-SE', { month: 'short' }).replace('.', ''),
-      fullLabel: d.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' }),
+      label: d.toLocaleDateString(dateLocale(), { month: 'short' }).replace('.', ''),
+      fullLabel: d.toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' }),
       run: 0, cycle: 0, walk: 0, total: 0, passes: 0, secs: 0, cals: 0, longest: 0,
       isCurrent: key === nowKey,
     }
@@ -114,16 +115,16 @@ function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Buck
 /** Rubrik för sidan man bläddrat till, t.ex. "14–20 juli" eller "V18 – V29" */
 function pageLabel(res: Res, buckets: Bucket[], offset: number): string {
   if (res === 'day') {
-    if (offset === 0) return 'Denna vecka'
+    if (offset === 0) return t('Denna vecka')
     const first = parseLocalDate(buckets[0].key)
     const last  = parseLocalDate(buckets[6].key)
     const sameMonth = first.getMonth() === last.getMonth()
     const fmt = (d: Date, withMonth: boolean) =>
-      withMonth ? d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '') : String(d.getDate())
+      withMonth ? d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '') : String(d.getDate())
     return `${fmt(first, !sameMonth)}–${fmt(last, true)}`
   }
   const last = buckets[buckets.length - 1]
-  if (res === 'week') return `V${buckets[0].label} – V${last.label}`
+  if (res === 'week') return t('V{a} – V{b}', { a: buckets[0].label, b: last.label })
   const short = (b: Bucket) => b.fullLabel.replace(/^(\w{3})\w*/, '$1')
   return `${short(buckets[0])} – ${short(last)}`
 }
@@ -136,6 +137,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
   workouts: CardioWorkout[]
   unit: UnitSystem
 }) {
+  const t = useT()
   const P = useStatsColors()
   const insets = useSafeAreaInsets()
   const [res, setRes] = useState<Res>('day')
@@ -156,7 +158,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
 
   // Det som visas i rubriken + fördelningen: vald stapel eller hela sidan
   const shown = sel ?? {
-    fullLabel: 'Totalt',
+    fullLabel: t('Totalt'),
     run:   buckets.reduce((s, b) => s + b.run, 0),
     cycle: buckets.reduce((s, b) => s + b.cycle, 0),
     walk:  buckets.reduce((s, b) => s + b.walk, 0),
@@ -166,7 +168,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
     cals: periodCals,
   }
 
-  const resAvgLabel = res === 'day' ? 'Snitt per aktiv dag' : res === 'week' ? 'Snitt per aktiv vecka' : 'Snitt per aktiv månad'
+  const resAvgLabel = res === 'day' ? t('Snitt per aktiv dag') : res === 'week' ? t('Snitt per aktiv vecka') : t('Snitt per aktiv månad')
 
   function changeRes(r: Res) {
     setRes(r)
@@ -183,7 +185,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
       <View style={s.root}>
         <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
           <GlassCircleButton icon="chevron-back" onPress={onClose} />
-          <Text style={s.topTitle}>Distans</Text>
+          <Text style={s.topTitle}>{t('Distans')}</Text>
           <View style={{ width: 44 }} />
         </View>
 
@@ -191,9 +193,9 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
           <GlassSegment
             value={res}
             options={[
-              { key: 'day',   label: 'Dag' },
-              { key: 'week',  label: 'Vecka' },
-              { key: 'month', label: 'Månad' },
+              { key: 'day',   label: t('Dag') },
+              { key: 'week',  label: t('Vecka') },
+              { key: 'month', label: t('Månad') },
             ]}
             onChange={changeRes}
           />
@@ -222,7 +224,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
               <Text style={s.readoutUnit}> {unitLabel.toUpperCase()}</Text>
             </Text>
             <Text style={s.readoutSub}>
-              {shown.passes} pass · {fmtDuration(shown.secs)}
+              {t('{n} pass', { n: shown.passes })} · {fmtDuration(shown.secs)}
               {shown.total > 0.1 ? ` · ${fmtPace(paceForUnit(shown.secs / shown.total, unit))} /${unitLabel}` : ''}
             </Text>
           </View>
@@ -242,7 +244,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
           </View>
 
           {/* Fördelning per aktivitet — för valet eller hela perioden */}
-          <Text style={s.sectionHead}>Fördelning</Text>
+          <Text style={s.sectionHead}>{t('Fördelning')}</Text>
           <View style={s.card}>
             {([
               { color: ACCENT, label: 'Löpning',  v: shown.run },
@@ -253,7 +255,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
               return (
                 <View key={r.label} style={[s.splitRow, i > 0 && s.rowBorder]}>
                   <View style={[s.dot, { backgroundColor: r.color }]} />
-                  <Text style={s.splitLbl}>{r.label}</Text>
+                  <Text style={s.splitLbl}>{t(r.label)}</Text>
                   <View style={s.splitTrack}>
                     <View style={[s.splitFill, { width: `${Math.max(pct, r.v > 0 ? 4 : 0)}%` as never, backgroundColor: r.color }]} />
                   </View>
@@ -266,17 +268,17 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
           </View>
 
           {/* Nyckeltal för hela perioden */}
-          <Text style={s.sectionHead}>Nyckeltal</Text>
+          <Text style={s.sectionHead}>{t('Nyckeltal')}</Text>
           <View style={s.card}>
             {([
-              { label: 'Total tid', value: periodSecs > 0 ? fmtDuration(periodSecs) : '–' },
-              { label: 'Kalorier', value: periodCals > 0 ? `${periodCals.toLocaleString('sv-SE')} kcal` : '–' },
+              { label: t('Total tid'), value: periodSecs > 0 ? fmtDuration(periodSecs) : '–' },
+              { label: t('Kalorier'), value: periodCals > 0 ? `${periodCals.toLocaleString(dateLocale())} kcal` : '–' },
               {
-                label: 'Snittempo',
+                label: t('Snittempo'),
                 value: periodTotal > 0.1 ? `${fmtPace(paceForUnit(periodSecs / periodTotal, unit))} /${unitLabel}` : '–',
               },
               {
-                label: 'Längsta pass',
+                label: t('Längsta pass'),
                 value: pageLongest > 0 ? `${toDisplayDistance(pageLongest, unit).toFixed(2)} ${unitLabel}` : '–',
               },
               {
@@ -284,14 +286,14 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
                 value: activeCount > 0 ? `${toDisplayDistance(periodTotal / activeCount, unit).toFixed(1)} ${unitLabel}` : '–',
               },
               {
-                label: res === 'day' ? 'Bästa dagen' : res === 'week' ? 'Bästa veckan' : 'Bästa månaden',
+                label: res === 'day' ? t('Bästa dagen') : res === 'week' ? t('Bästa veckan') : t('Bästa månaden'),
                 value: best && best.total > 0 ? `${best.fullLabel} · ${toDisplayDistance(best.total, unit).toFixed(1)} ${unitLabel}` : '–',
               },
               {
-                label: res === 'day' ? 'Aktiva dagar' : res === 'week' ? 'Aktiva veckor' : 'Aktiva månader',
-                value: `${activeCount} av ${buckets.length}`,
+                label: res === 'day' ? t('Aktiva dagar') : res === 'week' ? t('Aktiva veckor') : t('Aktiva månader'),
+                value: t('{a} av {b}', { a: activeCount, b: buckets.length }),
               },
-              { label: 'Pass under perioden', value: String(periodPasses) },
+              { label: t('Pass under perioden'), value: String(periodPasses) },
             ]).map((r, i) => (
               <View key={r.label} style={[s.kpiRow, i > 0 && s.rowBorder]}>
                 <Text style={s.kpiLbl}>{r.label}</Text>

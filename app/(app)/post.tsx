@@ -28,6 +28,7 @@ import { timeAgo } from '@/lib/format'
 import { BG, CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, ACCENT } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
 import { useRouteColor } from '@/lib/routeColor'
+import { useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // DISKUSSION — ett inläggs egen sida (Strava-stil): kartan högst upp,
@@ -37,6 +38,7 @@ import { useRouteColor } from '@/lib/routeColor'
 // =============================================================================
 
 export default function PostScreen() {
+  const t = useT()
   const routeColor = useRouteColor()
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{
@@ -47,7 +49,7 @@ export default function PostScreen() {
   const ownerId   = typeof params.ownerId === 'string' ? params.ownerId : ''
   const ownerName = typeof params.ownerName === 'string' ? params.ownerName : ''
   const kind      = params.kind === 'strength' ? 'strength' : 'cardio'
-  const title     = typeof params.title === 'string' && params.title ? params.title : 'Pass'
+  const title     = typeof params.title === 'string' && params.title ? params.title : t('Pass')
   const createdAt = typeof params.createdAt === 'string' ? params.createdAt : ''
   const meta      = typeof params.meta === 'string' ? params.meta : ''
 
@@ -138,17 +140,17 @@ export default function PostScreen() {
     const buttons: Array<{ text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }> = []
     if (canReport) {
       buttons.push({
-        text: 'Rapportera',
+        text: t('Rapportera'),
         onPress: () => {
           reportContent('comment', c.id)
-            .then(() => Alert.alert('Tack', 'Rapporten är mottagen och granskas av teamet.'))
+            .then(() => Alert.alert(t('Tack'), t('Rapporten är mottagen och granskas av teamet.')))
             .catch(() => {})
         },
       })
     }
     if (canDelete) {
       buttons.push({
-        text: 'Radera',
+        text: t('Radera'),
         style: 'destructive',
         onPress: () => {
           setComments(prev => prev.filter(x => x.id !== c.id))
@@ -158,8 +160,8 @@ export default function PostScreen() {
         },
       })
     }
-    buttons.push({ text: 'Avbryt', style: 'cancel' })
-    Alert.alert('Kommentar', `”${c.body}”`, buttons)
+    buttons.push({ text: t('Avbryt'), style: 'cancel' })
+    Alert.alert(t('Kommentar'), `”${c.body}”`, buttons)
   }
 
   async function handleSend() {
@@ -191,7 +193,7 @@ export default function PostScreen() {
           onPress={() => router.back()}
           fallbackStyle={s.iconBtnFallback}
         />
-        <Text style={s.headerTitle}>Diskussion</Text>
+        <Text style={s.headerTitle}>{t('Diskussion')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -301,7 +303,7 @@ export default function PostScreen() {
                       pathname: '/(app)/athlete',
                       params: {
                         userId: c.authorId,
-                        name: c.authorName ?? 'Namnlös',
+                        name: c.authorName ?? t('Namnlös'),
                         avatar: c.authorAvatar ?? '',
                       },
                     } as never)
@@ -315,7 +317,7 @@ export default function PostScreen() {
                 />
                 <View style={{ flex: 1 }}>
                   <View style={s.commentHead}>
-                    <Text style={s.commentName}>{c.authorName ?? 'Namnlös'}</Text>
+                    <Text style={s.commentName}>{c.authorName ?? t('Namnlös')}</Text>
                     <Text style={s.commentTime}>· {timeAgo(c.createdAt)}</Text>
                   </View>
                   <Text style={s.commentBody}>{c.body}</Text>
@@ -339,7 +341,7 @@ export default function PostScreen() {
                         testID={`commentLikers-${c.id}`}
                       >
                         <Text style={s.commentLikeCount}>
-                          {c.likes === 1 ? '1 gillamarkering' : `${c.likes} gillamarkeringar`}
+                          {c.likes === 1 ? t('1 gillamarkering') : t('{n} gillamarkeringar', { n: c.likes })}
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -348,7 +350,7 @@ export default function PostScreen() {
               </TouchableOpacity>
             ))}
             {comments.length === 0 && (
-              <Text style={s.emptyComments}>Inga kommentarer ännu, bli först!</Text>
+              <Text style={s.emptyComments}>{t('Inga kommentarer ännu, bli först!')}</Text>
             )}
           </View>
         </ScrollView>
@@ -359,7 +361,7 @@ export default function PostScreen() {
             style={s.input}
             value={draft}
             onChangeText={setDraft}
-            placeholder="Lägg till en kommentar"
+            placeholder={t('Lägg till en kommentar')}
             maxLength={500}
             multiline
             testID="commentInput"
@@ -374,7 +376,7 @@ export default function PostScreen() {
               ? <ActivityIndicator color={ACCENT} size="small" />
               : (
                 <Text style={[s.sendText, draft.trim().length === 0 && { opacity: 0.4 }]}>
-                  Skicka
+                  {t('Skicka')}
                 </Text>
               )}
           </TouchableOpacity>
@@ -394,7 +396,7 @@ export default function PostScreen() {
           } else {
             router.push({
               pathname: '/(app)/athlete',
-              params: { userId: p.id, name: p.name ?? 'Namnlös', avatar: p.avatar_url ?? '' },
+              params: { userId: p.id, name: p.name ?? t('Namnlös'), avatar: p.avatar_url ?? '' },
             } as never)
           }
         }}
@@ -407,7 +409,7 @@ export default function PostScreen() {
           <CardioSummaryView
             workout={workout}
             title={workout.name}
-            dateLabel={new Date(workout.created_at).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            dateLabel={new Date(workout.created_at).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
             avatarUrl={typeof params.ownerAvatar === 'string' && params.ownerAvatar ? params.ownerAvatar : null}
             unit={unit}
             onClose={() => setDetailOpen(false)}

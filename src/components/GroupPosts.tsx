@@ -21,6 +21,9 @@ import {
 import {
   CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings, useCardChrome,
 } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
+
+type TFn = (sv: string, vars?: Record<string, string | number>) => string
 
 // =============================================================================
 // GRUPPENS FLÖDE: textinlägg och pass blandade kronologiskt. Inläggen har
@@ -29,13 +32,13 @@ import {
 // inlägg som alltid ligger överst. RLS avgör vem som får skriva och radera.
 // =============================================================================
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: TFn): string {
   const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000))
-  if (mins < 1) return 'nu'
-  if (mins < 60) return `${mins} min`
+  if (mins < 1) return t('nu')
+  if (mins < 60) return t('{n} min', { n: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} h`
-  return `${Math.floor(hours / 24)} d`
+  if (hours < 24) return t('{n} h', { n: hours })
+  return t('{n} d', { n: Math.floor(hours / 24) })
 }
 
 export function GroupPosts({
@@ -62,6 +65,7 @@ export function GroupPosts({
   /** Visas under flödet, t.ex. "aktivitetsflödet är avstängt" */
   feedNote?: string
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const chrome = useCardChrome()
   const light = T.TEXT_PRIMARY !== '#FFFFFF'
@@ -129,7 +133,7 @@ export function GroupPosts({
       setDraft(''); setImageUri(null)
       load()
     } catch {
-      Alert.alert('Kunde inte publicera', 'Kontrollera anslutningen och försök igen.')
+      Alert.alert(t('Kunde inte publicera'), t('Kontrollera anslutningen och försök igen.'))
     } finally {
       setSending(false)
     }
@@ -139,13 +143,13 @@ export function GroupPosts({
   function openDiscussion(post: GroupPost) {
     const excerpt = post.body
       ? (post.body.length > 60 ? `${post.body.slice(0, 60)}…` : post.body)
-      : 'Bild'
+      : t('Bild')
     router.push({
       pathname: '/(app)/post',
       params: {
         postKey: `grp-${post.id}`,
         ownerId: post.author_id,
-        ownerName: post.authorName ?? 'Namnlös',
+        ownerName: post.authorName ?? t('Namnlös'),
         ownerAvatar: post.authorAvatar ?? '',
         kind: 'strength',   // hoppar över cardio-hämtningen, sidan är generisk
         title: excerpt,
@@ -177,18 +181,18 @@ export function GroupPosts({
   function postMenu(post: GroupPost) {
     const canDelete = post.author_id === me || isOwner
     const remove = () => deleteGroupPost(post.id).then(load).catch(() => {})
-    const report = () => promptReport('post', `grp-${post.id}`, 'Anmäl inlägget')
+    const report = () => promptReport('post', `grp-${post.id}`, t('Anmäl inlägget'))
     const togglePin = () => setGroupPostPinned(post.id, !post.pinned).then(load).catch(() => {})
     const canPin = isOwner || group.only_owner_pins === false
     const options: Array<{ label: string; act: () => void; destructive?: boolean }> = []
-    if (canPin) options.push({ label: post.pinned ? 'Ta bort fästningen' : 'Fäst inlägget', act: togglePin })
-    if (post.author_id !== me) options.push({ label: 'Anmäl inlägget', act: report })
-    if (canDelete) options.push({ label: 'Radera inlägget', act: remove, destructive: true })
+    if (canPin) options.push({ label: post.pinned ? t('Ta bort fästningen') : t('Fäst inlägget'), act: togglePin })
+    if (post.author_id !== me) options.push({ label: t('Anmäl inlägget'), act: report })
+    if (canDelete) options.push({ label: t('Radera inlägget'), act: remove, destructive: true })
     if (options.length === 0) return
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Avbryt', ...options.map(o => o.label)],
+          options: [t('Avbryt'), ...options.map(o => o.label)],
           cancelButtonIndex: 0,
           destructiveButtonIndex: options.findIndex(o => o.destructive) >= 0
             ? options.findIndex(o => o.destructive) + 1 : undefined,
@@ -196,8 +200,8 @@ export function GroupPosts({
         i => { if (i > 0) options[i - 1].act() },
       )
     } else {
-      Alert.alert('Inlägg', undefined, [
-        { text: 'Avbryt', style: 'cancel' },
+      Alert.alert(t('Inlägg'), undefined, [
+        { text: t('Avbryt'), style: 'cancel' },
         ...options.map(o => ({ text: o.label, onPress: o.act })),
       ])
     }
@@ -211,15 +215,15 @@ export function GroupPosts({
         {post.pinned && (
           <View style={s.pinRow}>
             <Ionicons name="pin" size={12} color={T.ACCENT} />
-            <Text style={[s.pinText, { color: T.ACCENT }]}>Fäst inlägg</Text>
+            <Text style={[s.pinText, { color: T.ACCENT }]}>{t('Fäst inlägg')}</Text>
           </View>
         )}
         <View style={s.postHead}>
           <FeedAvatar url={post.authorAvatar}
             fallback={(post.authorName ?? '?').charAt(0).toUpperCase()} size={36} />
           <View style={{ flex: 1 }}>
-            <Text style={s.postName} numberOfLines={1}>{post.authorName ?? 'Namnlös'}</Text>
-            <Text style={s.postTime}>{timeAgo(post.created_at)}</Text>
+            <Text style={s.postName} numberOfLines={1}>{post.authorName ?? t('Namnlös')}</Text>
+            <Text style={s.postTime}>{timeAgo(post.created_at, t)}</Text>
           </View>
           <TouchableOpacity onPress={() => postMenu(post)} hitSlop={10} testID={`gpMenu-${post.id}`}>
             <Ionicons name="ellipsis-horizontal" size={17} color={TEXT_SECONDARY} />
@@ -254,7 +258,7 @@ export function GroupPosts({
 
   return (
     <View>
-      <Text style={s.sectionLabel}>FLÖDE</Text>
+      <Text style={s.sectionLabel}>{t('FLÖDE')}</Text>
 
       {canPost ? (
         <View style={[s.composerWrap, chrome]}>
@@ -274,8 +278,8 @@ export function GroupPosts({
             <AppTextInput
               style={s.composerInput}
               value={draft}
-              onChangeText={t => setDraft(t.slice(0, 1000))}
-              placeholder="Skriv något till gruppen…"
+              onChangeText={v => setDraft(v.slice(0, 1000))}
+              placeholder={t('Skriv något till gruppen…')}
               multiline
               testID="postDraft"
             />
@@ -293,12 +297,12 @@ export function GroupPosts({
           </View>
         </View>
       ) : (
-        <Text style={s.lockedHint}>Bara skaparen kan skriva inlägg i den här gruppen.</Text>
+        <Text style={s.lockedHint}>{t('Bara skaparen kan skriva inlägg i den här gruppen.')}</Text>
       )}
 
       {loaded && items.length === 0 && (
         <Text style={s.empty}>
-          {canPost ? 'Inget i flödet ännu, skriv gruppens första inlägg!' : 'Inget i flödet ännu.'}
+          {canPost ? t('Inget i flödet ännu, skriv gruppens första inlägg!') : t('Inget i flödet ännu.')}
         </Text>
       )}
 
@@ -322,7 +326,7 @@ export function GroupPosts({
             onPress={onLoadMore} disabled={loadingMore} activeOpacity={0.8} testID="loadMore">
             {loadingMore
               ? <ActivityIndicator size="small" color={TEXT_SECONDARY} />
-              : <Text style={s.moreText}>Visa fler pass</Text>}
+              : <Text style={s.moreText}>{t('Visa fler pass')}</Text>}
           </TouchableOpacity>
         )}
       </View>

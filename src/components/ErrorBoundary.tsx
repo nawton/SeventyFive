@@ -2,6 +2,7 @@ import { Component, type ReactNode } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@/components/Icon'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT } from '@/lib/theme'
+import { t } from '@/lib/i18n'
 
 interface Props { children: ReactNode }
 interface State { error: Error | null }
@@ -30,16 +31,16 @@ export class ErrorBoundary extends Component<Props, State> {
         <View style={s.iconCircle}>
           <Ionicons name="alert-circle-outline" size={40} color={ACCENT} />
         </View>
-        <Text style={s.title}>Något gick fel</Text>
+        <Text style={s.title}>{t('Något gick fel')}</Text>
         <Text style={s.body}>
-          Ett oväntat fel inträffade. Din data är sparad, försök igen.
+          {t('Ett oväntat fel inträffade. Din data är sparad, försök igen.')}
         </Text>
         <TouchableOpacity
           style={s.retryBtn}
           onPress={() => this.setState({ error: null })}
           activeOpacity={0.85}
         >
-          <Text style={s.retryText}>Försök igen</Text>
+          <Text style={s.retryText}>{t('Försök igen')}</Text>
         </TouchableOpacity>
       </View>
     )

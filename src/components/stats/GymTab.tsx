@@ -35,6 +35,7 @@ import { GymSummaryView } from './GymSummaryView'
 import { MuscleDetailModal } from './MuscleDetailModal'
 import { VolumeDetailModal } from './VolumeDetailModal'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useT, dateLocale } from '@/lib/i18n'
 
 export function GymTab({
   userId, strengthWorkouts, completedSessions, reloadToken,
@@ -53,6 +54,7 @@ export function GymTab({
   /** Skalet äger completedSessions + databasraderingen; false = misslyckades */
   onDeleteCompletion: (id: string) => Promise<boolean>
 }) {
+  const t = useT()
   // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
   const bodyLight = useColorScheme() === 'light'
   const bodyFill = bodyLight ? '#DFE0E4' : '#2A2A2C'
@@ -151,7 +153,7 @@ export function GymTab({
     const sessions: GymSession[] = (data ?? [])
       .filter((c: any) => (c.workout_sessions as any)?.session_type !== 'cardio')
       .map((c: any) => {
-        const rawName: string = (c.workout_sessions as any)?.name ?? 'Pass'
+        const rawName: string = (c.workout_sessions as any)?.name ?? t('Pass')
         const sessionName = rawName.startsWith('ONCE:')
           ? rawName.split(':').slice(2).join(':')
           : rawName
@@ -266,7 +268,7 @@ export function GymTab({
       (w.data.workout_date ?? toLocalDateString(new Date(w.created_at))) === date)
     setGymDetail({
       name: title,
-      dateLabel: parseLocalDate(date).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' }),
+      dateLabel: parseLocalDate(date).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }),
       planned: [],
       logged,
     })
@@ -299,12 +301,12 @@ export function GymTab({
           {strengthWorkouts.length === 0 && completedSessions.every(c => c.sessionType !== 'gym') ? (
             <View style={s.tabEmpty}>
               <View style={s.tabEmptyIcon}><Ionicons name="barbell-outline" size={30} color={ACCENT} /></View>
-              <Text style={s.tabEmptyTitle}>Inga gympass ännu</Text>
+              <Text style={s.tabEmptyTitle}>{t('Inga gympass ännu')}</Text>
               <Text style={s.tabEmptyText}>
-                Bocka av övningar i schemat och logga reps och vikt i passen, då fylls muskelkartan, volymen och rekorden på här.
+                {t('Bocka av övningar i schemat och logga reps och vikt i passen, då fylls muskelkartan, volymen och rekorden på här.')}
               </Text>
               <TouchableOpacity style={s.tabEmptyBtn} activeOpacity={0.85} onPress={() => router.push('/(app)/add')}>
-                <Text style={s.tabEmptyBtnText}>Till schemat</Text>
+                <Text style={s.tabEmptyBtnText}>{t('Till schemat')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -339,8 +341,8 @@ export function GymTab({
               <Ionicons name="calendar-clear-outline" size={14} color={dayIdx !== null ? '#000' : TEXT_SECONDARY} />
               <Text style={[s.dayPickToggleText, dayIdx !== null && s.dayPickToggleTextActive]}>
                 {selDayDate
-                  ? parseLocalDate(selDayDate).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
-                  : dayPickerOpen ? 'Visa hela veckan' : 'Välj specifik dag'}
+                  ? parseLocalDate(selDayDate).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })
+                  : dayPickerOpen ? t('Visa hela veckan') : t('Välj specifik dag')}
               </Text>
               <Ionicons
                 name={dayPickerOpen ? 'chevron-up' : 'chevron-down'}
@@ -365,7 +367,7 @@ export function GymTab({
                       disabled={future}
                       onPress={() => setDayIdx(active ? null : i)}
                     >
-                      <Text style={[s.dayBoxLetter, active && s.dayBoxTextActive]}>{l}</Text>
+                      <Text style={[s.dayBoxLetter, active && s.dayBoxTextActive]}>{t(l)}</Text>
                       <Text style={[s.dayBoxNum, active && s.dayBoxTextActive]}>{d.getDate()}</Text>
                     </TouchableOpacity>
                   )
@@ -374,26 +376,26 @@ export function GymTab({
             )}
 
             {/* Veckostatistik — samma Apple-rutnät, med förra veckan som jämförelse */}
-            <Text style={s.sectionHead}>{dayIdx === null ? 'Veckans träning' : 'Dagens träning'}</Text>
+            <Text style={s.sectionHead}>{dayIdx === null ? t('Veckans träning') : t('Dagens träning')}</Text>
             <View style={[s.card, s.cardPlain]}>
               <View style={[s.dtlRow, { paddingTop: 0 }]}>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Pass</Text>
+                  <Text style={s.dtlLbl}>{t('Pass')}</Text>
                   <Text style={[s.dtlVal, { color: ACCENT }]}>{scopedPassCount}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevPassCount}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: prevPassCount })}</Text>}
                 </View>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl} numberOfLines={1} adjustsFontSizeToFit>Muskelgrupper</Text>
+                  <Text style={s.dtlLbl} numberOfLines={1} adjustsFontSizeToFit>{t('Muskelgrupper')}</Text>
                   <Text style={[s.dtlVal, { color: P.PURPLE }]}>
                     {scopedGroupCount}
                     <Text style={s.dtlUnit}> AV 6</Text>
                   </Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevGroupCount}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: prevGroupCount })}</Text>}
                 </View>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Övningar</Text>
+                  <Text style={s.dtlLbl}>{t('Övningar')}</Text>
                   <Text style={[s.dtlVal, { color: GREEN }]}>{scopedExNames.length}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevWeekExNames.length}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: prevWeekExNames.length })}</Text>}
                 </View>
               </View>
               <View style={s.dtlSep} />
@@ -401,20 +403,20 @@ export function GymTab({
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Set</Text>
                   <Text style={[s.dtlVal, { color: P.BLUE }]}>{weekSums.sets}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevSums.sets}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: prevSums.sets })}</Text>}
                 </View>
                 <View style={s.dtlCell}>
                   <Text style={s.dtlLbl}>Reps</Text>
                   <Text style={[s.dtlVal, { color: P.TEAL }]}>{weekSums.reps}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {prevSums.reps}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: prevSums.reps })}</Text>}
                 </View>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Volym</Text>
+                  <Text style={s.dtlLbl}>{t('Volym')}</Text>
                   <Text style={[s.dtlVal, { color: P.YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {Math.round(weekSums.volume).toLocaleString('sv-SE')}
+                    {Math.round(weekSums.volume).toLocaleString(dateLocale())}
                     <Text style={s.dtlUnit}> KG</Text>
                   </Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>förra veckan {Math.round(prevSums.volume).toLocaleString('sv-SE')}</Text>}
+                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: Math.round(prevSums.volume).toLocaleString(dateLocale()) })}</Text>}
                 </View>
               </View>
             </View>
@@ -423,7 +425,7 @@ export function GymTab({
             {weekStrength.some(w => w.data.sets.some(st => st.weight_kg > 0)) && (
               <>
               <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setVolumeOpen(true)}>
-                <Text style={[s.sectionHead, s.sectionHeadInline]}>Volym</Text>
+                <Text style={[s.sectionHead, s.sectionHeadInline]}>{t('Volym')}</Text>
                 <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
               </TouchableOpacity>
               <TouchableOpacity
@@ -431,7 +433,7 @@ export function GymTab({
                 activeOpacity={0.85}
                 onPress={() => setVolumeOpen(true)}
               >
-                <Text style={[s.cardSub, { marginTop: 0 }]}>kg lyft per dag, vald vecka</Text>
+                <Text style={[s.cardSub, { marginTop: 0 }]}>{t('kg lyft per dag, vald vecka')}</Text>
                 {(() => {
                   const CH_W = STATS_SCREEN_W - 80
                   const CH_H = 130
@@ -472,7 +474,7 @@ export function GymTab({
                                 fontSize={9} fontWeight="700" textAnchor="middle"
                                 fill="rgba(255,255,255,0.55)"
                               >
-                                {Math.round(v).toLocaleString('sv-SE')}
+                                {Math.round(v).toLocaleString(dateLocale())}
                               </SvgText>
                             </G>
                           )
@@ -480,7 +482,7 @@ export function GymTab({
                       </Svg>
                       <View style={s.distLblRow}>
                         {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((l, i) => (
-                          <Text key={i} style={[s.distLbl, dayIdx === i && { color: ACCENT }]}>{l}</Text>
+                          <Text key={i} style={[s.distLbl, dayIdx === i && { color: ACCENT }]}>{t(l)}</Text>
                         ))}
                       </View>
                     </>
@@ -492,12 +494,12 @@ export function GymTab({
 
             {/* Body map — rubriken öppnar muskeldetaljen (radar + set per grupp) */}
             <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setMuscleOpen(true)}>
-              <Text style={[s.sectionHead, s.sectionHeadInline]}>Tränade muskler</Text>
+              <Text style={[s.sectionHead, s.sectionHeadInline]}>{t('Tränade muskler')}</Text>
               <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
             </TouchableOpacity>
             <View style={[s.card, s.cardPlain]}>
               <View style={s.muscleHeader}>
-                <Text style={s.muscleAuto}>Från dina avbockade övningar</Text>
+                <Text style={s.muscleAuto}>{t('Från dina avbockade övningar')}</Text>
                 <View style={s.bodyToggle}>
                   {(['front', 'back'] as const).map(side => (
                     <TouchableOpacity
@@ -507,7 +509,7 @@ export function GymTab({
                       activeOpacity={0.8}
                     >
                       <Text style={[s.bodyToggleText, bodyView === side && s.bodyToggleTextActive]}>
-                        {side === 'front' ? 'Fram' : 'Bak'}
+                        {side === 'front' ? t('Fram') : t('Bak')}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -547,7 +549,7 @@ export function GymTab({
                       ] as const).map(({ color, label }) => (
                         <View key={label} style={s.legendItem}>
                           <View style={[s.legendDot, { backgroundColor: color }]} />
-                          <Text style={s.legendText}>{label}</Text>
+                          <Text style={s.legendText}>{t(label)}</Text>
                         </View>
                       ))}
                     </View>
@@ -558,8 +560,8 @@ export function GymTab({
               {!weekLoading && scopedExNames.length === 0 && (
                 <Text style={s.muscleEmpty}>
                   {dayIdx !== null
-                    ? 'Inga avklarade övningar vald dag'
-                    : weekOffset === 0 ? 'Inga avklarade övningar denna vecka' : 'Inga avklarade övningar vald vecka'}
+                    ? t('Inga avklarade övningar vald dag')
+                    : weekOffset === 0 ? t('Inga avklarade övningar denna vecka') : t('Inga avklarade övningar vald vecka')}
                 </Text>
               )}
 
@@ -575,9 +577,11 @@ export function GymTab({
                 <Ionicons name="checkmark-done-outline" size={17} color={GREEN} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.muscleLinkTitle}>Genomförda pass</Text>
+                <Text style={s.muscleLinkTitle}>{t('Genomförda pass')}</Text>
                 <Text style={s.muscleLinkSub}>
-                  {weekGymSessions.length} pass {weekOffset === 0 ? 'denna vecka' : 'vald vecka'}
+                  {weekOffset === 0
+                    ? t('{n} pass denna vecka', { n: weekGymSessions.length })
+                    : t('{n} pass vald vecka', { n: weekGymSessions.length })}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
@@ -586,7 +590,7 @@ export function GymTab({
             {/* Styrkerekord — all-time, klickbara till passet där rekordet sattes */}
             {hasGymRecords && (
               <>
-              <Text style={s.sectionHead}>Styrkerekord</Text>
+              <Text style={s.sectionHead}>{t('Styrkerekord')}</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -596,25 +600,25 @@ export function GymTab({
                 {([
                   recTopLift && {
                     icon: 'barbell-outline' as const, color: ACCENT,
-                    label: `Tyngsta lyft · ${recTopLift.name}`,
+                    label: t('Tyngsta lyft · {name}', { name: recTopLift.name }),
                     value: `${recTopLift.kg} kg`,
                     onPress: () => openGymDay(recTopLift!.date, recTopLift!.name),
                   },
                   recOneRm && {
                     icon: 'speedometer-outline' as const, color: P.PURPLE,
-                    label: `Bästa 1RM · ${recOneRm.name}`,
+                    label: t('Bästa 1RM · {name}', { name: recOneRm.name }),
                     value: `${Math.round(recOneRm.kg)} kg`,
                     onPress: () => openGymDay(recOneRm!.date, recOneRm!.name),
                   },
                   recBigDay && {
                     icon: 'trophy-outline' as const, color: P.YELLOW,
-                    label: 'Största passet (volym)',
-                    value: `${Math.round(recBigDay.vol).toLocaleString('sv-SE')} kg`,
-                    onPress: () => openGymDay(recBigDay!.date, 'Största passet'),
+                    label: t('Största passet (volym)'),
+                    value: `${Math.round(recBigDay.vol).toLocaleString(dateLocale())} kg`,
+                    onPress: () => openGymDay(recBigDay!.date, t('Största passet')),
                   },
                   recWeekSets > 0 && {
                     icon: 'layers-outline' as const, color: P.BLUE,
-                    label: 'Flest set en vecka',
+                    label: t('Flest set en vecka'),
                     value: `${recWeekSets} set`,
                     onPress: undefined,
                   },
@@ -654,18 +658,18 @@ export function GymTab({
         <View style={{ flex: 1, backgroundColor: BG }}>
           <View style={[s.modalTopBar, { paddingTop: insets.top + 8 }]}>
             <GlassCircleButton icon="chevron-back" onPress={() => setSessionsOpen(false)} />
-            <Text style={s.modalTopTitle}>Genomförda pass</Text>
+            <Text style={s.modalTopTitle}>{t('Genomförda pass')}</Text>
             <View style={{ width: 44 }} />
           </View>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
             <Text style={s.sessionsWeekLabel}>
-              {weekBounds.label} · {weekGymSessions.length} pass
+              {weekBounds.label} · {t('{n} pass', { n: weekGymSessions.length })}
             </Text>
             {weekGymSessions.length > 0 ? (
               <View style={[s.card, s.cardPlain, { marginTop: 12 }]}>
                 <View style={s.gymList}>
                   {weekGymSessions.map(gs => {
-                    const gymDay    = new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
+                    const gymDay    = new Date(gs.completedDate + 'T12:00:00').toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' })
                     const exPreview = gs.exercises.slice(0, 3).join(' · ')
                       + (gs.exercises.length > 3 ? ` · +${gs.exercises.length - 3}` : '')
                     return (
@@ -680,7 +684,7 @@ export function GymTab({
                           })
                           setGymDetail({
                             name: gs.sessionName,
-                            dateLabel: new Date(gs.completedDate + 'T12:00:00').toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' }),
+                            dateLabel: new Date(gs.completedDate + 'T12:00:00').toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }),
                             planned: gs.exercises,
                             logged,
                           })
@@ -704,7 +708,7 @@ export function GymTab({
             ) : (
               <View style={s.empty}>
                 <Ionicons name="barbell-outline" size={40} color="rgba(255,255,255,0.12)" />
-                <Text style={s.emptyText}>Inga gympass klarade vald vecka</Text>
+                <Text style={s.emptyText}>{t('Inga gympass klarade vald vecka')}</Text>
               </View>
             )}
           </ScrollView>
@@ -731,7 +735,7 @@ export function GymTab({
         weekLabel={weekBounds.label}
         day={selDayDate}
         dayLabel={selDayDate
-          ? parseLocalDate(selDayDate).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
+          ? parseLocalDate(selDayDate).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })
           : null}
       />
     </>

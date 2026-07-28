@@ -26,11 +26,13 @@ export function fmtTime(secs: number): string {
 }
 
 /** Relativ tid "nu" / "12 min" / "3 h" / "2 d" — för kommentarer och notiser */
+import { t } from '@/lib/i18n'
+
 export function timeAgo(iso: string, now = new Date()): string {
   const mins = Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000))
-  if (mins < 1) return 'nu'
-  if (mins < 60) return `${mins} min`
+  if (mins < 1) return t('nu')
+  if (mins < 60) return t('{n} min', { n: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} h`
-  return `${Math.floor(hours / 24)} d`
+  if (hours < 24) return t('{n} h', { n: hours })
+  return t('{n} d', { n: Math.floor(hours / 24) })
 }

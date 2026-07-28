@@ -18,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
+import { t, useT } from '@/lib/i18n'
 import { RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, CARDIO_BLUE, THEME_DARK, THEME_LIGHT, ACCENT, accentAlpha } from '@/lib/theme'
 import type { WorkoutSession, SessionExercise } from '@/services/workoutSchedule'
 
@@ -41,10 +42,10 @@ function cardioIcon(type: string | null): React.ComponentProps<typeof Ionicons>[
 
 function cardioLabel(type: string | null): string {
   switch (type) {
-    case 'cycling':  return 'Cykling'
-    case 'interval': return 'Intervall'
-    case 'walking':  return 'Promenad'
-    default:         return 'Löpning'
+    case 'cycling':  return t('Cykling')
+    case 'interval': return t('Intervall')
+    case 'walking':  return t('Promenad')
+    default:         return t('Löpning')
   }
 }
 
@@ -105,6 +106,7 @@ function ExerciseRow({
   lastKg?:     number
   onDelete:    () => void
 }) {
+  const t = useT()
   // Klar-radens gröna ton — sträng per schema (animerad nod)
   const doneRowStr = useColorScheme() === 'light' ? '#E9F6EE' : '#0B2418'
   // ── Shared values ─────────────────────────────────────────────────────────
@@ -222,7 +224,7 @@ function ExerciseRow({
             <Animated.View style={[r.btn, btnStyle]}>
               <Ionicons name="trash-outline" size={20} color="#fff" />
               <Animated.View style={labelWrapStyle}>
-                <Text style={r.btnLabel} numberOfLines={1}>Ta bort</Text>
+                <Text style={r.btnLabel} numberOfLines={1}>{t('Ta bort')}</Text>
               </Animated.View>
             </Animated.View>
           </TouchableOpacity>
@@ -238,9 +240,9 @@ function ExerciseRow({
               {(ex.sets || ex.reps) && (
                 <Text style={r.meta}>
                   {[
-                    ex.sets && `${ex.sets} set`,
-                    ex.reps && `${ex.reps} reps`,
-                    lastKg && `${lastKg % 1 === 0 ? lastKg : lastKg.toFixed(1).replace('.', ',')} kg senast`,
+                    ex.sets && t('{n} set', { n: ex.sets }),
+                    ex.reps && t('{n} reps', { n: ex.reps }),
+                    lastKg && t('{kg} kg senast', { kg: lastKg % 1 === 0 ? lastKg : lastKg.toFixed(1).replace('.', ',') }),
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -359,6 +361,7 @@ export function WorkoutSection({
   gymStats,
   progressedIds,
 }: WorkoutSectionProps) {
+  const t = useT()
   const isCardio  = session.session_type === 'cardio'
   const total     = isCardio ? 0 : session.exercises.length
   const doneCount = isCardio ? 0 : session.exercises.filter(e => checked[e.id]).length
@@ -484,12 +487,12 @@ export function WorkoutSection({
           </View>
           <Text style={s.sessionMeta}>
             {isCompleted
-              ? (isCardio ? 'Pass avklarat' : 'Alla övningar klara')
+              ? (isCardio ? t('Pass avklarat') : t('Alla övningar klara'))
               : isCardio
                 ? cardioLabel(session.cardio_type)
                 : total === 0
-                  ? 'Inga övningar tillagda'
-                  : `${doneCount} av ${total} klara`}
+                  ? t('Inga övningar tillagda')
+                  : t('{done} av {total} klara', { done: doneCount, total })}
           </Text>
           {!!session.notes && (
             <View style={s.notesRow}>
@@ -507,27 +510,27 @@ export function WorkoutSection({
             // Avbockat utan GPS-data → ingen detaljvy finns; bocken är enda
             // vägen att ångra så kortet inte blir dött
             <TouchableOpacity
-              onPress={() => Alert.alert('Ångra avklarat?', 'Passet markeras som ej genomfört.', [
-                { text: 'Avbryt', style: 'cancel' },
-                { text: 'Ångra', style: 'destructive', onPress: handleUncomplete },
+              onPress={() => Alert.alert(t('Ångra avklarat?'), t('Passet markeras som ej genomfört.'), [
+                { text: t('Avbryt'), style: 'cancel' },
+                { text: t('Ångra'), style: 'destructive', onPress: handleUncomplete },
               ])}
               style={s.doneBadge}
               activeOpacity={0.7}
             >
               <Ionicons name="checkmark-circle" size={13} color={GREEN} />
-              <Text style={s.doneBadgeText}>Klar</Text>
+              <Text style={s.doneBadgeText}>{t('Klar')}</Text>
             </TouchableOpacity>
           ) : null
         ) : onOpenFullscreen ? (
           // Gympass: alltid Öppna — även avklarade (info + Spara finns därinne)
           <TouchableOpacity onPress={onOpenFullscreen} style={s.openBtn} activeOpacity={0.8}>
             <Ionicons name="expand-outline" size={14} color={ACCENT} />
-            <Text style={s.openBtnText}>Öppna</Text>
+            <Text style={s.openBtnText}>{t('Öppna')}</Text>
           </TouchableOpacity>
         ) : greenComplete ? (
           <TouchableOpacity onPress={handleUncomplete} style={s.doneBadge} activeOpacity={0.7}>
             <Ionicons name="checkmark-circle" size={13} color={GREEN} />
-            <Text style={s.doneBadgeText}>Klar</Text>
+            <Text style={s.doneBadgeText}>{t('Klar')}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -536,7 +539,7 @@ export function WorkoutSection({
             activeOpacity={0.75}
           >
             <Text style={[s.completeBtnText, doneCount > 0 && s.completeBtnTextHot]}>
-              Klar
+              {t('Klar')}
             </Text>
           </TouchableOpacity>
         )}
@@ -570,7 +573,7 @@ export function WorkoutSection({
           activeOpacity={0.8}
         >
           <Ionicons name={cardioIcon(session.cardio_type)} size={18} color={CARDIO_BLUE} />
-          <Text style={[s.cardioStartText, { color: CARDIO_BLUE }]}>STARTA {cardioLabel(session.cardio_type).toUpperCase()}</Text>
+          <Text style={[s.cardioStartText, { color: CARDIO_BLUE }]}>{t('STARTA {type}', { type: cardioLabel(session.cardio_type).toUpperCase() })}</Text>
           <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
         </TouchableOpacity>
       )}
@@ -583,26 +586,26 @@ export function WorkoutSection({
               <Text style={s.cardioSummaryValue}>
                 {cardioStats ? cardioStats.distanceKm.toFixed(2) : '–'}
               </Text>
-              <Text style={s.cardioSummaryLabel}>km</Text>
+              <Text style={s.cardioSummaryLabel}>{t('km')}</Text>
             </View>
             <View style={s.cardioSummaryDivider} />
             <View style={s.cardioSummaryStat}>
               <Text style={s.cardioSummaryValue}>
                 {cardioStats ? fmtDuration(cardioStats.durationSeconds) : '–'}
               </Text>
-              <Text style={s.cardioSummaryLabel}>tid</Text>
+              <Text style={s.cardioSummaryLabel}>{t('tid')}</Text>
             </View>
             <View style={s.cardioSummaryDivider} />
             <View style={s.cardioSummaryStat}>
               <Text style={s.cardioSummaryValue}>
                 {cardioStats ? fmtPace(cardioStats.distanceKm, cardioStats.durationSeconds) : '–'}
               </Text>
-              <Text style={s.cardioSummaryLabel}>/km</Text>
+              <Text style={s.cardioSummaryLabel}>{t('/km')}</Text>
             </View>
           </View>
           <View style={s.cardioSummaryLink}>
             <Ionicons name="map-outline" size={15} color={CARDIO_BLUE} />
-            <Text style={s.cardioSummaryLinkText}>Visa pass</Text>
+            <Text style={s.cardioSummaryLinkText}>{t('Visa pass')}</Text>
             <Ionicons name="chevron-forward" size={15} color={CARDIO_BLUE} />
           </View>
         </TouchableOpacity>
@@ -615,12 +618,12 @@ export function WorkoutSection({
           <View style={s.cardioSummaryStats}>
             <View style={s.cardioSummaryStat}>
               <Text style={s.cardioSummaryValue}>{total}</Text>
-              <Text style={s.cardioSummaryLabel}>övningar</Text>
+              <Text style={s.cardioSummaryLabel}>{t('övningar')}</Text>
             </View>
             <View style={s.cardioSummaryDivider} />
             <View style={s.cardioSummaryStat}>
               <Text style={s.cardioSummaryValue}>{gymStats ? gymStats.sets : '–'}</Text>
-              <Text style={s.cardioSummaryLabel}>set</Text>
+              <Text style={s.cardioSummaryLabel}>{t('set')}</Text>
             </View>
           </View>
           {onOpenFullscreen && (
@@ -630,7 +633,7 @@ export function WorkoutSection({
               activeOpacity={0.8}
             >
               <Ionicons name="barbell-outline" size={15} color={ACCENT} />
-              <Text style={[s.cardioSummaryLinkText, { color: ACCENT }]}>Visa pass</Text>
+              <Text style={[s.cardioSummaryLinkText, { color: ACCENT }]}>{t('Visa pass')}</Text>
               <Ionicons name="chevron-forward" size={15} color={ACCENT} />
             </TouchableOpacity>
           )}
@@ -656,7 +659,7 @@ export function WorkoutSection({
       {!isCardio && onAddExercise && (
         <TouchableOpacity style={s.addRow} onPress={onAddExercise} activeOpacity={0.75}>
           <Ionicons name="add" size={16} color={ACCENT} />
-          <Text style={s.addRowText}>Lägg till övning</Text>
+          <Text style={s.addRowText}>{t('Lägg till övning')}</Text>
         </TouchableOpacity>
       )}
 

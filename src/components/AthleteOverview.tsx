@@ -10,6 +10,7 @@ import { fmtDuration } from '@/lib/format'
 import type { UnitSystem } from '@/lib/units'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, ORANGE, useThemeStrings, useCardChrome, THEME_DARK } from '@/lib/theme'
+import { t, useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // ATLETVY — delad mellan atletsidan (öppnas från flödet/sökningen) och
@@ -32,14 +33,14 @@ const CHART_WEEKS = 12
 
 /** "Aktiv: idag" / "Aktiv: igår" / "Aktiv: 5 dagar sedan" */
 export function activeLabel(latestIso: string | null, now = new Date()): string {
-  if (!latestIso) return 'Inga pass ännu'
+  if (!latestIso) return t('Inga pass ännu')
   const then = new Date(latestIso)
   const days = Math.floor(
     (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
      new Date(then.getFullYear(), then.getMonth(), then.getDate()).getTime()) / 86_400_000)
-  if (days <= 0) return 'Aktiv: idag'
-  if (days === 1) return 'Aktiv: igår'
-  return `Aktiv: ${days} dagar sedan`
+  if (days <= 0) return t('Aktiv: idag')
+  if (days === 1) return t('Aktiv: igår')
+  return t('Aktiv: {n} dagar sedan', { n: days })
 }
 
 /** 12 veckovisa hinkar, etikett = månadsnamn där månaden byter (Strava-stil) */
@@ -51,7 +52,7 @@ export function buildWeekBuckets(
     const mon = new Date(thisMon); mon.setDate(mon.getDate() - (CHART_WEEKS - 1 - i) * 7)
     return {
       key: toLocalDateString(mon),
-      label: mon.toLocaleDateString('sv-SE', { month: 'short' }).replace('.', '').toUpperCase(),
+      label: mon.toLocaleDateString(dateLocale(), { month: 'short' }).replace('.', '').toUpperCase(),
       total: 0,
       isCurrent: i === CHART_WEEKS - 1,
     }
@@ -117,6 +118,7 @@ export function AthleteOverview({
   /** Öppnar chatten med personen — bara på andras profiler */
   onMessage?: () => void
 }) {
+  const t = useT()
   // Chipramar som strängar per schema — dynamiska ramfärger fryser fel
   const T = useThemeStrings()
   const chrome = useCardChrome()
@@ -156,10 +158,10 @@ export function AthleteOverview({
 
   // "12 maj – 18 maj" för en vald vecka, annars "Den här veckan"
   const weekTitle = useMemo(() => {
-    if (!scrubKey) return 'Den här veckan'
+    if (!scrubKey) return t('Den här veckan')
     const mon = new Date(scrubKey + 'T12:00:00')
     const sun = new Date(mon); sun.setDate(sun.getDate() + 6)
-    const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
+    const fmt = (d: Date) => d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '')
     return `${fmt(mon)} – ${fmt(sun)}`
   }, [scrubKey])
 
@@ -183,7 +185,7 @@ export function AthleteOverview({
       <View style={{ flex: 1 }}>
         <Text style={s.name}>{name}</Text>
         <Text style={s.activeMeta}>
-          {statsUnlocked ? activeLabel(latestIso) : 'Privat profil'}
+          {statsUnlocked ? activeLabel(latestIso) : t('Privat profil')}
         </Text>
       </View>
       {onPressHero && <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />}
@@ -212,7 +214,7 @@ export function AthleteOverview({
               {isOwn || statsUnlocked ? streak ?? 0 : '–'}
             </Text>
           </View>
-          <Text style={s.counterLabel}>Streak</Text>
+          <Text style={s.counterLabel}>{t('Streak')}</Text>
         </TouchableOpacity>
         <View style={s.counterDivider} />
         <TouchableOpacity
@@ -223,7 +225,7 @@ export function AthleteOverview({
           testID="followersCounter"
         >
           <Text style={s.counterValue}>{counts.followers}</Text>
-          <Text style={s.counterLabel}>Följare</Text>
+          <Text style={s.counterLabel}>{t('Följare')}</Text>
         </TouchableOpacity>
         <View style={s.counterDivider} />
         <TouchableOpacity
@@ -234,7 +236,7 @@ export function AthleteOverview({
           testID="followingCounter"
         >
           <Text style={s.counterValue}>{counts.following}</Text>
-          <Text style={s.counterLabel}>Följer</Text>
+          <Text style={s.counterLabel}>{t('Följer')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -265,16 +267,16 @@ export function AthleteOverview({
                 s.followBtnText,
                 blocked ? s.followBtnTextBlocked : followStatus === 'none' && s.followBtnTextInvite,
               ]}>
-                {blocked ? 'Avblockera'
-                  : followStatus === 'accepted' ? 'Följer'
-                  : followStatus === 'pending' ? 'Förfrågan skickad' : 'Följ'}
+                {blocked ? t('Avblockera')
+                  : followStatus === 'accepted' ? t('Följer')
+                  : followStatus === 'pending' ? t('Förfrågan skickad') : t('Följ')}
               </Text>
             </TouchableOpacity>
             {showMessage && (
               <TouchableOpacity style={[s.messageBtn, lift, { borderColor: followEdge }]}
                 onPress={onMessage} activeOpacity={0.8} testID="athleteMessage">
                 <Ionicons name="chatbubble-outline" size={15} color={TEXT_PRIMARY} />
-                <Text style={s.messageBtnText}>Meddelande</Text>
+                <Text style={s.messageBtnText}>{t('Meddelande')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -293,31 +295,31 @@ export function AthleteOverview({
             color={TEXT_SECONDARY}
           />
           <Text style={s.otherEmptyTitle}>
-            {blocked ? 'Blockerad' : 'Statistiken är privat'}
+            {blocked ? t('Blockerad') : t('Statistiken är privat')}
           </Text>
           <Text style={s.otherEmptyBody}>
             {blocked
-              ? `Du har blockerat ${name.split(' ')[0] || 'personen'}. Ni kan inte följa eller se varandra förrän du avblockerar.`
+              ? t('Du har blockerat {name}. Ni kan inte följa eller se varandra förrän du avblockerar.', { name: name.split(' ')[0] || t('personen') })
               : followStatus === 'pending'
-              ? `Väntar på godkännande, när ${name.split(' ')[0] || 'personen'} godkänner din förfrågan ser du statistiken här.`
-              : `Skicka en vänförfrågan för att se ${name.split(' ')[0] || 'personens'} statistik och aktiviteter.`}
+              ? t('Väntar på godkännande, när {name} godkänner din förfrågan ser du statistiken här.', { name: name.split(' ')[0] || t('personen') })
+              : t('Skicka en vänförfrågan för att se {name} statistik och aktiviteter.', { name: name.split(' ')[0] || t('personens') })}
           </Text>
         </View>
       )}
 
       {!isOwn && statsUnlocked && (<>
       <View style={s.chipsRow}>
-        {TYPES.map(t => {
-          const on = t.key === type
+        {TYPES.map(ty => {
+          const on = ty.key === type
           return (
             <TouchableOpacity
-              key={t.key}
+              key={ty.key}
               style={[s.chip, lift, { borderColor: on ? T.ACCENT : chipEdge }]}
-              onPress={() => switchType(t.key)}
+              onPress={() => switchType(ty.key)}
               activeOpacity={0.8}
             >
-              <Ionicons name={t.icon} size={14} color={on ? ACCENT : TEXT_PRIMARY} />
-              <Text style={[s.chipText, on && s.chipTextActive]}>{t.label}</Text>
+              <Ionicons name={ty.icon} size={14} color={on ? ACCENT : TEXT_PRIMARY} />
+              <Text style={[s.chipText, on && s.chipTextActive]}>{t(ty.label)}</Text>
             </TouchableOpacity>
           )
         })}
@@ -329,15 +331,15 @@ export function AthleteOverview({
       <Animated.View key={type} entering={FadeIn.duration(250)} exiting={FadeOut.duration(120)}>
         <View style={s.weekRow}>
           <View style={s.weekStat}>
-            <Text style={s.weekLabel}>Distans</Text>
+            <Text style={s.weekLabel}>{t('Distans')}</Text>
             <Text style={s.weekValue}>{week.km.toFixed(2).replace('.', ',')} km</Text>
           </View>
           <View style={s.weekStat}>
-            <Text style={s.weekLabel}>Tid</Text>
+            <Text style={s.weekLabel}>{t('Tid')}</Text>
             <Text style={s.weekValue}>{fmtDuration(week.secs)}</Text>
           </View>
           <View style={s.weekStat}>
-            <Text style={s.weekLabel}>Pass</Text>
+            <Text style={s.weekLabel}>{t('Pass')}</Text>
             <Text style={s.weekValue}>{week.passes}</Text>
           </View>
         </View>
@@ -370,9 +372,9 @@ export function AthleteOverview({
             <Ionicons name="list-outline" size={20} color={TEXT_PRIMARY} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.activitiesTitle}>Aktiviteter</Text>
+            <Text style={s.activitiesTitle}>{t('Aktiviteter')}</Text>
             <Text style={s.activitiesMeta}>
-              {workouts.length + gymCount > 0 ? `${workouts.length + gymCount} pass` : 'Inga pass ännu'}
+              {workouts.length + gymCount > 0 ? t('{n} pass', { n: workouts.length + gymCount }) : t('Inga pass ännu')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />

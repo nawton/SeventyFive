@@ -15,6 +15,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useThemeStrings } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // SÖK ANVÄNDARE — riktig sökning mot databasen via search_profiles-RPC:n
@@ -27,6 +28,7 @@ import { AppTextInput } from '@/components/AppTextInput'
 const DEBOUNCE_MS = 300
 
 export default function SearchUsersScreen() {
+  const t = useT()
   // Ramar som schemasträngar — dynamiska fryser, vit-alfa syns inte på ljust
   const T = useThemeStrings()
   const pillEdge = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)'
@@ -94,7 +96,7 @@ export default function SearchUsersScreen() {
           onPress={() => router.back()}
           fallbackStyle={s.iconBtnFallback}
         />
-        <Text style={s.title}>Hitta vänner</Text>
+        <Text style={s.title}>{t('Hitta vänner')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -104,7 +106,7 @@ export default function SearchUsersScreen() {
           style={s.searchInput}
           value={query}
           onChangeText={setQuery}
-          placeholder="Sök på namn"
+          placeholder={t('Sök på namn')}
           autoFocus
           autoCorrect={false}
           autoCapitalize="none"
@@ -131,7 +133,7 @@ export default function SearchUsersScreen() {
                   pathname: '/(app)/athlete',
                   params: {
                     userId: item.id,
-                    name: item.name ?? 'Namnlös',
+                    name: item.name ?? t('Namnlös'),
                     avatar: item.avatar_url ?? '',
                   },
                 } as never)}
@@ -141,7 +143,7 @@ export default function SearchUsersScreen() {
                   fallback={(item.name ?? '?').charAt(0).toUpperCase()}
                   size={52}
                 />
-                <Text style={s.rowName} numberOfLines={1}>{item.name ?? 'Namnlös'}</Text>
+                <Text style={s.rowName} numberOfLines={1}>{item.name ?? t('Namnlös')}</Text>
               </TouchableOpacity>
               {/* Följstatusen direkt i träffen: Följ → Förfrågad → Följer */}
               <TouchableOpacity
@@ -151,7 +153,7 @@ export default function SearchUsersScreen() {
                 testID={`follow-${item.id}`}
               >
                 <Text style={[s.followPillText, status === 'none' && s.followPillTextInvite]}>
-                  {status === 'accepted' ? 'Följer' : status === 'pending' ? 'Förfrågad' : 'Följ'}
+                  {status === 'accepted' ? t('Följer') : status === 'pending' ? t('Förfrågad') : t('Följ')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -164,14 +166,14 @@ export default function SearchUsersScreen() {
           <View style={s.empty}>
             <Ionicons name="search-outline" size={44} color={TEXT_SECONDARY} />
             <Text style={s.emptyTitle}>
-              {query.trim().length < 2 ? 'Sök efter andra'
-                : searched && !searching ? 'Inga träffar'
+              {query.trim().length < 2 ? t('Sök efter andra')
+                : searched && !searching ? t('Inga träffar')
                 : ' '}
             </Text>
             <Text style={s.emptyBody}>
               {query.trim().length < 2
-                ? 'Skriv minst två tecken för att hitta andra som kör utmaningen.'
-                : searched && !searching ? 'Ingen användare matchade din sökning.' : ' '}
+                ? t('Skriv minst två tecken för att hitta andra som kör utmaningen.')
+                : searched && !searching ? t('Ingen användare matchade din sökning.') : ' '}
             </Text>
           </View>
         }

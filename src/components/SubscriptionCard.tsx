@@ -9,6 +9,7 @@ import {
   getSubscription, isPremium,
   FREE_SUBSCRIPTION, type Subscription,
 } from '@/services/subscription'
+import { useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // PREMIUM-BANNERN på profilsidan — appens eget formspråk: mörkt kort med
@@ -18,10 +19,11 @@ import {
 
 function fmtDate(iso: string | null): string {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
+  return new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' })
 }
 
 export function SubscriptionCard({ name }: { name?: string }) {
+  const t = useT()
   const [sub, setSub] = useState<Subscription | null>(null)
 
   const reload = useCallback(() => {
@@ -61,19 +63,19 @@ export function SubscriptionCard({ name }: { name?: string }) {
         <Text style={s.title}>
           {premium
             ? 'SeventyFive Premium'
-            : firstName ? `${firstName}, skaffa Premium` : 'Skaffa SeventyFive Premium'}
+            : firstName ? t('{name}, skaffa Premium', { name: firstName }) : t('Skaffa SeventyFive Premium')}
         </Text>
         <Text style={s.sub}>
           {premium
             ? sub.cancel_at_period_end
-              ? `Avslutas ${fmtDate(sub.current_period_end)}`
-              : `Aktivt · förnyas ${fmtDate(sub.current_period_end)}`
+              ? t('Avslutas {date}', { date: fmtDate(sub.current_period_end) })
+              : t('Aktivt · förnyas {date}', { date: fmtDate(sub.current_period_end) })
             : pastDue
-              ? 'Betalningen misslyckades, uppdatera ditt kort'
-              : 'Lås upp löpplaner, intervallguidning och full statistik'}
+              ? t('Betalningen misslyckades, uppdatera ditt kort')
+              : t('Lås upp löpplaner, intervallguidning och full statistik')}
         </Text>
         <Text style={[s.action, { color: accent }]}>
-          {premium ? 'HANTERA' : pastDue ? 'UPPDATERA BETALNING' : 'PRENUMERERA'}
+          {premium ? t('HANTERA') : pastDue ? t('UPPDATERA BETALNING') : t('PRENUMERERA')}
         </Text>
       </View>
     </TouchableOpacity>

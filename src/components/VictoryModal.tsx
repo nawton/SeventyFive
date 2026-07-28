@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, CARD_BORDER } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 const GREEN = '#3BE862'
 
@@ -26,6 +27,7 @@ interface Props {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function VictoryModal({ visible, completedDays, levelName, onNewChallenge }: Props) {
+  const t = useT()
   const scale   = useSharedValue(0.4)
   const opacity = useSharedValue(0)
 
@@ -54,19 +56,19 @@ export function VictoryModal({ visible, completedDays, levelName, onNewChallenge
           <Animated.Text style={[styles.bigNumber, numberStyle]}>75</Animated.Text>
 
           <Animated.View style={[styles.rest, restStyle]}>
-            <Text style={styles.title}>Du klarade utmaningen</Text>
+            <Text style={styles.title}>{t('Du klarade utmaningen')}</Text>
             <Text style={styles.subtitle}>
-              75 dagar. Varje dag räknades, och du räknade dem alla.
+              {t('75 dagar. Varje dag räknades, och du räknade dem alla.')}
             </Text>
 
             <View style={styles.statsCard}>
               <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Nivå</Text>
+                <Text style={styles.statLabel}>{t('Nivå')}</Text>
                 <Text style={styles.statValue}>{levelName || 'SeventyFive'}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Klara dagar</Text>
+                <Text style={styles.statLabel}>{t('Klara dagar')}</Text>
                 <Text style={[styles.statValue, { color: GREEN }]}>{completedDays}/75</Text>
               </View>
             </View>
@@ -76,7 +78,7 @@ export function VictoryModal({ visible, completedDays, levelName, onNewChallenge
               onPress={onNewChallenge}
               activeOpacity={0.8}
             >
-              <Text style={styles.newChallengeText}>Starta en ny utmaning</Text>
+              <Text style={styles.newChallengeText}>{t('Starta en ny utmaning')}</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>

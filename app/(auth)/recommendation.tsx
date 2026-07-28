@@ -7,6 +7,7 @@ import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { acceptChallenge as saveChallenge } from '@/services/challenge'
 import { OnboardingStep, ONB } from '@/components/OnboardingStep'
+import { useT } from '@/lib/i18n'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,7 @@ const COMPARE: Array<{ label: string; values: [string, string, string] }> = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function RecommendationScreen() {
+  const t = useT()
   const params = useLocalSearchParams<{ why: string; goal: string; startDay?: string }>()
   // Normal förvald — det är rätt val för de flesta
   const [selectedLevel, setSelectedLevel] = useState<Level>('normal')
@@ -117,7 +119,7 @@ export default function RecommendationScreen() {
       // Cast tills Metro genererat om typed routes för den nya skärmen
       router.replace('/(auth)/setup-schedule' as any)
     } catch (e: any) {
-      Alert.alert('Något gick fel', e.message)
+      Alert.alert(t('Något gick fel'), e.message)
     } finally {
       setLoading(false)
     }
@@ -130,12 +132,12 @@ export default function RecommendationScreen() {
       return
     }
     Alert.alert(
-      `Säker på ${level.name}?`,
-      `${level.warning}\n\nDe flesta lyckas bäst med Normal, du kan alltid köra en tuffare nivå nästa utmaning.`,
+      t('Säker på {name}?', { name: level.name }),
+      `${t(level.warning)}\n\n${t('De flesta lyckas bäst med Normal, du kan alltid köra en tuffare nivå nästa utmaning.')}`,
       [
-        { text: 'Byt till Normal', onPress: () => setSelectedLevel('normal') },
-        { text: `Kör ${level.name}`, style: 'destructive', onPress: doAccept },
-        { text: 'Avbryt', style: 'cancel' },
+        { text: t('Byt till Normal'), onPress: () => setSelectedLevel('normal') },
+        { text: t('Kör {name}', { name: level.name }), style: 'destructive', onPress: doAccept },
+        { text: t('Avbryt'), style: 'cancel' },
       ],
     )
   }
@@ -143,8 +145,8 @@ export default function RecommendationScreen() {
   return (
     <OnboardingStep
       step={3}
-      title="Välj din nivå"
-      subtitle="Nivåerna skiljer sig mycket åt. Läs igenom vad som krävs innan du bestämmer dig."
+      title={t('Välj din nivå')}
+      subtitle={t('Nivåerna skiljer sig mycket åt. Läs igenom vad som krävs innan du bestämmer dig.')}
       onBack={() => router.back()}
       scroll
       footer={
@@ -157,12 +159,12 @@ export default function RecommendationScreen() {
           >
             {loading
               ? <ActivityIndicator color={ONB.NAVY} />
-              : <Text style={styles.acceptButtonText}>Acceptera utmaningen: {level.name}</Text>
+              : <Text style={styles.acceptButtonText}>{t('Acceptera utmaningen: {name}', { name: level.name })}</Text>
             }
           </TouchableOpacity>
           <Text style={styles.disclaimer}>
-            {params.startDay ? `Du startar på dag ${params.startDay}. ` : 'Dag 1 börjar idag. '}
-            {level.missText}
+            {params.startDay ? t('Du startar på dag {day}. ', { day: params.startDay }) : t('Dag 1 börjar idag. ')}
+            {t(level.missText)}
           </Text>
         </>
       }
@@ -171,9 +173,9 @@ export default function RecommendationScreen() {
         <View style={styles.adviceBox}>
           <Ionicons name="information-circle" size={19} color={ONB.ORANGE} />
           <Text style={styles.adviceText}>
-            För de flesta är <Text style={styles.adviceStrong}>Normal</Text> det bästa valet.
-            Välj Hard eller Extreme bara om du redan tränar mycket och är väldigt
-            fokuserad, eller har extremt tydliga mål.
+            {t('För de flesta är')}{' '}
+            <Text style={styles.adviceStrong}>Normal</Text>{' '}
+            {t('det bästa valet. Välj Hard eller Extreme bara om du redan tränar mycket och är väldigt fokuserad, eller har extremt tydliga mål.')}
           </Text>
         </View>
 
@@ -192,7 +194,7 @@ export default function RecommendationScreen() {
               <View style={styles.levelHead}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.levelName, { color: l.color }]}>{l.name}</Text>
-                  <Text style={styles.tagline}>{l.tagline}</Text>
+                  <Text style={styles.tagline}>{t(l.tagline)}</Text>
                 </View>
                 <View style={[styles.radio, selected && { borderColor: l.color, backgroundColor: l.color }]}>
                   {selected && <Ionicons name="checkmark" size={13} color="#000" />}
@@ -204,7 +206,7 @@ export default function RecommendationScreen() {
                   {l.rules.map((rule, i) => (
                     <View key={i} style={styles.ruleRow}>
                       <Ionicons name="checkmark-circle" size={17} color={l.color} />
-                      <Text style={styles.ruleText}>{rule}</Text>
+                      <Text style={styles.ruleText}>{t(rule)}</Text>
                     </View>
                   ))}
                 </View>
@@ -216,7 +218,7 @@ export default function RecommendationScreen() {
         {/* Jämförelsen — kravet på egen rad med tre luftiga kolumner under,
             och den valda nivåns kolumn tonad i nivåns färg */}
         <View style={styles.compareCard}>
-          <Text style={styles.compareTitle}>Jämför nivåerna</Text>
+          <Text style={styles.compareTitle}>{t('Jämför nivåerna')}</Text>
           <View style={styles.compareValues}>
             {LEVEL_ORDER.map(slug => (
               <View
@@ -231,7 +233,7 @@ export default function RecommendationScreen() {
           </View>
           {COMPARE.map(row => (
             <View key={row.label} style={styles.compareBlock}>
-              <Text style={styles.compareLabel}>{row.label.toUpperCase()}</Text>
+              <Text style={styles.compareLabel}>{t(row.label).toUpperCase()}</Text>
               <View style={styles.compareValues}>
                 {row.values.map((val, i) => {
                   const slug = LEVEL_ORDER[i]
@@ -241,7 +243,7 @@ export default function RecommendationScreen() {
                       key={slug}
                       style={[styles.compareCell, active && { backgroundColor: LEVELS[slug].color + '14' }]}
                     >
-                      <Text style={[styles.compareValue, active && styles.compareValueActive]}>{val}</Text>
+                      <Text style={[styles.compareValue, active && styles.compareValueActive]}>{t(val)}</Text>
                     </View>
                   )
                 })}

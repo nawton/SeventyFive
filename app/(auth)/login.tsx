@@ -18,6 +18,7 @@ import { signInWithGoogle } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
 import { updateProfile } from '@/services/profile'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT } from '@/lib/i18n'
 
 type Mode = 'login' | 'register'
 
@@ -31,6 +32,7 @@ const ORANGE      = '#FFA817'
 const ORANGE_DEEP = '#FF7A1A'
 
 export default function LoginScreen() {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const { startDay, mode: modeParam } = useLocalSearchParams<{ startDay?: string; mode?: string }>()
   // Välkomstsidans "Registrera dig" landar direkt i registreringsläget
@@ -56,7 +58,7 @@ export default function LoginScreen() {
             : '/(app)/dashboard'
         )
       } else {
-        Alert.alert('Google-inloggning misslyckades', 'Försök igen.')
+        Alert.alert(t('Google-inloggning misslyckades'), t('Försök igen.'))
       }
     } finally {
       setGoogleLoading(false)
@@ -68,11 +70,11 @@ export default function LoginScreen() {
     const trimmedName  = name.trim()
 
     if (mode === 'register' && !trimmedName) {
-      Alert.alert('Fyll i ditt namn')
+      Alert.alert(t('Fyll i ditt namn'))
       return
     }
     if (!trimmedEmail || !password) {
-      Alert.alert('Fyll i email och lösenord')
+      Alert.alert(t('Fyll i email och lösenord'))
       return
     }
 
@@ -85,11 +87,11 @@ export default function LoginScreen() {
       })
       if (error) {
         const msg = error.message.includes('Email not confirmed')
-          ? 'Du behöver bekräfta din e-post. Kolla din inkorg.'
+          ? t('Du behöver bekräfta din e-post. Kolla din inkorg.')
           : error.message.includes('Invalid login credentials')
-          ? 'Fel e-post eller lösenord.'
+          ? t('Fel e-post eller lösenord.')
           : error.message
-        Alert.alert('Inloggning misslyckades', msg)
+        Alert.alert(t('Inloggning misslyckades'), msg)
       } else {
         // For login, dashboard decides routing (challenge may already exist)
         router.replace(
@@ -104,7 +106,7 @@ export default function LoginScreen() {
         password,
       })
       if (error) {
-        Alert.alert('Registrering misslyckades', error.message)
+        Alert.alert(t('Registrering misslyckades'), error.message)
       } else {
         if (data.user) {
           try { await updateProfile(data.user.id, { name: trimmedName }) } catch { /* non-blocking */ }
@@ -120,8 +122,8 @@ export default function LoginScreen() {
           setPassword('')
           setMode('login')
           Alert.alert(
-            'Bekräfta din e-post',
-            'Vi har skickat en länk till din inkorg. Klicka på den och logga sedan in här.'
+            t('Bekräfta din e-post'),
+            t('Vi har skickat en länk till din inkorg. Klicka på den och logga sedan in här.')
           )
         }
       }
@@ -155,16 +157,16 @@ export default function LoginScreen() {
         <View style={styles.container}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
-              <Text style={styles.brandName}>SeventyFive</Text>
-              <Text style={styles.brandBy}>by Nawton</Text>
+              <Text style={styles.brandName}>{t('SeventyFive')}</Text>
+              <Text style={styles.brandBy}>{t('by Nawton')}</Text>
             </View>
             <Text style={styles.title}>
-              {mode === 'login' ? 'Logga in' : 'Skapa ditt konto'}
+              {mode === 'login' ? t('Logga in') : t('Skapa ditt konto')}
             </Text>
             <Text style={styles.subtitle}>
               {mode === 'login'
-                ? 'Fortsätt din resa, en dag i taget.'
-                : 'Din resa börjar här.'}
+                ? t('Fortsätt din resa, en dag i taget.')
+                : t('Din resa börjar här.')}
             </Text>
           </View>
 
@@ -180,21 +182,21 @@ export default function LoginScreen() {
               ) : (
                 <>
                   <Text style={styles.googleIcon}>G</Text>
-                  <Text style={styles.googleText}>Fortsätt med Google</Text>
+                  <Text style={styles.googleText}>{t('Fortsätt med Google')}</Text>
                 </>
               )}
             </TouchableOpacity>
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>eller</Text>
+              <Text style={styles.dividerText}>{t('eller')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
             {mode === 'register' && (
               <AppTextInput
                 style={styles.input}
-                placeholder="Ditt namn"
+                placeholder={t('Ditt namn')}
                 placeholderTextColor="rgba(244,245,250,0.35)"
                 value={name}
                 onChangeText={setName}
@@ -207,7 +209,7 @@ export default function LoginScreen() {
             <AppTextInput
               ref={emailRef}
               style={styles.input}
-              placeholder="Email"
+              placeholder={t('Email')}
               placeholderTextColor="rgba(244,245,250,0.35)"
               value={email}
               onChangeText={setEmail}
@@ -220,7 +222,7 @@ export default function LoginScreen() {
             <AppTextInput
               ref={passwordRef}
               style={styles.input}
-              placeholder="Lösenord"
+              placeholder={t('Lösenord')}
               placeholderTextColor="rgba(244,245,250,0.35)"
               value={password}
               onChangeText={setPassword}
@@ -244,7 +246,7 @@ export default function LoginScreen() {
                   <ActivityIndicator color={NAVY} />
                 ) : (
                   <Text style={styles.primaryButtonText}>
-                    {mode === 'login' ? 'Logga in' : 'Registrera dig'}
+                    {mode === 'login' ? t('Logga in') : t('Registrera dig')}
                   </Text>
                 )}
               </LinearGradient>
@@ -257,15 +259,15 @@ export default function LoginScreen() {
                 style={styles.switchButton}
                 onPress={() => router.push('/(auth)/forgot-password')}
               >
-                <Text style={styles.switchText}>Glömt lösenordet?</Text>
+                <Text style={styles.switchText}>{t('Glömt lösenordet?')}</Text>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity style={styles.switchPill} onPress={switchMode}>
               <Text style={styles.switchPillText}>
                 {mode === 'login'
-                  ? <>Inget konto? <Text style={styles.switchPillAction}>Registrera dig</Text></>
-                  : <>Har du ett konto? <Text style={styles.switchPillAction}>Logga in</Text></>}
+                  ? <>{t('Inget konto?')} <Text style={styles.switchPillAction}>{t('Registrera dig')}</Text></>
+                  : <>{t('Har du ett konto?')} <Text style={styles.switchPillAction}>{t('Logga in')}</Text></>}
               </Text>
             </TouchableOpacity>
           </View>

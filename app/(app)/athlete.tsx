@@ -21,6 +21,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { BG, CARD, TEXT_PRIMARY } from '@/lib/theme'
 import { TAB_CONTENT_PAD } from '@/lib/glass'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // ATLETPROFIL — öppnas från flödeskortens avatar och sökningen. Själva vyn
@@ -33,6 +34,7 @@ import { TAB_CONTENT_PAD } from '@/lib/glass'
 export { activeLabel, buildWeekBuckets } from '@/components/AthleteOverview'
 
 export default function AthleteScreen() {
+  const t = useT()
   const params = useLocalSearchParams<{ userId?: string; name?: string; avatar?: string }>()
   const otherId = typeof params.userId === 'string' && params.userId.length > 0 ? params.userId : null
   const paramName = typeof params.name === 'string' ? params.name : ''
@@ -141,12 +143,12 @@ export default function AthleteScreen() {
       return
     }
     Alert.alert(
-      `Blockera ${name.split(' ')[0] || 'användaren'}?`,
-      'Ni slutar följa varandra, kan inte skicka nya förfrågningar och hittar inte varandra i sökningen. Personen meddelas inte.',
+      t('Blockera {name}?', { name: name.split(' ')[0] || t('användaren') }),
+      t('Ni slutar följa varandra, kan inte skicka nya förfrågningar och hittar inte varandra i sökningen. Personen meddelas inte.'),
       [
-        { text: 'Avbryt', style: 'cancel' },
+        { text: t('Avbryt'), style: 'cancel' },
         {
-          text: 'Blockera',
+          text: t('Blockera'),
           style: 'destructive',
           onPress: () => {
             setBlocked(true)

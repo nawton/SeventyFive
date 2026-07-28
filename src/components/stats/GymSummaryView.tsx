@@ -9,6 +9,7 @@ import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI,
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
 import { useStatsColors } from '@/components/stats/statsShared'
+import { useT, dateLocale } from '@/lib/i18n'
 
 const SCREEN_W = Dimensions.get('window').width
 
@@ -50,6 +51,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
   /** Community: gilla/kommentera/dela-raden under övningarna */
   social?: { postKey: string; ownerId: string; onOpenComments?: () => void }
 }) {
+  const t = useT()
   const P = useStatsColors()
   const insets = useSafeAreaInsets()
   const [progressEx, setProgressEx] = useState<string | null>(null)
@@ -85,20 +87,20 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{name}</Text>
-            <Text style={s.heroSub}>Gympass</Text>
+            <Text style={s.heroSub}>{t('Gympass')}</Text>
           </View>
           <View style={s.donePill}>
             <Ionicons name="checkmark-circle" size={13} color={GREEN} />
-            <Text style={s.donePillText}>Avklarat</Text>
+            <Text style={s.donePillText}>{t('Avklarat')}</Text>
           </View>
         </View>
 
         {/* Träningsdetaljer */}
-        <Text style={s.sectionHead}>Träningsdetaljer</Text>
+        <Text style={s.sectionHead}>{t('Träningsdetaljer')}</Text>
         <View style={s.card}>
           <View style={s.dtlRow}>
             <View style={s.dtlCell}>
-              <Text style={s.dtlLbl}>Övningar</Text>
+              <Text style={s.dtlLbl}>{t('Övningar')}</Text>
               <Text style={[s.dtlVal, { color: ACCENT }]}>{exerciseCount}</Text>
             </View>
             <View style={s.dtlCell}>
@@ -109,13 +111,13 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
           <View style={s.dtlSep} />
           <View style={s.dtlRow}>
             <View style={s.dtlCell}>
-              <Text style={s.dtlLbl}>Reps totalt</Text>
+              <Text style={s.dtlLbl}>{t('Reps totalt')}</Text>
               <Text style={[s.dtlVal, { color: GREEN }]}>{totalReps}</Text>
             </View>
             <View style={s.dtlCell}>
-              <Text style={s.dtlLbl}>Volym</Text>
+              <Text style={s.dtlLbl}>{t('Volym')}</Text>
               <Text style={[s.dtlVal, { color: P.BLUE }]}>
-                {Math.round(totalKg).toLocaleString('sv-SE')}
+                {Math.round(totalKg).toLocaleString(dateLocale())}
                 <Text style={s.dtlUnit}> KG</Text>
               </Text>
             </View>
@@ -125,7 +127,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
         {/* Övningar med alla set */}
         {(logged.length > 0 || unlogged.length > 0) && (
           <>
-            <Text style={s.sectionHead}>Övningar</Text>
+            <Text style={s.sectionHead}>{t('Övningar')}</Text>
             <View style={s.card}>
               {logged.map((w, i) => {
                 const topKg = w.data.sets.reduce((m, r) => Math.max(m, r.weight_kg || 0), 0)
@@ -141,7 +143,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
                       <Text style={s.exName} numberOfLines={1}>{w.data.exercise_name}</Text>
                       {topKg > 0 && (
                         <Text style={s.exTop}>
-                          topp {topKg} kg
+                          {t('topp {kg} kg', { kg: topKg })}
                         </Text>
                       )}
                       {allWorkouts && <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.28)" />}
@@ -162,7 +164,7 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
                 <View key={n} style={[s.exBlock, (logged.length > 0 || i > 0) && s.rowBorder]}>
                   <View style={s.exHead}>
                     <Text style={[s.exName, { color: TEXT_SECONDARY }]} numberOfLines={1}>{n}</Text>
-                    <Text style={s.exUnlogged}>Ej loggad</Text>
+                    <Text style={s.exUnlogged}>{t('Ej loggad')}</Text>
                   </View>
                 </View>
               ))}
@@ -176,7 +178,9 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
             postKey={social.postKey}
             ownerId={social.ownerId}
             onOpenComments={social.onOpenComments}
-            shareText={`Gympass · ${logged.length} ${logged.length === 1 ? 'övning' : 'övningar'}, loggat med SeventyFive`}
+            shareText={logged.length === 1
+              ? t('Gympass · {n} övning, loggat med SeventyFive', { n: logged.length })
+              : t('Gympass · {n} övningar, loggat med SeventyFive', { n: logged.length })}
           />
         )}
       </ScrollView>
@@ -191,10 +195,10 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
           </View>
 
           <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
-            <Text style={s.sectionHead}>Progression</Text>
+            <Text style={s.sectionHead}>{t('Progression')}</Text>
             {progWeighted.length >= 2 ? (
               <View style={[s.card, { paddingVertical: 16 }]}>
-                <Text style={s.progSub}>toppvikt per pass · senaste {Math.min(progWeighted.length, 12)} passen</Text>
+                <Text style={s.progSub}>{t('toppvikt per pass · senaste {n} passen', { n: Math.min(progWeighted.length, 12) })}</Text>
                 {(() => {
                   const pts = progWeighted.slice(-12)
                   const CH_W = SCREEN_W - 40 - 36
@@ -225,13 +229,13 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
                       </Svg>
                       <View style={s.progAxisRow}>
                         <Text style={s.progAxisLbl}>
-                          {parseLocalDate(pts[0].date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')}
+                          {parseLocalDate(pts[0].date).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '')}
                         </Text>
                         <Text style={s.progAxisLbl}>
                           {minV === maxV ? `${maxV} kg` : `${minV}–${maxV} kg`}
                         </Text>
                         <Text style={s.progAxisLbl}>
-                          {parseLocalDate(pts[pts.length - 1].date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')}
+                          {parseLocalDate(pts[pts.length - 1].date).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '')}
                         </Text>
                       </View>
                     </>
@@ -240,23 +244,23 @@ export function GymSummaryView({ name, dateLabel, logged, plannedNames, allWorko
               </View>
             ) : (
               <Text style={s.progHint}>
-                Logga vikt på övningen i minst två pass så ritas progressionen här.
+                {t('Logga vikt på övningen i minst två pass så ritas progressionen här.')}
               </Text>
             )}
 
-            <Text style={s.sectionHead}>Rekord</Text>
+            <Text style={s.sectionHead}>{t('Rekord')}</Text>
             <View style={[s.card, { paddingVertical: 6 }]}>
               {([
                 {
-                  label: 'Bästa set',
+                  label: t('Bästa set'),
                   value: bestTop && bestTop.topKg > 0 ? `${bestTop.topKg} kg × ${bestTop.topReps}` : '–',
                 },
-                { label: 'Beräknad 1RM', value: bestOrm > 0 ? `${Math.round(bestOrm)} kg` : '–' },
-                { label: 'Pass med övningen', value: String(progression.length) },
+                { label: t('Beräknad 1RM'), value: bestOrm > 0 ? `${Math.round(bestOrm)} kg` : '–' },
+                { label: t('Pass med övningen'), value: String(progression.length) },
                 {
-                  label: 'Senaste passet',
+                  label: t('Senaste passet'),
                   value: progression.length > 0
-                    ? `${parseLocalDate(progression[progression.length - 1].date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')}${progression[progression.length - 1].topKg > 0 ? ` · ${progression[progression.length - 1].topKg} kg` : ''}`
+                    ? `${parseLocalDate(progression[progression.length - 1].date).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '')}${progression[progression.length - 1].topKg > 0 ? ` · ${progression[progression.length - 1].topKg} kg` : ''}`
                     : '–',
                 },
               ]).map((r, i) => (

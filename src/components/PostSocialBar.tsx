@@ -4,6 +4,7 @@ import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { getFeedSocial, likePost, unlikePost } from '@/services/social'
 import { CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, CARD_BORDER } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // SOCIAL RAD — Strava-stil under passdetaljerna: "2 gillanden · 1
@@ -21,6 +22,7 @@ export function PostSocialBar({ postKey, ownerId, shareText, onOpenComments }: {
   /** Öppna diskussionssidan (föräldern stänger ev. modal först) */
   onOpenComments?: () => void
 }) {
+  const t = useT()
   const [likes, setLikes] = useState(0)
   const [likedByMe, setLikedByMe] = useState(false)
   const [comments, setComments] = useState(0)
@@ -58,10 +60,10 @@ export function PostSocialBar({ postKey, ownerId, shareText, onOpenComments }: {
     <View style={s.wrap}>
       <View style={s.countsRow}>
         <Text style={s.countText}>
-          {likes === 1 ? '1 gillande' : `${likes} gillanden`}
+          {likes === 1 ? t('1 gillande') : t('{n} gillanden', { n: likes })}
         </Text>
         <Text style={s.countText}>
-          {comments === 1 ? '1 kommentar' : `${comments} kommentarer`}
+          {comments === 1 ? t('1 kommentar') : t('{n} kommentarer', { n: comments })}
         </Text>
       </View>
       <View style={s.buttonsRow}>

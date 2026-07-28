@@ -15,6 +15,7 @@ import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, DIVIDER, ACCENT, useCardChrome, useThemeStrings } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // INTEGRITETSINSTÄLLNINGAR — Strava-mönstret: lista med nuvarande värde,
@@ -35,6 +36,7 @@ const TRIM_LABELS = [0, 400, 800, 1200, 1600]
 /** Snäppande slider med punkter på spåret, som förlagan — tick-etiketterna
  *  under går också att trycka på för att hoppa direkt till ett värde */
 function TrimSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const t = useT()
   const [trackW, setTrackW] = useState(0)
   const last = useRef(value)
   useEffect(() => { last.current = value }, [value])
@@ -84,7 +86,7 @@ function TrimSlider({ value, onChange }: { value: number; onChange: (v: number) 
         {TRIM_LABELS.map(m => (
           <Pressable key={m} onPress={() => commit(m)} hitSlop={10} testID={`trim-${m}`}>
             <Text style={[s.sliderLabel, value === m && s.sliderLabelActive]}>
-              {m === 0 ? 'Av' : String(m)}
+              {m === 0 ? t('Av') : String(m)}
             </Text>
           </Pressable>
         ))}
@@ -155,6 +157,7 @@ const SETTINGS: Record<SettingKey, {
 }
 
 export default function PrivacyScreen() {
+  const t = useT()
   const chrome = useCardChrome()
   // Radioringar som strängar — dynamiska ramfärger fryser i modaler
   const T = useThemeStrings()
@@ -206,7 +209,7 @@ export default function PrivacyScreen() {
   function save(updates: Parameters<typeof updateProfile>[1]) {
     if (!userId) return
     updateProfile(userId, updates).catch(() => {
-      Alert.alert('Kunde inte spara', 'Ändringen sparades inte, kontrollera anslutningen och försök igen.')
+      Alert.alert(t('Kunde inte spara'), t('Ändringen sparades inte, kontrollera anslutningen och försök igen.'))
       getProfile(userId).then(p => { if (p) applyProfile(p) }).catch(() => {})
     })
   }
@@ -218,9 +221,9 @@ export default function PrivacyScreen() {
   }
 
   const displayValue: Record<SettingKey, string> = {
-    search: searchable ? 'Alla' : 'Ingen',
-    profile: isPublic ? 'Alla' : 'Godkännande krävs',
-    activities: activityVisibility === 'followers' ? 'Följare' : 'Bara du',
+    search: searchable ? t('Alla') : t('Ingen'),
+    profile: isPublic ? t('Alla') : t('Godkännande krävs'),
+    activities: activityVisibility === 'followers' ? t('Följare') : t('Bara du'),
   }
 
   function select(key: SettingKey, value: string) {
@@ -252,12 +255,12 @@ export default function PrivacyScreen() {
           onPress={() => router.back()}
           fallbackStyle={s.iconBtnFallback}
         />
-        <Text style={s.title}>Integritet</Text>
+        <Text style={s.title}>{t('Integritet')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.sectionLabel}>VAR DU VISAS</Text>
+        <Text style={s.sectionLabel}>{t('VAR DU VISAS')}</Text>
         <View style={[s.rowsCard, chrome]}>
           {(Object.keys(SETTINGS) as SettingKey[]).map((key, i) => (
             <View key={key}>
@@ -268,7 +271,7 @@ export default function PrivacyScreen() {
                 activeOpacity={0.7}
                 testID={`privacy-${key}`}
               >
-                <Text style={s.rowLabel}>{SETTINGS[key].label}</Text>
+                <Text style={s.rowLabel}>{t(SETTINGS[key].label)}</Text>
                 <Text style={s.rowValue}>{displayValue[key]}</Text>
                 <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
               </TouchableOpacity>
@@ -277,10 +280,10 @@ export default function PrivacyScreen() {
         </View>
 
         <Text style={s.footnote}>
-          Framstegsfoton är alltid privata och delas aldrig med någon.
+          {t('Framstegsfoton är alltid privata och delas aldrig med någon.')}
         </Text>
 
-        <Text style={[s.sectionLabel, { marginTop: 26 }]}>YTTERLIGARE INSTÄLLNINGAR</Text>
+        <Text style={[s.sectionLabel, { marginTop: 26 }]}>{t('YTTERLIGARE INSTÄLLNINGAR')}</Text>
         <View style={[s.rowsCard, chrome]}>
           <TouchableOpacity
             style={s.row}
@@ -288,7 +291,7 @@ export default function PrivacyScreen() {
             activeOpacity={0.7}
             testID="privacy-maps"
           >
-            <Text style={s.rowLabel}>Kartsynlighet</Text>
+            <Text style={s.rowLabel}>{t('Kartsynlighet')}</Text>
             <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
           </TouchableOpacity>
           <View style={s.rowDivider} />
@@ -298,7 +301,7 @@ export default function PrivacyScreen() {
             activeOpacity={0.7}
             testID="privacy-blocked"
           >
-            <Text style={s.rowLabel}>Blockerade konton</Text>
+            <Text style={s.rowLabel}>{t('Blockerade konton')}</Text>
             {blocked.length > 0 && <Text style={s.rowValue}>{blocked.length}</Text>}
             <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
           </TouchableOpacity>
@@ -321,9 +324,9 @@ export default function PrivacyScreen() {
               fallbackStyle={s.iconBtnFallback}
             />
             <Text style={s.title}>
-              {mapsView === 'menu' ? 'Kartsynlighet'
-                : mapsView === 'trim' ? 'Dölj start och slut'
-                : 'Dölj alla kartor'}
+              {mapsView === 'menu' ? t('Kartsynlighet')
+                : mapsView === 'trim' ? t('Dölj start och slut')
+                : t('Dölj alla kartor')}
             </Text>
             <View style={{ width: 40 }} />
           </View>
@@ -339,9 +342,9 @@ export default function PrivacyScreen() {
                 >
                   <Ionicons name="location-outline" size={20} color={TEXT_SECONDARY} />
                   <View style={{ flex: 1 }}>
-                    <Text style={s.menuLabel}>Dölj start- och slutpunkter</Text>
+                    <Text style={s.menuLabel}>{t('Dölj start- och slutpunkter')}</Text>
                     <Text style={s.rowSub}>
-                      {trimMeters === 0 ? 'Av' : `${trimMeters} m döljs i varje ände`}
+                      {trimMeters === 0 ? t('Av') : t('{n} m döljs i varje ände', { n: trimMeters })}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
@@ -355,8 +358,8 @@ export default function PrivacyScreen() {
                 >
                   <Ionicons name="eye-off-outline" size={20} color={TEXT_SECONDARY} />
                   <View style={{ flex: 1 }}>
-                    <Text style={s.menuLabel}>Dölj dina kartor helt för andra</Text>
-                    <Text style={s.rowSub}>{hideRouteMaps ? 'På' : 'Av'}</Text>
+                    <Text style={s.menuLabel}>{t('Dölj dina kartor helt för andra')}</Text>
+                    <Text style={s.rowSub}>{hideRouteMaps ? t('På') : t('Av')}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
                 </TouchableOpacity>
@@ -367,12 +370,10 @@ export default function PrivacyScreen() {
           {mapsView === 'trim' && (
             <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
               <Text style={s.intro}>
-                Dölj starten och slutet på alla framtida rutter med ett
-                ungefärligt avstånd. Punkterna klipps bort innan passet sparas
-                och lagras aldrig.
+                {t('Dölj starten och slutet på alla framtida rutter med ett ungefärligt avstånd. Punkterna klipps bort innan passet sparas och lagras aldrig.')}
               </Text>
               <Text style={s.trimValue}>
-                {trimMeters === 0 ? 'Inga dolda meter' : `${trimMeters} dolda meter`}
+                {trimMeters === 0 ? t('Inga dolda meter') : t('{n} dolda meter', { n: trimMeters })}
               </Text>
               <TrimSlider
                 value={trimMeters}
@@ -382,8 +383,7 @@ export default function PrivacyScreen() {
                 }}
               />
               <Text style={s.footnote}>
-                Tidigare pass påverkas inte, och distans och kalorier räknas
-                fortfarande på hela rundan.
+                {t('Tidigare pass påverkas inte, och distans och kalorier räknas fortfarande på hela rundan.')}
               </Text>
             </ScrollView>
           )}
@@ -392,10 +392,9 @@ export default function PrivacyScreen() {
             <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
               <View style={s.toggleRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.optionTitle}>Dölj alla kartor</Text>
+                  <Text style={s.optionTitle}>{t('Dölj alla kartor')}</Text>
                   <Text style={s.optionBody}>
-                    Dina rutter visas aldrig för följare, varken i flödet, på
-                    din profil eller i passdetaljerna. Du ser dem alltid själv.
+                    {t('Dina rutter visas aldrig för följare, varken i flödet, på din profil eller i passdetaljerna. Du ser dem alltid själv.')}
                   </Text>
                 </View>
                 <Switch
@@ -427,7 +426,7 @@ export default function PrivacyScreen() {
               onPress={() => setBlockedOpen(false)}
               fallbackStyle={s.iconBtnFallback}
             />
-            <Text style={s.title}>Blockerade konton</Text>
+            <Text style={s.title}>{t('Blockerade konton')}</Text>
             <View style={{ width: 40 }} />
           </View>
           <FlatList
@@ -440,14 +439,14 @@ export default function PrivacyScreen() {
                   fallback={(item.name ?? '?').charAt(0).toUpperCase()}
                   size={46}
                 />
-                <Text style={s.blockedName} numberOfLines={1}>{item.name ?? 'Namnlös'}</Text>
+                <Text style={s.blockedName} numberOfLines={1}>{item.name ?? t('Namnlös')}</Text>
                 <TouchableOpacity
                   style={s.unblockPill}
                   onPress={() => handleUnblock(item.id)}
                   activeOpacity={0.8}
                   testID={`unblock-${item.id}`}
                 >
-                  <Text style={s.unblockText}>Avblockera</Text>
+                  <Text style={s.unblockText}>{t('Avblockera')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -457,7 +456,7 @@ export default function PrivacyScreen() {
             ListEmptyComponent={
               <View style={s.empty}>
                 <Ionicons name="ban-outline" size={40} color={TEXT_SECONDARY} />
-                <Text style={s.emptyTitle}>Inga blockerade konton</Text>
+                <Text style={s.emptyTitle}>{t('Inga blockerade konton')}</Text>
               </View>
             }
           />
@@ -475,13 +474,13 @@ export default function PrivacyScreen() {
               onPress={() => setPicker(null)}
               fallbackStyle={s.iconBtnFallback}
             />
-            <Text style={s.title}>{active?.label ?? ''}</Text>
+            <Text style={s.title}>{active ? t(active.label) : ''}</Text>
             <View style={{ width: 40 }} />
           </View>
 
           {picker && active && (
             <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-              <Text style={s.intro}>{active.intro}</Text>
+              <Text style={s.intro}>{t(active.intro)}</Text>
               {active.options.map(option => {
                 const selected = currentValue[picker] === option.value
                 return (
@@ -493,8 +492,8 @@ export default function PrivacyScreen() {
                     testID={`option-${option.value}`}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={s.optionTitle}>{option.title}</Text>
-                      <Text style={s.optionBody}>{option.description}</Text>
+                      <Text style={s.optionTitle}>{t(option.title)}</Text>
+                      <Text style={s.optionBody}>{t(option.description)}</Text>
                     </View>
                     <View style={[s.radio, { borderColor: selected ? T.ACCENT : radioEdge }]}>
                       {selected && <View style={[s.radioDot, { backgroundColor: T.ACCENT }]} />}

@@ -17,6 +17,7 @@ import { getStreak, getWeekStatuses, getDayDetail, type TaskItem } from '@/servi
 import { GlassCircleButton } from '@/components/GlassButton'
 import { toLocalDateString, startOfWeek } from '@/lib/date'
 import { BG, CARD, BORDER, GREEN, RED, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, useThemeStrings, useCardChrome, THEME_DARK } from '@/lib/theme'
+import { useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // STREAK — hur många dagar i rad utmaningen klarats. Glödande låga,
@@ -56,6 +57,7 @@ function Flame({ size = 250 }: { size?: number }) {
 }
 
 export default function StreakScreen() {
+  const t = useT()
   const T = useThemeStrings()
   const chrome = useCardChrome()
   const dotEdge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'rgba(0,0,0,0.30)'
@@ -151,7 +153,7 @@ export default function StreakScreen() {
           onPress={() => router.back()}
           fallbackStyle={s.iconBtnFallback}
         />
-        <Text style={s.title}>Streak</Text>
+        <Text style={s.title}>{t('Streak')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -161,9 +163,9 @@ export default function StreakScreen() {
         </View>
 
         <Text style={s.streakNumber}>{streak}</Text>
-        <Text style={s.streakLabel}>{streak === 1 ? 'dags streak' : 'dagars streak'}</Text>
+        <Text style={s.streakLabel}>{streak === 1 ? t('dags streak') : t('dagars streak')}</Text>
         <Text style={s.streakHint}>
-          Klara alla dagens uppgifter varje dag för att hålla lågan vid liv.
+          {t('Klara alla dagens uppgifter varje dag för att hålla lågan vid liv.')}
         </Text>
 
         {/* Veckan: bock för klarade dagar, kryss för missade, siffror framåt */}
@@ -171,7 +173,7 @@ export default function StreakScreen() {
           <View style={s.weekRow}>
             {week.map(d => (
               <Text key={`l-${d.key}`} style={[s.weekLabel, d.isToday && s.weekLabelToday]}>
-                {d.label}
+                {t(d.label)}
               </Text>
             ))}
           </View>
@@ -206,7 +208,7 @@ export default function StreakScreen() {
         {/* Milstolpar — nästa mål har streckad orange ram som i förlagan */}
         <View style={[s.milestoneCard, chrome]}>
           <Text style={s.milestoneHead}>
-            {next ? `NÄSTA MILSTOLPE: ${next} DAGAR` : 'ALLA MILSTOLPAR KLARADE'}
+            {next ? t('NÄSTA MILSTOLPE: {n} DAGAR', { n: next }) : t('ALLA MILSTOLPAR KLARADE')}
           </Text>
           <View style={s.milestoneRow}>
             {milestones.map(m => {
@@ -219,7 +221,7 @@ export default function StreakScreen() {
                     passed && s.milestonePassed,
                     isNext && s.milestoneNextText,
                   ]}>
-                    {m} dagar
+                    {t('{n} dagar', { n: m })}
                   </Text>
                   {passed ? (
                     <Ionicons name="checkmark-circle" size={16} color={GREEN} />
@@ -242,32 +244,32 @@ export default function StreakScreen() {
           <View style={[s.dayCard, chrome]} onStartShouldSetResponder={() => true}>
             <View style={s.grabber} />
             <Text style={s.dayTitle}>
-              {dayOpen ? new Date(`${dayOpen}T12:00:00`).toLocaleDateString('sv-SE', {
+              {dayOpen ? new Date(`${dayOpen}T12:00:00`).toLocaleDateString(dateLocale(), {
                 weekday: 'long', day: 'numeric', month: 'long',
               }).replace(/^./, c => c.toUpperCase()) : ''}
             </Text>
-            {dayStatus === 'completed' && <Text style={[s.dayStatusText, { color: GREEN }]}>Dagen klarad</Text>}
-            {dayStatus === 'failed' && <Text style={[s.dayStatusText, { color: RED }]}>Dagen missad</Text>}
+            {dayStatus === 'completed' && <Text style={[s.dayStatusText, { color: GREEN }]}>{t('Dagen klarad')}</Text>}
+            {dayStatus === 'failed' && <Text style={[s.dayStatusText, { color: RED }]}>{t('Dagen missad')}</Text>}
 
             {dayTasks === null ? (
               <ActivityIndicator style={{ marginVertical: 24 }} color={TEXT_SECONDARY} />
             ) : dayTasks.length === 0 ? (
               <Text style={s.dayEmpty}>
-                Ingen data för den här dagen, du hade inte öppnat appen då.
+                {t('Ingen data för den här dagen, du hade inte öppnat appen då.')}
               </Text>
             ) : (
               <View style={{ marginTop: 6 }}>
-                {dayTasks.map((t, i) => (
-                  <View key={t.completionId} style={[s.dayTaskRow, i > 0 && s.dayTaskDivider]}>
+                {dayTasks.map((task, i) => (
+                  <View key={task.completionId} style={[s.dayTaskRow, i > 0 && s.dayTaskDivider]}>
                     <Ionicons
-                      name={t.completed ? 'checkmark-circle' : 'close-circle'}
+                      name={task.completed ? 'checkmark-circle' : 'close-circle'}
                       size={20}
-                      color={t.completed ? GREEN : RED}
+                      color={task.completed ? GREEN : RED}
                     />
-                    <Text style={[s.dayTaskName, !t.completed && s.dayTaskMissed]} numberOfLines={1}>
-                      {t.name}
+                    <Text style={[s.dayTaskName, !task.completed && s.dayTaskMissed]} numberOfLines={1}>
+                      {task.name}
                     </Text>
-                    {!t.completed && <Text style={s.dayTaskTag}>Missad</Text>}
+                    {!task.completed && <Text style={s.dayTaskTag}>{t('Missad')}</Text>}
                   </View>
                 ))}
               </View>

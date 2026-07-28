@@ -14,6 +14,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import { TASK_COLORS } from '@/components/TaskGridCard'
 import { BORDER, CARD, ACCENT, useThemeStrings, BG, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT_CONTRAST } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT } from '@/lib/i18n'
 
 const CARD_BG     = CARD
 const CARD_BORDER = BORDER
@@ -50,6 +51,7 @@ export function AddRuleSheet({ visible, onClose, onCreate }: {
   onClose: () => void
   onCreate: (name: string, icon: string) => Promise<void>
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const insets = useSafeAreaInsets()
   const [name, setName]     = useState('')
@@ -138,25 +140,25 @@ export function AddRuleSheet({ visible, onClose, onCreate }: {
               </View>
             </GestureDetector>
             <View style={s.header}>
-              <Text style={s.title}>Ny regel</Text>
+              <Text style={s.title}>{t('Ny regel')}</Text>
               <TouchableOpacity onPress={dismiss} style={s.closeBtn}>
                 <Ionicons name="close" size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
 
-            <Text style={s.fieldLabel}>NAMN</Text>
+            <Text style={s.fieldLabel}>{t('NAMN')}</Text>
             <AppTextInput
               style={s.input}
               value={name}
               onChangeText={setName}
-              placeholder="t.ex. Kall dusch varje morgon"
+              placeholder={t('t.ex. Kall dusch varje morgon')}
               placeholderTextColor="#4A4A50"
               maxLength={60}
               returnKeyType="done"
               onSubmitEditing={handleSave}
             />
 
-            <Text style={[s.fieldLabel, { marginTop: 18 }]}>IKON</Text>
+            <Text style={[s.fieldLabel, { marginTop: 18 }]}>{t('IKON')}</Text>
             <ScrollView
               style={s.iconScroll}
               keyboardShouldPersistTaps="handled"
@@ -175,7 +177,7 @@ export function AddRuleSheet({ visible, onClose, onCreate }: {
                   >
                     <Ionicons name={opt.icon} size={20} color={icon === opt.icon ? CUSTOM : '#4A4A50'} />
                     <Text style={[s.iconLabel, icon === opt.icon && s.iconLabelActive]}>
-                      {opt.label}
+                      {t(opt.label)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -190,7 +192,7 @@ export function AddRuleSheet({ visible, onClose, onCreate }: {
             >
               {saving
                 ? <ActivityIndicator color="#000" size="small" />
-                : <Text style={s.saveBtnText}>Spara regel</Text>
+                : <Text style={s.saveBtnText}>{t('Spara regel')}</Text>
               }
             </TouchableOpacity>
           </Animated.View>

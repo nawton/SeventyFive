@@ -12,6 +12,7 @@ import { getFollowStatus, type FollowStatus } from '@/services/follows'
 import {
   BG, CARD, RED, TEXT_PRIMARY, TEXT_SECONDARY, useCardChrome,
 } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // ALTERNATIV FÖR EN ANNAN PERSONS PROFIL — samma inställningsspråk som
@@ -53,9 +54,10 @@ function SettingRow({ icon, label, onPress, danger, last }: {
 }
 
 export default function AthleteOptionsScreen() {
+  const t = useT()
   const params = useLocalSearchParams<{ userId?: string; name?: string; avatar?: string }>()
   const userId = typeof params.userId === 'string' && params.userId ? params.userId : null
-  const name = typeof params.name === 'string' && params.name ? params.name : 'Profil'
+  const name = typeof params.name === 'string' && params.name ? params.name : t('Profil')
   const avatar = typeof params.avatar === 'string' && params.avatar ? params.avatar : null
 
   const [blocked, setBlocked] = useState(false)
@@ -78,11 +80,11 @@ export default function AthleteOptionsScreen() {
       return
     }
     Alert.alert(
-      `Blockera ${name.split(' ')[0]}?`,
-      'Ni slutar följa varandra, kan inte skicka nya förfrågningar eller meddelanden och hittar inte varandra i sökningen. Personen meddelas inte.',
+      t('Blockera {name}?', { name: name.split(' ')[0] }),
+      t('Ni slutar följa varandra, kan inte skicka nya förfrågningar eller meddelanden och hittar inte varandra i sökningen. Personen meddelas inte.'),
       [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Blockera', style: 'destructive', onPress: () => {
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Blockera'), style: 'destructive', onPress: () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {})
           setBlocked(true)
           blockUser(userId).catch(() => setBlocked(false))
@@ -96,7 +98,7 @@ export default function AthleteOptionsScreen() {
       <View style={s.header}>
         <GlassCircleButton icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
           onPress={() => router.back()} fallbackStyle={s.iconFallback} />
-        <Text style={s.headerTitle} numberOfLines={1}>Alternativ</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>{t('Alternativ')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -105,23 +107,23 @@ export default function AthleteOptionsScreen() {
         <View style={s.hero}>
           <FeedAvatar url={avatar} fallback={name.charAt(0).toUpperCase()} size={72} />
           <Text style={s.heroName} numberOfLines={1}>{name}</Text>
-          {blocked && <Text style={s.heroBlocked}>Blockerad</Text>}
+          {blocked && <Text style={s.heroBlocked}>{t('Blockerad')}</Text>}
         </View>
 
-        <Section title="Kontakt">
-          <SettingRow icon="chatbubble-outline" label="Skicka meddelande" last={followStatus !== 'accepted' || blocked}
+        <Section title={t('Kontakt')}>
+          <SettingRow icon="chatbubble-outline" label={t('Skicka meddelande')} last={followStatus !== 'accepted' || blocked}
             onPress={() => userId && router.push({
               pathname: '/(app)/chat',
               params: { userId, name, avatar: avatar ?? '' },
             } as never)} />
           {followStatus === 'accepted' && !blocked && (
             <>
-              <SettingRow icon="people-outline" label="Följare"
+              <SettingRow icon="people-outline" label={t('Följare')}
                 onPress={() => userId && router.push({
                   pathname: '/(app)/following',
                   params: { tab: 'followers', userId, name },
                 } as never)} />
-              <SettingRow icon="person-add-outline" label="Följer" last
+              <SettingRow icon="person-add-outline" label={t('Följer')} last
                 onPress={() => userId && router.push({
                   pathname: '/(app)/following',
                   params: { tab: 'following', userId, name },
@@ -130,12 +132,12 @@ export default function AthleteOptionsScreen() {
           )}
         </Section>
 
-        <Section title="Säkerhet">
-          <SettingRow icon="flag-outline" label="Anmäl användaren"
-            onPress={() => userId && promptReport('user', userId, `Anmäl ${name}`)} />
+        <Section title={t('Säkerhet')}>
+          <SettingRow icon="flag-outline" label={t('Anmäl användaren')}
+            onPress={() => userId && promptReport('user', userId, t('Anmäl {name}', { name }))} />
           <SettingRow
             icon="ban-outline"
-            label={blocked ? 'Avblockera' : 'Blockera användaren'}
+            label={blocked ? t('Avblockera') : t('Blockera användaren')}
             danger={!blocked}
             last
             onPress={toggleBlock}

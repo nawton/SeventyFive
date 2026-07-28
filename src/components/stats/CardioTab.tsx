@@ -26,6 +26,7 @@ import {
 import { SwipeRow } from './SwipeRow'
 import { DistanceDetailModal } from './DistanceDetailModal'
 import { DistanceAreaChart } from './DistanceAreaChart'
+import { useT, dateLocale } from '@/lib/i18n'
 
 interface WeekBar {
   label:     string
@@ -98,6 +99,7 @@ export function CardioTab({
   onDeleteWorkout: (id: string) => void
   onDeleteCompletion: (id: string) => void
 }) {
+  const t = useT()
   const P = useStatsColors()
   const chrome = useCardChrome()
   const T = useThemeStrings()
@@ -125,11 +127,11 @@ export function CardioTab({
       mon.setDate(mon.getDate() + cardioOffset * 7)
       const end = new Date(mon); end.setDate(end.getDate() + 7)
       const sun = new Date(mon); sun.setDate(sun.getDate() + 6)
-      const fmt = (d: Date) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
+      const fmt = (d: Date) => d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '')
       return {
         start: toLocalDateString(mon) as string | null,
         end: toLocalDateString(end) as string | null,
-        label: cardioOffset === 0 ? 'Denna vecka' : `${fmt(mon)} till ${fmt(sun)}`,
+        label: cardioOffset === 0 ? t('Denna vecka') : t('{a} till {b}', { a: fmt(mon), b: fmt(sun) }),
       }
     }
     if (cardioRange === 'month') {
@@ -140,11 +142,11 @@ export function CardioTab({
         start: toLocalDateString(first) as string | null,
         end: toLocalDateString(next) as string | null,
         label: cardioOffset === 0
-          ? 'Denna månad'
-          : first.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' }),
+          ? t('Denna månad')
+          : first.toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' }),
       }
     }
-    return { start: null as string | null, end: null as string | null, label: 'Hela historiken' }
+    return { start: null as string | null, end: null as string | null, label: t('Hela historiken') }
   })()
   const cardioW = useMemo(() => workouts.filter(w => {
     const d = toLocalDateString(new Date(w.created_at))
@@ -198,7 +200,7 @@ export function CardioTab({
       const buckets = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(start); d.setDate(d.getDate() + i)
         const key = toLocalDateString(d)
-        return { key, label: ['M', 'T', 'O', 'T', 'F', 'L', 'S'][i], run: 0, cycle: 0, walk: 0, total: 0, isCurrent: key === today }
+        return { key, label: t(['M', 'T', 'O', 'T', 'F', 'L', 'S'][i]), run: 0, cycle: 0, walk: 0, total: 0, isCurrent: key === today }
       })
       workouts.forEach(w => add(buckets, toLocalDateString(new Date(w.created_at)), w))
       return buckets
@@ -210,7 +212,7 @@ export function CardioTab({
       const mon = startOfWeek(parseLocalDate(cardioBounds.start!))
       while (toLocalDateString(mon) < cardioBounds.end!) {
         const key = toLocalDateString(mon)
-        buckets.push({ key, label: `V${isoWeekNum(mon)}`, run: 0, cycle: 0, walk: 0, total: 0, isCurrent: key === thisMon })
+        buckets.push({ key, label: t('V{n}', { n: isoWeekNum(mon) }), run: 0, cycle: 0, walk: 0, total: 0, isCurrent: key === thisMon })
         mon.setDate(mon.getDate() + 7)
       }
       workouts.forEach(w => add(buckets, toLocalDateString(startOfWeek(new Date(w.created_at))), w))
@@ -221,7 +223,7 @@ export function CardioTab({
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
       return {
         key: `${d.getFullYear()}-${d.getMonth()}`,
-        label: d.toLocaleDateString('sv-SE', { month: 'short' }).replace('.', ''),
+        label: d.toLocaleDateString(dateLocale(), { month: 'short' }).replace('.', ''),
         run: 0, cycle: 0, walk: 0, total: 0, isCurrent: i === 5,
       }
     })
@@ -321,7 +323,7 @@ export function CardioTab({
         return {
           key: `g:${c.id}`,
           name: c.name,
-          value: 'Klart',
+          value: t('Klart'),
           icon: meta.icon,
           color: meta.color,
           sortKey: new Date(`${c.completedDate}T12:00:00`).getTime(),
@@ -344,12 +346,12 @@ export function CardioTab({
           {workouts.length === 0 ? (
             <View style={s.tabEmpty}>
               <View style={s.tabEmptyIcon}><Ionicons name="walk-outline" size={30} color={ACCENT} /></View>
-              <Text style={s.tabEmptyTitle}>Inget cardio ännu</Text>
+              <Text style={s.tabEmptyTitle}>{t('Inget cardio ännu')}</Text>
               <Text style={s.tabEmptyText}>
-                Starta ett GPS-pass från schemat så vaknar statistiken: distans, tempo, grafer och rekord.
+                {t('Starta ett GPS-pass från schemat så vaknar statistiken: distans, tempo, grafer och rekord.')}
               </Text>
               <TouchableOpacity style={s.tabEmptyBtn} activeOpacity={0.85} onPress={() => router.push('/(app)/add')}>
-                <Text style={s.tabEmptyBtnText}>Till schemat</Text>
+                <Text style={s.tabEmptyBtnText}>{t('Till schemat')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -358,9 +360,9 @@ export function CardioTab({
             <GlassSegment
               value={cardioRange}
               options={[
-                { key: 'week',  label: 'Vecka' },
-                { key: 'month', label: 'Månad' },
-                { key: 'all',   label: 'Totalt' },
+                { key: 'week',  label: t('Vecka') },
+                { key: 'month', label: t('Månad') },
+                { key: 'all',   label: t('Totalt') },
               ]}
               onChange={k => { setCardioRange(k); setCardioOffset(0) }}
             />
@@ -385,7 +387,7 @@ export function CardioTab({
 
             {/* Träningsdetaljer — kompakt på fliken, tryck för alla detaljer */}
             <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setCardioDetailsOpen(true)}>
-              <Text style={[s.sectionHead, s.sectionHeadInline]}>Träningsdetaljer</Text>
+              <Text style={[s.sectionHead, s.sectionHeadInline]}>{t('Träningsdetaljer')}</Text>
               <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
             </TouchableOpacity>
             <TouchableOpacity
@@ -395,11 +397,11 @@ export function CardioTab({
             >
               <View style={[s.dtlRow, { paddingTop: 0 }]}>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Träningstid</Text>
+                  <Text style={s.dtlLbl}>{t('Träningstid')}</Text>
                   <Text style={[s.dtlVal, { color: P.YELLOW }]}>{fmtDuration(totalSecs)}</Text>
                 </View>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Distans</Text>
+                  <Text style={s.dtlLbl}>{t('Distans')}</Text>
                   <Text style={[s.dtlVal, { color: P.BLUE }]}>
                     {toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')}
                     <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
@@ -409,11 +411,11 @@ export function CardioTab({
               <View style={s.dtlSep} />
               <View style={[s.dtlRow, { paddingBottom: 0 }]}>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Antal pass</Text>
+                  <Text style={s.dtlLbl}>{t('Antal pass')}</Text>
                   <Text style={[s.dtlVal, { color: P.GREEN }]}>{cardioW.length}</Text>
                 </View>
                 <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Snittempo</Text>
+                  <Text style={s.dtlLbl}>{t('Snittempo')}</Text>
                   <Text style={[s.dtlVal, { color: P.TEAL }]}>
                     {avgPace}
                     <Text style={s.dtlUnit}> /{unitLabel}</Text>
@@ -437,7 +439,7 @@ export function CardioTab({
               return (
                 <>
                 <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setCardioDetailsOpen(true)}>
-                  <Text style={[s.sectionHead, s.sectionHeadInline]}>Tempoutveckling</Text>
+                  <Text style={[s.sectionHead, s.sectionHeadInline]}>{t('Tempoutveckling')}</Text>
                   <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -445,7 +447,7 @@ export function CardioTab({
                   activeOpacity={0.85}
                   onPress={() => setCardioDetailsOpen(true)}
                 >
-                  <Text style={[s.cardSub, { marginTop: 0 }]}>snitt min/{unitLabel} per vecka · snabbare är högre upp</Text>
+                  <Text style={[s.cardSub, { marginTop: 0 }]}>{t('snitt min/{u} per vecka · snabbare är högre upp', { u: unitLabel })}</Text>
                   <View style={s.paceChartRow}>
                     <View style={s.paceAxis}>
                       <Text style={s.paceAxisLbl}>{fmtPace(minV)}</Text>
@@ -496,22 +498,22 @@ export function CardioTab({
               return (
                 <>
                 <View style={s.sectionHeadRow}>
-                  <Text style={[s.sectionHead, s.sectionHeadInline]}>Intervaller</Text>
+                  <Text style={[s.sectionHead, s.sectionHeadInline]}>{t('Intervaller')}</Text>
                 </View>
                 <View style={[s.card, s.cardPlain]}>
                   <View style={s.ivTrendHeadRow}>
                     <Text style={[s.cardSub, { marginTop: 0, flex: 1 }]}>
-                      {distLbl}-intervaller · snitt per pass
+                      {t('{d}-intervaller · snitt per pass', { d: distLbl })}
                     </Text>
                     <Text style={[
                       s.ivTrendDelta,
                       ivTrend.improvementSec > 0 && { color: P.GREEN },
                     ]}>
                       {ivTrend.improvementSec > 0
-                        ? `−${ivTrend.improvementSec} s snabbare`
+                        ? t('−{n} s snabbare', { n: ivTrend.improvementSec })
                         : ivTrend.improvementSec < 0
-                          ? `+${-ivTrend.improvementSec} s`
-                          : 'oförändrat'}
+                          ? t('+{n} s', { n: -ivTrend.improvementSec })
+                          : t('oförändrat')}
                     </Text>
                   </View>
                   <Text style={s.ivTrendHeadline}>
@@ -541,7 +543,7 @@ export function CardioTab({
                   <View style={s.paceWeekRow}>
                     {ivTrend.points.map((p, i) => (
                       <Text key={i} style={s.paceWeekLbl}>
-                        {new Date(p.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'numeric' })}
+                        {new Date(p.date).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'numeric' })}
                       </Text>
                     ))}
                   </View>
@@ -555,7 +557,7 @@ export function CardioTab({
             {distBuckets.some(b => b.total > 0) && (
               <>
               <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setDistDetailOpen(true)}>
-                <Text style={[s.sectionHead, s.sectionHeadInline]}>Distans</Text>
+                <Text style={[s.sectionHead, s.sectionHeadInline]}>{t('Distans')}</Text>
                 <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
               </TouchableOpacity>
               <TouchableOpacity
@@ -564,7 +566,11 @@ export function CardioTab({
                 onPress={() => setDistDetailOpen(true)}
               >
                 <Text style={[s.cardSub, { marginTop: 0 }]}>
-                  {unitLabel} {cardioRange === 'week' ? 'per dag, vald vecka' : cardioRange === 'month' ? 'per vecka, vald månad' : 'per månad, senaste 6 månaderna'}
+                  {cardioRange === 'week'
+                    ? t('{u} per dag, vald vecka', { u: unitLabel })
+                    : cardioRange === 'month'
+                      ? t('{u} per vecka, vald månad', { u: unitLabel })
+                      : t('{u} per månad, senaste 6 månaderna', { u: unitLabel })}
                 </Text>
                 <DistanceAreaChart
                   buckets={distBuckets}
@@ -583,7 +589,7 @@ export function CardioTab({
             {/* Cardiorekord (all-time) — lista med ikon, etikett och färgat värde */}
             {hasRecords && (
               <>
-              <Text style={s.sectionHead}>Cardiorekord</Text>
+              <Text style={s.sectionHead}>{t('Cardiorekord')}</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -592,22 +598,22 @@ export function CardioTab({
               >
                 {([
                   {
-                    icon: 'map-outline' as const, color: T.ACCENT, label: 'Längsta pass',
+                    icon: 'map-outline' as const, color: T.ACCENT, label: t('Längsta pass'),
                     value: recLongestKm > 0 ? `${toDisplayDistance(recLongestKm, unit).toFixed(2)} ${unitLabel}` : '–',
                     workout: recLongestW,
                   },
                   {
-                    icon: 'flash-outline' as const, color: P.YELLOW, label: 'Snabbaste km',
+                    icon: 'flash-outline' as const, color: P.YELLOW, label: t('Snabbaste km'),
                     value: recFastestSplitSec === Infinity ? '–' : fmtPace(recFastestSplitSec),
                     workout: recFastestSplitW,
                   },
                   {
-                    icon: 'stopwatch-outline' as const, color: P.RED, label: `Bästa tempo /${unitLabel}`,
+                    icon: 'stopwatch-outline' as const, color: P.RED, label: t('Bästa tempo /{u}', { u: unitLabel }),
                     value: recBestPaceSec === Infinity ? '–' : fmtPace(paceForUnit(recBestPaceSec, unit)),
                     workout: recBestPaceW,
                   },
                   {
-                    icon: 'trending-up-outline' as const, color: P.GREEN, label: 'Längsta vecka',
+                    icon: 'trending-up-outline' as const, color: P.GREEN, label: t('Längsta vecka'),
                     value: recBiggestWeek > 0 ? `${toDisplayDistance(recBiggestWeek, unit).toFixed(1)} ${unitLabel}` : '–',
                     workout: recBiggestWeekW,
                   },
@@ -638,7 +644,7 @@ export function CardioTab({
             {/* Sessioner — blandad lista i Apple Fitness-stil */}
             {sessionRows.length > 0 ? (
               <View style={{ gap: 10 }}>
-                <Text style={[s.sectionHead, { marginBottom: -14 }]}>Sessioner</Text>
+                <Text style={[s.sectionHead, { marginBottom: -14 }]}>{t('Sessioner')}</Text>
                 {sessionRows.map((r, i) => {
                   const m = monthLabel(r.dateStr)
                   const showMonth = i === 0 || monthLabel(sessionRows[i - 1].dateStr) !== m
@@ -679,7 +685,7 @@ export function CardioTab({
               <View style={s.empty}>
                 <Ionicons name="walk-outline" size={40} color="rgba(255,255,255,0.12)" />
                 <Text style={s.emptyText}>
-                  {workouts.length === 0 ? 'Inga pass sparade ännu' : 'Inga pass under vald period'}
+                  {workouts.length === 0 ? t('Inga pass sparade ännu') : t('Inga pass under vald period')}
                 </Text>
               </View>
             )}
@@ -698,24 +704,24 @@ export function CardioTab({
         <View style={{ flex: 1, backgroundColor: BG }}>
           <View style={[s.modalTopBar, { paddingTop: insets.top + 8 }]}>
             <GlassCircleButton icon="chevron-back" onPress={() => setCardioDetailsOpen(false)} />
-            <Text style={s.modalTopTitle}>Träningsdetaljer</Text>
+            <Text style={s.modalTopTitle}>{t('Träningsdetaljer')}</Text>
             <View style={{ width: 44 }} />
           </View>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
             <Text style={s.sessionsWeekLabel}>{cardioBounds.label}</Text>
             <View style={[s.card, s.cardPlain, { marginTop: 12, paddingVertical: 4 }]}>
               {([
-                { label: 'Träningstid', value: fmtDuration(totalSecs), color: P.YELLOW },
-                { label: 'Distans', value: `${toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: P.BLUE },
-                { label: 'Kilokalorier', value: `${totalCals.toLocaleString('sv-SE')} kcal`, color: P.RED },
-                { label: 'Antal pass', value: String(cardioW.length), color: P.GREEN },
-                { label: 'Aktiva dagar', value: String(activeCardioDays), color: TEXT_PRIMARY },
-                { label: 'Snittempo', value: `${avgPace} /${unitLabel}`, color: P.TEAL },
-                { label: 'Bästa tempo', value: `${bestPace} /${unitLabel}`, color: P.PURPLE },
-                { label: 'Snittdistans', value: `${toDisplayDistance(avgDistKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: P.LIME },
-                { label: 'Längsta pass', value: `${toDisplayDistance(longestPassKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: ACCENT },
+                { label: t('Träningstid'), value: fmtDuration(totalSecs), color: P.YELLOW },
+                { label: t('Distans'), value: `${toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: P.BLUE },
+                { label: t('Kilokalorier'), value: `${totalCals.toLocaleString(dateLocale())} kcal`, color: P.RED },
+                { label: t('Antal pass'), value: String(cardioW.length), color: P.GREEN },
+                { label: t('Aktiva dagar'), value: String(activeCardioDays), color: TEXT_PRIMARY },
+                { label: t('Snittempo'), value: `${avgPace} /${unitLabel}`, color: P.TEAL },
+                { label: t('Bästa tempo'), value: `${bestPace} /${unitLabel}`, color: P.PURPLE },
+                { label: t('Snittdistans'), value: `${toDisplayDistance(avgDistKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: P.LIME },
+                { label: t('Längsta pass'), value: `${toDisplayDistance(longestPassKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: ACCENT },
                 {
-                  label: 'Snittansträngning',
+                  label: t('Snittansträngning'),
                   value: avgEffort > 0 ? `${avgEffort.toFixed(1).replace('.', ',')} / 10` : '–',
                   color: avgEffort > 0 ? effortColor(Math.round(avgEffort)) : TEXT_SECONDARY,
                 },

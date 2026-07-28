@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings, THEME_DARK } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // KÖN — egen sida (nås från Profilinställningar) med de fyra vanliga
@@ -16,6 +17,7 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, us
 const OPTIONS = ['Man', 'Kvinna', 'Annat', 'Vill inte ange']
 
 export default function GenderScreen() {
+  const t = useT()
   const T = useThemeStrings()
   const edge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'transparent'
   const [gender, setGender] = useState<string | null>(null)
@@ -46,7 +48,7 @@ export default function GenderScreen() {
         <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
         </TouchableOpacity>
-        <Text style={s.title}>Kön</Text>
+        <Text style={s.title}>{t('Kön')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -60,7 +62,7 @@ export default function GenderScreen() {
               onPress={() => pick(g)}
               activeOpacity={0.8}
             >
-              <Text style={[s.optionText, selected && { color: ACCENT }]}>{g}</Text>
+              <Text style={[s.optionText, selected && { color: ACCENT }]}>{t(g)}</Text>
               {selected && <Ionicons name="checkmark-circle" size={20} color={ACCENT} />}
             </TouchableOpacity>
           )

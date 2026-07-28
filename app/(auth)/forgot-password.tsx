@@ -15,6 +15,7 @@ import { Ionicons } from '@/components/Icon'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '@/lib/supabase'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT } from '@/lib/i18n'
 
 // Samma palett som onboardingen och inloggningen — ett sammanhållet flöde
 const NAVY      = '#05080F'
@@ -27,6 +28,7 @@ const ORANGE_DEEP = '#FF7A1A'
 const ORANGE_SOFT = 'rgba(255,168,23,0.14)'
 
 export default function ForgotPasswordScreen() {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const [email, setEmail]     = useState('')
   const [sending, setSending] = useState(false)
@@ -35,7 +37,7 @@ export default function ForgotPasswordScreen() {
   async function handleSend() {
     const trimmed = email.trim().toLowerCase()
     if (!trimmed.includes('@')) {
-      Alert.alert('Ange din e-postadress')
+      Alert.alert(t('Ange din e-postadress'))
       return
     }
     setSending(true)
@@ -46,7 +48,7 @@ export default function ForgotPasswordScreen() {
       if (error) throw error
       setSent(true)
     } catch (e: any) {
-      Alert.alert('Kunde inte skicka', e.message ?? 'Försök igen om en stund.')
+      Alert.alert(t('Kunde inte skicka'), e.message ?? t('Försök igen om en stund.'))
     } finally {
       setSending(false)
     }
@@ -69,11 +71,11 @@ export default function ForgotPasswordScreen() {
               <View style={s.bigIcon}>
                 <Ionicons name="mail-open-outline" size={38} color={ORANGE} />
               </View>
-              <Text style={s.title}>Kolla din mejl</Text>
+              <Text style={s.title}>{t('Kolla din mejl')}</Text>
               <Text style={s.sub}>
-                Vi har skickat en återställningslänk till{'\n'}
+                {t('Vi har skickat en återställningslänk till')}{'\n'}
                 <Text style={s.subStrong}>{email.trim()}</Text>
-                {'\n\n'}Öppna länken på den här enheten så får du välja ett nytt lösenord.
+                {'\n\n'}{t('Öppna länken på den här enheten så får du välja ett nytt lösenord.')}
               </Text>
               <TouchableOpacity onPress={() => router.back()} activeOpacity={0.85}>
                 <LinearGradient
@@ -81,7 +83,7 @@ export default function ForgotPasswordScreen() {
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={s.primaryBtn}
                 >
-                  <Text style={s.primaryBtnText}>Tillbaka till inloggning</Text>
+                  <Text style={s.primaryBtnText}>{t('Tillbaka till inloggning')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </>
@@ -90,9 +92,9 @@ export default function ForgotPasswordScreen() {
               <View style={s.bigIcon}>
                 <Ionicons name="lock-closed-outline" size={38} color={ORANGE} />
               </View>
-              <Text style={s.title}>Glömt lösenordet?</Text>
+              <Text style={s.title}>{t('Glömt lösenordet?')}</Text>
               <Text style={s.sub}>
-                Ange din e-postadress så skickar vi en länk där du kan välja ett nytt.
+                {t('Ange din e-postadress så skickar vi en länk där du kan välja ett nytt.')}
               </Text>
 
               <View style={s.inputWrapper}>
@@ -101,7 +103,7 @@ export default function ForgotPasswordScreen() {
                   style={s.input}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="din@mejl.se"
+                  placeholder={t('din@mejl.se')}
                   placeholderTextColor="rgba(244,245,250,0.35)"
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -125,7 +127,7 @@ export default function ForgotPasswordScreen() {
                 >
                   {sending
                     ? <ActivityIndicator color={NAVY} />
-                    : <Text style={s.primaryBtnText}>Skicka återställningslänk</Text>}
+                    : <Text style={s.primaryBtnText}>{t('Skicka återställningslänk')}</Text>}
                 </LinearGradient>
               </TouchableOpacity>
             </>

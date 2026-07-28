@@ -15,6 +15,7 @@ import {
   type ViewStyle,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
+import { useT } from '@/lib/i18n'
 import { useAppRefresh, SPINNER_GRAY } from '@/components/AppRefresh'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Ionicons } from '@/components/Icon'
@@ -69,6 +70,7 @@ import { PAGER_DATA, CENTER_IDX, isoDate, todayMidnight, indexToDate, dateToInde
 const SCREEN_W = Dimensions.get('window').width
 
 export default function SchemaScreen() {
+  const t = useT()
   const [exercises, setExercises]           = useState<Exercise[]>([])
   const [sessions, setSessions]             = useState<WorkoutSession[]>([])
   const [userId, setUserId]                 = useState<string | null>(null)
@@ -273,7 +275,7 @@ export default function SchemaScreen() {
       : completeExercise(exId, userId, date)
     action.catch((e: Error) => {
       setCheckedByDate(prev => ({ ...prev, [date]: { ...(prev[date] ?? {}), [exId]: wasChecked } }))
-      Alert.alert('Kunde inte spara avbockningen', e.message)
+      Alert.alert(t('Kunde inte spara avbockningen'), e.message)
     })
   }
 
@@ -319,18 +321,18 @@ export default function SchemaScreen() {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          title: 'Ta bort övning',
-          options: ['Avbryt', 'Bara idag', 'Alltid (alla kommande)'],
+          title: t('Ta bort övning'),
+          options: [t('Avbryt'), t('Bara idag'), t('Alltid (alla kommande)')],
           destructiveButtonIndex: 2,
           cancelButtonIndex: 0,
         },
         i => { if (i === 1) deleteJustToday(); if (i === 2) deleteFromTemplate() },
       )
     } else {
-      Alert.alert('Ta bort övning', 'Ta bort bara idag eller från alla kommande pass?', [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Bara idag', onPress: deleteJustToday },
-        { text: 'Alltid', style: 'destructive', onPress: deleteFromTemplate },
+      Alert.alert(t('Ta bort övning'), t('Ta bort bara idag eller från alla kommande pass?'), [
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Bara idag'), onPress: deleteJustToday },
+        { text: t('Alltid'), style: 'destructive', onPress: deleteFromTemplate },
       ])
     }
   }
@@ -346,7 +348,7 @@ export default function SchemaScreen() {
       ActionSheetIOS.showActionSheetWithOptions(
         {
           title: displayedName,
-          options: ['Avbryt', 'Inställningar', 'Ta bort pass'],
+          options: [t('Avbryt'), t('Inställningar'), t('Ta bort pass')],
           destructiveButtonIndex: 2,
           cancelButtonIndex: 0,
         },
@@ -357,9 +359,9 @@ export default function SchemaScreen() {
       )
     } else {
       Alert.alert(displayedName, undefined, [
-        { text: 'Inställningar', onPress: () => openEditor(session) },
-        { text: 'Ta bort pass', style: 'destructive', onPress: deletePass },
-        { text: 'Avbryt', style: 'cancel' },
+        { text: t('Inställningar'), onPress: () => openEditor(session) },
+        { text: t('Ta bort pass'), style: 'destructive', onPress: deletePass },
+        { text: t('Avbryt'), style: 'cancel' },
       ])
     }
   }
@@ -463,12 +465,12 @@ export default function SchemaScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.planEndTitle}>
-              {planEnd?.ended ? 'Din löpplan är klar!' : 'Sista veckan på din löpplan'}
+              {planEnd?.ended ? t('Din löpplan är klar!') : t('Sista veckan på din löpplan')}
             </Text>
             <Text style={styles.planEndSub}>
               {planEnd?.ended
-                ? 'Skapa nästa plan utifrån var du är nu'
-                : 'Dags att planera nästa, utgå från din nya nivå'}
+                ? t('Skapa nästa plan utifrån var du är nu')
+                : t('Dags att planera nästa, utgå från din nya nivå')}
             </Text>
           </View>
           <TouchableOpacity
@@ -635,20 +637,20 @@ export default function SchemaScreen() {
               const count = await generateScheduleFromWizard(userId, result)
               await loadData(userId)
               getRaceDate().then(setRaceDateState).catch(() => {})
-              Alert.alert('Schema skapat', `${count} pass har lagts till i ditt veckoschema.`)
+              Alert.alert(t('Schema skapat'), t('{count} pass har lagts till i ditt veckoschema.', { count }))
             } catch (e: any) {
-              Alert.alert('Kunde inte skapa schemat', e.message)
+              Alert.alert(t('Kunde inte skapa schemat'), e.message)
             }
           }
           const hasRepeating = sessions.some(s => s.weekdays.length > 0 && !s.name.startsWith('SKIP:'))
           if (hasRepeating) {
             Alert.alert(
-              'Du har redan ett schema',
-              'Vill du ersätta dina nuvarande upprepande pass med det nya schemat, eller behålla båda?',
+              t('Du har redan ett schema'),
+              t('Vill du ersätta dina nuvarande upprepande pass med det nya schemat, eller behålla båda?'),
               [
-                { text: 'Avbryt', style: 'cancel' },
-                { text: 'Behåll båda', onPress: () => generate(false) },
-                { text: 'Ersätt', style: 'destructive', onPress: () => generate(true) },
+                { text: t('Avbryt'), style: 'cancel' },
+                { text: t('Behåll båda'), onPress: () => generate(false) },
+                { text: t('Ersätt'), style: 'destructive', onPress: () => generate(true) },
               ]
             )
           } else {
@@ -675,7 +677,7 @@ export default function SchemaScreen() {
         <View style={styles.recordWrap} pointerEvents="box-none">
           <TouchableOpacity style={styles.recordBtn} onPress={handleRecordWorkout} activeOpacity={0.9}>
             <Ionicons name="play" size={16} color="#000" />
-            <Text style={styles.recordBtnText}>Logga pass</Text>
+            <Text style={styles.recordBtnText}>{t('Logga pass')}</Text>
           </TouchableOpacity>
         </View>
       )}

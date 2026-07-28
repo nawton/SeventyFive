@@ -9,6 +9,7 @@ import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import { getMusclesForName, MUSCLE_GROUPS_6 } from '@/lib/muscles'
 import { getCompletedExerciseNamesBetween } from '@/services/workoutSchedule'
 import type { StrengthWorkout } from '@/services/workouts'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // MUSKELFÖRDELNING — öppnas med flikens valda vecka/dag som förvalt läge så
@@ -46,6 +47,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
 }) {
   // Radar: spindelnät, förra veckans yta och etiketter — vit-alfa syns
   // inte på ljus botten (SVG kräver strängfärger)
+  const t = useT()
   const radarLight = useColorScheme() === 'light'
   const webStroke = radarLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)'
   const prevFill  = radarLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)'
@@ -70,34 +72,34 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
           from: day, to: addDays(day, 1),
           prevFrom: addDays(day, -7), prevTo: addDays(day, -6),
           label: dayLabel ?? day,
-          curLegend: 'Vald dag', prevLegend: 'Samma dag förra veckan',
+          curLegend: t('Vald dag'), prevLegend: t('Samma dag förra veckan'),
         }
       }
       return {
         from: weekStart, to: addDays(weekStart, 7),
         prevFrom: addDays(weekStart, -7), prevTo: weekStart,
         label: weekLabel,
-        curLegend: 'Vald vecka', prevLegend: 'Förra veckan',
+        curLegend: t('Vald vecka'), prevLegend: t('Förra veckan'),
       }
     }
     if (period === 'all') {
       return {
         from: null, to: null, prevFrom: null, prevTo: null,
-        label: 'Hela historiken', curLegend: 'Alla pass', prevLegend: '',
+        label: t('Hela historiken'), curLegend: t('Alla pass'), prevLegend: '',
       }
     }
     const days = ROLLING_DAYS[period]
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const todayIso = toLocalDateString(today)
     const from = addDays(todayIso, -(days - 1))
-    const labels = { m: 'Senaste 30 dagarna', '3m': 'Senaste 3 månaderna', y: 'Senaste året' } as const
+    const labels = { m: t('Senaste 30 dagarna'), '3m': t('Senaste 3 månaderna'), y: t('Senaste året') } as const
     return {
       from, to: addDays(todayIso, 1),
       prevFrom: addDays(from, -days), prevTo: from,
       label: labels[period],
-      curLegend: 'Perioden', prevLegend: 'Föregående period',
+      curLegend: t('Perioden'), prevLegend: t('Föregående period'),
     }
-  }, [period, day, dayLabel, weekStart, weekLabel])
+  }, [period, day, dayLabel, weekStart, weekLabel, t])
 
   // Avbockade övningar för perioden — samma källa som kroppskartan
   useEffect(() => {
@@ -138,7 +140,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
       <View style={s.root}>
         <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
           <GlassCircleButton icon="chevron-back" onPress={onClose} />
-          <Text style={s.topTitle}>Muskelfördelning</Text>
+          <Text style={s.topTitle}>{t('Muskelfördelning')}</Text>
           <View style={{ width: 44 }} />
         </View>
 
@@ -148,10 +150,10 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
             options={[
               // 1 ÅR togs bort: identiskt med Allt tills appen använts över
               // ett år — en flik som aldrig visar något eget förvirrar bara
-              { key: 'sel', label: day ? 'Dag' : 'Vecka' },
-              { key: 'm',   label: '1 M' },
-              { key: '3m',  label: '3 M' },
-              { key: 'all', label: 'Allt' },
+              { key: 'sel', label: day ? t('Dag') : t('Vecka') },
+              { key: 'm',   label: t('1 M') },
+              { key: '3m',  label: t('3 M') },
+              { key: 'all', label: t('Allt') },
             ]}
             onChange={setPeriod}
           />
@@ -212,7 +214,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
                         fontSize={12} fontWeight="600" textAnchor="middle"
                         fill={axisText}
                       >
-                        {g.label}
+                        {t(g.label)}
                       </SvgText>
                     )
                   })}
@@ -233,20 +235,20 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
             </View>
           </View>
           {!loading && curNames.length === 0 && (
-            <Text style={s.hint}>Inga avbockade övningar i perioden.</Text>
+            <Text style={s.hint}>{t('Inga avbockade övningar i perioden.')}</Text>
           )}
 
           {/* Set per muskelgrupp — från loggade set med reps/vikt */}
-          <Text style={s.sectionHead}>Set per muskelgrupp</Text>
+          <Text style={s.sectionHead}>{t('Set per muskelgrupp')}</Text>
           <View style={[s.card, { paddingVertical: 6 }]}>
             <View style={s.grpRow}>
-              <Text style={[s.grpLbl, { fontWeight: '700' }]}>Totalt</Text>
+              <Text style={[s.grpLbl, { fontWeight: '700' }]}>{t('Totalt')}</Text>
               <View style={s.grpTrack} />
               <Text style={s.grpVal}>{totalSets}</Text>
             </View>
             {MUSCLE_GROUPS_6.map((g, i) => (
               <View key={g.label} style={[s.grpRow, s.grpRowBorder]}>
-                <Text style={s.grpLbl}>{g.label}</Text>
+                <Text style={s.grpLbl}>{t(g.label)}</Text>
                 <View style={s.grpTrack}>
                   {setsPerGroup[i] > 0 && (
                     <View style={[s.grpFill, { width: `${Math.max(6, (setsPerGroup[i] / maxGroupSets) * 100)}%` as never }]} />
@@ -260,7 +262,7 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
           </View>
           {totalSets === 0 && (
             <Text style={s.hint}>
-              Set räknas från reps och vikt du loggar i passen, fyll i dem så växer tabellen.
+              {t('Set räknas från reps och vikt du loggar i passen, fyll i dem så växer tabellen.')}
             </Text>
           )}
         </ScrollView>

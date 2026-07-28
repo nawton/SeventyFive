@@ -11,6 +11,7 @@ import Animated, {
 import type { FollowProfile } from '@/services/follows'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { BG, BORDER, RED, TEXT_PRIMARY, DIVIDER, useThemeStrings, ACCENT } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 // =============================================================================
 // GILLARLISTAN — dragbar bottom sheet (Strava-stil): öppnar till halva
@@ -27,6 +28,7 @@ export function LikersSheet({ likers, count, onClose, onPressPerson }: {
   onClose: () => void
   onPressPerson?: (person: FollowProfile) => void
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const { height: screenH } = useWindowDimensions()
   const FULL_TOP = screenH * 0.10
@@ -111,7 +113,7 @@ export function LikersSheet({ likers, count, onClose, onPressPerson }: {
                     fallback={(item.name ?? '?').charAt(0).toUpperCase()}
                     size={46}
                   />
-                  <Text style={s.rowName} numberOfLines={1}>{item.name ?? 'Namnlös'}</Text>
+                  <Text style={s.rowName} numberOfLines={1}>{item.name ?? t('Namnlös')}</Text>
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={s.rowDivider} />}

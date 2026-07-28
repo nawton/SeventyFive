@@ -17,6 +17,7 @@ import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
+import { useT } from '@/lib/i18n'
 
 /** Plockar ut auth-tokens ur deep link-fragmentet (#access_token=…&refresh_token=…) */
 function parseTokens(url: string): { access_token: string; refresh_token: string } | null {
@@ -29,6 +30,7 @@ function parseTokens(url: string): { access_token: string; refresh_token: string
 }
 
 export default function ChangePasswordScreen() {
+  const t = useT()
   const { from } = useLocalSearchParams<{ from?: string }>()
   const url = useURL()
 
@@ -56,20 +58,20 @@ export default function ChangePasswordScreen() {
 
   async function handleSave() {
     if (password.length < 6) {
-      Alert.alert('För kort lösenord', 'Lösenordet måste vara minst 6 tecken.')
+      Alert.alert(t('För kort lösenord'), t('Lösenordet måste vara minst 6 tecken.'))
       return
     }
     if (password !== confirm) {
-      Alert.alert('Lösenorden matchar inte', 'Kontrollera att du skrivit samma lösenord två gånger.')
+      Alert.alert(t('Lösenorden matchar inte'), t('Kontrollera att du skrivit samma lösenord två gånger.'))
       return
     }
     setSaving(true)
     try {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
-      Alert.alert('Lösenordet är ändrat', 'Använd ditt nya lösenord nästa gång du loggar in.', [
+      Alert.alert(t('Lösenordet är ändrat'), t('Använd ditt nya lösenord nästa gång du loggar in.'), [
         {
-          text: 'OK',
+          text: t('OK'),
           onPress: () => {
             if (from === 'profile') router.back()
             else router.replace('/(app)/dashboard')
@@ -77,7 +79,7 @@ export default function ChangePasswordScreen() {
         },
       ])
     } catch (e: any) {
-      Alert.alert('Kunde inte byta lösenord', e.message ?? 'Försök igen.')
+      Alert.alert(t('Kunde inte byta lösenord'), e.message ?? t('Försök igen.'))
     } finally {
       setSaving(false)
     }
@@ -98,16 +100,16 @@ export default function ChangePasswordScreen() {
           <View style={s.bigIcon}>
             <Ionicons name="alert-circle-outline" size={40} color={ACCENT} />
           </View>
-          <Text style={s.title}>Länken har gått ut</Text>
+          <Text style={s.title}>{t('Länken har gått ut')}</Text>
           <Text style={s.sub}>
-            Återställningslänkar är giltiga en begränsad tid. Begär en ny från inloggningssidan.
+            {t('Återställningslänkar är giltiga en begränsad tid. Begär en ny från inloggningssidan.')}
           </Text>
           <TouchableOpacity
             style={s.primaryBtn}
             onPress={() => router.replace('/(auth)/login')}
             activeOpacity={0.85}
           >
-            <Text style={s.primaryBtnText}>Till inloggningen</Text>
+            <Text style={s.primaryBtnText}>{t('Till inloggningen')}</Text>
           </TouchableOpacity>
         </View>
       </SafeScreen>
@@ -122,7 +124,7 @@ export default function ChangePasswordScreen() {
             <Ionicons name="chevron-back" size={24} color={TEXT_PRIMARY} />
           </TouchableOpacity>
         ) : <View style={{ width: 40 }} />}
-        <Text style={s.headerTitle}>Nytt lösenord</Text>
+        <Text style={s.headerTitle}>{t('Nytt lösenord')}</Text>
         <TouchableOpacity
           style={[s.checkBtn, !(password.length >= 6 && password === confirm) && s.checkBtnDisabled]}
           onPress={handleSave}
@@ -137,14 +139,14 @@ export default function ChangePasswordScreen() {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={s.body}>
-          <Text style={s.fieldLabel}>NYTT LÖSENORD</Text>
+          <Text style={s.fieldLabel}>{t('NYTT LÖSENORD')}</Text>
           <View style={s.inputWrapper}>
             <Ionicons name="lock-closed-outline" size={18} color={TEXT_SECONDARY} />
             <AppTextInput
               style={s.input}
               value={password}
               onChangeText={setPassword}
-              placeholder="Minst 6 tecken"
+              placeholder={t('Minst 6 tecken')}
               placeholderTextColor={TEXT_SECONDARY}
               secureTextEntry={!showPw}
               autoCapitalize="none"
@@ -156,14 +158,14 @@ export default function ChangePasswordScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={[s.fieldLabel, { marginTop: 14 }]}>BEKRÄFTA LÖSENORD</Text>
+          <Text style={[s.fieldLabel, { marginTop: 14 }]}>{t('BEKRÄFTA LÖSENORD')}</Text>
           <View style={s.inputWrapper}>
             <Ionicons name="lock-closed-outline" size={18} color={TEXT_SECONDARY} />
             <AppTextInput
               style={s.input}
               value={confirm}
               onChangeText={setConfirm}
-              placeholder="Samma lösenord igen"
+              placeholder={t('Samma lösenord igen')}
               placeholderTextColor={TEXT_SECONDARY}
               secureTextEntry={!showPw}
               autoCapitalize="none"

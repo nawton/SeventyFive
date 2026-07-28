@@ -18,7 +18,7 @@ import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useCardChrome } from '@/lib/theme'
 import type { UserChallengeWithLevel } from '@/types/database'
-import { getLanguage, setLanguage, type AppLanguage } from '@/lib/i18n'
+import { getLanguage, setLanguage, useT, dateLocale, type AppLanguage } from '@/lib/i18n'
 
 const IS_EXPO_GO = Constants.appOwnership === 'expo'
 
@@ -81,6 +81,7 @@ function SettingRow({ icon, label, sub, value, onPress, rightElement, danger, la
 }
 
 export default function GeneralScreen() {
+  const t = useT()
   const [levelName, setLevelName]   = useState('')
   const [currentDay, setCurrentDay] = useState(1)
   const [startDate, setStartDate]   = useState('')
@@ -114,7 +115,7 @@ export default function GeneralScreen() {
 
   async function handleNotificationToggle(value: boolean) {
     if (IS_EXPO_GO) {
-      Alert.alert('Kräver development build', 'Push-notiser fungerar inte i Expo Go. Bygg appen med expo-dev-client för att aktivera notiser.')
+      Alert.alert(t('Kräver development build'), t('Push-notiser fungerar inte i Expo Go. Bygg appen med expo-dev-client för att aktivera notiser.'))
       return
     }
     try {
@@ -122,7 +123,7 @@ export default function GeneralScreen() {
         const { status } = await Notifications.requestPermissionsAsync()
         if (status !== 'granted') {
           setNotificationsEnabled(false)
-          Alert.alert('Notiser blockerade', 'Gå till Inställningar → SeventyFive och aktivera notiser manuellt.')
+          Alert.alert(t('Notiser blockerade'), t('Gå till Inställningar → SeventyFive och aktivera notiser manuellt.'))
           return
         }
         await scheduleDailyReminders()
@@ -134,17 +135,17 @@ export default function GeneralScreen() {
         setNotificationsEnabled(false)
       }
     } catch {
-      Alert.alert('Något gick fel', 'Kunde inte ändra notisinställningen.')
+      Alert.alert(t('Något gick fel'), t('Kunde inte ändra notisinställningen.'))
     }
   }
 
   async function handleDeleteAccount() {
     Alert.alert(
-      'Radera konto',
-      'All din data (utmaningar, träningspass, foton och profil) raderas permanent. Det går inte att ångra.',
+      t('Radera konto'),
+      t('All din data (utmaningar, träningspass, foton och profil) raderas permanent. Det går inte att ångra.'),
       [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Radera mitt konto', style: 'destructive', onPress: confirmDeleteAccount },
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Radera mitt konto'), style: 'destructive', onPress: confirmDeleteAccount },
       ]
     )
   }
@@ -173,7 +174,7 @@ export default function GeneralScreen() {
       await supabase.auth.signOut()
       router.replace('/(auth)/welcome')
     } catch (e: any) {
-      Alert.alert('Kunde inte radera kontot', e.message ?? 'Kontrollera anslutningen och försök igen.')
+      Alert.alert(t('Kunde inte radera kontot'), e.message ?? t('Kontrollera anslutningen och försök igen.'))
     }
   }
 
@@ -181,12 +182,12 @@ export default function GeneralScreen() {
     setWizardVisible(false)
     if (!userId) return
     Alert.alert(
-      'Ersätt ditt schema?',
-      'Vill du ersätta dina nuvarande upprepande pass med det nya schemat, eller behålla båda?',
+      t('Ersätt ditt schema?'),
+      t('Vill du ersätta dina nuvarande upprepande pass med det nya schemat, eller behålla båda?'),
       [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Behåll båda', onPress: () => applyNewSchedule(result, false) },
-        { text: 'Ersätt', style: 'destructive', onPress: () => applyNewSchedule(result, true) },
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Behåll båda'), onPress: () => applyNewSchedule(result, false) },
+        { text: t('Ersätt'), style: 'destructive', onPress: () => applyNewSchedule(result, true) },
       ]
     )
   }
@@ -196,9 +197,9 @@ export default function GeneralScreen() {
     try {
       if (replace) await deleteRepeatingSessions(userId)
       const count = await generateScheduleFromWizard(userId, result)
-      Alert.alert('Schema uppdaterat', `${count} pass har lagts in i ditt veckoschema.`)
+      Alert.alert(t('Schema uppdaterat'), t('{count} pass har lagts in i ditt veckoschema.', { count }))
     } catch (e: any) {
-      Alert.alert('Kunde inte skapa schemat', e.message)
+      Alert.alert(t('Kunde inte skapa schemat'), e.message)
     }
   }
 
@@ -207,7 +208,7 @@ export default function GeneralScreen() {
   function handleChangeLevel() {
     if (!challenge) return
     if (challenge.level_changed_at) {
-      Alert.alert('Nivån är redan ändrad', 'Nivån kan bara ändras en gång per utmaning.')
+      Alert.alert(t('Nivån är redan ändrad'), t('Nivån kan bara ändras en gång per utmaning.'))
       return
     }
     const currentSlug = challenge.challenge_levels?.slug
@@ -218,21 +219,21 @@ export default function GeneralScreen() {
         onPress: () => confirmChangeLevel(slug),
       }))
     Alert.alert(
-      'Byt nivå',
-      'Du kan bara byta nivå en gång under utmaningen. Allt du gjort hittills behålls, de nya reglerna gäller från och med imorgon.',
-      [{ text: 'Avbryt', style: 'cancel' as const }, ...options],
+      t('Byt nivå'),
+      t('Du kan bara byta nivå en gång under utmaningen. Allt du gjort hittills behålls, de nya reglerna gäller från och med imorgon.'),
+      [{ text: t('Avbryt'), style: 'cancel' as const }, ...options],
     )
   }
 
   function confirmChangeLevel(slug: 'normal' | 'hard' | 'extreme') {
     const name = slug.charAt(0).toUpperCase() + slug.slice(1)
     Alert.alert(
-      `Byta till ${name}?`,
-      'Det här går inte att ångra, nivån kan inte bytas igen under den här utmaningen.',
+      t('Byta till {name}?', { name }),
+      t('Det här går inte att ångra, nivån kan inte bytas igen under den här utmaningen.'),
       [
-        { text: 'Avbryt', style: 'cancel' },
+        { text: t('Avbryt'), style: 'cancel' },
         {
-          text: `Byt till ${name}`,
+          text: t('Byt till {name}', { name }),
           style: 'destructive',
           onPress: async () => {
             if (!challenge) return
@@ -243,9 +244,9 @@ export default function GeneralScreen() {
                 setChallenge(updated)
                 setLevelName(levelDisplayName(updated))
               }
-              Alert.alert('Nivå ändrad', `Du kör nu ${name}. De nya reglerna dyker upp med morgondagens uppgifter.`)
+              Alert.alert(t('Nivå ändrad'), t('Du kör nu {name}. De nya reglerna dyker upp med morgondagens uppgifter.', { name }))
             } catch (e: any) {
-              Alert.alert('Kunde inte byta nivå', e.message ?? 'Försök igen.')
+              Alert.alert(t('Kunde inte byta nivå'), e.message ?? t('Försök igen.'))
             }
           },
         },
@@ -254,9 +255,9 @@ export default function GeneralScreen() {
   }
 
   function handleLanguagePress() {
-    Alert.alert('Språk', 'Välj appens språk.', [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Svenska', onPress: () => { setLanguage('sv'); setLanguageState('sv') } },
+    Alert.alert(t('Språk'), t('Välj appens språk.'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      { text: t('Svenska'), onPress: () => { setLanguage('sv'); setLanguageState('sv') } },
       { text: 'English', onPress: () => { setLanguage('en'); setLanguageState('en') } },
     ])
   }
@@ -264,12 +265,12 @@ export default function GeneralScreen() {
   function handleResetSchedule() {
     if (!userId) return
     Alert.alert(
-      'Nollställ träningsschema',
-      'Alla upprepande pass tas bort och du kan börja om från början med schemaguiden. Loggade pass och historik påverkas inte.',
+      t('Nollställ träningsschema'),
+      t('Alla upprepande pass tas bort och du kan börja om från början med schemaguiden. Loggade pass och historik påverkas inte.'),
       [
-        { text: 'Avbryt', style: 'cancel' },
+        { text: t('Avbryt'), style: 'cancel' },
         {
-          text: 'Nollställ',
+          text: t('Nollställ'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -277,15 +278,15 @@ export default function GeneralScreen() {
               // Visa schemaintrot på schemasidan igen, även om det tystats
               await AsyncStorage.removeItem('scheduleIntroNeverShow').catch(() => {})
               Alert.alert(
-                'Schema nollställt',
-                `${count} pass togs bort. Vill du skapa ett nytt schema direkt?`,
+                t('Schema nollställt'),
+                t('{count} pass togs bort. Vill du skapa ett nytt schema direkt?', { count }),
                 [
-                  { text: 'Inte nu', style: 'cancel' },
-                  { text: 'Skapa nytt schema', onPress: () => setWizardVisible(true) },
+                  { text: t('Inte nu'), style: 'cancel' },
+                  { text: t('Skapa nytt schema'), onPress: () => setWizardVisible(true) },
                 ]
               )
             } catch {
-              Alert.alert('Kunde inte nollställa', 'Kontrollera din anslutning och försök igen.')
+              Alert.alert(t('Kunde inte nollställa'), t('Kontrollera din anslutning och försök igen.'))
             }
           },
         },
@@ -303,85 +304,85 @@ export default function GeneralScreen() {
           onPress={() => router.back()}
           fallbackStyle={styles.iconBtnFallback}
         />
-        <Text style={styles.title}>Allmänt</Text>
+        <Text style={styles.title}>{t('Allmänt')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {levelName ? (
-          <Section title="Aktiv utmaning">
-            <SettingRow icon="trophy-outline"   label="Nivå"       value={levelName} />
-            <SettingRow icon="calendar-outline" label="Startdatum" value={startDate} />
-            <SettingRow icon="flag-outline"     label="Dag"        value={`${currentDay} av 75`} />
+          <Section title={t('Aktiv utmaning')}>
+            <SettingRow icon="trophy-outline"   label={t('Nivå')}       value={levelName} />
+            <SettingRow icon="calendar-outline" label={t('Startdatum')} value={startDate} />
+            <SettingRow icon="flag-outline"     label={t('Dag')}        value={t('{n} av 75', { n: currentDay })} />
             <SettingRow
               icon="swap-vertical-outline"
-              label="Byt nivå"
+              label={t('Byt nivå')}
               sub={challenge?.level_changed_at
-                ? 'Nivån har redan ändrats en gång'
-                : 'Kan bara göras en gång per utmaning'}
+                ? t('Nivån har redan ändrats en gång')
+                : t('Kan bara göras en gång per utmaning')}
               onPress={challenge?.level_changed_at ? undefined : handleChangeLevel}
               last
             />
           </Section>
         ) : null}
 
-        <Section title="Träningsschema">
+        <Section title={t('Träningsschema')}>
           <SettingRow
             icon="calendar-outline"
-            label="Hantera veckoschemat"
-            sub="Se, ändra och ta bort veckans pass"
+            label={t('Hantera veckoschemat')}
+            sub={t('Se, ändra och ta bort veckans pass')}
             onPress={() => router.push('/(app)/manage-sessions' as never)}
           />
           <SettingRow
             icon="color-wand-outline"
-            label="Skapa nytt schema"
-            sub="Schemaguiden bygger veckan åt dig"
+            label={t('Skapa nytt schema')}
+            sub={t('Schemaguiden bygger veckan åt dig')}
             onPress={() => setWizardVisible(true)}
           />
           <SettingRow
             icon="refresh-outline"
-            label="Nollställ schemat"
-            sub="Tar bort alla upprepande pass, historiken sparas"
+            label={t('Nollställ schemat')}
+            sub={t('Tar bort alla upprepande pass, historiken sparas')}
             onPress={handleResetSchedule}
             last
           />
         </Section>
 
-        <Section title="Dagsrutin">
+        <Section title={t('Dagsrutin')}>
           <SettingRow
             icon="time-outline"
-            label="Dagliga tider"
-            sub="Vakentid, måltider och träningstider"
+            label={t('Dagliga tider')}
+            sub={t('Vakentid, måltider och träningstider')}
             onPress={() => router.push('/(auth)/schedule?from=settings' as any)}
             last
           />
         </Section>
 
-        <Section title="Språk">
+        <Section title={t('Språk')}>
           <SettingRow
             icon="language-outline"
-            label="Språk"
-            sub="Gäller hela appen direkt"
-            value={language === 'sv' ? 'Svenska' : 'English'}
+            label={t('Språk')}
+            sub={t('Gäller hela appen direkt')}
+            value={language === 'sv' ? t('Svenska') : 'English'}
             onPress={handleLanguagePress}
             last
           />
         </Section>
 
-        <Section title="Integritet">
+        <Section title={t('Integritet')}>
           <SettingRow
             icon="shield-checkmark-outline"
-            label="Integritetsinställningar"
+            label={t('Integritetsinställningar')}
             onPress={() => router.push('/(app)/privacy' as any)}
             last
           />
         </Section>
 
-        <Section title="Notiser">
+        <Section title={t('Notiser')}>
           <SettingRow
             icon="notifications-outline"
-            label="Push-notiser"
-            value={IS_EXPO_GO ? 'Kräver dev build' : undefined}
+            label={t('Push-notiser')}
+            value={IS_EXPO_GO ? t('Kräver dev build') : undefined}
             last
             rightElement={
               IS_EXPO_GO ? undefined : (
@@ -397,16 +398,16 @@ export default function GeneralScreen() {
           />
         </Section>
 
-        <Section title="App">
-          <SettingRow icon="information-circle-outline" label="Version" value="1.0.0" />
-          <SettingRow icon="lock-closed-outline" label="Integritetspolicy"
+        <Section title={t('App')}>
+          <SettingRow icon="information-circle-outline" label={t('Version')} value="1.0.0" />
+          <SettingRow icon="lock-closed-outline" label={t('Integritetspolicy')}
             onPress={() => router.push('/(app)/privacy-policy' as never)} last />
         </Section>
 
-        <Section title="Konto">
+        <Section title={t('Konto')}>
           <SettingRow
             icon="trash-outline"
-            label="Radera konto"
+            label={t('Radera konto')}
             onPress={handleDeleteAccount}
             danger
             last
@@ -424,7 +425,7 @@ export default function GeneralScreen() {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('sv-SE', {
+  return new Date(dateStr).toLocaleDateString(dateLocale(), {
     day: 'numeric', month: 'long', year: 'numeric',
   })
 }

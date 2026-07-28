@@ -10,6 +10,7 @@ import {
   type ViewStyle,
 } from 'react-native'
 import { AppRefreshControl } from '@/components/AppRefresh'
+import { useT } from '@/lib/i18n'
 import Animated, { type AnimatedStyle } from 'react-native-reanimated'
 import { Ionicons } from '@/components/Icon'
 import { router } from 'expo-router'
@@ -76,6 +77,7 @@ export const DayPage = React.memo(function DayPage({
   /** Tävlingsdatum (YYYY-MM-DD) — styr planens slut och nedtrappningen */
   raceDate: string | null
 }) {
+          const t = useT()
           const onScrollShrink = useTabBarShrinkOnScroll()
 
           const date       = indexToDate(idx)
@@ -99,12 +101,12 @@ export const DayPage = React.memo(function DayPage({
           })
           function sessionDisplayName(s: WorkoutSession): string {
             if (s.name.startsWith('ONCE:')) return s.name.split(':').slice(2).join(':')
-            if (s.name === dateStr) return 'Loggat idag'
+            if (s.name === dateStr) return t('Loggat idag')
             return s.name
           }
           const scheduledSessions = daySessions.filter(s => s.weekdays.length > 0 || s.name.startsWith(`ONCE:${dateStr}:`))
           const quickLogSession   = daySessions.find(s => s.weekdays.length === 0 && s.name === dateStr)
-          const dayLabel          = isToday ? 'IDAG' : DAY_SHORT[weekday - 1]
+          const dayLabel          = isToday ? t('IDAG') : t(DAY_SHORT[weekday - 1])
           // GPS-avklarade schemapass sparar OCKSÅ ett historikpass — filtrera bort
           // loggar som matchar en avklarning (typ + distans + tid) så samma
           // löpning inte visas som två kort
@@ -135,7 +137,7 @@ export const DayPage = React.memo(function DayPage({
                   activeOpacity={0.75}
                 >
                   <Ionicons name="list-outline" size={15} color={TEXT_PRIMARY} />
-                  <Text style={styles.toolbarBtnText}>Schema</Text>
+                  <Text style={styles.toolbarBtnText}>{t('Schema')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toolbarBtn, styles.toolbarBtnPrimary]}
@@ -143,7 +145,7 @@ export const DayPage = React.memo(function DayPage({
                   activeOpacity={0.8}
                 >
                   <Ionicons name="add" size={16} color="#000" />
-                  <Text style={styles.toolbarBtnPrimaryText}>Nytt pass</Text>
+                  <Text style={styles.toolbarBtnPrimaryText}>{t('Nytt pass')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -152,7 +154,10 @@ export const DayPage = React.memo(function DayPage({
                 <Text style={styles.dayName}>{dayLabel}</Text>
                 {daySessions.length + visibleCardioLogs.length > 0 && (
                   <Text style={styles.daySubtitle}>
-                    {daySessions.length + visibleCardioLogs.length} pass · {daySessions.reduce((a, s) => a + s.exercises.length, 0)} övningar
+                    {t('{n} pass · {m} övningar', {
+                      n: daySessions.length + visibleCardioLogs.length,
+                      m: daySessions.reduce((a, s) => a + s.exercises.length, 0),
+                    })}
                   </Text>
                 )}
               </Animated.View>
@@ -163,11 +168,11 @@ export const DayPage = React.memo(function DayPage({
                   <View style={styles.emptyIcon}>
                     <Ionicons name="barbell-outline" size={32} color={ACCENT} />
                   </View>
-                  <Text style={styles.emptyTitle}>Bygg ditt schema</Text>
-                  <Text style={styles.emptyText}>Skapa pass och lägg till övningar för varje dag</Text>
+                  <Text style={styles.emptyTitle}>{t('Bygg ditt schema')}</Text>
+                  <Text style={styles.emptyText}>{t('Skapa pass och lägg till övningar för varje dag')}</Text>
                   <TouchableOpacity style={styles.emptyBtn} onPress={() => api.openEditor(null)} activeOpacity={0.8}>
                     <Ionicons name="add" size={16} color="#000" />
-                    <Text style={styles.emptyBtnText}>Skapa första passet</Text>
+                    <Text style={styles.emptyBtnText}>{t('Skapa första passet')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -175,8 +180,10 @@ export const DayPage = React.memo(function DayPage({
                   {scheduledSessions.length === 0 && visibleCardioLogs.length === 0 ? (
                     <View style={styles.restState}>
                       <Ionicons name="moon-outline" size={40} color={BORDER} />
-                      <Text style={styles.restTitle}>Vilodag</Text>
-                      <Text style={styles.restText}>Inget pass schemalagt {isToday ? 'idag' : WEEKDAYS[weekday - 1].toLowerCase()}</Text>
+                      <Text style={styles.restTitle}>{t('Vilodag')}</Text>
+                      <Text style={styles.restText}>
+                        {t('Inget pass schemalagt {day}', { day: isToday ? t('idag') : t(WEEKDAYS[weekday - 1]).toLowerCase() })}
+                      </Text>
                     </View>
                   ) : scheduledSessions.map(s => {
                     const isCompleted = completed.has(s.id)
@@ -228,7 +235,7 @@ export const DayPage = React.memo(function DayPage({
                       onStartCardioSession={s.session_type === 'cardio'
                         ? () => {
                             if (!isToday && !isPast) {
-                              Alert.alert('Framtida pass', 'Du kan starta passet först på passdagen.')
+                              Alert.alert(t('Framtida pass'), t('Du kan starta passet först på passdagen.'))
                               return
                             }
                             // Schemalagda pass öppnar pass-detaljen med veckans
@@ -261,15 +268,15 @@ export const DayPage = React.memo(function DayPage({
                   {quickLogSession && (
                     <WorkoutSection
                       key={quickLogSession.id}
-                      session={{ ...quickLogSession, name: 'Loggat idag' }}
+                      session={{ ...quickLogSession, name: t('Loggat idag') }}
                       checked={checked}
                       isCompleted={false}
                       isQuickLog
                       onDeleteExercise={(exId) => api.deleteExercise(quickLogSession.id, exId, dateStr)}
-                      onOpenFullscreen={() => api.openFullscreen({ ...quickLogSession, name: 'Loggat idag' }, dateStr)}
+                      onOpenFullscreen={() => api.openFullscreen({ ...quickLogSession, name: t('Loggat idag') }, dateStr)}
                       onComplete={() => {}}
                       onUncomplete={() => {}}
-                      onLongPress={() => api.sessionLongPress(quickLogSession, 'Loggat idag')}
+                      onLongPress={() => api.sessionLongPress(quickLogSession, t('Loggat idag'))}
                     />
                   )}
 

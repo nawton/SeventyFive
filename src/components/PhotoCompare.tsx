@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, ACCENT } from '@/lib/theme'
 import { GlassCircleButton } from '@/components/GlassButton'
 import type { ProgressPhotoItem } from '@/services/progressPhotos'
+import { useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
 // JÄMFÖR FRAMSTEGSFOTON — välj två foton från olika dagar och se dem sida
@@ -19,7 +20,7 @@ const GRID_GAP = 8
 const CELL_W = (SCREEN_W - 40 - GRID_GAP * 2) / 3
 
 function fmtDate(createdAt: string): string {
-  return new Date(createdAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
+  return new Date(createdAt).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '')
 }
 
 export function PhotoCompare({ visible, photos, onClose }: {
@@ -27,6 +28,7 @@ export function PhotoCompare({ visible, photos, onClose }: {
   photos: ProgressPhotoItem[]
   onClose: () => void
 }) {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const [selected, setSelected] = useState<string[]>([])
   const [showResult, setShowResult] = useState(false)
@@ -62,14 +64,14 @@ export function PhotoCompare({ visible, photos, onClose }: {
             icon="chevron-back"
             onPress={() => (showResult ? setShowResult(false) : onClose())}
           />
-          <Text style={s.topTitle}>{showResult ? 'Jämförelse' : 'Välj två foton'}</Text>
+          <Text style={s.topTitle}>{showResult ? t('Jämförelse') : t('Välj två foton')}</Text>
           <View style={{ width: 44 }} />
         </View>
 
         {showResult && pair.length === 2 ? (
           <View style={s.resultWrap}>
             <Text style={s.resultHead}>
-              <Text style={s.resultHeadNum}>{daysBetween}</Text> dagar emellan
+              <Text style={s.resultHeadNum}>{daysBetween}</Text> {t('dagar emellan')}
             </Text>
             <View style={s.resultRow}>
               {pair.map(p => (
@@ -82,7 +84,7 @@ export function PhotoCompare({ visible, photos, onClose }: {
                     </View>
                   )}
                   <Text style={s.resultDay}>
-                    Dag <Text style={s.resultDayNum}>{p.dayNumber}</Text>
+                    {t('Dag')} <Text style={s.resultDayNum}>{p.dayNumber}</Text>
                   </Text>
                   <Text style={s.resultDate}>{fmtDate(p.createdAt)}</Text>
                 </View>
@@ -92,7 +94,7 @@ export function PhotoCompare({ visible, photos, onClose }: {
         ) : (
           <>
             <Text style={s.hint}>
-              Tryck på två foton från olika dagar, startfotot hamnar till vänster.
+              {t('Tryck på två foton från olika dagar, startfotot hamnar till vänster.')}
             </Text>
             <FlatList
               data={sorted}
@@ -117,7 +119,7 @@ export function PhotoCompare({ visible, photos, onClose }: {
                       </View>
                     )}
                     <View style={s.cellDay}>
-                      <Text style={s.cellDayText}>Dag {item.dayNumber}</Text>
+                      <Text style={s.cellDayText}>{t('Dag {n}', { n: item.dayNumber })}</Text>
                     </View>
                     {idx >= 0 && (
                       <View style={s.cellBadge}>
@@ -140,7 +142,7 @@ export function PhotoCompare({ visible, photos, onClose }: {
               >
                 <Ionicons name="git-compare-outline" size={17} color="#000" />
                 <Text style={s.compareBtnText}>
-                  {selected.length === 2 ? 'Jämför' : `Välj ${2 - selected.length} till`}
+                  {selected.length === 2 ? t('Jämför') : t('Välj {n} till', { n: 2 - selected.length })}
                 </Text>
               </TouchableOpacity>
             </View>

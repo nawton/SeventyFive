@@ -9,12 +9,14 @@ import { BG, TEXT_SECONDARY, CARDIO_BLUE } from '@/lib/theme'
 import { parseLocalDate } from '@/lib/date'
 import { getUnitSystem, type UnitSystem } from '@/lib/units'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
+import { useT, dateLocale } from '@/lib/i18n'
 
 const TYPE_LABELS: Record<string, string> = {
   running: 'Löpning', cycling: 'Cykling', walking: 'Promenad', interval: 'Intervaller',
 }
 
 export default function CardioSummaryScreen() {
+  const t = useT()
   const params = useLocalSearchParams<{ name?: string; cardioType?: string; date?: string; workoutId?: string }>()
   const type = params.cardioType ?? 'running'
 
@@ -43,7 +45,7 @@ export default function CardioSummaryScreen() {
   }, [type, params.date, params.workoutId])
 
   const dateLabel = params.date
-    ? parseLocalDate(params.date).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
+    ? parseLocalDate(params.date).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })
     : null
 
   if (loading) {
@@ -53,7 +55,7 @@ export default function CardioSummaryScreen() {
     return (
       <View style={st.center}>
         <Ionicons name="cloud-offline-outline" size={40} color={TEXT_SECONDARY} />
-        <Text style={st.empty}>Kunde inte hitta det sparade passet.</Text>
+        <Text style={st.empty}>{t('Kunde inte hitta det sparade passet.')}</Text>
       </View>
     )
   }
@@ -61,20 +63,20 @@ export default function CardioSummaryScreen() {
   return (
     <CardioSummaryView
       workout={workout}
-      title={params.name ?? TYPE_LABELS[type] ?? 'Pass'}
+      title={params.name ?? (TYPE_LABELS[type] ? t(TYPE_LABELS[type]) : t('Pass'))}
       dateLabel={dateLabel}
       avatarUrl={avatarUrl}
       unit={unit}
       onClose={() => router.back()}
       onDelete={() => {
-        Alert.alert('Radera träning', 'Det här går inte att ångra.', [
-          { text: 'Avbryt', style: 'cancel' },
+        Alert.alert(t('Radera träning'), t('Det här går inte att ångra.'), [
+          { text: t('Avbryt'), style: 'cancel' },
           {
-            text: 'Radera', style: 'destructive',
+            text: t('Radera'), style: 'destructive',
             onPress: async () => {
               const ok = await deleteCardioWorkout(workout.id).catch(() => false)
               if (!ok) {
-                Alert.alert('Kunde inte radera', 'Kontrollera din uppkoppling och försök igen.')
+                Alert.alert(t('Kunde inte radera'), t('Kontrollera din uppkoppling och försök igen.'))
                 return
               }
               router.back()

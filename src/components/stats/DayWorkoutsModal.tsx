@@ -15,6 +15,7 @@ import { getTasksForDay, updateDayTasks, type DaySummary, type TaskItem } from '
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
 import { GymSummaryView } from './GymSummaryView'
+import { useT, dateLocale } from '@/lib/i18n'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 const SCREEN_WIDTH  = Dimensions.get('window').width
@@ -48,6 +49,7 @@ function TasksCard({ tasks, failedDay, editable, onSave }: {
   editable: boolean
   onSave: (updated: TaskItem[]) => Promise<void>
 }) {
+  const t = useT()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<TaskItem[]>(tasks)
   const [saving, setSaving] = useState(false)
@@ -55,11 +57,11 @@ function TasksCard({ tasks, failedDay, editable, onSave }: {
 
   function startEditing() {
     Alert.alert(
-      'Ändra i efterhand?',
-      'Bocka bara i det du faktiskt gjorde. Utmaningen handlar om ärlighet mot dig själv, det är bara dig det påverkar.',
+      t('Ändra i efterhand?'),
+      t('Bocka bara i det du faktiskt gjorde. Utmaningen handlar om ärlighet mot dig själv, det är bara dig det påverkar.'),
       [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Jag är säker', onPress: () => setEditing(true) },
+        { text: t('Avbryt'), style: 'cancel' },
+        { text: t('Jag är säker'), onPress: () => setEditing(true) },
       ],
     )
   }
@@ -70,7 +72,7 @@ function TasksCard({ tasks, failedDay, editable, onSave }: {
       await onSave(draft)
       setEditing(false)
     } catch {
-      Alert.alert('Kunde inte spara', 'Kontrollera din anslutning och försök igen.')
+      Alert.alert(t('Kunde inte spara'), t('Kontrollera din anslutning och försök igen.'))
     } finally {
       setSaving(false)
     }
@@ -80,57 +82,57 @@ function TasksCard({ tasks, failedDay, editable, onSave }: {
   return (
     <View style={s.tasksWrap}>
       <View style={s.tasksHead}>
-        <Text style={s.tasksTitle}>Dagens uppgifter</Text>
+        <Text style={s.tasksTitle}>{t('Dagens uppgifter')}</Text>
         {editing ? (
           <View style={s.editActions}>
             <TouchableOpacity onPress={() => setEditing(false)} hitSlop={8} disabled={saving}>
-              <Text style={s.editCancel}>Avbryt</Text>
+              <Text style={s.editCancel}>{t('Avbryt')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={save} hitSlop={8} disabled={saving} testID="tasksSave">
-              <Text style={s.editSave}>{saving ? 'Sparar …' : 'Spara'}</Text>
+              <Text style={s.editSave}>{saving ? t('Sparar …') : t('Spara')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={s.editActions}>
             <Text style={[
               s.tasksCount,
-              { color: tasks.every(t => t.completed) ? GREEN : failedDay ? RED : TEXT_SECONDARY },
+              { color: tasks.every(x => x.completed) ? GREEN : failedDay ? RED : TEXT_SECONDARY },
             ]}>
-              {tasks.filter(t => t.completed).length} av {tasks.length}
+              {t('{a} av {b}', { a: tasks.filter(x => x.completed).length, b: tasks.length })}
             </Text>
             {editable && (
               <TouchableOpacity onPress={startEditing} hitSlop={8} testID="tasksEdit">
-                <Text style={s.editSave}>Redigera</Text>
+                <Text style={s.editSave}>{t('Redigera')}</Text>
               </TouchableOpacity>
             )}
           </View>
         )}
       </View>
-      {shown.map((t, i) => {
-        const missed = !t.completed && failedDay && !editing
+      {shown.map((task, i) => {
+        const missed = !task.completed && failedDay && !editing
         const row = (
           <>
             <Ionicons
-              name={t.completed ? 'checkmark-circle' : missed ? 'close-circle' : 'ellipse-outline'}
+              name={task.completed ? 'checkmark-circle' : missed ? 'close-circle' : 'ellipse-outline'}
               size={20}
-              color={t.completed ? GREEN : missed ? RED : 'rgba(255,255,255,0.25)'}
+              color={task.completed ? GREEN : missed ? RED : 'rgba(255,255,255,0.25)'}
             />
             <Text style={[s.taskName, missed && { color: RED, fontWeight: '600' }]} numberOfLines={1}>
-              {t.name}
+              {task.name}
             </Text>
           </>
         )
         if (!editing) {
-          return <View key={t.completionId} style={[s.taskRow, i > 0 && s.taskRowBorder]}>{row}</View>
+          return <View key={task.completionId} style={[s.taskRow, i > 0 && s.taskRowBorder]}>{row}</View>
         }
         return (
           <TouchableOpacity
-            key={t.completionId}
+            key={task.completionId}
             style={[s.taskRow, i > 0 && s.taskRowBorder]}
             activeOpacity={0.7}
             testID={`taskToggle-${i}`}
             onPress={() => setDraft(prev => prev.map(x =>
-              x.completionId === t.completionId ? { ...x, completed: !x.completed } : x
+              x.completionId === task.completionId ? { ...x, completed: !x.completed } : x
             ))}
           >
             {row}
@@ -154,6 +156,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
   /** Efter en efterhandsredigering — skalet laddar om så allt blir grönt överallt */
   onTasksChanged?: () => void
 }) {
+  const t = useT()
   const T = useThemeStrings()
   const insets    = useSafeAreaInsets()
   const FULL_TOP  = insets.top + 8
@@ -193,16 +196,16 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
       challengeId,
       day.dayNumber,
       dateIso,
-      updated.map(t => ({
-        completionId: t.completionId,
-        templateId: t.templateId,
-        completed: t.completed,
+      updated.map(item => ({
+        completionId: item.completionId,
+        templateId: item.templateId,
+        completed: item.completed,
       })),
     )
     setTasks(updated)
     onTasksChanged?.()
     if (status === 'completed' && day.status !== 'completed') {
-      Alert.alert('Snyggt!', `Dag ${day.dayNumber} räknas nu som klarad.`)
+      Alert.alert(t('Snyggt!'), t('Dag {n} räknas nu som klarad.', { n: day.dayNumber }))
     }
   }
 
@@ -235,7 +238,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
 
   const date    = dayDate(startDate, day.dayNumber)
   const dateIso = toLocalDateString(date)
-  const dateStr = date.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
+  const dateStr = date.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })
 
   const dayCardio   = workouts.filter(w => sameDay(new Date(w.created_at), date))
   const dayStrength = strengthWorkouts.filter(w => {
@@ -249,8 +252,8 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
 
   // Uppdelat i löpar-/cardiopass och gympass — swipa mellan dem
   const pages: { key: 'cardio' | 'gym'; label: string; count: number }[] = []
-  if (dayCardio.length > 0 || cardioSessions.length > 0) pages.push({ key: 'cardio', label: 'Cardio', count: dayCardio.length + cardioSessions.length })
-  if (dayStrength.length > 0 || gymSessions.length > 0)  pages.push({ key: 'gym',    label: 'Gym',    count: dayStrength.length + gymSessions.length })
+  if (dayCardio.length > 0 || cardioSessions.length > 0) pages.push({ key: 'cardio', label: t('Cardio'), count: dayCardio.length + cardioSessions.length })
+  if (dayStrength.length > 0 || gymSessions.length > 0)  pages.push({ key: 'gym',    label: t('Gym'),    count: dayStrength.length + gymSessions.length })
   const hasAny = pages.length > 0
 
   function goToPage(i: number) {
@@ -287,7 +290,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
           )}
           <View style={s.empty}>
             <Ionicons name="fitness-outline" size={28} color="rgba(255,255,255,0.2)" />
-            <Text style={s.emptyText}>Inga träningar sparade</Text>
+            <Text style={s.emptyText}>{t('Inga träningar sparade')}</Text>
           </View>
           </>
         ) : (
@@ -366,7 +369,7 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                           </View>
                           <View style={s.itemBody}>
                             <Text style={s.itemName}>{c.name}</Text>
-                            <View style={s.itemMeta}><Text style={s.itemStat}>Avklarat pass</Text></View>
+                            <View style={s.itemMeta}><Text style={s.itemStat}>{t('Avklarat pass')}</Text></View>
                           </View>
                           <Ionicons name="checkmark-circle" size={18} color={GREEN} style={{ alignSelf: 'center' }} />
                         </View>
@@ -399,7 +402,11 @@ export function DayWorkoutsModal({ day, startDate, challengeId, workouts, streng
                                   <Text style={s.itemName}>{c.name}</Text>
                                   <View style={s.itemMeta}>
                                     <Text style={s.itemStat}>
-                                      {sub.length > 0 ? `${sub.length} loggade övningar` : c.exerciseNames.length > 0 ? `${c.exerciseNames.length} övningar` : 'Avklarat pass'}
+                                      {sub.length > 0
+                                        ? t('{n} loggade övningar', { n: sub.length })
+                                        : c.exerciseNames.length > 0
+                                          ? t('{n} övningar', { n: c.exerciseNames.length })
+                                          : t('Avklarat pass')}
                                     </Text>
                                   </View>
                                 </View>
