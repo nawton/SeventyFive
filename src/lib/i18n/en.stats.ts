@@ -225,7 +225,7 @@ export const EN_STATS: Record<string, string> = {
   'Framgång': 'Success rate',
   'Längsta streak': 'Longest streak',
   'Senaste 7 dagarna': 'Last 7 days',
-  'Träningspass': 'Workouts',
+  'Träningspass': 'Workout',
   '({n} veckan innan)': '({n} the week before)',
   'Att tänka på': 'Things to keep in mind',
 

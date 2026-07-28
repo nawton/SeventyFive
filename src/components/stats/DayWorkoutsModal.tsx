@@ -118,7 +118,7 @@ function TasksCard({ tasks, failedDay, editable, onSave }: {
               color={task.completed ? GREEN : missed ? RED : 'rgba(255,255,255,0.25)'}
             />
             <Text style={[s.taskName, missed && { color: RED, fontWeight: '600' }]} numberOfLines={1}>
-              {task.name}
+              {t(task.name)}
             </Text>
           </>
         )

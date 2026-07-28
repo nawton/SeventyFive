@@ -267,7 +267,7 @@ export default function StreakScreen() {
                       color={task.completed ? GREEN : RED}
                     />
                     <Text style={[s.dayTaskName, !task.completed && s.dayTaskMissed]} numberOfLines={1}>
-                      {task.name}
+                      {t(task.name)}
                     </Text>
                     {!task.completed && <Text style={s.dayTaskTag}>{t('Missad')}</Text>}
                   </View>

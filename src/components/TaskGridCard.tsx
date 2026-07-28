@@ -7,6 +7,7 @@ import Animated, {
 import type { TaskItem } from '@/services/dailyLog'
 import type { TaskType } from '@/types/database'
 import { BORDER, CARD, useThemeStrings, ACCENT } from '@/lib/theme'
+import { useT } from '@/lib/i18n'
 
 const { width: SW } = Dimensions.get('window')
 
@@ -58,6 +59,7 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
   /** Sträcker kortet till full rad-bredd (foto-uppgiften under griden) */
   fullWidth?: boolean
 }) {
+  const t = useT()
   const T = useThemeStrings()
   // Ljust läge: inga ramar på korten — mjuk skugga på ytterhöljet istället
   // (kortet klipper med overflow hidden, så skuggan måste ligga utanför)
@@ -124,7 +126,7 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
             ]}
             numberOfLines={metaLabel || counter ? 1 : 2}
           >
-            {task.name}
+            {t(task.name)}
           </Text>
           {counter && (
             <>

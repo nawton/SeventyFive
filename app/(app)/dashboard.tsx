@@ -907,7 +907,7 @@ export default function DashboardScreen() {
                   <View style={[s.ruleIconBox, { backgroundColor: accentAlpha('1C') }]}>
                     <Ionicons name={icon} size={16} color={ACCENT} />
                   </View>
-                  <Text style={s.ruleItemText}>{ruleText}</Text>
+                  <Text style={s.ruleItemText}>{t(ruleText)}</Text>
                   <Ionicons name="lock-closed-outline" size={12} color="#2A2A30" />
                 </View>
               )
@@ -939,7 +939,7 @@ export default function DashboardScreen() {
                     />
                   </View>
                   <Text style={[s.ruleItemText, task.completed && s.ruleItemTextDone]}>
-                    {task.name}
+                    {t(task.name)}
                   </Text>
                   <View style={[s.ruleCheckBox, task.completed && { backgroundColor: color, borderColor: color }]}>
                     {task.completed && <Ionicons name="checkmark" size={12} color="#000" />}
