@@ -371,14 +371,14 @@ const s = StyleSheet.create({
     marginTop: 26, marginBottom: 12,
   },
   card: { backgroundColor: CARD, borderRadius: 20, paddingHorizontal: 18 },
-  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
+  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.14)' },
 
   dtlRow: { flexDirection: 'row', paddingVertical: 14 },
   dtlCell: { flex: 1, gap: 3 },
   dtlLbl: { color: TEXT_SECONDARY, fontSize: 14 },
   dtlVal: { fontSize: 26, fontFamily: NUM_FONT },
   dtlUnit: { fontSize: 14, fontFamily: NUM_FONT_SEMI },
-  dtlSep: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER },
+  dtlSep: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(128,128,128,0.14)' },
 
   exBlock: { paddingVertical: 13, gap: 9 },
   exHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
@@ -396,7 +396,7 @@ const s = StyleSheet.create({
   exThumb: {
     width: 46, height: 46, borderRadius: 23,
     backgroundColor: '#FFFFFF', resizeMode: 'contain',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: DIVIDER,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(128,128,128,0.16)',
   },
   exTop: { color: ACCENT, fontSize: 12, fontFamily: NUM_FONT_SEMI },
   exUnlogged: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
@@ -410,7 +410,7 @@ const s = StyleSheet.create({
   setVal: { color: TEXT_PRIMARY, fontSize: 16, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
   setWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   setChip: {
-    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 9,
+    backgroundColor: 'rgba(128,128,128,0.14)', borderRadius: 9,
     paddingHorizontal: 10, paddingVertical: 5,
   },
   setChipText: { color: TEXT_PRIMARY, fontSize: 12, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },

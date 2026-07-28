@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { useT } from '@/lib/i18n'
-import { GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, ACCENT, accentAlpha } from '@/lib/theme'
+import { GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
 import type { WorkoutSession } from '@/services/workoutSchedule'
 import { completeExercise, updateSessionExercise, addSingleExerciseToSession, deleteSessionExercise } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
@@ -61,6 +61,9 @@ export function SessionFullscreen({
   onClose: () => void
 }) {
   const t = useT()
+  // Råa temafärger: dynamiska konstanter fryser i modaler (fills/borders)
+  const T = useThemeStrings()
+  const tint = (alpha: string) => `${T.ACCENT}${alpha}`
   const insets = useSafeAreaInsets()
   const exercises = session?.exercises ?? []
 
@@ -669,9 +672,9 @@ export function SessionFullscreen({
             {exercises.length === 0 && <Text style={s.empty}>{t('Inga övningar i passet')}</Text>}
 
             {/* Lägg till övning i passet */}
-            <TouchableOpacity style={s.addExBtn} onPress={() => setAddExOpen(true)} activeOpacity={0.8}>
+            <TouchableOpacity style={[s.addExBtn, { borderColor: tint('30') }]} onPress={() => setAddExOpen(true)} activeOpacity={0.8}>
               <Ionicons name="add-circle-outline" size={19} color={ACCENT} />
-              <Text style={s.addExText}>{t('Lägg till övning')}</Text>
+              <Text style={[s.addExText, { color: T.ACCENT }]}>{t('Lägg till övning')}</Text>
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -727,7 +730,7 @@ export function SessionFullscreen({
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={s.restSheetDone} onPress={() => setRestSheetOpen(false)} activeOpacity={0.85}>
+              <TouchableOpacity style={[s.restSheetDone, { backgroundColor: T.ACCENT }]} onPress={() => setRestSheetOpen(false)} activeOpacity={0.85}>
                 <Text style={s.restSheetDoneText}>{t('Klar')}</Text>
               </TouchableOpacity>
             </View>
@@ -736,15 +739,15 @@ export function SessionFullscreen({
 
         {/* ── Vilotimer — dyker upp när ett set bockas av ── */}
         {restLeft !== null && (
-          <View style={[s.restBar, { marginBottom: insets.bottom + 10 }]}>
+          <View style={[s.restBar, { backgroundColor: tint('16'), marginBottom: insets.bottom + 10 }]}>
             <Text style={[s.restBarTime, restLeft === 0 && { color: GREEN }]}>
               {restLeft === 0 ? t('Klar!') : fmtClock(restLeft)}
             </Text>
             <View style={s.restBarTrack}>
-              <View style={[s.restBarFill, { width: `${Math.min(100, (restLeft / restTotal) * 100)}%` as never }]} />
+              <View style={[s.restBarFill, { backgroundColor: T.ACCENT, width: `${Math.min(100, (restLeft / restTotal) * 100)}%` as never }]} />
             </View>
             <TouchableOpacity onPress={() => extendRest(15)} style={s.restBarBtn} activeOpacity={0.75}>
-              <Text style={s.restBarBtnText}>+15</Text>
+              <Text style={[s.restBarBtnText, { color: T.ACCENT }]}>+15</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={cancelRest} style={s.restBarBtn} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }} activeOpacity={0.75}>
               <Ionicons name="close" size={16} color={TEXT_SECONDARY} />
@@ -803,7 +806,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.16)',
     gap: 28,
   },
   restClockBtn: {
@@ -839,7 +842,7 @@ const s = StyleSheet.create({
   inputDone: { backgroundColor: GREEN + '22', borderColor: GREEN + '55' },
   check: {
     width: 40, height: 34, borderRadius: 9,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(128,128,128,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
   checkOn: { backgroundColor: GREEN },
@@ -848,7 +851,7 @@ const s = StyleSheet.create({
   addSetBtn: {
     flex: 1,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12,
+    backgroundColor: 'rgba(128,128,128,0.15)', borderRadius: 12,
     paddingVertical: 10,
   },
   addSetText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
@@ -859,9 +862,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 22,
     paddingVertical: 13, borderRadius: 14,
-    borderWidth: 1.5, borderColor: accentAlpha('50'), borderStyle: 'dashed',
+    borderWidth: 1.5, borderStyle: 'dashed',
   },
-  addExText: { color: ACCENT, fontSize: 15, fontWeight: '700' },
+  addExText: { fontSize: 15, fontWeight: '700' },
 
   restSheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
@@ -872,7 +875,7 @@ const s = StyleSheet.create({
   },
   restSheetHandle: {
     alignSelf: 'center', width: 40, height: 4, borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(128,128,128,0.45)',
   },
   restSheetTitle: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800', textAlign: 'center', marginTop: 6 },
   restSheetSub: { color: TEXT_SECONDARY, fontSize: 13, textAlign: 'center', marginTop: -8 },
@@ -880,13 +883,13 @@ const s = StyleSheet.create({
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
     letterSpacing: 1.5, textAlign: 'center', marginTop: 4,
   },
-  restSectionHint: { color: 'rgba(255,255,255,0.3)', fontSize: 11, textAlign: 'center', marginTop: -10 },
+  restSectionHint: { color: 'rgba(128,128,128,0.8)', fontSize: 11, textAlign: 'center', marginTop: -10 },
   restStepRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 22,
   },
   restStepBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(128,128,128,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
   restStepValue: {
@@ -894,7 +897,7 @@ const s = StyleSheet.create({
     fontVariant: ['tabular-nums'], minWidth: 76, textAlign: 'center',
   },
   restSheetDone: {
-    backgroundColor: ACCENT, borderRadius: 14,
+    borderRadius: 14,
     paddingVertical: 14, alignItems: 'center',
   },
   restSheetDoneText: { color: '#000', fontSize: 15, fontWeight: '800' },
@@ -903,11 +906,11 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     marginHorizontal: 16, marginTop: 8,
     paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: accentAlpha('16'), borderRadius: 14,
+    borderRadius: 14,
   },
   restBarTime: { color: TEXT_PRIMARY, fontSize: 18, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'], minWidth: 46 },
-  restBarTrack: { flex: 1, height: 5, borderRadius: 3, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.08)' },
-  restBarFill: { height: '100%', borderRadius: 3, backgroundColor: ACCENT },
+  restBarTrack: { flex: 1, height: 5, borderRadius: 3, overflow: 'hidden', backgroundColor: 'rgba(128,128,128,0.20)' },
+  restBarFill: { height: '100%', borderRadius: 3 },
   restBarBtn: { paddingHorizontal: 6, paddingVertical: 4 },
-  restBarBtnText: { color: ACCENT, fontSize: 14, fontWeight: '700' },
+  restBarBtnText: { fontSize: 14, fontWeight: '700' },
 })

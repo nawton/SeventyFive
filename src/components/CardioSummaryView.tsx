@@ -399,7 +399,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
                   return (
                     <TouchableOpacity
                       key={ms.key}
-                      style={[s.mapCard, active && s.mapCardActive]}
+                      style={[s.mapCard, active && { borderColor: T.ACCENT }]}
                       onPress={() => changeStyle(ms.key)}
                       activeOpacity={0.85}
                     >
@@ -453,7 +453,7 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: -6 },
     shadowOpacity: 0.4, shadowRadius: 16,
   },
-  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: '#3A3A3C' },
+  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(128,128,128,0.45)' },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   heroIcon: {
     width: 52, height: 52, borderRadius: 26,
@@ -497,12 +497,12 @@ const s = StyleSheet.create({
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
     textTransform: 'uppercase', letterSpacing: 1.5,
   },
-  splitsUnit: { color: 'rgba(255,255,255,0.30)', fontSize: 11, fontFamily: NUM_FONT_SEMI },
+  splitsUnit: { color: 'rgba(128,128,128,0.80)', fontSize: 11, fontFamily: NUM_FONT_SEMI },
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
   splitKm: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT_SEMI, width: 52, fontVariant: ['tabular-nums'] },
   ivMeta: { color: TEXT_PRIMARY, fontSize: 13, fontFamily: NUM_FONT_SEMI, width: 74, fontVariant: ['tabular-nums'] },
   ivMetaDist: { color: TEXT_SECONDARY, fontSize: 11, fontFamily: NUM_FONT_SEMI },
-  splitBarTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
+  splitBarTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(128,128,128,0.12)', overflow: 'hidden' },
   splitBar: { height: '100%', borderRadius: 5, backgroundColor: CARDIO_BLUE, opacity: 0.55 },
   splitBarFastest: { opacity: 1 },
   splitPaceWrap: {
@@ -525,10 +525,9 @@ const s = StyleSheet.create({
   mapCard: {
     flexBasis: '48%', flexGrow: 1,
     borderRadius: 16, borderWidth: 2, borderColor: 'transparent',
-    backgroundColor: '#242426', overflow: 'hidden',
+    backgroundColor: 'rgba(128,128,128,0.14)', overflow: 'hidden',
   },
-  mapCardActive: { borderColor: ACCENT },
-  mapPreviewIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
+  mapPreviewIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(128,128,128,0.12)' },
   routeDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: '#fff' },
   mapPreview: { width: '100%', height: 96, backgroundColor: BORDER },
   mapCardLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9 },

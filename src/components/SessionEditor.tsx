@@ -104,6 +104,8 @@ export function SessionEditor({
   const t = useT()
   // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
   const bodyLight = useColorScheme() === 'light'
+  const tint = (alpha: string) => `${T.ACCENT}${alpha}`
+  const onAccent = bodyLight ? '#FFFFFF' : '#000000'
   // Chippens/fältens ramar: dynamiska färger fryser till mörkt i modaler —
   // mycket ljus ram i ljust läge, som förut i mörkt
   const chip = { borderColor: bodyLight ? 'rgba(0,0,0,0.08)' : THEME_DARK.BORDER } as const
@@ -353,16 +355,16 @@ export function SessionEditor({
                 {(['gym', 'cardio'] as const).map(kind => (
                   <TouchableOpacity
                     key={kind}
-                    style={[s.typeBtn, chip, sessionType === kind && s.typeBtnActive]}
+                    style={[s.typeBtn, chip, sessionType === kind && { backgroundColor: T.ACCENT, borderColor: T.ACCENT }]}
                     onPress={() => setSessionType(kind)}
                     activeOpacity={0.8}
                   >
                     <Ionicons
                       name={kind === 'gym' ? 'barbell-outline' : 'fitness-outline'}
                       size={14}
-                      color={sessionType === kind ? '#000' : TEXT_SECONDARY}
+                      color={sessionType === kind ? onAccent : TEXT_SECONDARY}
                     />
-                    <Text style={[s.typeBtnText, sessionType === kind && s.typeBtnTextActive]}>
+                    <Text style={[s.typeBtnText, sessionType === kind && { color: onAccent, fontWeight: '700' }]}>
                       {kind === 'gym' ? t('Gympass') : t('Cardio')}
                     </Text>
                   </TouchableOpacity>
@@ -408,11 +410,11 @@ export function SessionEditor({
                   return (
                     <TouchableOpacity
                       key={num}
-                      style={[s.dayBtn, chip, active && s.dayBtnActive]}
+                      style={[s.dayBtn, chip, active && { backgroundColor: T.ACCENT, borderColor: T.ACCENT }]}
                       onPress={() => toggleDay(num)}
                       activeOpacity={0.7}
                     >
-                      <Text style={[s.dayText, active && s.dayTextActive]}>{t(d)}</Text>
+                      <Text style={[s.dayText, active && { color: onAccent, fontWeight: '700' }]}>{t(d)}</Text>
                     </TouchableOpacity>
                   )
                 })}
@@ -420,16 +422,16 @@ export function SessionEditor({
 
               {/* Upprepa toggle */}
               <TouchableOpacity
-                style={[s.repeatRow, chip, repeat && s.repeatRowActive]}
+                style={[s.repeatRow, chip, repeat && { backgroundColor: tint('14'), borderColor: tint('40') }]}
                 onPress={toggleRepeat}
                 activeOpacity={0.75}
               >
-                <View style={[s.repeatIcon, repeat && s.repeatIconActive]}>
-                  <Ionicons name="repeat" size={15} color={repeat ? '#000' : TEXT_SECONDARY} />
+                <View style={[s.repeatIcon, repeat && { backgroundColor: T.ACCENT }]}>
+                  <Ionicons name="repeat" size={15} color={repeat ? onAccent : TEXT_SECONDARY} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={s.repeatLabelRow}>
-                    <Text style={[s.repeatLabel, repeat && s.repeatLabelActive]}>{t('Upprepa varje vecka')}</Text>
+                    <Text style={[s.repeatLabel, repeat && { color: T.ACCENT }]}>{t('Upprepa varje vecka')}</Text>
                     <TouchableOpacity
                       onPress={() => Alert.alert(
                         t('Upprepa varje vecka'),
@@ -449,7 +451,7 @@ export function SessionEditor({
                       : t('Passet visas bara den valda dagen')}
                   </Text>
                 </View>
-                <View style={[s.swToggle, repeat && s.swToggleActive]}>
+                <View style={[s.swToggle, repeat && { backgroundColor: T.ACCENT }]}>
                   <View style={[s.swThumb, repeat && s.swThumbActive]} />
                 </View>
               </TouchableOpacity>
@@ -463,16 +465,16 @@ export function SessionEditor({
                   {CARDIO_TYPES.map(ct => (
                     <TouchableOpacity
                       key={ct.key}
-                      style={[s.cardioTypeBtn, chip, cardioType === ct.key && s.cardioTypeBtnActive]}
+                      style={[s.cardioTypeBtn, chip, cardioType === ct.key && { backgroundColor: T.ACCENT, borderColor: T.ACCENT }]}
                       onPress={() => setCardioType(ct.key)}
                       activeOpacity={0.8}
                     >
                       <Ionicons
                         name={ct.icon}
                         size={20}
-                        color={cardioType === ct.key ? '#000' : TEXT_SECONDARY}
+                        color={cardioType === ct.key ? onAccent : TEXT_SECONDARY}
                       />
-                      <Text style={[s.cardioTypeTxt, cardioType === ct.key && s.cardioTypeTxtActive]}>
+                      <Text style={[s.cardioTypeTxt, cardioType === ct.key && { color: onAccent, fontWeight: '700' }]}>
                         {t(ct.label)}
                       </Text>
                     </TouchableOpacity>
@@ -501,9 +503,9 @@ export function SessionEditor({
                       </TouchableOpacity>
                     ) : null}
                     {isCardio ? (
-                      <View style={s.cardioBadge}>
-                        <Ionicons name="walk-outline" size={13} color={ACCENT} />
-                        <Text style={s.cardioBadgeText}>{t('Cardio')}</Text>
+                      <View style={[s.cardioBadge, { backgroundColor: tint('1E') }]}>
+                        <Ionicons name="walk-outline" size={13} color={T.ACCENT} />
+                        <Text style={[s.cardioBadgeText, { color: T.ACCENT }]}>{t('Cardio')}</Text>
                       </View>
                     ) : (
                       <>
@@ -532,9 +534,9 @@ export function SessionEditor({
                   </View>
                 )
               })}
-              <TouchableOpacity style={s.pickerToggle} onPress={() => setShowPicker(true)} activeOpacity={0.8}>
-                <Ionicons name="add" size={17} color={ACCENT} />
-                <Text style={s.pickerToggleText}>{t('Lägg till övning')}</Text>
+              <TouchableOpacity style={[s.pickerToggle, { backgroundColor: tint('14'), borderColor: tint('35') }]} onPress={() => setShowPicker(true)} activeOpacity={0.8}>
+                <Ionicons name="add" size={17} color={T.ACCENT} />
+                <Text style={[s.pickerToggleText, { color: T.ACCENT }]}>{t('Lägg till övning')}</Text>
               </TouchableOpacity>
             </View>
             )}
@@ -619,22 +621,18 @@ const s = StyleSheet.create({
     borderWidth: 1,
     padding: 14, marginTop: 4,
   },
-  repeatRowActive: { backgroundColor: accentAlpha('14'), borderColor: accentAlpha('40') },
   repeatIcon: {
     width: 34, height: 34, borderRadius: 10,
     backgroundColor: BG, alignItems: 'center', justifyContent: 'center',
   },
-  repeatIconActive: { backgroundColor: ACCENT },
   repeatLabelRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
   repeatLabel:      { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
-  repeatLabelActive:{ color: ACCENT },
   repeatSub:        { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   swToggle: {
     width: 44, height: 26, borderRadius: 13,
     backgroundColor: BORDER, padding: 2,
     justifyContent: 'center',
   },
-  swToggleActive:  { backgroundColor: ACCENT },
   swThumb: {
     width: 22, height: 22, borderRadius: 11,
     backgroundColor: TEXT_SECONDARY,
@@ -650,9 +648,7 @@ const s = StyleSheet.create({
     backgroundColor: CARD,
     borderWidth: 1,
   },
-  dayBtnActive:  { backgroundColor: ACCENT, borderColor: ACCENT },
   dayText:       { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
-  dayTextActive: { color: '#000', fontWeight: '700' },
 
   exRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -663,9 +659,9 @@ const s = StyleSheet.create({
   cardioBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
-    backgroundColor: accentAlpha('1E'),
+
   },
-  cardioBadgeText: { color: ACCENT, fontSize: 12, fontWeight: '600' },
+  cardioBadgeText: { fontSize: 12, fontWeight: '600' },
   exSmall: {
     width: 50, color: TEXT_PRIMARY, fontSize: 13,
     backgroundColor: BG, borderRadius: 8,
@@ -675,10 +671,10 @@ const s = StyleSheet.create({
   pickerToggle: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingVertical: 10, paddingHorizontal: 14,
-    backgroundColor: accentAlpha('16'), borderRadius: 10, marginTop: 4,
-    borderWidth: 1, borderColor: accentAlpha('40'),
+    borderRadius: 10, marginTop: 4,
+    borderWidth: 1,
   },
-  pickerToggleText: { color: ACCENT, fontSize: 14, fontWeight: '600' },
+  pickerToggleText: { fontSize: 14, fontWeight: '600' },
 
   pickerScreen: { flex: 1, backgroundColor: BG },
   pickerHeader: {
@@ -712,7 +708,7 @@ const s = StyleSheet.create({
   pickerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.14)',
   },
   pickerRowAdded: { backgroundColor: accentAlpha('08') },
   pickerIcon: {
@@ -723,7 +719,7 @@ const s = StyleSheet.create({
   pickerRowSub:  { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   pickerAddBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(128,128,128,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -742,9 +738,7 @@ const s = StyleSheet.create({
     backgroundColor: CARD,
     borderWidth: 1,
   },
-  typeBtnActive:     { backgroundColor: ACCENT, borderColor: ACCENT },
   typeBtnText:       { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
-  typeBtnTextActive: { color: '#000', fontWeight: '700' },
 
   cardioTypeGrid: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 8,
@@ -755,9 +749,7 @@ const s = StyleSheet.create({
     borderRadius: 12, backgroundColor: CARD,
     borderWidth: 1,
   },
-  cardioTypeBtnActive:  { backgroundColor: ACCENT, borderColor: ACCENT },
   cardioTypeTxt:        { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
-  cardioTypeTxtActive:  { color: '#000', fontWeight: '700' },
 
   infoScreen: { flex: 1, backgroundColor: BG },
   infoHeader: {
@@ -794,7 +786,7 @@ const s = StyleSheet.create({
   muscleChips:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   muscleChip: {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
-    backgroundColor: accentAlpha('1E'),
+
   },
   muscleChipText: { color: ACCENT, fontSize: 13, fontWeight: '600' },
   noMuscles:      { color: TEXT_SECONDARY, fontSize: 13 },

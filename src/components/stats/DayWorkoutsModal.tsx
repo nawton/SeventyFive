@@ -493,14 +493,14 @@ const s = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.16)',
   },
   tabBtn: { marginRight: 24, paddingBottom: 10, alignItems: 'flex-start' },
   tabLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   tabLabel: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '700' },
   tabCount: {
     minWidth: 20, paddingHorizontal: 6, height: 20, borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(128,128,128,0.15)', alignItems: 'center', justifyContent: 'center',
   },
   tabCountText: { color: TEXT_SECONDARY, fontSize: 12, fontFamily: NUM_FONT_SEMI, fontVariant: ['tabular-nums'] },
   tabUnderline: {
@@ -511,13 +511,13 @@ const s = StyleSheet.create({
 
   tasksWrap: {
     marginTop: 10, marginBottom: 18,
-    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16,
+    backgroundColor: 'rgba(128,128,128,0.08)', borderRadius: 16,
     paddingHorizontal: 14, paddingVertical: 4,
   },
   tasksHead: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 11,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: DIVIDER,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.14)',
   },
   tasksTitle: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
   tasksCount: { fontSize: 13, fontFamily: NUM_FONT_SEMI },
@@ -525,11 +525,11 @@ const s = StyleSheet.create({
   editSave:   { color: ACCENT, fontSize: 13, fontWeight: '800' },
   editCancel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
-  taskRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.07)' },
+  taskRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.13)' },
   taskName: { color: TEXT_PRIMARY, fontSize: 14, flex: 1 },
   emptyText:{ color: TEXT_SECONDARY, fontSize: 14 },
   item:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
-  itemBorder:{ borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
+  itemBorder:{ borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.13)' },
   itemIcon: { width: 38, height: 38, borderRadius: 10, backgroundColor: accentAlpha('22'), alignItems: 'center', justifyContent: 'center' },
   itemBody: { flex: 1, gap: 4 },
   itemName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
