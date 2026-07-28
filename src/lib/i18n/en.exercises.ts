@@ -156,6 +156,28 @@ export const EN_EXERCISES: Record<string, string> = {
   'Exempel: {names}': 'Example: {names}',
   'TID': 'TIME',
 
+  // Infobladet (muskler, utrustning och rubriker från ExerciseDB-paketet)
+  'GENOMFÖRANDE': 'INSTRUCTIONS',
+  'UTRUSTNING': 'EQUIPMENT',
+  'Magmuskler': 'Abs',
+  'Vader': 'Calves',
+  'Underarmar': 'Forearms',
+  'Säte': 'Glutes',
+  'Baksida lår': 'Hamstrings',
+  'Lats': 'Lats',
+  'Framsida lår': 'Quads',
+  'Abduktorer': 'Abductors',
+  'Bål': 'Core',
+  'Höftböjare': 'Hip flexors',
+  'Sneda magmuskler': 'Obliques',
+  'Bakre delta': 'Rear delts',
+  'Romboider': 'Rhomboids',
+  'Övre bröst': 'Upper chest',
+  'Brachialis': 'Brachialis',
+  'Kabel': 'Cable',
+  'Vikt': 'Weight',
+  'Träningshjul': 'Ab wheel',
+
   // Delmuskelfilter (bröstets och axelns regioner)
   'Övre': 'Upper',
   'Mellersta': 'Middle',

@@ -12,6 +12,8 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, us
 import { MuscleThumb } from '@/components/MuscleThumb'
 import { CATEGORY_LABELS, exerciseImageUrl, type Exercise } from '@/services/exercises'
 import { CreateExerciseSheet } from '@/components/CreateExerciseSheet'
+import { ExerciseInfoSheet } from '@/components/ExerciseInfoSheet'
+import { EXERCISE_INFO } from '@/lib/exerciseInfo'
 import { getExerciseMuscleGroup, getMusclesForName, SLUG_LABELS, type Slug } from '@/lib/muscles'
 import type { ExerciseCategory } from '@/types/database'
 import { AppTextInput } from '@/components/AppTextInput'
@@ -173,6 +175,8 @@ export function ExercisePickerSheet({
   // så de syns direkt utan att skalet behöver ladda om
   const [createdExes, setCreatedExes]     = useState<Exercise[]>([])
   const [createOpen, setCreateOpen]       = useState(false)
+  // Infobladet: tryck på GIF:en eller långtryck på raden
+  const [infoEx, setInfoEx]               = useState<Exercise | null>(null)
   const [multiSel, setMultiSel]           = useState<Exercise[]>([])
   const [sets, setSets]                   = useState('3')
   const [reps, setReps]                   = useState('10')
@@ -205,6 +209,12 @@ export function ExercisePickerSheet({
     // I gym-only-läget finns ingen landing att backa till → stäng istället
     else if (page === 'gym' && gymOnly) handleClose()
     else if (page === 'gym' || page === 'cardio') setPage('landing')
+  }
+
+  function openInfo(ex: Exercise) {
+    if (!EXERCISE_INFO[ex.name] && !ex.image_path) return
+    Haptics.selectionAsync()
+    setInfoEx(ex)
   }
 
   function handleTap(ex: Exercise) {
@@ -452,13 +462,20 @@ export function ExercisePickerSheet({
               {filteredExercises.map(ex => {
                 const on = multiSelect && multiSel.some(e => e.id === ex.id)
                 return (
-                  <TouchableOpacity key={ex.id} style={[s.row, on && { backgroundColor: tint('0D') }]} onPress={() => handleTap(ex)} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    key={ex.id}
+                    style={[s.row, on && { backgroundColor: tint('0D') }]}
+                    onPress={() => handleTap(ex)}
+                    onLongPress={() => openInfo(ex)}
+                    activeOpacity={0.7}
+                  >
                     {ex.image_path ? (
-                      <Image
-                        testID={`exerciseImage-${ex.id}`}
-                        source={{ uri: exerciseImageUrl(ex.image_path) }}
-                        style={[s.exImg, { borderColor: T.BORDER }, on && { borderWidth: 2, borderColor: T.ACCENT }]}
-                      />
+                      <TouchableOpacity onPress={() => openInfo(ex)} activeOpacity={0.7} testID={`exerciseImage-${ex.id}`}>
+                        <Image
+                          source={{ uri: exerciseImageUrl(ex.image_path) }}
+                          style={[s.exImg, { borderColor: T.BORDER }, on && { borderWidth: 2, borderColor: T.ACCENT }]}
+                        />
+                      </TouchableOpacity>
                     ) : (
                       <View style={[s.exIconBox, { borderColor: T.BORDER }, on && { backgroundColor: tint('22'), borderColor: T.ACCENT }]}>
                         <Ionicons name="barbell-outline" size={22} color={on ? T.ACCENT : T.TEXT_SECONDARY} />
@@ -554,6 +571,10 @@ export function ExercisePickerSheet({
 
       </View>
 
+      {infoEx !== null && (
+        <ExerciseInfoSheet exercise={infoEx} onClose={() => setInfoEx(null)} />
+      )}
+
       <CreateExerciseSheet
         visible={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -644,7 +665,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(52,199,89,0.12)', alignItems: 'center', justifyContent: 'center',
   },
   exIconBox: {
-    width: 56, height: 56, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth,
+    width: 68, height: 68, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth,
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
   },
   // Illustrationerna är svarta linjer på vitt — plattan är vit även i mörkt
@@ -652,7 +673,7 @@ const s = StyleSheet.create({
   // contain: illustrationerna har olika proportioner, cover beskär dem
   // till oigenkännliga utsnitt. Hela gubben ska synas i plattan.
   exImg: {
-    width: 56, height: 56, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth,
+    width: 68, height: 68, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth,
     backgroundColor: '#FFFFFF', resizeMode: 'contain',
   },
   rowName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },

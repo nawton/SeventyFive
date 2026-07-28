@@ -1,4 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react-native'
+import { render, screen, fireEvent, act, within } from '@testing-library/react-native'
+import { setLanguage } from '@/lib/i18n'
+import { EXERCISE_INFO } from '@/lib/exerciseInfo'
 import { ExercisePickerSheet } from '../ExercisePickerSheet'
 import type { Exercise } from '@/services/exercises'
 
@@ -38,6 +40,42 @@ function mount() {
     />,
   )
 }
+
+describe('ExercisePickerSheet — infobladet', () => {
+  afterEach(async () => {
+    await act(async () => { await setLanguage('sv') })
+  })
+
+  it('långtryck på en övning öppnar infobladet med svenska steg', () => {
+    mount()
+    fireEvent.press(screen.getByText('Bröst'))
+    fireEvent(screen.getByText('Bänkpress'), 'longPress')
+
+    expect(screen.getByTestId('exerciseInfoSheet')).toBeOnTheScreen()
+    expect(screen.getByText('GENOMFÖRANDE')).toBeOnTheScreen()
+    expect(screen.getByText(EXERCISE_INFO['Bänkpress'].steps[0].sv)).toBeOnTheScreen()
+    // Muskelchipen letas inuti bladet, gruppnamnet bakom modalen heter likadant
+    expect(within(screen.getByTestId('exerciseInfoSheet')).getByText(EXERCISE_INFO['Bänkpress'].target)).toBeOnTheScreen()
+  })
+
+  it('tryck på GIF-plattan öppnar också infobladet', () => {
+    mount()
+    fireEvent.press(screen.getByText('Bröst'))
+    expect(screen.queryByTestId('exerciseInfoSheet')).toBeNull()
+    fireEvent.press(screen.getByTestId('exerciseImage-e3'))
+    expect(screen.getByTestId('exerciseInfoSheet')).toBeOnTheScreen()
+  })
+
+  it('på engelska visas de engelska originalstegen', async () => {
+    await act(async () => { await setLanguage('en') })
+    mount()
+    fireEvent.press(screen.getByText('Chest'))
+    fireEvent(screen.getByText('Bench press'), 'longPress')
+
+    expect(screen.getByText('INSTRUCTIONS')).toBeOnTheScreen()
+    expect(screen.getByText(EXERCISE_INFO['Bänkpress'].steps[0].en)).toBeOnTheScreen()
+  })
+})
 
 describe('ExercisePickerSheet — delmuskelfiltret', () => {
   it('gruppen visar alla sina övningar som standard, med filterchips', () => {
