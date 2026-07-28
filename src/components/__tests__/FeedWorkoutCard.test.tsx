@@ -72,10 +72,11 @@ describe('FeedWorkoutCard — gympassets övningsförhandsvisning', () => {
     expect(screen.getByText('Sjukt bra pass')).toBeOnTheScreen()
   })
 
-  it('tryck på en övningsrad öppnar infobladet', () => {
-    render(<FeedWorkoutCard post={POST} onOpen={jest.fn()} />)
+  it('tryck på kortet öppnar passet, övningsraderna fångar inte trycket', () => {
+    const onOpen = jest.fn()
+    render(<FeedWorkoutCard post={POST} onOpen={onOpen} />)
+    fireEvent.press(screen.getByTestId(`post-${POST.id}`))
+    expect(onOpen).toHaveBeenCalledWith(POST)
     expect(screen.queryByTestId('exerciseInfoSheet')).toBeNull()
-    fireEvent.press(screen.getByTestId('preview-w1'))
-    expect(screen.getByTestId('exerciseInfoSheet')).toBeOnTheScreen()
   })
 })
