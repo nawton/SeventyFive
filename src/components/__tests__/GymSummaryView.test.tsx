@@ -66,6 +66,36 @@ describe('GymSummaryView — set-tabellen', () => {
     expect(screen.getByText('Tappade 20 kg på tån')).toBeOnTheScreen()
   })
 
+  it('ologgade planerade övningar visas som Ej loggad', () => {
+    render(
+      <GymSummaryView
+        name="Gympass"
+        dateLabel="måndag 27 juli"
+        logged={[W]}
+        plannedNames={['Bänkpress', 'Knäböj']}
+        onClose={jest.fn()}
+      />,
+    )
+    expect(screen.getByText('Knäböj')).toBeOnTheScreen()
+    expect(screen.getByText('Ej loggad')).toBeOnTheScreen()
+  })
+
+  it('högersidan öppnar utvecklingsvyn när hela historiken finns', () => {
+    render(
+      <GymSummaryView
+        name="Gympass"
+        dateLabel="måndag 27 juli"
+        logged={[W]}
+        plannedNames={[]}
+        allWorkouts={[W]}
+        onClose={jest.fn()}
+      />,
+    )
+    fireEvent.press(screen.getByTestId('exProg-w1'))
+    // Progressionsmodalen visar övningens namn som rubrik igen
+    expect(screen.getAllByText('Bänkpress').length).toBeGreaterThan(1)
+  })
+
   it('tryck på övningsnamnet öppnar infobladet', () => {
     render(
       <GymSummaryView

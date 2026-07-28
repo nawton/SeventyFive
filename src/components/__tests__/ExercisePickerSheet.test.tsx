@@ -20,6 +20,10 @@ const ex = (id: string, name: string, image_path: string | null = null, equipmen
 })
 
 // Rodd → övre rygg/trapezius, Marklyft → nedre rygg m.m., Bänkpress → bröst
+const CARDIO: Exercise = {
+  id: 'c1', name: 'Löpning', description: null, category: 'cardio', difficulty: 'beginner', video_url: null, image_path: null,
+}
+
 const EXERCISES = [
   ex('e1', 'Rodd med skivstång'),
   ex('e2', 'Marklyft'),
@@ -71,6 +75,44 @@ describe('ExercisePickerSheet — infobladet', () => {
 
     expect(screen.getByText('INSTRUCTIONS')).toBeOnTheScreen()
     expect(screen.getByText(EXERCISE_INFO['Bänkpress'].steps[0].en)).toBeOnTheScreen()
+  })
+})
+
+describe('ExercisePickerSheet — cardio och enkelval', () => {
+  it('cardiosidan listar kategorin och väljer direkt utan set/reps', () => {
+    const onSelect = jest.fn()
+    render(
+      <ExercisePickerSheet
+        visible
+        exercises={[...EXERCISES, CARDIO]}
+        onSelect={onSelect}
+        onClose={jest.fn()}
+      />,
+    )
+    // Typvalet → Cardio → övningen väljs direkt
+    fireEvent.press(screen.getByText('Cardio'))
+    fireEvent.press(screen.getByText('Löpning'))
+    expect(onSelect).toHaveBeenCalledWith(CARDIO, null, null)
+  })
+
+  it('enkelval av gymövning frågar efter set och reps innan valet skickas', () => {
+    const onSelect = jest.fn()
+    render(
+      <ExercisePickerSheet
+        visible
+        gymOnly
+        exercises={EXERCISES}
+        onSelect={onSelect}
+        onClose={jest.fn()}
+      />,
+    )
+    fireEvent.press(screen.getByText('Bänkpress'))
+    // Prompten visas med standardvärden
+    expect(screen.getByText('Ange set och reps för passet')).toBeOnTheScreen()
+    fireEvent.changeText(screen.getByDisplayValue('3'), '4')
+    fireEvent.changeText(screen.getByDisplayValue('10'), '8')
+    fireEvent.press(screen.getByText('Lägg till i pass'))
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ name: 'Bänkpress' }), 4, '8')
   })
 })
 

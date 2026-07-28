@@ -111,3 +111,33 @@ describe('DayWorkoutsModal — efterhandsredigering', () => {
     alertSpy.mockRestore()
   })
 })
+
+describe('DayWorkoutsModal — pass-nyckeln håller isär dubbla pass', () => {
+  const mkW = (id: string, name: string, passKey: string) => ({
+    id, name, created_at: '2026-07-05T10:00:00Z',
+    data: { exercise_name: name, sets: [{ reps: 10, weight_kg: 50 }], workout_date: '2026-07-05', pass_key: passKey },
+  })
+
+  it('samma schemapass två gånger samma dag ger två block med varsina rader', async () => {
+    const { getTasksForDay } = jest.requireMock('@/services/dailyLog')
+    getTasksForDay.mockResolvedValue([])
+    render(
+      <DayWorkoutsModal
+        day={{ dayNumber: 5, status: 'completed' }}
+        startDate="2026-07-01"
+        workouts={[]}
+        strengthWorkouts={[mkW('a1', 'Bänkpress', 'p1'), mkW('b1', 'Bänkpress', 'p2')] as never}
+        completedSessions={[
+          { id: 'c1', name: 'Bröstpass', completedDate: '2026-07-05', sessionType: 'gym', cardioType: null, exerciseNames: ['Bänkpress'], distanceKm: null, durationSeconds: null },
+          { id: 'c2', name: 'Bröstpass', completedDate: '2026-07-05', sessionType: 'gym', cardioType: null, exerciseNames: ['Bänkpress'], distanceKm: null, durationSeconds: null },
+        ] as never}
+        onClose={jest.fn()}
+        onSelectWorkout={jest.fn()}
+      />,
+    )
+    // Båda blocken visar en logga vardera — inte allt i första och tomt i andra
+    const rows = await screen.findAllByText('Bröstpass')
+    expect(rows.length).toBeGreaterThanOrEqual(2)
+    expect(screen.queryByText('0 loggade övningar')).toBeNull()
+  })
+})
