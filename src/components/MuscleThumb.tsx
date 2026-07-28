@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import Body from 'react-native-body-highlighter'
 import { bestSideForMuscles, type Slug } from '@/lib/muscles'
@@ -17,7 +17,7 @@ const MUSCLE_CENTER: Partial<Record<Slug, number>> = {
   quadriceps: 0.55, hamstring: 0.58, tibialis: 0.74, calves: 0.75,
 }
 
-export function MuscleThumb({ slug, size = 52, color, tintAlpha = '14' }: {
+export const MuscleThumb = memo(function MuscleThumb({ slug, size = 52, color, tintAlpha = '14' }: {
   slug: Slug
   size?: number
   /** Accentfärgen som hex — temaväxlad av anroparen (orange mörkt, blå ljust) */
@@ -46,7 +46,7 @@ export function MuscleThumb({ slug, size = 52, color, tintAlpha = '14' }: {
       </View>
     </View>
   )
-}
+})
 
 const s = StyleSheet.create({
   thumb: {

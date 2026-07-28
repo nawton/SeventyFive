@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ScrollView, Modal, KeyboardAvoidingView, Platform, Keyboard,
@@ -31,6 +31,26 @@ const GYM_GROUPS: GymGroup[] = [
 ]
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
+
+// Kroppssiluetterna är tunga SVG-träd — memoiseras så tryck i filtret
+// aldrig ritar om dem (GYM_GROUPS slug-arrayer är stabila referenser)
+const GroupBodyThumb = memo(function GroupBodyThumb({ slugs, side, color, scale }: {
+  slugs: Slug[]
+  side: 'front' | 'back'
+  color: string
+  scale: number
+}) {
+  return (
+    <Body
+      data={slugs.map(sl => ({ slug: sl, intensity: 1 as const }))}
+      side={side}
+      gender="male"
+      scale={scale}
+      colors={[color]}
+      defaultFill="#3A3A3C"
+    />
+  )
+})
 
 function cardioExIcon(ex: Exercise): IoniconName {
   const n = ex.name.toLowerCase()
@@ -242,14 +262,7 @@ export function ExercisePickerSheet({
                 activeOpacity={0.7}
               >
                 <View style={[s.thumbWrap, { backgroundColor: group.color + '14' }]}>
-                  <Body
-                    data={group.slugs.map(sl => ({ slug: sl, intensity: 1 as const }))}
-                    side={group.side}
-                    gender="male"
-                    scale={0.33}
-                    colors={[group.color]}
-                    defaultFill="#3A3A3C"
-                  />
+                  <GroupBodyThumb slugs={group.slugs} side={group.side} color={group.color} scale={0.33} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.groupLabel}>{t(group.label)}</Text>
@@ -315,17 +328,10 @@ export function ExercisePickerSheet({
                   >
                     <View style={[s.subThumbRing, subMuscle === 'all' && { borderColor: T.ACCENT }]}>
                       <View style={[s.subAllThumb, { backgroundColor: tint('14') }]}>
-                        <Body
-                          data={slugs.map(sl => ({ slug: sl, intensity: 1 as const }))}
-                          side={group.side}
-                          gender="male"
-                          scale={0.22}
-                          colors={[T.ACCENT]}
-                          defaultFill="#3A3A3C"
-                        />
+                        <GroupBodyThumb slugs={slugs} side={group.side} color={T.ACCENT} scale={0.22} />
                       </View>
                     </View>
-                    <Text style={[s.subCardText, subMuscle === 'all' && { color: T.ACCENT, fontWeight: '700' }]}>
+                    <Text style={[s.subCardText, { color: subMuscle === 'all' ? T.ACCENT : T.TEXT_SECONDARY }, subMuscle === 'all' && { fontWeight: '700' }]}>
                       {t('Alla')}
                     </Text>
                   </TouchableOpacity>
@@ -341,8 +347,10 @@ export function ExercisePickerSheet({
                         <MuscleThumb slug={sl} size={48} color={T.ACCENT} />
                       </View>
                       <Text
-                        style={[s.subCardText, subMuscle === sl && { color: T.ACCENT, fontWeight: '700' }]}
+                        style={[s.subCardText, { color: subMuscle === sl ? T.ACCENT : T.TEXT_SECONDARY }, subMuscle === sl && { fontWeight: '700' }]}
                         numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
                       >
                         {t(SLUG_LABELS[sl])}
                       </Text>
@@ -619,8 +627,8 @@ const s = StyleSheet.create({
 
   // Delmuskelfiltret — SVG-kort som visar VAR muskeln sitter
   subMuscleBar: { flexGrow: 0, marginBottom: 6 },
-  subMuscleRow: { paddingHorizontal: 20, gap: 12, paddingVertical: 2 },
-  subCard: { alignItems: 'center', gap: 5, width: 62 },
+  subMuscleRow: { paddingHorizontal: 20, gap: 10, paddingVertical: 2, paddingBottom: 6, alignItems: 'flex-start' },
+  subCard: { alignItems: 'center', gap: 6, width: 70 },
   subThumbRing: {
     borderWidth: 2, borderColor: 'transparent', borderRadius: 28, padding: 2,
   },
