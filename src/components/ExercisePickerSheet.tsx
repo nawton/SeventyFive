@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image,
+  View, Text, StyleSheet, TouchableOpacity, Image, FlatList,
   TextInput, ScrollView, Modal, KeyboardAvoidingView, Platform, Keyboard, useColorScheme,
 } from 'react-native'
 import { Ionicons } from '@/components/Icon'
@@ -455,13 +455,16 @@ export function ExercisePickerSheet({
               />
             </View>
 
-            <ScrollView
+            <FlatList
               style={{ flex: 1 }}
+              data={filteredExercises}
+              keyExtractor={ex => ex.id}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
               keyboardShouldPersistTaps="handled"
-            >
-              {filteredExercises.map(ex => {
+              initialNumToRender={12}
+              windowSize={7}
+              renderItem={({ item: ex }) => {
                 const on = multiSelect && multiSel.some(e => e.id === ex.id)
                 return (
                   <TouchableOpacity
@@ -495,8 +498,8 @@ export function ExercisePickerSheet({
                     )}
                   </TouchableOpacity>
                 )
-              })}
-              {filteredExercises.length === 0 && (
+              }}
+              ListEmptyComponent={
                 <View style={{ alignItems: 'center', gap: 10 }}>
                   <Text style={s.emptyText}>{t('Inga övningar hittades')}</Text>
                   <TouchableOpacity style={[s.emptyCreateBtn, { backgroundColor: T.ACCENT }]} onPress={() => setCreateOpen(true)} activeOpacity={0.8} testID="createFromEmpty">
@@ -504,8 +507,8 @@ export function ExercisePickerSheet({
                     <Text style={[s.emptyCreateText, { color: onAccent }]}>{t('Skapa "{name}"', { name: search.trim() })}</Text>
                   </TouchableOpacity>
                 </View>
-              )}
-            </ScrollView>
+              }
+            />
           </>
         )}
 

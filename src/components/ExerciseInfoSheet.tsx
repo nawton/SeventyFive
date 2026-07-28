@@ -7,6 +7,8 @@ import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from 
 import type { Exercise } from '@/services/exercises'
 import { publicExerciseImageUrl } from '@/lib/exerciseInfo/images'
 import { EXERCISE_INFO } from '@/lib/exerciseInfo'
+import { SLUG_LABELS } from '@/lib/muscles'
+import { EQUIPMENT_LABELS } from '@/services/exercises'
 
 // =============================================================================
 // INFOBLAD FÖR EN ÖVNING — stor animation, muskler, utrustning och
@@ -30,6 +32,11 @@ export function ExerciseInfoSheet({ exercise, onClose }: {
   const info = exercise ? EXERCISE_INFO[exercise.name] : undefined
   if (!exercise) return null
   const english = getLanguage() === 'en'
+  // Nya biblioteket saknar bundlade steg — muskler och utrustning
+  // kommer från radens egna kolumner istället
+  const target = info?.target ?? (exercise.primary_muscle ? SLUG_LABELS[exercise.primary_muscle] : null)
+  const secondary = info?.secondary ?? (exercise.other_muscles ?? []).map(m => SLUG_LABELS[m]).filter(Boolean)
+  const equipment = info?.equipment ?? (exercise.equipment ? EQUIPMENT_LABELS[exercise.equipment] : null)
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -54,24 +61,28 @@ export function ExerciseInfoSheet({ exercise, onClose }: {
             </View>
           )}
 
+          {target && (
+            <View style={s.chipRow}>
+              <View style={[s.chip, { backgroundColor: T.ACCENT }]}>
+                <Text style={[s.chipText, { color: onAccent }]}>{t(target)}</Text>
+              </View>
+              {secondary.map(m => (
+                <View key={m} style={[s.chip, { backgroundColor: tint('16') }]}>
+                  <Text style={[s.chipText, { color: T.ACCENT }]}>{t(m)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {equipment && (
+            <View style={s.metaRow}>
+              <Text style={s.metaLabel}>{t('UTRUSTNING')}</Text>
+              <Text style={s.metaValue}>{t(equipment)}</Text>
+            </View>
+          )}
+
           {info && (
             <>
-              <View style={s.chipRow}>
-                <View style={[s.chip, { backgroundColor: T.ACCENT }]}>
-                  <Text style={[s.chipText, { color: onAccent }]}>{t(info.target)}</Text>
-                </View>
-                {info.secondary.map(m => (
-                  <View key={m} style={[s.chip, { backgroundColor: tint('16') }]}>
-                    <Text style={[s.chipText, { color: T.ACCENT }]}>{t(m)}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <View style={s.metaRow}>
-                <Text style={s.metaLabel}>{t('UTRUSTNING')}</Text>
-                <Text style={s.metaValue}>{t(info.equipment)}</Text>
-              </View>
-
               <Text style={s.sectionHeader}>{t('GENOMFÖRANDE')}</Text>
               {info.steps.map((step, i) => (
                 <View key={i} style={s.stepRow}>

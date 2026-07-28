@@ -3,7 +3,7 @@ import { registerExerciseMuscles, type Slug } from '@/lib/muscles'
 import type { ExerciseCategory, ExerciseDifficulty } from '@/types/database'
 
 export type ExerciseEquipment =
-  | 'none' | 'barbell' | 'dumbbell' | 'kettlebell' | 'machine'
+  | 'none' | 'barbell' | 'dumbbell' | 'kettlebell' | 'machine' | 'cable'
   | 'plate' | 'band' | 'suspension' | 'other'
 
 export type ExerciseType =
@@ -34,6 +34,7 @@ export const EQUIPMENT_LABELS: Record<ExerciseEquipment, string> = {
   dumbbell:   'Hantlar',
   kettlebell: 'Kettlebell',
   machine:    'Maskin',
+  cable:      'Kabel',
   plate:      'Viktskiva',
   band:       'Gummiband',
   suspension: 'Suspensionsband',
@@ -96,10 +97,11 @@ export async function getExercises(): Promise<Exercise[]> {
 
   if (error) throw error
   const exercises: Exercise[] = data ?? []
-  // Egna övningar har explicit valda muskler — registrera dem så
-  // muskelkartan och gruppindelningen i väljaren känner igen namnen
+  // Rader med explicit muskeldata (egna övningar OCH nya biblioteket)
+  // registreras så muskelkartan och gruppindelningen känner igen namnen
+  // utan nyckelordsmatchning
   for (const ex of exercises) {
-    if (ex.user_id && ex.primary_muscle) {
+    if (ex.primary_muscle) {
       registerExerciseMuscles(ex.name, [ex.primary_muscle, ...(ex.other_muscles ?? [])])
     }
   }

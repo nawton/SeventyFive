@@ -101,7 +101,7 @@ describe('egna övningar', () => {
   })
 
   it('utrustnings- och typkonstanterna är kompletta', () => {
-    expect(Object.keys(EQUIPMENT_LABELS)).toHaveLength(9)
+    expect(Object.keys(EQUIPMENT_LABELS)).toHaveLength(10)
     for (const info of Object.values(EXERCISE_TYPE_INFO)) {
       expect(info.label.length).toBeGreaterThan(2)
       expect(info.badges.length).toBeGreaterThan(0)
