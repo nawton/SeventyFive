@@ -10,6 +10,7 @@ import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
 import { MuscleThumb } from '@/components/MuscleThumb'
+import { EquipmentIcon } from '@/components/EquipmentIcon'
 import { useBodyGender } from '@/lib/bodyGender'
 import { CATEGORY_LABELS, EQUIPMENT_LABELS, exerciseImageUrl, type Exercise, type ExerciseEquipment } from '@/services/exercises'
 import { CreateExerciseSheet } from '@/components/CreateExerciseSheet'
@@ -447,7 +448,7 @@ export function ExercisePickerSheet({
                 activeOpacity={0.75}
                 testID="equipFilter"
               >
-                <Ionicons name="barbell-outline" size={17} color={equipFilter !== 'all' ? T.ACCENT : TEXT_SECONDARY} />
+                <EquipmentIcon equipment={equipFilter} size={17} color={equipFilter !== 'all' ? T.ACCENT : T.TEXT_SECONDARY} />
                 <Text style={[s.filterBtnText, equipFilter !== 'all' && { color: T.ACCENT, fontWeight: '700' }]}>
                   {equipFilter === 'all' ? t('Utrustning') : t(EQUIPMENT_LABELS[equipFilter])}
                 </Text>
@@ -652,9 +653,14 @@ export function ExercisePickerSheet({
                     activeOpacity={0.75}
                     testID={`equip-${key}`}
                   >
-                    <Text style={[s.equipRowText, on && { color: T.ACCENT, fontWeight: '700' }]}>
-                      {key === 'all' ? t('All utrustning') : t(EQUIPMENT_LABELS[key as ExerciseEquipment])}
-                    </Text>
+                    <View style={s.equipRowLeft}>
+                      <View style={[s.equipIconBox, { backgroundColor: on ? tint('16') : 'rgba(128,128,128,0.10)' }]}>
+                        <EquipmentIcon equipment={key} size={20} color={on ? T.ACCENT : T.TEXT_SECONDARY} />
+                      </View>
+                      <Text style={[s.equipRowText, on && { color: T.ACCENT, fontWeight: '700' }]}>
+                        {key === 'all' ? t('All utrustning') : t(EQUIPMENT_LABELS[key as ExerciseEquipment])}
+                      </Text>
+                    </View>
                     {on && <Ionicons name="checkmark" size={18} color={T.ACCENT} />}
                   </TouchableOpacity>
                 )
@@ -840,6 +846,11 @@ const s = StyleSheet.create({
   equipRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 13, borderRadius: 12,
+  },
+  equipRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  equipIconBox: {
+    width: 36, height: 36, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
   },
   equipRowText: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
 
