@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/react-native'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/lib/auth'
 import { applyStoredTheme } from '@/lib/themeMode'
+import { loadLanguage } from '@/lib/i18n'
 
 // Kraschrapportering — slås på först när EXPO_PUBLIC_SENTRY_DSN finns i
 // miljön (kräver också en byggnation med den nativa modulen). Utan DSN
@@ -21,6 +22,9 @@ if (SENTRY_DSN) {
 // systemljusa användare aldrig ser en ljus blink; ev. sparat ljust val
 // appliceras strax efter
 applyStoredTheme()
+
+// Sparat språkval (svenska är standard) — prenumeranter ritas om när det laddats
+loadLanguage()
 
 export default function RootLayout() {
   // Rundad siffer-font (SF Rounded-känsla) — appen renderar med systemfont tills den laddats

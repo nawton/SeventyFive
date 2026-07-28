@@ -18,6 +18,7 @@ import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useCardChrome } from '@/lib/theme'
 import type { UserChallengeWithLevel } from '@/types/database'
+import { getLanguage, setLanguage, type AppLanguage } from '@/lib/i18n'
 
 const IS_EXPO_GO = Constants.appOwnership === 'expo'
 
@@ -86,6 +87,7 @@ export default function GeneralScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [userId, setUserId]         = useState<string | null>(null)
   const [challenge, setChallenge]   = useState<UserChallengeWithLevel | null>(null)
+  const [language, setLanguageState] = useState<AppLanguage>(getLanguage())
   const [wizardVisible, setWizardVisible] = useState(false)
 
   useEffect(() => {
@@ -251,6 +253,14 @@ export default function GeneralScreen() {
     )
   }
 
+  function handleLanguagePress() {
+    Alert.alert('Språk', 'Välj appens språk.', [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Svenska', onPress: () => { setLanguage('sv'); setLanguageState('sv') } },
+      { text: 'English', onPress: () => { setLanguage('en'); setLanguageState('en') } },
+    ])
+  }
+
   function handleResetSchedule() {
     if (!userId) return
     Alert.alert(
@@ -343,6 +353,17 @@ export default function GeneralScreen() {
             label="Dagliga tider"
             sub="Vakentid, måltider och träningstider"
             onPress={() => router.push('/(auth)/schedule?from=settings' as any)}
+            last
+          />
+        </Section>
+
+        <Section title="Språk">
+          <SettingRow
+            icon="language-outline"
+            label="Språk"
+            sub="Gäller hela appen direkt"
+            value={language === 'sv' ? 'Svenska' : 'English'}
+            onPress={handleLanguagePress}
             last
           />
         </Section>
