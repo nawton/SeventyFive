@@ -8,7 +8,8 @@ import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
+import { MuscleThumb } from '@/components/MuscleThumb'
 import { CATEGORY_LABELS, type Exercise } from '@/services/exercises'
 import { CreateExerciseSheet } from '@/components/CreateExerciseSheet'
 import { getExerciseMuscleGroup, getMusclesForName, SLUG_LABELS, type Slug } from '@/lib/muscles'
@@ -62,6 +63,9 @@ export function ExercisePickerSheet({
   onConfirmMulti?: (exs: Exercise[]) => void
 }) {
   const t = useT()
+  const T = useThemeStrings()
+  // Ljust läge har blå accent — aldrig orange kanter där
+  const tint = (alpha: string) => `${T.ACCENT}${alpha}`
   const insets = useSafeAreaInsets()
   // Gym-pass startar direkt på muskelgrupperna; annars på typvalet
   const startPage: Page = gymOnly ? 'gym' : 'landing'
@@ -216,13 +220,13 @@ export function ExercisePickerSheet({
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
             {/* Saknas övningen? Skapa en egen — den hamnar under sin muskelgrupp */}
             <TouchableOpacity
-              style={s.createRow}
+              style={[s.createRow, { backgroundColor: tint('10'), borderColor: tint('35') }]}
               onPress={() => setCreateOpen(true)}
               activeOpacity={0.75}
               testID="createExercise"
             >
-              <View style={s.createIcon}>
-                <Ionicons name="add" size={20} color={ACCENT} />
+              <View style={[s.createIcon, { backgroundColor: tint('22') }]}>
+                <Ionicons name="add" size={20} color={T.ACCENT} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.createTitle}>{t('Skapa egen övning')}</Text>
@@ -292,8 +296,9 @@ export function ExercisePickerSheet({
         {page === 'exercises' && (
           <>
             {(() => {
-              const slugs = GYM_GROUPS.find(g => g.key === selectedGroup)?.slugs ?? []
-              if (slugs.length < 2) return null
+              const group = GYM_GROUPS.find(g => g.key === selectedGroup)
+              const slugs = group?.slugs ?? []
+              if (!group || slugs.length < 2) return null
               return (
                 <ScrollView
                   horizontal
@@ -301,23 +306,46 @@ export function ExercisePickerSheet({
                   style={s.subMuscleBar}
                   contentContainerStyle={s.subMuscleRow}
                 >
+                  {/* Alla: hela gruppens muskler tända i en helkroppsvy */}
                   <TouchableOpacity
-                    style={[s.subChip, subMuscle === 'all' && s.subChipActive]}
+                    style={s.subCard}
                     onPress={() => { Haptics.selectionAsync(); setSubMuscle('all') }}
                     activeOpacity={0.75}
                     testID="subMuscle-all"
                   >
-                    <Text style={[s.subChipText, subMuscle === 'all' && s.subChipTextActive]}>{t('Alla')}</Text>
+                    <View style={[s.subThumbRing, subMuscle === 'all' && { borderColor: T.ACCENT }]}>
+                      <View style={[s.subAllThumb, { backgroundColor: tint('14') }]}>
+                        <Body
+                          data={slugs.map(sl => ({ slug: sl, intensity: 1 as const }))}
+                          side={group.side}
+                          gender="male"
+                          scale={0.22}
+                          colors={[T.ACCENT]}
+                          defaultFill="#3A3A3C"
+                        />
+                      </View>
+                    </View>
+                    <Text style={[s.subCardText, subMuscle === 'all' && { color: T.ACCENT, fontWeight: '700' }]}>
+                      {t('Alla')}
+                    </Text>
                   </TouchableOpacity>
                   {slugs.map(sl => (
                     <TouchableOpacity
                       key={sl}
-                      style={[s.subChip, subMuscle === sl && s.subChipActive]}
+                      style={s.subCard}
                       onPress={() => { Haptics.selectionAsync(); setSubMuscle(sl) }}
                       activeOpacity={0.75}
                       testID={`subMuscle-${sl}`}
                     >
-                      <Text style={[s.subChipText, subMuscle === sl && s.subChipTextActive]}>{t(SLUG_LABELS[sl])}</Text>
+                      <View style={[s.subThumbRing, subMuscle === sl && { borderColor: T.ACCENT }]}>
+                        <MuscleThumb slug={sl} size={48} color={T.ACCENT} />
+                      </View>
+                      <Text
+                        style={[s.subCardText, subMuscle === sl && { color: T.ACCENT, fontWeight: '700' }]}
+                        numberOfLines={1}
+                      >
+                        {t(SLUG_LABELS[sl])}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -366,7 +394,7 @@ export function ExercisePickerSheet({
               {filteredExercises.length === 0 && (
                 <View style={{ alignItems: 'center', gap: 10 }}>
                   <Text style={s.emptyText}>{t('Inga övningar hittades')}</Text>
-                  <TouchableOpacity style={s.emptyCreateBtn} onPress={() => setCreateOpen(true)} activeOpacity={0.8} testID="createFromEmpty">
+                  <TouchableOpacity style={[s.emptyCreateBtn, { backgroundColor: T.ACCENT }]} onPress={() => setCreateOpen(true)} activeOpacity={0.8} testID="createFromEmpty">
                     <Ionicons name="add" size={16} color="#000" />
                     <Text style={s.emptyCreateText}>{t('Skapa "{name}"', { name: search.trim() })}</Text>
                   </TouchableOpacity>
@@ -589,16 +617,18 @@ const s = StyleSheet.create({
   },
   confirmBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 
-  // Delmuskelfiltret
-  subMuscleBar: { flexGrow: 0, marginBottom: 4 },
-  subMuscleRow: { paddingHorizontal: 20, gap: 8, paddingVertical: 2 },
-  subChip: {
-    borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8,
-    backgroundColor: CARD, borderWidth: 1, borderColor: 'rgba(128,128,128,0.2)',
+  // Delmuskelfiltret — SVG-kort som visar VAR muskeln sitter
+  subMuscleBar: { flexGrow: 0, marginBottom: 6 },
+  subMuscleRow: { paddingHorizontal: 20, gap: 12, paddingVertical: 2 },
+  subCard: { alignItems: 'center', gap: 5, width: 62 },
+  subThumbRing: {
+    borderWidth: 2, borderColor: 'transparent', borderRadius: 28, padding: 2,
   },
-  subChipActive: { backgroundColor: accentAlpha('1E'), borderColor: ACCENT },
-  subChipText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  subChipTextActive: { color: ACCENT, fontWeight: '700' },
+  subAllThumb: {
+    width: 48, height: 48, borderRadius: 24,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+  },
+  subCardText: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '600' },
 
   // Skapa egen övning
   createRow: {

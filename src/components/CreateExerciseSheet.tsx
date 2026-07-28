@@ -4,12 +4,12 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
-import Body from 'react-native-body-highlighter'
 import { Ionicons } from '@/components/Icon'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { MuscleThumb } from '@/components/MuscleThumb'
 import { AppTextInput } from '@/components/AppTextInput'
 import { useT } from '@/lib/i18n'
-import { SLUG_LABELS, bestSideForMuscles, type Slug } from '@/lib/muscles'
+import { SLUG_LABELS, type Slug } from '@/lib/muscles'
 import {
   createCustomExercise, EQUIPMENT_LABELS, EXERCISE_TYPE_INFO,
   type Exercise, type ExerciseEquipment, type ExerciseType,
@@ -25,38 +25,6 @@ import {
 // =============================================================================
 
 type Page = 'form' | 'equipment' | 'muscle' | 'otherMuscles' | 'type'
-
-/** Var på kroppen muskeln sitter, som andel av höjden uppifrån — cirkeln
-    panoreras dit så vald muskel hamnar i mitten (vader nere, axlar uppe) */
-const MUSCLE_CENTER: Partial<Record<Slug, number>> = {
-  trapezius: 0.16, deltoids: 0.20, chest: 0.24, 'upper-back': 0.25,
-  biceps: 0.29, triceps: 0.29, abs: 0.34, obliques: 0.34,
-  'lower-back': 0.36, forearm: 0.38, gluteal: 0.46, adductors: 0.52,
-  quadriceps: 0.55, hamstring: 0.58, tibialis: 0.74, calves: 0.75,
-}
-
-/** Miniatyrkropp inzoomad och panorerad så vald muskel ligger mitt i cirkeln */
-function MuscleThumb({ slug }: { slug: Slug }) {
-  const [bodyH, setBodyH] = useState(0)
-  const frac = MUSCLE_CENTER[slug] ?? 0.35
-  return (
-    <View style={s.muscleThumb}>
-      <View
-        onLayout={e => setBodyH(e.nativeEvent.layout.height)}
-        style={{ transform: [{ translateY: bodyH ? (0.5 - frac) * bodyH : 0 }] }}
-      >
-        <Body
-          data={[{ slug, intensity: 1 as const }]}
-          side={bestSideForMuscles([slug])}
-          gender="male"
-          scale={0.45}
-          colors={['#FFA817']}
-          defaultFill="#3A3A3C"
-        />
-      </View>
-    </View>
-  )
-}
 
 // Bara tränbara muskler — SLUG_LABELS innehåller även hår, huvud, händer m.m.
 const MUSCLE_SLUGS: Slug[] = [
@@ -75,6 +43,8 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
 }) {
   const t = useT()
   const T = useThemeStrings()
+  // Ljust läge har blå accent — aldrig orange kanter där
+  const tint = (alpha: string) => `${T.ACCENT}${alpha}`
   const chrome = useCardChrome()
   const insets = useSafeAreaInsets()
 
@@ -151,7 +121,7 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
       >
         <View style={{ flex: 1 }}>
           <Text style={s.pickerLabel}>{label}</Text>
-          <Text style={value ? s.pickerValue : s.pickerPlaceholder}>
+          <Text style={value ? [s.pickerValue, { color: T.ACCENT }] : s.pickerPlaceholder}>
             {value ?? placeholder}
           </Text>
         </View>
@@ -219,24 +189,24 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
                     {otherMuscles.map(sl => (
                       <TouchableOpacity
                         key={sl}
-                        style={s.muscleChip}
+                        style={[s.muscleChip, { backgroundColor: tint('16') }]}
                         onPress={() => toggleOtherMuscle(sl)}
                         activeOpacity={0.7}
                         testID={`removeMuscle-${sl}`}
                       >
-                        <Text style={s.muscleChipText}>{t(SLUG_LABELS[sl])}</Text>
-                        <Ionicons name="close" size={13} color={ACCENT} />
+                        <Text style={[s.muscleChipText, { color: T.ACCENT }]}>{t(SLUG_LABELS[sl])}</Text>
+                        <Ionicons name="close" size={13} color={T.ACCENT} />
                       </TouchableOpacity>
                     ))}
                     <TouchableOpacity
-                      style={s.addChip}
+                      style={[s.addChip, { borderColor: tint('55') }]}
                       onPress={() => setPage('otherMuscles')}
                       activeOpacity={0.7}
                       testID="addMuscle"
                     >
-                      <Ionicons name="add" size={16} color={ACCENT} />
+                      <Ionicons name="add" size={16} color={T.ACCENT} />
                       {otherMuscles.length === 0 && (
-                        <Text style={s.addChipText}>{t('Lägg till muskel')}</Text>
+                        <Text style={[s.addChipText, { color: T.ACCENT }]}>{t('Lägg till muskel')}</Text>
                       )}
                     </TouchableOpacity>
                   </View>
@@ -263,15 +233,15 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
             {EQUIPMENT_KEYS.map(key => (
               <TouchableOpacity
                 key={key}
-                style={[s.optionRow, equipment === key && s.optionRowActive]}
+                style={[s.optionRow, equipment === key && { backgroundColor: tint('14') }]}
                 onPress={() => { Haptics.selectionAsync(); setEquipment(key); setPage('form') }}
                 activeOpacity={0.7}
                 testID={`equipment-${key}`}
               >
-                <Text style={[s.optionText, equipment === key && { color: ACCENT, fontWeight: '700' }]}>
+                <Text style={[s.optionText, equipment === key && { color: T.ACCENT, fontWeight: '700' }]}>
                   {t(EQUIPMENT_LABELS[key])}
                 </Text>
-                {equipment === key && <Ionicons name="checkmark" size={18} color={ACCENT} />}
+                {equipment === key && <Ionicons name="checkmark" size={18} color={T.ACCENT} />}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -283,16 +253,16 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
             {MUSCLE_SLUGS.map(slug => (
               <TouchableOpacity
                 key={slug}
-                style={[s.optionRow, primaryMuscle === slug && s.optionRowActive]}
+                style={[s.optionRow, primaryMuscle === slug && { backgroundColor: tint('14') }]}
                 onPress={() => { Haptics.selectionAsync(); setPrimaryMuscle(slug); setPage('form') }}
                 activeOpacity={0.7}
                 testID={`muscle-${slug}`}
               >
-                <MuscleThumb slug={slug} />
-                <Text style={[s.optionText, { flex: 1 }, primaryMuscle === slug && { color: ACCENT, fontWeight: '700' }]}>
+                <MuscleThumb slug={slug} color={T.ACCENT} />
+                <Text style={[s.optionText, { flex: 1 }, primaryMuscle === slug && { color: T.ACCENT, fontWeight: '700' }]}>
                   {t(SLUG_LABELS[slug])}
                 </Text>
-                {primaryMuscle === slug && <Ionicons name="checkmark" size={18} color={ACCENT} />}
+                {primaryMuscle === slug && <Ionicons name="checkmark" size={18} color={T.ACCENT} />}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -306,22 +276,22 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
               return (
                 <TouchableOpacity
                   key={slug}
-                  style={[s.optionRow, on && s.optionRowActive]}
+                  style={[s.optionRow, on && { backgroundColor: tint('14') }]}
                   onPress={() => toggleOtherMuscle(slug)}
                   activeOpacity={0.7}
                   testID={`other-${slug}`}
                 >
-                  <MuscleThumb slug={slug} />
-                  <Text style={[s.optionText, { flex: 1 }, on && { color: ACCENT, fontWeight: '700' }]}>
+                  <MuscleThumb slug={slug} color={T.ACCENT} />
+                  <Text style={[s.optionText, { flex: 1 }, on && { color: T.ACCENT, fontWeight: '700' }]}>
                     {t(SLUG_LABELS[slug])}
                   </Text>
-                  <View style={[s.checkbox, on && { backgroundColor: ACCENT, borderColor: ACCENT }]}>
+                  <View style={[s.checkbox, on && { backgroundColor: T.ACCENT, borderColor: T.ACCENT }]}>
                     {on && <Ionicons name="checkmark" size={13} color="#000" />}
                   </View>
                 </TouchableOpacity>
               )
             })}
-            <TouchableOpacity style={s.doneBtn} onPress={() => setPage('form')} activeOpacity={0.8}>
+            <TouchableOpacity style={[s.doneBtn, { backgroundColor: T.ACCENT }]} onPress={() => setPage('form')} activeOpacity={0.8}>
               <Text style={s.doneBtnText}>{t('Klar')}</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -336,13 +306,13 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
               return (
                 <TouchableOpacity
                   key={key}
-                  style={[s.typeRow, on && s.optionRowActive]}
+                  style={[s.typeRow, on && { backgroundColor: tint('14') }]}
                   onPress={() => { Haptics.selectionAsync(); setExerciseType(key); setPage('form') }}
                   activeOpacity={0.7}
                   testID={`type-${key}`}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.optionText, on && { color: ACCENT, fontWeight: '700' }]}>
+                    <Text style={[s.optionText, on && { color: T.ACCENT, fontWeight: '700' }]}>
                       {t(info.label)}
                     </Text>
                     <Text style={s.typeExample}>{t('Exempel: {names}', { names: t(info.example) })}</Text>
@@ -354,7 +324,7 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
                       ))}
                     </View>
                   </View>
-                  {on && <Ionicons name="checkmark" size={18} color={ACCENT} />}
+                  {on && <Ionicons name="checkmark" size={18} color={T.ACCENT} />}
                 </TouchableOpacity>
               )
             })}
