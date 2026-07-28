@@ -1,32 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Modal,
   View,
   Text,
-  TextInput,
   TouchableOpacity,
+  Pressable,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native'
-
-import { BG, CARD, BORDER, RED, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha } from '@/lib/theme'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
+import Animated, {
+  useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS,
+} from 'react-native-reanimated'
+import { Ionicons } from '@/components/Icon'
+import { RED, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
 import { AppTextInput } from '@/components/AppTextInput'
 
-// Hårdkodade motivationsvar — ersätts med OpenAI av Anton
-const AI_RESPONSES = [
-  'Din ursäkt är verklig. Din potential är större. Imorgon börjar du om, starkare.',
-  'Nawton-mentaliteten handlar inte om perfektion. Den handlar om att resa sig. Gör det imorgon.',
-  'Du visste att det inte skulle vara enkelt. Det är precis därför det är värt det. En dag i taget.',
-  'Kom ihåg varför du startade. Den känslan är starkare än varje ursäkt. Tillbaka på spåret imorgon.',
-]
+// =============================================================================
+// RAPPORTERA MISSAD DAG — dragbar bottom sheet. Ärlighet med krav: dagen
+// kan bara rapporteras när både ursäkten OCH planen för imorgon är ifyllda.
+// Ingen låtsascoach — sparningen stänger arket och omstartsfrågan tar vid.
+// =============================================================================
 
-function getAiResponse(): string {
-  return AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)]
-}
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+const SLIDE = 640
+const SPRING = { damping: 20, stiffness: 220, mass: 0.8 } as const
 
 interface Props {
   visible: boolean
@@ -34,209 +34,175 @@ interface Props {
   onConfirm: (reason: string) => Promise<void>
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
-type Step = 'input' | 'response'
-
 export function FailModal({ visible, onClose, onConfirm }: Props) {
-  const [step, setStep] = useState<Step>('input')
-  const [reason, setReason] = useState('')
-  const [aiResponse, setAiResponse] = useState('')
+  const T = useThemeStrings()
+  const insets = useSafeAreaInsets()
+  const [excuse, setExcuse] = useState('')
+  const [plan, setPlan] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const ty = useSharedValue(SLIDE)
+  useEffect(() => {
+    if (visible) {
+      setExcuse('')
+      setPlan('')
+      ty.value = SLIDE
+      ty.value = withSpring(0, SPRING)
+    }
+  }, [visible])
+
+  // Planen är kravet — utan en plan för imorgon går dagen inte att rapportera
+  const canSubmit = excuse.trim().length > 0 && plan.trim().length > 0
+
+  const drag = Gesture.Pan()
+    .activeOffsetY([-12, 12])
+    .onUpdate(e => {
+      ty.value = e.translationY > 0 ? e.translationY : e.translationY * 0.15
+    })
+    .onEnd(e => {
+      if (e.translationY > 100 || e.velocityY > 600) {
+        ty.value = withTiming(SLIDE, { duration: 200 }, finished => {
+          if (finished) runOnJS(onClose)()
+        })
+      } else {
+        ty.value = withSpring(0, SPRING)
+      }
+    })
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: ty.value }],
+  }))
+
   async function handleSubmit() {
-    if (!reason.trim()) return
+    if (!canSubmit || loading) return
     setLoading(true)
     try {
-      await onConfirm(reason.trim())
-      setAiResponse(getAiResponse())
-      setStep('response')
+      await onConfirm(`${excuse.trim()} · Plan: ${plan.trim()}`)
+      onClose()
     } catch {
-      // sparningen misslyckades — stanna på input-steget så användaren kan försöka igen
+      // sparningen misslyckades — arket ligger kvar så användaren kan försöka igen
     } finally {
       setLoading(false)
     }
   }
 
-  function handleClose() {
-    setStep('input')
-    setReason('')
-    setAiResponse('')
-    onClose()
-  }
+  if (!visible) return null
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
-      <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {step === 'input' ? (
-          <View style={styles.container}>
-            <View style={styles.handle} />
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <GestureHandlerRootView style={s.root}>
+        <Pressable style={s.backdrop} onPress={onClose} testID="failBackdrop" />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Animated.View style={[
+            s.sheet,
+            { backgroundColor: T.BG, borderColor: T.BORDER, paddingBottom: 20 + insets.bottom },
+            sheetStyle,
+          ]}>
+            {/* Draghandtaget och rubriken äger nedsvepet — inte textfälten */}
+            <GestureDetector gesture={drag}>
+              <View style={s.dragArea}>
+                <View style={s.handle} />
+                <View style={s.iconCircle}>
+                  <Ionicons name="flag-outline" size={24} color={RED} />
+                </View>
+                <Text style={[s.title, { color: T.TEXT_PRIMARY }]}>Rapportera dagen som missad</Text>
+                <Text style={s.sub}>
+                  Var ärlig mot dig själv. Dagen kan bara rapporteras med en plan
+                  för hur imorgon blir bättre.
+                </Text>
+              </View>
+            </GestureDetector>
 
-            <Text style={styles.emoji}>😤</Text>
-            <Text style={styles.title}>Vad är din ursäkt?</Text>
-            <Text style={styles.subtitle}>
-              Skriv ned vad som hindrade dig idag. Var ärlig mot dig själv.
-            </Text>
-
+            <Text style={s.fieldLabel}>VAD HÄNDE?</Text>
             <AppTextInput
-              style={styles.input}
-              placeholder="Jag missade för att..."
-              placeholderTextColor="#444"
-              value={reason}
-              onChangeText={setReason}
+              style={[s.input, { color: T.TEXT_PRIMARY }]}
+              placeholder="Jag missade för att …"
+              placeholderTextColor="rgba(128,128,128,0.6)"
+              value={excuse}
+              onChangeText={setExcuse}
               multiline
-              numberOfLines={4}
               textAlignVertical="top"
-              autoFocus
+              testID="failExcuse"
+            />
+
+            <Text style={s.fieldLabel}>DIN PLAN FÖR IMORGON</Text>
+            <AppTextInput
+              style={[s.input, { color: T.TEXT_PRIMARY }]}
+              placeholder="Imorgon gör jag istället …"
+              placeholderTextColor="rgba(128,128,128,0.6)"
+              value={plan}
+              onChangeText={setPlan}
+              multiline
+              textAlignVertical="top"
+              testID="failPlan"
             />
 
             <TouchableOpacity
-              style={[styles.submitButton, (!reason.trim() || loading) && styles.disabled]}
+              style={[s.submitButton, (!canSubmit || loading) && s.disabled]}
               onPress={handleSubmit}
-              disabled={!reason.trim() || loading}
+              disabled={!canSubmit || loading}
               activeOpacity={0.8}
+              testID="failSubmit"
             >
               {loading
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.submitButtonText}>Skicka till coachen</Text>
+                : <Text style={s.submitButtonText}>Rapportera missad dag</Text>
               }
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-              <Text style={styles.cancelText}>Avbryt</Text>
+            <TouchableOpacity style={s.cancelButton} onPress={onClose} activeOpacity={0.7}>
+              <Text style={s.cancelText}>Avbryt</Text>
             </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.container}>
-            <View style={styles.handle} />
-
-            <Text style={styles.emoji}>💪</Text>
-            <Text style={styles.title}>Din coach svarar</Text>
-
-            <View style={styles.responseCard}>
-              <Text style={styles.responseText}>{aiResponse}</Text>
-            </View>
-
-            <Text style={styles.yourReason}>Din ursäkt: "{reason}"</Text>
-
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={handleClose}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.closeButtonText}>Tillbaka till utmaningen</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </KeyboardAvoidingView>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </GestureHandlerRootView>
     </Modal>
   )
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
+const s = StyleSheet.create({
+  root: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
+
+  sheet: {
+    borderTopLeftRadius: 22, borderTopRightRadius: 22, borderWidth: 1,
+    paddingHorizontal: 22, paddingTop: 10,
   },
-  container: {
-    flex: 1,
-    padding: 24,
-    paddingTop: 12,
-    gap: 16,
-  },
+  dragArea: { alignItems: 'center', paddingBottom: 6 },
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: BORDER,
-    alignSelf: 'center',
-    marginBottom: 8,
+    width: 44, height: 5, borderRadius: 3,
+    backgroundColor: 'rgba(128,128,128,0.45)', marginBottom: 16,
   },
-  emoji: {
-    fontSize: 48,
-    textAlign: 'center',
+  iconCircle: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: 'rgba(255,59,74,0.14)',
+    borderWidth: 1.5, borderColor: 'rgba(255,59,74,0.35)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
   },
-  title: {
-    color: TEXT_PRIMARY,
-    fontSize: 26,
-    fontWeight: '700',
-    textAlign: 'center',
+  title: { fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  sub: {
+    color: TEXT_SECONDARY, fontSize: 13.5, textAlign: 'center',
+    lineHeight: 20, marginTop: 6, maxWidth: 300,
   },
-  subtitle: {
-    color: TEXT_SECONDARY,
-    fontSize: 15,
-    textAlign: 'center',
-    lineHeight: 22,
+
+  fieldLabel: {
+    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '800',
+    letterSpacing: 1.2, marginTop: 14, marginBottom: 7,
   },
   input: {
-    backgroundColor: CARD,
-    borderRadius: 14,
-    padding: 16,
-    color: TEXT_PRIMARY,
-    fontSize: 16,
-    minHeight: 120,
-    marginTop: 8,
+    backgroundColor: 'rgba(128,128,128,0.10)',
+    borderWidth: 1, borderColor: 'rgba(128,128,128,0.18)',
+    borderRadius: 14, padding: 14, fontSize: 15, minHeight: 72,
   },
+
   submitButton: {
-    backgroundColor: RED,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
+    backgroundColor: RED, borderRadius: 999,
+    paddingVertical: 15, alignItems: 'center', marginTop: 18,
   },
-  disabled: {
-    opacity: 0.4,
-  },
-  submitButtonText: {
-    color: TEXT_PRIMARY,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  cancelButton: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  cancelText: {
-    color: TEXT_SECONDARY,
-    fontSize: 15,
-  },
-  responseCard: {
-    backgroundColor: accentAlpha('12'),
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 8,
-  },
-  responseText: {
-    color: TEXT_PRIMARY,
-    fontSize: 17,
-    lineHeight: 26,
-    fontStyle: 'italic',
-  },
-  yourReason: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  closeButton: {
-    backgroundColor: ACCENT,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 'auto',
-  },
-  closeButtonText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  disabled: { opacity: 0.35 },
+  submitButtonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  cancelButton: { alignItems: 'center', paddingVertical: 10 },
+  cancelText: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
 })

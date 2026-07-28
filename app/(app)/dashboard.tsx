@@ -546,8 +546,8 @@ export default function DashboardScreen() {
 
   async function handleFail(reason: string) {
     if (!dailyLogId) return
-    // Kastar vidare vid fel — FailModal stannar då på input-steget.
-    // Modalen stängs av användaren efter coach-svaret (onClose).
+    // Kastar vidare vid fel — FailModal ligger då kvar för nytt försök
+    // och stänger sig själv efter en lyckad sparning (onClose).
     await markDayFailed(dailyLogId, reason)
     setDayFailed(true)
   }
