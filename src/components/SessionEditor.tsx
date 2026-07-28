@@ -25,16 +25,11 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
-import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
-import { useBodyGender } from '@/lib/bodyGender'
-import { getMusclesForName, bestSideForMuscles, SLUG_LABELS, getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
+import { getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings, ACCENT, accentAlpha, THEME_DARK } from '@/lib/theme'
 import { toLocalDateString, weekdayOf } from '@/lib/date'
 import {
-  CATEGORY_LABELS,
-  DIFFICULTY_LABELS,
-  DIFFICULTY_COLORS,
   type Exercise,
 } from '@/services/exercises'
 import {
@@ -46,6 +41,8 @@ import {
 import type { ExerciseCategory } from '@/types/database'
 import { AppTextInput } from '@/components/AppTextInput'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
+import { ExerciseInfoSheet } from '@/components/ExerciseInfoSheet'
+import { EXERCISE_INFO } from '@/lib/exerciseInfo'
 
 // ─── Shared schedule helpers (also imported by add.tsx) ───────────────────────
 
@@ -104,12 +101,9 @@ export function SessionEditor({
   initialDate?:  Date
   allowDelete?:  boolean
 }) {
-  const bodyGender = useBodyGender()
   const t = useT()
   // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
   const bodyLight = useColorScheme() === 'light'
-  const bodyFill = bodyLight ? '#DFE0E4' : '#2A2A2C'
-  const bodyBorder = bodyLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.10)'
   // Chippens/fältens ramar: dynamiska färger fryser till mörkt i modaler —
   // mycket ljus ram i ljust läge, som förut i mörkt
   const chip = { borderColor: bodyLight ? 'rgba(0,0,0,0.08)' : THEME_DARK.BORDER } as const
@@ -126,11 +120,6 @@ export function SessionEditor({
   const [saving, setSaving]             = useState(false)
   const [deleting, setDeleting]         = useState(false)
   const [infoEx, setInfoEx]             = useState<Exercise | null>(null)
-  const [infoBodyView, setInfoBodyView] = useState<'front' | 'back'>('front')
-
-  useEffect(() => {
-    if (infoEx) setInfoBodyView(bestSideForMuscles(getMusclesForName(infoEx.name)))
-  }, [infoEx])
 
   useEffect(() => {
     if (!visible) return
@@ -502,6 +491,15 @@ export function SessionEditor({
                 return (
                   <View key={d.key} style={[s.exRow, chip, chip]}>
                     <Text style={s.exName} numberOfLines={1}>{t(d.exercise_name)}</Text>
+                    {exInfo && (EXERCISE_INFO[exInfo.name] || exInfo.image_path) ? (
+                      <TouchableOpacity
+                        onPress={() => setInfoEx(exInfo)}
+                        hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                        testID={`exerciseInfoBtn-${d.key}`}
+                      >
+                        <Ionicons name="information-circle-outline" size={21} color={T.ACCENT} />
+                      </TouchableOpacity>
+                    ) : null}
                     {isCardio ? (
                       <View style={s.cardioBadge}>
                         <Ionicons name="walk-outline" size={13} color={ACCENT} />
@@ -574,95 +572,10 @@ export function SessionEditor({
       />
 
 
-      {/* Exercise info sheet */}
-      {(() => {
-        const muscles    = infoEx ? getMusclesForName(infoEx.name) : []
-        const muscleData = muscles.map(slug => ({ slug, intensity: 1 as const }))
-        const diffColor  = infoEx ? (DIFFICULTY_COLORS[infoEx.difficulty] ?? T.ACCENT) : T.ACCENT
-        return (
-          <Modal
-            visible={infoEx !== null}
-            animationType="slide"
-            presentationStyle="pageSheet"
-            onRequestClose={() => { setInfoEx(null); setTimeout(() => setShowPicker(true), 350) }}
-          >
-            <SafeAreaView style={s.infoScreen} edges={['top', 'bottom']}>
-              <View style={s.infoHeader}>
-                <Text style={s.infoTitle} numberOfLines={1}>{infoEx?.name}</Text>
-                <TouchableOpacity
-                  onPress={() => { setInfoEx(null); setTimeout(() => setShowPicker(true), 350) }}
-                  activeOpacity={0.8}
-                  style={s.infoClose}
-                >
-                  <Ionicons name="close" size={22} color={TEXT_PRIMARY} />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView contentContainerStyle={s.infoScroll} showsVerticalScrollIndicator={false}>
-                <View style={s.badgeRow}>
-                  <View style={s.categoryBadge}>
-                    <Text style={s.categoryBadgeText}>{infoEx ? t(CATEGORY_LABELS[infoEx.category]) : ''}</Text>
-                  </View>
-                  <View style={[s.diffBadge, { backgroundColor: diffColor + '22' }]}>
-                    <Text style={[s.diffBadgeText, { color: diffColor }]}>
-                      {infoEx ? t(DIFFICULTY_LABELS[infoEx.difficulty]) : ''}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={[s.infoCard, chip, chip]}>
-                  <View style={s.infoCardTitleRow}>
-                    <Text style={s.infoCardTitle}>{t('Muskelgrupper')}</Text>
-                    <View style={s.toggle}>
-                      {(['front', 'back'] as const).map(side => (
-                        <TouchableOpacity
-                          key={side}
-                          style={[s.toggleBtn, infoBodyView === side && s.toggleBtnActive]}
-                          onPress={() => setInfoBodyView(side)}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={[s.toggleText, infoBodyView === side && s.toggleTextActive]}>
-                            {side === 'front' ? t('Fram') : t('Bak')}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                  <View style={s.bodyWrap}>
-                    <Body
-                      data={muscleData}
-                      side={infoBodyView}
-                      gender={bodyGender}
-                      scale={1.6}
-                      colors={[T.ACCENT]}
-                      defaultFill={bodyFill}
-                      border={bodyBorder}
-                    />
-                  </View>
-                  {muscles.length > 0 ? (
-                    <View style={s.muscleChips}>
-                      {muscles.map(slug => (
-                        <View key={slug} style={s.muscleChip}>
-                          <Text style={s.muscleChipText}>{t(SLUG_LABELS[slug])}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  ) : (
-                    <Text style={s.noMuscles}>{t('Inga muskler mappade för denna övning')}</Text>
-                  )}
-                </View>
-
-                {infoEx?.description ? (
-                  <View style={[s.infoCard, chip, chip]}>
-                    <Text style={s.infoCardTitle}>{t('Beskrivning')}</Text>
-                    <Text style={s.infoDesc}>{infoEx.description}</Text>
-                  </View>
-                ) : null}
-              </ScrollView>
-            </SafeAreaView>
-          </Modal>
-        )
-      })()}
+      {/* Delade infobladet: animation, muskler och instruktioner */}
+      {infoEx !== null && (
+        <ExerciseInfoSheet exercise={infoEx} onClose={() => setInfoEx(null)} />
+      )}
     </Modal>
   )
 }
