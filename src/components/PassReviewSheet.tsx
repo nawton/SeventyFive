@@ -4,6 +4,11 @@ import {
   Alert, ActivityIndicator, useColorScheme,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Pressable, Platform, KeyboardAvoidingView } from 'react-native'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
+import Animated, {
+  useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS,
+} from 'react-native-reanimated'
 import * as ImagePicker from 'expo-image-picker'
 import { Ionicons } from '@/components/Icon'
 import { useT } from '@/lib/i18n'
@@ -22,6 +27,9 @@ import { AppTextInput } from '@/components/AppTextInput'
 // som syns i flödet. Övningarna med loggade set ligger längst ner.
 // Hoppa över sparar ingenting, passet är redan säkrat innan skärmen visas.
 // =============================================================================
+
+const SLIDE = 640
+const SPRING = { damping: 20, stiffness: 220, mass: 0.8 } as const
 
 export type ReviewEntry = {
   name: string
@@ -52,10 +60,39 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries: initi
   const [editSets, setEditSets] = useState<Array<{ reps: string; weight: string }>>([])
   const [editSaving, setEditSaving] = useState(false)
 
+  const editTy = useSharedValue(SLIDE)
+
   function openEdit(ix: number) {
     setEditSets(entries[ix].sets.map(r => ({ reps: String(r.reps), weight: r.weightKg > 0 ? String(r.weightKg) : '' })))
     setEditIx(ix)
+    editTy.value = SLIDE
+    editTy.value = withSpring(0, SPRING)
   }
+
+  function closeEdit() {
+    editTy.value = withTiming(SLIDE, { duration: 200 }, finished => {
+      if (finished) runOnJS(setEditIx)(null)
+    })
+  }
+
+  const editDrag = Gesture.Pan()
+    .activeOffsetY([-12, 12])
+    .onUpdate(e => {
+      editTy.value = e.translationY > 0 ? e.translationY : e.translationY * 0.15
+    })
+    .onEnd(e => {
+      if (e.translationY > 100 || e.velocityY > 600) {
+        editTy.value = withTiming(SLIDE, { duration: 200 }, finished => {
+          if (finished) runOnJS(setEditIx)(null)
+        })
+      } else {
+        editTy.value = withSpring(0, SPRING)
+      }
+    })
+
+  const editSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: editTy.value }],
+  }))
 
   async function saveEdit() {
     if (editIx === null) return
@@ -63,14 +100,14 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries: initi
     const parsed = editSets
       .map(r => ({ reps: parseInt(r.reps, 10) || 0, weight_kg: parseFloat(r.weight.replace(',', '.')) || 0 }))
       .filter(r => r.reps > 0)
-    if (parsed.length === 0 || !entry.workoutId) { setEditIx(null); return }
+    if (parsed.length === 0 || !entry.workoutId) { closeEdit(); return }
     setEditSaving(true)
     try {
       await updateStrengthWorkoutSets(entry.workoutId, parsed)
       setEntries(prev => prev.map((e, i) => i === editIx
         ? { ...e, sets: parsed.map(r => ({ reps: r.reps, weightKg: r.weight_kg })) }
         : e))
-      setEditIx(null)
+      closeEdit()
     } catch {
       Alert.alert(t('Något gick fel'), t('Ändringen kunde inte sparas. Försök igen.'))
     } finally {
@@ -236,64 +273,81 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries: initi
         </ScrollView>
 
         {editIx !== null && (
-          <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditIx(null)}>
-            <View style={s.editScreen}>
-              <Text style={s.editTitle}>{t(entries[editIx].name)}</Text>
-              <ScrollView contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
-                {editSets.map((row, j) => (
-                  <View key={j} style={s.editRow}>
-                    <Text style={s.editNum}>{j + 1}</Text>
-                    <AppTextInput
-                      style={s.editInput}
-                      value={row.reps}
-                      onChangeText={v => setEditSets(prev => prev.map((r, k) => k === j ? { ...r, reps: v.replace(/[^0-9]/g, '') } : r))}
-                      keyboardType="number-pad"
-                      placeholder={t('Reps')}
-                      placeholderTextColor={TEXT_SECONDARY}
-                      testID={`editReps-${j}`}
-                    />
-                    <AppTextInput
-                      style={s.editInput}
-                      value={row.weight}
-                      onChangeText={v => setEditSets(prev => prev.map((r, k) => k === j ? { ...r, weight: v } : r))}
-                      keyboardType="decimal-pad"
-                      placeholder={t('Kg')}
-                      placeholderTextColor={TEXT_SECONDARY}
-                      testID={`editKg-${j}`}
-                    />
-                    <TouchableOpacity
-                      onPress={() => setEditSets(prev => prev.filter((_, k) => k !== j))}
-                      hitSlop={8}
-                      testID={`editRemove-${j}`}
-                    >
-                      <Ionicons name="close-circle" size={20} color={TEXT_SECONDARY} />
-                    </TouchableOpacity>
+          <Modal visible transparent animationType="fade" onRequestClose={closeEdit}>
+            <GestureHandlerRootView style={s.editRoot}>
+              <Pressable style={s.editBackdrop} onPress={closeEdit} testID="editBackdrop" />
+              <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <Animated.View style={[s.editSheet, { paddingBottom: insets.bottom + 16 }, editSheetStyle]}>
+                  {/* Handtaget och rubriken äger nedsvepet, inte inmatningsfälten */}
+                  <GestureDetector gesture={editDrag}>
+                    <View style={s.editDragArea}>
+                      <View style={s.editHandle} />
+                      <Text style={s.editTitle}>{t(entries[editIx].name)}</Text>
+                    </View>
+                  </GestureDetector>
+
+                  <View style={s.editHead}>
+                    <Text style={[s.editTh, { width: 30 }]}>{t('SET')}</Text>
+                    <Text style={[s.editTh, { flex: 1, textAlign: 'center' }]}>{t('REPS')}</Text>
+                    <Text style={[s.editTh, { flex: 1, textAlign: 'center' }]}>{t('KG')}</Text>
+                    <View style={{ width: 24 }} />
                   </View>
-                ))}
-                <TouchableOpacity
-                  style={[s.editAdd, { borderColor: tint('55') }]}
-                  onPress={() => setEditSets(prev => [...prev, { reps: '', weight: '' }])}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons name="add" size={17} color={T.ACCENT} />
-                  <Text style={[s.editAddText, { color: T.ACCENT }]}>{t('Lägg till set')}</Text>
-                </TouchableOpacity>
-              </ScrollView>
-              <View style={s.editFooter}>
-                <TouchableOpacity
-                  style={[s.saveBtn, { backgroundColor: T.ACCENT, flex: 1 }, editSaving && { opacity: 0.6 }]}
-                  onPress={saveEdit}
-                  disabled={editSaving}
-                  activeOpacity={0.85}
-                  testID="editSave"
-                >
-                  {editSaving ? <ActivityIndicator color={onAccent} /> : <Text style={[s.saveBtnText, { color: onAccent }]}>{t('Spara')}</Text>}
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setEditIx(null)} disabled={editSaving} hitSlop={8}>
-                  <Text style={s.skipText}>{t('Avbryt')}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+                  <ScrollView
+                    style={{ flexGrow: 0 }}
+                    contentContainerStyle={{ paddingBottom: 4 }}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {editSets.map((row, j) => (
+                      <View key={j} style={s.editRow}>
+                        <Text style={s.editNum}>{j + 1}</Text>
+                        <AppTextInput
+                          style={s.editInput}
+                          value={row.reps}
+                          onChangeText={v => setEditSets(prev => prev.map((r, k) => k === j ? { ...r, reps: v.replace(/[^0-9]/g, '') } : r))}
+                          keyboardType="number-pad"
+                          placeholder="0"
+                          placeholderTextColor={TEXT_SECONDARY}
+                          testID={`editReps-${j}`}
+                        />
+                        <AppTextInput
+                          style={s.editInput}
+                          value={row.weight}
+                          onChangeText={v => setEditSets(prev => prev.map((r, k) => k === j ? { ...r, weight: v } : r))}
+                          keyboardType="decimal-pad"
+                          placeholder="0"
+                          placeholderTextColor={TEXT_SECONDARY}
+                          testID={`editKg-${j}`}
+                        />
+                        <TouchableOpacity
+                          onPress={() => setEditSets(prev => prev.filter((_, k) => k !== j))}
+                          hitSlop={8}
+                          testID={`editRemove-${j}`}
+                        >
+                          <Ionicons name="close-circle" size={20} color={TEXT_SECONDARY} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity
+                    style={[s.editAdd, { borderColor: tint('55') }]}
+                    onPress={() => setEditSets(prev => [...prev, { reps: '', weight: '' }])}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons name="add" size={17} color={T.ACCENT} />
+                    <Text style={[s.editAddText, { color: T.ACCENT }]}>{t('Lägg till set')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.saveBtn, { backgroundColor: T.ACCENT, marginTop: 14 }, editSaving && { opacity: 0.6 }]}
+                    onPress={saveEdit}
+                    disabled={editSaving}
+                    activeOpacity={0.85}
+                    testID="editSave"
+                  >
+                    {editSaving ? <ActivityIndicator color={onAccent} /> : <Text style={[s.saveBtnText, { color: onAccent }]}>{t('Spara')}</Text>}
+                  </TouchableOpacity>
+                </Animated.View>
+              </KeyboardAvoidingView>
+            </GestureHandlerRootView>
           </Modal>
         )}
 
@@ -371,13 +425,23 @@ const s = StyleSheet.create({
   exCount: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT },
   emptyText: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', paddingVertical: 18 },
 
-  editScreen: { flex: 1, backgroundColor: BG, paddingTop: 24 },
-  editTitle: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800', paddingHorizontal: 20, paddingBottom: 14 },
-  editRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 20, paddingVertical: 6,
+  editRoot: { flex: 1, justifyContent: 'flex-end' },
+  editBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
+  editSheet: {
+    backgroundColor: BG, borderTopLeftRadius: 22, borderTopRightRadius: 22,
+    borderWidth: 1, borderColor: BORDER, paddingHorizontal: 20, paddingTop: 10,
+    maxHeight: 560,
   },
-  editNum: { width: 24, color: TEXT_SECONDARY, fontSize: 15, fontFamily: NUM_FONT },
+  editDragArea: { alignItems: 'center', paddingBottom: 4 },
+  editHandle: {
+    width: 44, height: 5, borderRadius: 3,
+    backgroundColor: 'rgba(128,128,128,0.45)', marginBottom: 14,
+  },
+  editTitle: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', alignSelf: 'flex-start', paddingBottom: 10 },
+  editHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 6 },
+  editTh: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
+  editRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  editNum: { width: 30, color: TEXT_SECONDARY, fontSize: 15, fontFamily: NUM_FONT },
   editInput: {
     flex: 1, backgroundColor: CARD, borderRadius: 12,
     color: TEXT_PRIMARY, fontSize: 16, paddingHorizontal: 12, paddingVertical: 11,
@@ -385,11 +449,10 @@ const s = StyleSheet.create({
   },
   editAdd: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginHorizontal: 20, marginTop: 10, paddingVertical: 12,
+    marginTop: 10, paddingVertical: 12,
     borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed',
   },
   editAddText: { fontSize: 14, fontWeight: '700' },
-  editFooter: { alignItems: 'center', gap: 12, padding: 20 },
 
   footer: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
