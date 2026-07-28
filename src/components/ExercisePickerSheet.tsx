@@ -649,9 +649,11 @@ const s = StyleSheet.create({
   },
   // Illustrationerna är svarta linjer på vitt — plattan är vit även i mörkt
   // läge, och samma hårlinjeram som ikonplattan så alla kort ser likadana ut
+  // contain: illustrationerna har olika proportioner, cover beskär dem
+  // till oigenkännliga utsnitt. Hela gubben ska synas i plattan.
   exImg: {
     width: 56, height: 56, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', resizeMode: 'contain',
   },
   rowName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
   addBtn: {
