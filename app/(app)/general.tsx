@@ -413,6 +413,11 @@ export default function GeneralScreen() {
             last
           />
         </Section>
+
+        {/* CC BY-SA 4.0 kräver att källan anges */}
+        <Text style={styles.attribution}>
+          {t('Övningsillustrationer från Everkinetic, CC BY-SA 4.0.')}
+        </Text>
       </ScrollView>
 
       <ScheduleWizard
@@ -431,6 +436,10 @@ function formatDate(dateStr: string): string {
 }
 
 const styles = StyleSheet.create({
+  attribution: {
+    color: TEXT_SECONDARY, fontSize: 12, textAlign: 'center',
+    marginTop: 4, marginBottom: 28,
+  },
 
   screen: { flex: 1, backgroundColor: BG },
   header: {

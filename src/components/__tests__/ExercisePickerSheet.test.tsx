@@ -21,7 +21,7 @@ const ex = (id: string, name: string, image_path: string | null = null): Exercis
 const EXERCISES = [
   ex('e1', 'Rodd med skivstång'),
   ex('e2', 'Marklyft'),
-  ex('e3', 'Bänkpress', 'Barbell_Bench_Press_-_Medium_Grip.jpg'),
+  ex('e3', 'Bänkpress', 'bench-press.png'),
   ex('e4', 'Lutande bänkpress'),
   ex('e5', 'Sidolyft'),
   ex('e6', 'Bakre deltalyft'),

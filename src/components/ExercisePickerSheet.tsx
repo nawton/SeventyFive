@@ -646,7 +646,8 @@ const s = StyleSheet.create({
     width: 44, height: 44, borderRadius: 12,
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
   },
-  exImg: { width: 44, height: 44, borderRadius: 12, backgroundColor: CARD },
+  // Illustrationerna är svarta linjer på vitt — plattan är vit även i mörkt läge
+  exImg: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFFFFF' },
   rowName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   addBtn: {
     width: 36, height: 36, borderRadius: 18,
