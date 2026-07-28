@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { useT } from '@/lib/i18n'
-import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, ACCENT, accentAlpha } from '@/lib/theme'
+import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, CARDIO_BLUE, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
 import { ExerciseInfoSheet } from '@/components/ExerciseInfoSheet'
 import { EXERCISE_INFO } from '@/lib/exerciseInfo'
@@ -38,6 +38,9 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
   allowCardio?: boolean
 }) {
   const t = useT()
+  // Rå accentsträng: statiska konstanter fryser till mörklägesorange i modaler
+  const T = useThemeStrings()
+  const tint = (alpha: string) => `${T.ACCENT}${alpha}`
   const insets = useSafeAreaInsets()
   const [step, setStep] = useState<Step>('choose')
   const [entries, setEntries] = useState<GymEntry[]>([])
@@ -254,9 +257,9 @@ export function LogWorkoutSheet({ visible, exercises, onClose, onPickCardio, onS
               </View>
 
               {/* Fler övningar via muskelgruppssidan */}
-              <TouchableOpacity style={s.addExBtn} onPress={() => setPickerOpen(true)} activeOpacity={0.8}>
-                <Ionicons name="add" size={19} color={ACCENT} />
-                <Text style={s.addExText}>{t('Lägg till övning')}</Text>
+              <TouchableOpacity style={[s.addExBtn, { borderColor: tint('30') }]} onPress={() => setPickerOpen(true)} activeOpacity={0.8}>
+                <Ionicons name="add" size={19} color={T.ACCENT} />
+                <Text style={[s.addExText, { color: T.ACCENT }]}>{t('Lägg till övning')}</Text>
               </TouchableOpacity>
             </ScrollView>
             <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
@@ -349,9 +352,9 @@ const s = StyleSheet.create({
   addExBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 14, borderRadius: 14,
-    borderWidth: 1.5, borderColor: accentAlpha('50'), borderStyle: 'dashed',
+    borderWidth: 1.5, borderStyle: 'dashed',
   },
-  addExText: { color: ACCENT, fontSize: 15, fontWeight: '700' },
+  addExText: { fontSize: 15, fontWeight: '700' },
 
   fieldLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: 8, paddingHorizontal: 4 },
   nameInput: {
