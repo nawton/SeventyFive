@@ -258,11 +258,8 @@ describe('Community', () => {
     const { router } = require('expo-router')
     render(<CommunityScreen />)
     await screen.findByText('Erik Larsson')
-    fireEvent.press(screen.getByText('glassbtn:people-outline'))
-    expect(router.push).toHaveBeenCalledWith({
-      pathname: '/(app)/following',
-      params: { tab: 'following', userId: '', name: '' },
-    })
+    fireEvent.press(screen.getByText('glassbtn:person-add-outline'))
+    expect(router.push).toHaveBeenCalledWith('/(app)/search-users')
   })
 
   it('Grupper-segmentet listar mina grupper och öppnar gruppsidan', async () => {
