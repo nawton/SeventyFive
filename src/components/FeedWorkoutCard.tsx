@@ -9,7 +9,10 @@ import { formatPace } from '@/lib/cardioUtils'
 import { fmtTime } from '@/lib/format'
 import { CARD, BORDER, CARDIO_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, useCardChrome, accentAlpha, ACCENT } from '@/lib/theme'
 import { useRouteColor } from '@/lib/routeColor'
-import { exerciseImageUrlFor } from '@/lib/exerciseInfo/images'
+import { exerciseStillUrlFor, EXERCISE_IMAGES } from '@/lib/exerciseInfo/images'
+import { EXERCISE_INFO } from '@/lib/exerciseInfo'
+import { ExerciseInfoSheet } from '@/components/ExerciseInfoSheet'
+import type { Exercise } from '@/services/exercises'
 import { t, useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
@@ -213,6 +216,16 @@ export function FeedWorkoutCard({ post, meta, onOpen, onAvatarPress, social, onT
   const chrome = useCardChrome()
   const routeColor = useRouteColor()
   const [localLiked, setLocalLiked] = useState(false)
+  // Infobladet för en övning i förhandsvisningen
+  const [infoEx, setInfoEx] = useState<Exercise | null>(null)
+
+  function openExerciseInfo(name: string) {
+    if (!EXERCISE_INFO[name] && !EXERCISE_IMAGES[name]) return
+    setInfoEx({
+      id: `feed-${name}`, name, description: null, category: 'strength',
+      difficulty: 'beginner', video_url: null, image_path: EXERCISE_IMAGES[name] ?? null,
+    })
+  }
   const liked = social ? social.likedByMe : localLiked
   const route = post.kind === 'cardio' ? post.route ?? [] : []
   const hasRoute = route.length > 1
@@ -280,11 +293,17 @@ export function FeedWorkoutCard({ post, meta, onOpen, onAvatarPress, social, onT
           {/* De första övningarna direkt i kortet, resten i detaljvyn */}
           <View style={s.exPreview}>
             {post.workouts.slice(0, 3).map(w => {
-              const img = exerciseImageUrlFor(w.data.exercise_name)
+              const still = exerciseStillUrlFor(w.data.exercise_name)
               return (
-                <View key={w.id} style={s.exPreviewRow} testID={`preview-${w.id}`}>
-                  {img ? (
-                    <Image source={{ uri: img }} style={s.exPreviewImg} />
+                <TouchableOpacity
+                  key={w.id}
+                  style={s.exPreviewRow}
+                  onPress={() => openExerciseInfo(w.data.exercise_name)}
+                  activeOpacity={0.7}
+                  testID={`preview-${w.id}`}
+                >
+                  {still ? (
+                    <Image source={{ uri: still }} style={s.exPreviewImg} />
                   ) : (
                     <View style={s.exPreviewIcon}>
                       <Ionicons name="barbell-outline" size={16} color={TEXT_SECONDARY} />
@@ -292,7 +311,7 @@ export function FeedWorkoutCard({ post, meta, onOpen, onAvatarPress, social, onT
                   )}
                   <Text style={s.exPreviewName} numberOfLines={1}>{t(w.data.exercise_name)}</Text>
                   <Text style={s.exPreviewSets}>{t('{n} set', { n: w.data.sets.length })}</Text>
-                </View>
+                </TouchableOpacity>
               )
             })}
             {post.workouts.length > 3 && (
@@ -360,6 +379,10 @@ export function FeedWorkoutCard({ post, meta, onOpen, onAvatarPress, social, onT
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
+
+    {infoEx !== null && (
+      <ExerciseInfoSheet exercise={infoEx} onClose={() => setInfoEx(null)} />
+    )}
     </View>
   )
 }

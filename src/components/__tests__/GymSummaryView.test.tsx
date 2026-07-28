@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native'
+import { render, screen, fireEvent } from '@testing-library/react-native'
 import { GymSummaryView } from '../stats/GymSummaryView'
 import type { StrengthWorkout } from '@/services/strengthWorkouts'
 
@@ -64,5 +64,20 @@ describe('GymSummaryView — set-tabellen', () => {
     expect(screen.getByText('Vera Holm')).toBeOnTheScreen()
     expect(await screen.findByText('Oh snap')).toBeOnTheScreen()
     expect(screen.getByText('Tappade 20 kg på tån')).toBeOnTheScreen()
+  })
+
+  it('tryck på övningsnamnet öppnar infobladet', () => {
+    render(
+      <GymSummaryView
+        name="Gympass"
+        dateLabel="måndag 27 juli"
+        logged={[W]}
+        plannedNames={[]}
+        onClose={jest.fn()}
+      />,
+    )
+    fireEvent.press(screen.getByTestId('exInfo-w1'))
+    expect(screen.getByTestId('exerciseInfoSheet')).toBeOnTheScreen()
+    expect(screen.getByText('GENOMFÖRANDE')).toBeOnTheScreen()
   })
 })

@@ -108,11 +108,20 @@ export function exerciseImageFor(name: string): string | null {
   return EXERCISE_IMAGES[name] ?? null
 }
 
-/** Publik URL utan supabase-klienten: flödeskorten renderas även i miljöer
-    (tester) där klienten inte finns, och bucketen är publik ändå. */
+/** Publik URL till valfri fil i övningsbucketen, utan supabase-klienten:
+    flödesytorna renderas även i miljöer (tester) där klienten inte finns. */
+export function publicExerciseImageUrl(path: string): string | null {
+  const base = process.env.EXPO_PUBLIC_SUPABASE_URL
+  return base ? `${base}/storage/v1/object/public/exercise-images/${path}` : null
+}
+
 export function exerciseImageUrlFor(name: string): string | null {
   const file = EXERCISE_IMAGES[name]
-  const base = process.env.EXPO_PUBLIC_SUPABASE_URL
-  if (!file || !base) return null
-  return `${base}/storage/v1/object/public/exercise-images/${file}`
+  return file ? publicExerciseImageUrl(file) : null
+}
+
+/** Stillbild (första bildrutan) — listor ska inte myllra av animationer */
+export function exerciseStillUrlFor(name: string): string | null {
+  const file = EXERCISE_IMAGES[name]
+  return file ? publicExerciseImageUrl(`still/${file.replace(/\.gif$/, '.png')}`) : null
 }

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native'
+import { render, screen, fireEvent } from '@testing-library/react-native'
 import { FeedWorkoutCard, strengthToPosts, type StrengthPost } from '../FeedWorkoutCard'
 import type { StrengthWorkout } from '@/services/strengthWorkouts'
 
@@ -70,5 +70,12 @@ describe('FeedWorkoutCard — gympassets övningsförhandsvisning', () => {
     )
     expect(screen.getByText('Tungt benpass')).toBeOnTheScreen()
     expect(screen.getByText('Sjukt bra pass')).toBeOnTheScreen()
+  })
+
+  it('tryck på en övningsrad öppnar infobladet', () => {
+    render(<FeedWorkoutCard post={POST} onOpen={jest.fn()} />)
+    expect(screen.queryByTestId('exerciseInfoSheet')).toBeNull()
+    fireEvent.press(screen.getByTestId('preview-w1'))
+    expect(screen.getByTestId('exerciseInfoSheet')).toBeOnTheScreen()
   })
 })

@@ -6,7 +6,10 @@ import Svg, { Polyline, Circle, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { PostSocialBar } from '@/components/PostSocialBar'
 import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
-import { exerciseImageUrlFor } from '@/lib/exerciseInfo/images'
+import { exerciseStillUrlFor, EXERCISE_IMAGES } from '@/lib/exerciseInfo/images'
+import { EXERCISE_INFO } from '@/lib/exerciseInfo'
+import { ExerciseInfoSheet } from '@/components/ExerciseInfoSheet'
+import type { Exercise } from '@/services/exercises'
 import { getPassMeta, passPhotoUrl, type GymPassMeta } from '@/services/gymPassMeta'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
@@ -78,6 +81,16 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
   }, [ownerId, workoutDate, passKey])
   const insets = useSafeAreaInsets()
   const [progressEx, setProgressEx] = useState<string | null>(null)
+  // Infobladet: tryck på övningens namn eller bild
+  const [infoEx, setInfoEx] = useState<Exercise | null>(null)
+
+  function openExerciseInfo(name: string) {
+    if (!EXERCISE_INFO[name] && !EXERCISE_IMAGES[name]) return
+    setInfoEx({
+      id: `summary-${name}`, name, description: null, category: 'strength',
+      difficulty: 'beginner', video_url: null, image_path: EXERCISE_IMAGES[name] ?? null,
+    })
+  }
   const progression = progressEx && allWorkouts ? progressionFor(allWorkouts, progressEx) : []
   const progWeighted = progression.filter(p => p.topKg > 0)
   const bestOrm = progression.reduce((b, p) => Math.max(b, p.bestOrm), 0)
@@ -164,27 +177,40 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
               {logged.map((w, i) => {
                 const topKg = w.data.sets.reduce((m, r) => Math.max(m, r.weight_kg || 0), 0)
                 return (
-                  <TouchableOpacity
+                  <View
                     key={w.id}
                     style={[s.exBlock, i > 0 && s.rowBorder]}
-                    activeOpacity={0.7}
-                    disabled={!allWorkouts}
-                    onPress={() => setProgressEx(w.data.exercise_name)}
                   >
                     <View style={s.exHead}>
-                      {(() => {
-                        const img = exerciseImageUrlFor(w.data.exercise_name)
-                        return img
-                          ? <Image source={{ uri: img }} style={s.exThumb} />
-                          : null
-                      })()}
-                      <Text style={s.exName} numberOfLines={2}>{t(w.data.exercise_name)}</Text>
-                      {topKg > 0 && (
-                        <Text style={s.exTop}>
-                          {t('topp {kg} kg', { kg: topKg })}
-                        </Text>
-                      )}
-                      {allWorkouts && <Ionicons name="chevron-forward" size={14} color={TEXT_SECONDARY} />}
+                      {/* Namn och bild öppnar övningens infoblad, högersidan progressionen */}
+                      <TouchableOpacity
+                        style={s.exHeadLeft}
+                        onPress={() => openExerciseInfo(w.data.exercise_name)}
+                        activeOpacity={0.7}
+                        testID={`exInfo-${w.id}`}
+                      >
+                        {(() => {
+                          const still = exerciseStillUrlFor(w.data.exercise_name)
+                          return still
+                            ? <Image source={{ uri: still }} style={s.exThumb} />
+                            : null
+                        })()}
+                        <Text style={s.exName} numberOfLines={2}>{t(w.data.exercise_name)}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={s.exHeadRight}
+                        disabled={!allWorkouts}
+                        onPress={() => setProgressEx(w.data.exercise_name)}
+                        activeOpacity={0.7}
+                        testID={`exProg-${w.id}`}
+                      >
+                        {topKg > 0 && (
+                          <Text style={s.exTop}>
+                            {t('topp {kg} kg', { kg: topKg })}
+                          </Text>
+                        )}
+                        {allWorkouts && <Ionicons name="chevron-forward" size={14} color={TEXT_SECONDARY} />}
+                      </TouchableOpacity>
                     </View>
                     <View style={s.tableHead}>
                       <Text style={[s.th, { width: 40 }]}>{t('SET')}</Text>
@@ -198,7 +224,7 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
                         </Text>
                       </View>
                     ))}
-                  </TouchableOpacity>
+                  </View>
                 )
               })}
               {unlogged.map((n, i) => (
@@ -227,6 +253,10 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
       </ScrollView>
 
       {/* Övningsprogression — toppvikt per pass över tid */}
+      {infoEx !== null && (
+        <ExerciseInfoSheet exercise={infoEx} onClose={() => setInfoEx(null)} />
+      )}
+
       <Modal visible={!!progressEx} animationType="slide" onRequestClose={() => setProgressEx(null)}>
         <View style={s.root}>
           <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
@@ -356,7 +386,10 @@ const s = StyleSheet.create({
 
   exBlock: { paddingVertical: 13, gap: 9 },
   exHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  exHeadLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  exHeadRight: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   exName: { color: ACCENT, fontSize: 17, fontWeight: '800', flex: 1 },
+  // exHeadLeft äger flexen — namnet fyller vänstersidan
   metaWrap: { paddingHorizontal: 2, gap: 8, marginTop: 2 },
   metaTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800' },
   metaNote: { color: TEXT_SECONDARY, fontSize: 15, lineHeight: 21 },

@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { useT, getLanguage } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
-import { exerciseImageUrl, type Exercise } from '@/services/exercises'
+import type { Exercise } from '@/services/exercises'
+import { publicExerciseImageUrl } from '@/lib/exerciseInfo/images'
 import { EXERCISE_INFO } from '@/lib/exerciseInfo'
 
 // =============================================================================
@@ -46,7 +47,7 @@ export function ExerciseInfoSheet({ exercise, onClose }: {
           {exercise.image_path && (
             <View style={s.heroWrap}>
               <Image
-                source={{ uri: exerciseImageUrl(bigFailed ? exercise.image_path : `360/${exercise.image_path}`) }}
+                source={{ uri: publicExerciseImageUrl(bigFailed ? exercise.image_path : `360/${exercise.image_path}`) ?? undefined }}
                 onError={() => setBigFailed(true)}
                 style={s.hero}
               />
