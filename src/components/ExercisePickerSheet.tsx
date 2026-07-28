@@ -10,7 +10,8 @@ import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
 import { useBodyGender } from '@/lib/bodyGender'
-import { CATEGORY_LABELS, EQUIPMENT_LABELS, exerciseImageUrl, type Exercise, type ExerciseEquipment } from '@/services/exercises'
+import { CATEGORY_LABELS, EQUIPMENT_LABELS, type Exercise, type ExerciseEquipment } from '@/services/exercises'
+import { stillUrlForImagePath } from '@/lib/exerciseInfo/images'
 import { MuscleThumb } from '@/components/MuscleThumb'
 import { CreateExerciseSheet } from '@/components/CreateExerciseSheet'
 import { ExerciseInfoSheet } from '@/components/ExerciseInfoSheet'
@@ -361,7 +362,7 @@ export function ExercisePickerSheet({
                     {ex.image_path ? (
                       <TouchableOpacity onPress={() => openInfo(ex)} activeOpacity={0.7} testID={`exerciseImage-${ex.id}`}>
                         <Image
-                          source={{ uri: exerciseImageUrl(ex.image_path) }}
+                          source={{ uri: stillUrlForImagePath(ex.image_path) ?? undefined }}
                           style={[s.exImg, on && { borderWidth: 2, borderColor: T.ACCENT }]}
                         />
                       </TouchableOpacity>

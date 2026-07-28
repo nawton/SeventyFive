@@ -1970,3 +1970,8 @@ export function exerciseStillUrlFor(name: string): string | null {
   const file = EXERCISE_IMAGES[name]
   return file ? publicExerciseImageUrl(`still/${file.replace(/\.gif$/, '.png')}`) : null
 }
+
+/** Samma sak utifrån en databasrads image_path (övningsväljaren) */
+export function stillUrlForImagePath(path: string): string | null {
+  return publicExerciseImageUrl(`still/${path.replace(/\.gif$/, '.png')}`)
+}
