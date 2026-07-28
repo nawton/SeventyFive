@@ -198,7 +198,7 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries: initi
             style={s.input}
             value={title}
             onChangeText={setTitle}
-            placeholder={t('Gympass')}
+            placeholder={t('Gympass (valfritt)')}
             placeholderTextColor={TEXT_SECONDARY}
             returnKeyType="done"
             testID="reviewTitle"
@@ -209,7 +209,7 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries: initi
             style={[s.input, s.noteInput]}
             value={note}
             onChangeText={setNote}
-            placeholder={t('Hur kändes passet?')}
+            placeholder={t('Hur kändes passet? (valfritt)')}
             placeholderTextColor={TEXT_SECONDARY}
             multiline
             testID="reviewNote"
@@ -363,9 +363,6 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries: initi
               ? <ActivityIndicator color={onAccent} />
               : <Text style={[s.saveBtnText, { color: onAccent }]}>{t('Klar')}</Text>}
           </TouchableOpacity>
-          <TouchableOpacity onPress={onDone} disabled={saving} hitSlop={8} testID="reviewSkip">
-            <Text style={s.skipText}>{t('Hoppa över')}</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -466,5 +463,4 @@ const s = StyleSheet.create({
     borderRadius: 16, paddingVertical: 16,
   },
   saveBtnText: { fontSize: 16, fontWeight: '800' },
-  skipText: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
 })

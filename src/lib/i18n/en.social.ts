@@ -13,6 +13,8 @@ export const EN_SOCIAL: Record<string, string> = {
   'Inga set loggades det här passet.': 'No sets were logged this workout.',
   'Ändringen kunde inte sparas. Försök igen.': 'The change could not be saved. Try again.',
   'Kg': 'Kg',
+  'Gympass (valfritt)': 'Workout (optional)',
+  'Hur kändes passet? (valfritt)': 'How did the workout feel? (optional)',
   'TITEL': 'TITLE',
   'KOMMENTAR': 'COMMENT',
   'FOTO': 'PHOTO',

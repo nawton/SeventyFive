@@ -50,16 +50,13 @@ describe('PassReviewSheet', () => {
     expect(onDone).toHaveBeenCalled()
   })
 
-  it('Hoppa över och tom Klar sparar ingenting', async () => {
+  it('tom Klar stänger utan att spara någonting', async () => {
     const onDone = jest.fn()
     render(
       <PassReviewSheet workoutDate="2026-07-28" durationS={null} effort={null} entries={ENTRIES} onDone={onDone} />,
     )
-    fireEvent.press(screen.getByTestId('reviewSkip'))
-    expect(onDone).toHaveBeenCalledTimes(1)
-
     fireEvent.press(screen.getByTestId('reviewSave'))
-    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1))
     expect(saveMock).not.toHaveBeenCalled()
   })
 
