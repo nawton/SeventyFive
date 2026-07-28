@@ -11,6 +11,8 @@ import { GREEN, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FO
 import type { WorkoutSession } from '@/services/workoutSchedule'
 import { completeExercise, updateSessionExercise, addSingleExerciseToSession, deleteSessionExercise } from '@/services/workoutSchedule'
 import type { Exercise } from '@/services/exercises'
+import { ExerciseInfoSheet } from '@/components/ExerciseInfoSheet'
+import { EXERCISE_INFO } from '@/lib/exerciseInfo'
 import { saveStrengthWorkout, getStrengthWorkouts, type StrengthSet } from '@/services/workouts'
 import { getPersonalRecords, findNewPR } from '@/services/personalRecords'
 import { ExercisePickerSheet } from '@/components/ExercisePickerSheet'
@@ -63,6 +65,8 @@ export function SessionFullscreen({
 
   // ── Loggade set per övningsrad (key = session_exercises.id) ──
   const [logs, setLogs] = useState<Record<string, LogSet[]>>({})
+  // Infobladet: animation och instruktioner för övningen man loggar
+  const [infoEx, setInfoEx] = useState<Exercise | null>(null)
   const [prevByName, setPrevByName] = useState<Record<string, StrengthSet[]>>({})
   const [saving, setSaving] = useState(false)
 
@@ -538,6 +542,19 @@ export function SessionFullscreen({
                 <View key={ex.id} style={s.exBlock}>
                   <View style={s.exNameRow}>
                     <Text style={s.exName}>{t(ex.exercise_name)}</Text>
+                    {(() => {
+                      const lib = exercisesList.find(e => e.name === ex.exercise_name)
+                      return lib && (EXERCISE_INFO[lib.name] || lib.image_path) ? (
+                        <TouchableOpacity
+                          onPress={() => setInfoEx(lib)}
+                          hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+                          activeOpacity={0.7}
+                          testID={`exerciseInfoBtn-${ex.id}`}
+                        >
+                          <Ionicons name="information-circle-outline" size={20} color={ACCENT} />
+                        </TouchableOpacity>
+                      ) : null
+                    })()}
                     <TouchableOpacity
                       onPress={() => removeExercise(ex.id, ex.exercise_name)}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -696,6 +713,10 @@ export function SessionFullscreen({
         {/* ── Betygsätt ansträngning — lager över passvyn ── */}
         <EffortRating visible={effortOpen} onDone={handleEffortDone} />
       </View>
+
+      {infoEx !== null && (
+        <ExerciseInfoSheet exercise={infoEx} onClose={() => setInfoEx(null)} />
+      )}
     </Modal>
   )
 }
@@ -743,8 +764,9 @@ const s = StyleSheet.create({
   statValue: { color: TEXT_PRIMARY, fontSize: 17, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
 
   exBlock: { paddingTop: 18, paddingHorizontal: 16 },
-  exNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  exNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginBottom: 10 },
   exName: { color: ACCENT, fontSize: 17, fontWeight: '800', flex: 1, marginRight: 10 },
+  // trash-ikonen får luft från infoknappen via gap i raden
 
   tableHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 6 },
   th: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
