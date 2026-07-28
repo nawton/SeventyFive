@@ -40,10 +40,10 @@ jest.mock('expo-glass-effect', () => {
 jest.mock('@/components/GlassButton', () => {
   const React = require('react')
   const { TouchableOpacity, Text } = require('react-native')
-  const Btn = ({ icon, onPress, children }) =>
+  const Btn = ({ icon, onPress, children, testID }) =>
     React.createElement(
       TouchableOpacity,
-      { onPress },
+      { onPress, testID },
       children ?? null,
       icon ? React.createElement(Text, null, `glassbtn:${icon}`) : null,
     )

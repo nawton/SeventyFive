@@ -78,8 +78,9 @@ function useDefaultTint(tint: string | null | undefined): string | null | undefi
 }
 
 export function GlassCircleButton({
-  icon, size = 44, iconColor, onPress, draggable = false, style, fallbackStyle, children, tint,
+  icon, size = 44, iconColor, onPress, draggable = false, style, fallbackStyle, children, tint, testID,
 }: {
+  testID?: string
   icon?: React.ComponentProps<typeof Ionicons>['name']
   size?: number
   /** Default: vit på glas, svart på fallback-cirkeln */
@@ -112,13 +113,14 @@ export function GlassCircleButton({
           colorScheme={light ? 'light' : 'dark'}
           tintColor={resolvedTint ?? undefined}
           style={[s.center, circle, anim, style]}
+          testID={testID}
         >
           {content}
         </AnimatedGlassView>
       ) : (
         // Färgbärande fallback på en inre oanimerad vy — reanimated kraschar
         // på dynamiska färgobjekt om de ligger på den animerade noden
-        <Animated.View style={[circle, anim, style]}>
+        <Animated.View style={[circle, anim, style]} testID={testID}>
           <View style={[s.center, StyleSheet.absoluteFillObject, fallbackStyle ?? s.fallbackCircle, { borderRadius: size / 2 }]}>
             {content}
           </View>

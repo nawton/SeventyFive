@@ -312,7 +312,18 @@ export function ExercisePickerSheet({
             fallbackStyle={s.iconBtnFallback}
           />
           <Text style={s.title}>{headerTitle}</Text>
-          <View style={{ width: 40 }} />
+          {page === 'exercises' ? (
+            <GlassCircleButton
+              icon="add"
+              size={40}
+              iconColor={TEXT_PRIMARY}
+              onPress={() => setCreateOpen(true)}
+              fallbackStyle={s.iconBtnFallback}
+              testID="createExercise"
+            />
+          ) : (
+            <View style={{ width: 40 }} />
+          )}
         </View>
 
         {/* ── LANDING ─────────────────────────────────────────────── */}
@@ -342,22 +353,6 @@ export function ExercisePickerSheet({
         {/* ── GYM — muscle groups ──────────────────────────────────── */}
         {page === 'gym' && (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
-            {/* Saknas övningen? Skapa en egen — den hamnar under sin muskelgrupp */}
-            <TouchableOpacity
-              style={[s.createRow, { backgroundColor: tint('10'), borderColor: tint('35') }]}
-              onPress={() => setCreateOpen(true)}
-              activeOpacity={0.75}
-              testID="createExercise"
-            >
-              <View style={[s.createIcon, { backgroundColor: tint('22') }]}>
-                <Ionicons name="add" size={20} color={T.ACCENT} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.createTitle}>{t('Skapa egen övning')}</Text>
-                <Text style={s.createSub}>{t('Hittar du inte din övning? Lägg till den själv.')}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={TEXT_SECONDARY} />
-            </TouchableOpacity>
             <TouchableOpacity
               style={s.groupRow}
               onPress={() => { Haptics.selectionAsync(); setSelectedGroup('all'); setSubMuscle('all'); setPage('exercises') }}
@@ -535,17 +530,17 @@ export function ExercisePickerSheet({
                       <TouchableOpacity onPress={() => openInfo(ex)} activeOpacity={0.7} testID={`exerciseImage-${ex.id}`}>
                         <Image
                           source={{ uri: exerciseImageUrl(ex.image_path) }}
-                          style={[s.exImg, { borderColor: T.BORDER }, on && { borderWidth: 2, borderColor: T.ACCENT }]}
+                          style={[s.exImg, on && { borderWidth: 2, borderColor: T.ACCENT }]}
                         />
                       </TouchableOpacity>
                     ) : (
-                      <View style={[s.exIconBox, { borderColor: T.BORDER }, on && { backgroundColor: tint('22'), borderColor: T.ACCENT }]}>
+                      <View style={[s.exIconBox, on && { backgroundColor: tint('22'), borderColor: T.ACCENT }]}>
                         <Ionicons name="barbell-outline" size={22} color={on ? T.ACCENT : T.TEXT_SECONDARY} />
                       </View>
                     )}
                     <Text style={[s.rowName, { flex: 1 }, on && { color: T.ACCENT }]}>{t(ex.name)}</Text>
                     {multiSelect ? (
-                      <View style={[s.checkBox, { borderColor: T.BORDER }, on && { backgroundColor: T.ACCENT, borderColor: T.ACCENT }]}>
+                      <View style={[s.checkBox, on && { backgroundColor: T.ACCENT, borderColor: T.ACCENT }]}>
                         {on && <Ionicons name="checkmark" size={16} color={onAccent} />}
                       </View>
                     ) : (
@@ -640,7 +635,7 @@ export function ExercisePickerSheet({
       {equipOpen && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setEquipOpen(false)}>
           <TouchableOpacity style={s.equipBackdrop} activeOpacity={1} onPress={() => setEquipOpen(false)} testID="equipBackdrop">
-            <View style={[s.equipSheet, { backgroundColor: T.BG, borderColor: T.BORDER, paddingBottom: insets.bottom + 12 }]}>
+            <View style={[s.equipSheet, { backgroundColor: T.BG, borderColor: 'rgba(128,128,128,0.20)', paddingBottom: insets.bottom + 12 }]}>
               <View style={s.equipHandle} />
               <Text style={s.equipTitle}>{t('Filtrera på utrustning')}</Text>
               {(['all', ...equipOptions] as const).map(key => {
@@ -688,6 +683,7 @@ export function ExercisePickerSheet({
 const s = StyleSheet.create({
   checkBox: {
     width: 28, height: 28, borderRadius: 9, borderWidth: 1.5,
+    borderColor: 'rgba(128,128,128,0.30)',
     alignItems: 'center', justifyContent: 'center',
   },
   groupSelBadge: {
@@ -698,7 +694,7 @@ const s = StyleSheet.create({
   multiFooter: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     paddingHorizontal: 16, paddingTop: 10,
-    backgroundColor: BG, borderTopWidth: 1, borderTopColor: BORDER,
+    backgroundColor: BG, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.16)',
   },
   multiBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -711,7 +707,7 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.16)',
   },
   iconBtn:      { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title:        { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '700' },
@@ -733,7 +729,7 @@ const s = StyleSheet.create({
   groupRow: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
     paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)', minHeight: 112,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.13)', minHeight: 112,
   },
   thumbWrap: {
     width: 64, height: 110, overflow: 'hidden',
@@ -753,7 +749,7 @@ const s = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.15)',
   },
   cardioIconBox: {
     width: 44, height: 44, borderRadius: 12,
@@ -761,6 +757,7 @@ const s = StyleSheet.create({
   },
   exIconBox: {
     width: 68, height: 68, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(128,128,128,0.18)',
     backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
   },
   // Illustrationerna är svarta linjer på vitt — plattan är vit även i mörkt
@@ -769,6 +766,7 @@ const s = StyleSheet.create({
   // till oigenkännliga utsnitt. Hela gubben ska synas i plattan.
   exImg: {
     width: 68, height: 68, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(128,128,128,0.18)',
     backgroundColor: '#FFFFFF', resizeMode: 'contain',
   },
   rowName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
@@ -829,7 +827,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 14, paddingVertical: 11,
     backgroundColor: CARD, borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(128,128,128,0.18)',
+    borderWidth: 1, borderColor: 'rgba(128,128,128,0.13)',
   },
   filterBtnText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
 
