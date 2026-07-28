@@ -6,6 +6,7 @@ import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { getProfile, updateProfile } from '@/services/profile'
+import { syncBodyGenderFromProfile } from '@/lib/bodyGender'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings, THEME_DARK } from '@/lib/theme'
 import { useT } from '@/lib/i18n'
 
@@ -39,6 +40,8 @@ export default function GenderScreen() {
     Haptics.selectionAsync()
     setGender(g)
     if (userId) updateProfile(userId, { gender: g }).catch(() => {})
+    // Muskelvyernas figur följer könet tills man valt själv i Allmänt
+    syncBodyGenderFromProfile(g)
     setTimeout(() => router.back(), 250)   // hinn se bocken landa
   }
 

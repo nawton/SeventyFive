@@ -2,6 +2,7 @@ import { memo, useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import Body from 'react-native-body-highlighter'
 import { bestSideForMuscles, type Slug } from '@/lib/muscles'
+import { useBodyGender } from '@/lib/bodyGender'
 
 // =============================================================================
 // MUSKELMINIATYR — inzoomad kroppssiluett panorerad så vald muskel ligger
@@ -26,6 +27,7 @@ export const MuscleThumb = memo(function MuscleThumb({ slug, size = 52, color, t
   /** Tvinga vy: bakre delta ska visas bakifrån trots att framsidan är standard */
   side?: 'front' | 'back'
 }) {
+  const gender = useBodyGender()
   const [bodyH, setBodyH] = useState(0)
   const frac = MUSCLE_CENTER[slug] ?? 0.35
   return (
@@ -45,7 +47,7 @@ export const MuscleThumb = memo(function MuscleThumb({ slug, size = 52, color, t
         <Body
           data={[{ slug, intensity: 1 as const }]}
           side={side ?? bestSideForMuscles([slug])}
-          gender="male"
+          gender={gender}
           scale={0.45}
           colors={[color]}
           defaultFill="#3A3A3C"

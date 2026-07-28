@@ -10,6 +10,7 @@ import { Ionicons } from '@/components/Icon'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Body from 'react-native-body-highlighter'
 import { useT, dateLocale } from '@/lib/i18n'
+import { useBodyGender } from '@/lib/bodyGender'
 import { NUM_FONT, useThemeStrings } from '@/lib/theme'
 
 // Samma marinblå palett som onboardingen — guiden är en del av samma resa
@@ -124,6 +125,7 @@ export function ScheduleWizard({
   onClose:  () => void
   onFinish: (result: WizardResult) => void
 }) {
+  const bodyGender = useBodyGender()
   const t = useT()
   // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
   const bodyLight = useColorScheme() === 'light'
@@ -512,14 +514,14 @@ export function ScheduleWizard({
               <View style={s.bodyRow}>
                 <Body
                   data={bodyData(ALL_SLUGS)}
-                  side="front" gender="male"
+                  side="front" gender={bodyGender}
                   scale={BODY_SCALE}
                   colors={['#F5A623']}
                   defaultFill={bodyFill}
                 />
                 <Body
                   data={bodyData(ALL_SLUGS)}
-                  side="back" gender="male"
+                  side="back" gender={bodyGender}
                   scale={BODY_SCALE}
                   colors={['#F5A623']}
                   defaultFill={bodyFill}
@@ -571,14 +573,14 @@ export function ScheduleWizard({
               <View style={s.bodyRow}>
                 <Body
                   data={bodyData(focusSlugs.length > 0 ? focusSlugs : [])}
-                  side="front" gender="male"
+                  side="front" gender={bodyGender}
                   scale={BODY_SCALE}
                   colors={[T.ACCENT]}
                   defaultFill={bodyFill}
                 />
                 <Body
                   data={bodyData(focusSlugs.length > 0 ? focusSlugs : [])}
-                  side="back" gender="male"
+                  side="back" gender={bodyGender}
                   scale={BODY_SCALE}
                   colors={[T.ACCENT]}
                   defaultFill={bodyFill}

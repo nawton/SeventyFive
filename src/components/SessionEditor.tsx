@@ -27,6 +27,7 @@ import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
 import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
+import { useBodyGender } from '@/lib/bodyGender'
 import { getMusclesForName, bestSideForMuscles, SLUG_LABELS, getExerciseMuscleGroup, type MuscleGroup } from '@/lib/muscles'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings, ACCENT, accentAlpha, THEME_DARK } from '@/lib/theme'
 import { toLocalDateString, weekdayOf } from '@/lib/date'
@@ -103,6 +104,7 @@ export function SessionEditor({
   initialDate?:  Date
   allowDelete?:  boolean
 }) {
+  const bodyGender = useBodyGender()
   const t = useT()
   // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
   const bodyLight = useColorScheme() === 'light'
@@ -630,7 +632,7 @@ export function SessionEditor({
                     <Body
                       data={muscleData}
                       side={infoBodyView}
-                      gender="male"
+                      gender={bodyGender}
                       scale={1.6}
                       colors={[T.ACCENT]}
                       defaultFill={bodyFill}

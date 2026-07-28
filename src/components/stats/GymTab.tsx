@@ -16,6 +16,7 @@ import Animated, {
 import Svg, { Text as SvgText, Line as SvgLine, Rect, G } from 'react-native-svg'
 import Body from 'react-native-body-highlighter'
 import { supabase } from '@/lib/supabase'
+import { useBodyGender } from '@/lib/bodyGender'
 import { BG, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek } from '@/lib/date'
 import { getMusclesForName, MUSCLE_GROUPS_6, type Slug } from '@/lib/muscles'
@@ -54,6 +55,7 @@ export function GymTab({
   /** Skalet äger completedSessions + databasraderingen; false = misslyckades */
   onDeleteCompletion: (id: string) => Promise<boolean>
 }) {
+  const bodyGender = useBodyGender()
   const t = useT()
   // Kroppskartan: mörkgrå siluett på mörk botten, ljusgrå på ljus
   const bodyLight = useColorScheme() === 'light'
@@ -531,7 +533,7 @@ export function GymTab({
                         <Body
                           data={weekMuscleData}
                           side={bodyView}
-                          gender="male"
+                          gender={bodyGender}
                           scale={1.6}
                           colors={[P.BLUE, P.YELLOW, T.ACCENT]}
                           defaultFill={bodyFill}

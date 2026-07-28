@@ -10,6 +10,7 @@ import Body from 'react-native-body-highlighter'
 import { useT } from '@/lib/i18n'
 import { BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
 import { MuscleThumb } from '@/components/MuscleThumb'
+import { useBodyGender } from '@/lib/bodyGender'
 import { CATEGORY_LABELS, exerciseImageUrl, type Exercise } from '@/services/exercises'
 import { CreateExerciseSheet } from '@/components/CreateExerciseSheet'
 import { ExerciseInfoSheet } from '@/components/ExerciseInfoSheet'
@@ -66,12 +67,13 @@ const GroupBodyThumb = memo(function GroupBodyThumb({ slugs, side, color, scale 
   color: string
   scale: number
 }) {
+  const gender = useBodyGender()
   return (
     <View pointerEvents="none">
       <Body
         data={slugs.map(sl => ({ slug: sl, intensity: 1 as const }))}
         side={side}
-        gender="male"
+        gender={gender}
         scale={scale}
         colors={[color]}
         defaultFill="#3A3A3C"

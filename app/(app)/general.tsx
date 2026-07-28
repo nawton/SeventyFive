@@ -19,6 +19,7 @@ import { GlassCircleButton } from '@/components/GlassButton'
 import { RED, BG, CARD, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useCardChrome } from '@/lib/theme'
 import type { UserChallengeWithLevel } from '@/types/database'
 import { getLanguage, setLanguage, useT, dateLocale, type AppLanguage } from '@/lib/i18n'
+import { useBodyGender, setBodyGender } from '@/lib/bodyGender'
 
 const IS_EXPO_GO = Constants.appOwnership === 'expo'
 
@@ -89,6 +90,7 @@ export default function GeneralScreen() {
   const [userId, setUserId]         = useState<string | null>(null)
   const [challenge, setChallenge]   = useState<UserChallengeWithLevel | null>(null)
   const [language, setLanguageState] = useState<AppLanguage>(getLanguage())
+  const bodyGender = useBodyGender()
   const [wizardVisible, setWizardVisible] = useState(false)
 
   useEffect(() => {
@@ -254,6 +256,14 @@ export default function GeneralScreen() {
     )
   }
 
+  function handleBodyGenderPress() {
+    Alert.alert(t('Kroppsmodell'), t('Välj vilken figur muskelvyerna visar.'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      { text: t('Man'), onPress: () => setBodyGender('male') },
+      { text: t('Kvinna'), onPress: () => setBodyGender('female') },
+    ])
+  }
+
   function handleLanguagePress() {
     Alert.alert(t('Språk'), t('Välj appens språk.'), [
       { text: t('Avbryt'), style: 'cancel' },
@@ -365,6 +375,13 @@ export default function GeneralScreen() {
             sub={t('Gäller hela appen direkt')}
             value={language === 'sv' ? t('Svenska') : 'English'}
             onPress={handleLanguagePress}
+          />
+          <SettingRow
+            icon="body-outline"
+            label={t('Kroppsmodell')}
+            sub={t('Figuren i muskelvyerna')}
+            value={bodyGender === 'female' ? t('Kvinna') : t('Man')}
+            onPress={handleBodyGenderPress}
             last
           />
         </Section>
