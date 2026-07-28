@@ -45,6 +45,35 @@ describe('getExerciseMuscleGroup', () => {
     expect(getExerciseMuscleGroup('Plankan')).toBe('core')
     expect(getExerciseMuscleGroup('Burpees')).toBe('all')   // okänd → all
   })
+
+  it('kabelövningarna och de tidigare osynliga namnen hamnar i rätt grupp', () => {
+    expect(getExerciseMuscleGroup('Kabelpress')).toBe('chest')
+    expect(getExerciseMuscleGroup('Lutande hantelpress')).toBe('chest')
+    expect(getExerciseMuscleGroup('Hantelpress liggande')).toBe('chest')
+    expect(getExerciseMuscleGroup('Push-ups')).toBe('chest')
+    expect(getExerciseMuscleGroup('Genomdrag med kabel')).toBe('legs')
+    expect(getExerciseMuscleGroup('Glute kickback i kabel')).toBe('legs')
+    expect(getExerciseMuscleGroup('Kettlebell swing')).toBe('legs')
+    expect(getExerciseMuscleGroup('Thrusters')).toBe('legs')
+    expect(getExerciseMuscleGroup('Frontlyft i kabel')).toBe('shoulders')
+    expect(getExerciseMuscleGroup('Bakre deltalyft i kabel')).toBe('shoulders')
+    expect(getExerciseMuscleGroup('Omvänd flyes')).toBe('shoulders')
+    expect(getExerciseMuscleGroup('Landmine press')).toBe('shoulders')
+    expect(getExerciseMuscleGroup('Push press')).toBe('shoulders')
+    expect(getExerciseMuscleGroup('Skull crushers')).toBe('arms')
+    expect(getExerciseMuscleGroup('Handledscurl')).toBe('arms')
+    expect(getExerciseMuscleGroup('Hyperextensions')).toBe('back')
+    expect(getExerciseMuscleGroup('Shrugs med hantlar')).toBe('back')
+    expect(getExerciseMuscleGroup('Kabelvridning')).toBe('core')
+    expect(getExerciseMuscleGroup('Russian twist')).toBe('core')
+    expect(getExerciseMuscleGroup('Pallof press')).toBe('core')
+    expect(getExerciseMuscleGroup('Hängande benlyft')).toBe('core')
+
+    // Viktiga gamla mappningar rubbas inte av de nya nyckelorden
+    expect(getExerciseMuscleGroup('Hantelpress axlar')).toBe('shoulders')
+    expect(getExerciseMuscleGroup('Bencurl liggande')).toBe('legs')
+    expect(getExerciseMuscleGroup('Triceps kickback')).toBe('arms')
+  })
 })
 
 describe('datakonsistens', () => {
