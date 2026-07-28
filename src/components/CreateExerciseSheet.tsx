@@ -26,23 +26,44 @@ import {
 
 type Page = 'form' | 'equipment' | 'muscle' | 'otherMuscles' | 'type'
 
-/** Miniatyrkropp med muskeln tänd — så man ser exakt vad som avses */
+/** Var på kroppen muskeln sitter, som andel av höjden uppifrån — cirkeln
+    panoreras dit så vald muskel hamnar i mitten (vader nere, axlar uppe) */
+const MUSCLE_CENTER: Partial<Record<Slug, number>> = {
+  trapezius: 0.16, deltoids: 0.20, chest: 0.24, 'upper-back': 0.25,
+  biceps: 0.29, triceps: 0.29, abs: 0.34, obliques: 0.34,
+  'lower-back': 0.36, forearm: 0.38, gluteal: 0.46, adductors: 0.52,
+  quadriceps: 0.55, hamstring: 0.58, tibialis: 0.74, calves: 0.75,
+}
+
+/** Miniatyrkropp inzoomad och panorerad så vald muskel ligger mitt i cirkeln */
 function MuscleThumb({ slug }: { slug: Slug }) {
+  const [bodyH, setBodyH] = useState(0)
+  const frac = MUSCLE_CENTER[slug] ?? 0.35
   return (
     <View style={s.muscleThumb}>
-      <Body
-        data={[{ slug, intensity: 1 as const }]}
-        side={bestSideForMuscles([slug])}
-        gender="male"
-        scale={0.25}
-        colors={['#FFA817']}
-        defaultFill="#3A3A3C"
-      />
+      <View
+        onLayout={e => setBodyH(e.nativeEvent.layout.height)}
+        style={{ transform: [{ translateY: bodyH ? (0.5 - frac) * bodyH : 0 }] }}
+      >
+        <Body
+          data={[{ slug, intensity: 1 as const }]}
+          side={bestSideForMuscles([slug])}
+          gender="male"
+          scale={0.45}
+          colors={['#FFA817']}
+          defaultFill="#3A3A3C"
+        />
+      </View>
     </View>
   )
 }
 
-const MUSCLE_SLUGS = Object.keys(SLUG_LABELS) as Slug[]
+// Bara tränbara muskler — SLUG_LABELS innehåller även hår, huvud, händer m.m.
+const MUSCLE_SLUGS: Slug[] = [
+  'chest', 'upper-back', 'lower-back', 'trapezius', 'deltoids',
+  'biceps', 'triceps', 'forearm', 'abs', 'obliques',
+  'quadriceps', 'hamstring', 'gluteal', 'adductors', 'calves', 'tibialis',
+]
 const EQUIPMENT_KEYS = Object.keys(EQUIPMENT_LABELS) as ExerciseEquipment[]
 const TYPE_KEYS = Object.keys(EXERCISE_TYPE_INFO) as ExerciseType[]
 
@@ -109,7 +130,7 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
   const pageTitle =
     page === 'equipment'    ? t('Välj utrustning')
     : page === 'muscle'       ? t('Primär muskelgrupp')
-    : page === 'otherMuscles' ? t('Övriga muskler')
+    : page === 'otherMuscles' ? t('Lägg till muskler')
     : page === 'type'         ? t('Välj övningstyp')
     : t('Skapa övning')
 
@@ -191,14 +212,36 @@ export function CreateExerciseSheet({ visible, onClose, onCreated }: {
                 placeholder={t('Välj')}
                 onPress={() => setPage('muscle')}
               />
-              <PickerRow
-                label={t('Övriga muskler')}
-                value={otherMuscles.length > 0
-                  ? otherMuscles.map(sl => t(SLUG_LABELS[sl])).join(', ')
-                  : null}
-                placeholder={t('Välj (valfritt)')}
-                onPress={() => setPage('otherMuscles')}
-              />
+              <View style={[s.pickerRow, s.pickerRowBorder, { alignItems: 'flex-start' }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.pickerLabel}>{t('Fler muskler')}</Text>
+                  <View style={s.chipWrap}>
+                    {otherMuscles.map(sl => (
+                      <TouchableOpacity
+                        key={sl}
+                        style={s.muscleChip}
+                        onPress={() => toggleOtherMuscle(sl)}
+                        activeOpacity={0.7}
+                        testID={`removeMuscle-${sl}`}
+                      >
+                        <Text style={s.muscleChipText}>{t(SLUG_LABELS[sl])}</Text>
+                        <Ionicons name="close" size={13} color={ACCENT} />
+                      </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity
+                      style={s.addChip}
+                      onPress={() => setPage('otherMuscles')}
+                      activeOpacity={0.7}
+                      testID="addMuscle"
+                    >
+                      <Ionicons name="add" size={16} color={ACCENT} />
+                      {otherMuscles.length === 0 && (
+                        <Text style={s.addChipText}>{t('Lägg till muskel')}</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
               <PickerRow
                 label={t('Övningstyp')}
                 value={exerciseType ? t(EXERCISE_TYPE_INFO[exerciseType].label) : null}
@@ -356,6 +399,20 @@ const s = StyleSheet.create({
   pickerPlaceholder: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 3 },
 
   hint: { color: TEXT_SECONDARY, fontSize: 12, lineHeight: 18, marginTop: 4 },
+
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  muscleChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: accentAlpha('16'), borderRadius: 999,
+    paddingHorizontal: 11, paddingVertical: 6,
+  },
+  muscleChipText: { color: ACCENT, fontSize: 13, fontWeight: '600' },
+  addChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1.5, borderColor: accentAlpha('55'), borderStyle: 'dashed',
+    borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6,
+  },
+  addChipText: { color: ACCENT, fontSize: 13, fontWeight: '600' },
 
   optionRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

@@ -92,6 +92,9 @@ export const EN_EXERCISES: Record<string, string> = {
   'Välj övningstyp': 'Select exercise type',
   'Övningen blir bara synlig för dig och dyker upp i övningsväljaren under sin muskelgrupp.': 'The exercise is only visible to you and shows up in the exercise picker under its muscle group.',
   'Sparar …': 'Saving …',
+  'Fler muskler': 'More muscles',
+  'Lägg till muskel': 'Add muscle',
+  'Lägg till muskler': 'Add muscles',
 
   // Utrustning
   'Ingen utrustning': 'No equipment',

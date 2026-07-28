@@ -54,10 +54,12 @@ describe('CreateExerciseSheet', () => {
     fireEvent.press(screen.getByTestId('create-Primär muskelgrupp'))
     fireEvent.press(screen.getByTestId('muscle-chest'))
 
-    // Övriga muskler: flervalslista med Klar
-    fireEvent.press(screen.getByTestId('create-Övriga muskler'))
+    // Fler muskler läggs till via plusknappen, flervalslista med Klar
+    fireEvent.press(screen.getByTestId('addMuscle'))
     fireEvent.press(screen.getByTestId('other-deltoids'))
     fireEvent.press(screen.getByText('Klar'))
+    // Vald muskel visas som chip och kan tas bort med krysset
+    expect(screen.getByTestId('removeMuscle-deltoids')).toBeOnTheScreen()
 
     // Typ med exempel och badges
     fireEvent.press(screen.getByTestId('create-Övningstyp'))
