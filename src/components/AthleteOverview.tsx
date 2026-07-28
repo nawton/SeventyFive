@@ -413,7 +413,7 @@ const s = StyleSheet.create({
   streakValueRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   counterValue: { color: TEXT_PRIMARY, fontSize: 24, fontFamily: NUM_FONT },
   counterLabel: { color: TEXT_SECONDARY, fontSize: 13 },
-  counterDivider: { width: StyleSheet.hairlineWidth, height: 34, backgroundColor: 'rgba(255,255,255,0.15)' },
+  counterDivider: { width: StyleSheet.hairlineWidth, height: 34, backgroundColor: 'rgba(128,128,128,0.25)' },
 
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   followBtn: {
@@ -457,7 +457,7 @@ const s = StyleSheet.create({
   },
   activitiesIcon: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(128,128,128,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
   activitiesTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },

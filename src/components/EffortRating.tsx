@@ -144,7 +144,7 @@ export function EffortRating({ visible, initial, onDone }: Props) {
           <Text style={s.skipText}>{t('Hoppa över')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[s.doneBtn, { backgroundColor: sel ? accent : DIVIDER }]}
+          style={[s.doneBtn, { backgroundColor: sel ? accent : 'rgba(128,128,128,0.25)' }]}
           onPress={() => { if (sel) onDone(sel) }}
           activeOpacity={0.8}
           disabled={!sel}

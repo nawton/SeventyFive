@@ -185,7 +185,7 @@ export function AddRuleSheet({ visible, onClose, onCreate }: {
             </ScrollView>
 
             <TouchableOpacity
-              style={[s.saveBtn, !name.trim() && s.saveBtnDisabled]}
+              style={[s.saveBtn, { backgroundColor: T.ACCENT }, !name.trim() && s.saveBtnDisabled]}
               onPress={handleSave}
               disabled={!name.trim() || saving}
               activeOpacity={0.85}
@@ -221,7 +221,7 @@ const s = StyleSheet.create({
   title: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800' },
   closeBtn: {
     width: 32, height: 32, borderRadius: 10,
-    backgroundColor: BORDER, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(128,128,128,0.18)', alignItems: 'center', justifyContent: 'center',
   },
   fieldLabel: {
     color: TEXT_SECONDARY, fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginBottom: 8,
@@ -243,7 +243,7 @@ const s = StyleSheet.create({
   iconLabel:       { color: '#4A4A50', fontSize: 10, fontWeight: '500' },
   iconLabelActive: { color: CUSTOM, fontWeight: '700' },
   saveBtn: {
-    backgroundColor: ACCENT, borderRadius: 16,
+     borderRadius: 16,
     paddingVertical: 16, alignItems: 'center', marginTop: 24,
   },
   saveBtnDisabled: { opacity: 0.4 },

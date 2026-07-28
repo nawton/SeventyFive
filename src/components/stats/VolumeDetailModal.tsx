@@ -178,7 +178,7 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
             </TouchableOpacity>
             <Text style={s.navLabel}>{pageLabel(res, buckets, offset)}</Text>
             <TouchableOpacity style={s.navBtn} onPress={() => nav(1)} disabled={offset >= 0} activeOpacity={0.7}>
-              <Ionicons name="chevron-forward" size={20} color={offset >= 0 ? 'rgba(255,255,255,0.18)' : TEXT_PRIMARY} />
+              <Ionicons name="chevron-forward" size={20} color={offset >= 0 ? 'rgba(128,128,128,0.35)' : TEXT_PRIMARY} />
             </TouchableOpacity>
           </View>
 
@@ -209,14 +209,14 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
                         key={f}
                         x1={0} x2={CH_W}
                         y1={CH_H - 4 - f * (CH_H - 34)} y2={CH_H - 4 - f * (CH_H - 34)}
-                        stroke="rgba(255,255,255,0.06)" strokeWidth={1}
+                        stroke="rgba(128,128,128,0.15)" strokeWidth={1}
                       />
                     ))}
                     {buckets.map((b, i) => {
                       const x = i * slot + (slot - barW) / 2
                       const dimmed = sel !== null && sel.key !== b.key
                       if (b.volume <= 0) {
-                        return <Rect key={b.key} x={x} y={CH_H - 7} width={barW} height={3} rx={1.5} fill="rgba(255,255,255,0.10)" />
+                        return <Rect key={b.key} x={x} y={CH_H - 7} width={barW} height={3} rx={1.5} fill="rgba(128,128,128,0.18)" />
                       }
                       const h = Math.max(3, b.volume * scale)
                       const y = CH_H - 4 - h

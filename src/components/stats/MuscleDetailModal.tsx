@@ -295,7 +295,7 @@ const s = StyleSheet.create({
   grpRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
   grpRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
   grpLbl: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', width: 62 },
-  grpTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: DIVIDER, overflow: 'hidden' },
+  grpTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(128,128,128,0.18)', overflow: 'hidden' },
   grpFill: { height: '100%', borderRadius: 5, backgroundColor: ACCENT },
   grpVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'] },
 

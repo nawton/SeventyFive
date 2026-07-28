@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: BORDER,
+    backgroundColor: 'rgba(128,128,128,0.45)',
     alignSelf: 'center',
     marginBottom: 8,
   },
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   card: {
-    backgroundColor: accentAlpha('12'),
+    backgroundColor: 'rgba(128,128,128,0.12)',
     borderRadius: 16,
     padding: 20,
     marginTop: 8,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(128,128,128,0.14)',
   },
   continueButtonText: {
     color: TEXT_SECONDARY,

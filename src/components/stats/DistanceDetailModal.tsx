@@ -212,7 +212,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
               disabled={offset >= 0}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-forward" size={20} color={offset >= 0 ? 'rgba(255,255,255,0.18)' : TEXT_PRIMARY} />
+              <Ionicons name="chevron-forward" size={20} color={offset >= 0 ? 'rgba(128,128,128,0.35)' : TEXT_PRIMARY} />
             </TouchableOpacity>
           </View>
 
@@ -338,7 +338,7 @@ const s = StyleSheet.create({
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13 },
   dot: { width: 9, height: 9, borderRadius: 3 },
   splitLbl: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', width: 82 },
-  splitTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' },
+  splitTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(128,128,128,0.15)', overflow: 'hidden' },
   splitFill: { height: '100%', borderRadius: 5 },
   splitVal: { fontSize: 16, fontFamily: NUM_FONT, width: 52, textAlign: 'right', fontVariant: ['tabular-nums'] },
 

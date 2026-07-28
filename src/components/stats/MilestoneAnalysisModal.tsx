@@ -281,7 +281,7 @@ const s = StyleSheet.create({
   readout: { gap: 6, marginTop: 6 },
   readoutLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
   readoutTitle: { color: TEXT_PRIMARY, fontSize: 28, fontWeight: '800', letterSpacing: -0.4 },
-  progressTrack: { height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 4 },
+  progressTrack: { height: 10, borderRadius: 5, backgroundColor: 'rgba(128,128,128,0.18)', overflow: 'hidden', marginTop: 4 },
   progressFill: { height: '100%', borderRadius: 5, backgroundColor: ACCENT },
   readoutSub: { color: TEXT_SECONDARY, fontSize: 13, fontFamily: NUM_FONT_SEMI },
 

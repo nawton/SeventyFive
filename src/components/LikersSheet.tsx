@@ -91,7 +91,7 @@ export function LikersSheet({ likers, count, onClose, onPressPerson }: {
                   {/* Rött hjärta — samma gillafärg som i flödet och trådarna */}
                   <Ionicons name="heart" size={20} color={RED} />
                 </View>
-                <View style={s.headerUnderline} />
+                <View style={[s.headerUnderline, { backgroundColor: T.ACCENT }]} />
               </View>
               <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} testID="likersClose">
                 <Ionicons name="close" size={24} color={TEXT_PRIMARY} />
@@ -141,16 +141,16 @@ const s = StyleSheet.create({
   headerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: DIVIDER,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.14)',
   },
   headerTab: { alignItems: 'center', gap: 10 },
   headerTabInner: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 6 },
   headerCount: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
   headerUnderline: {
-    alignSelf: 'stretch', height: 3, borderRadius: 2, backgroundColor: ACCENT,
+    alignSelf: 'stretch', height: 3, borderRadius: 2,
   },
   listContent: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 60 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
   rowName: { flex: 1, color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
-  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER, marginLeft: 60 },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(128,128,128,0.14)', marginLeft: 60 },
 })
