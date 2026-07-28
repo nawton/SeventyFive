@@ -130,10 +130,6 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
             </Text>
             <Text style={s.heroSub}>{dateLabel ? `${t('Gympass')} · ${dateLabel}` : t('Gympass')}</Text>
           </View>
-          <View style={s.donePill}>
-            <Ionicons name="checkmark-circle" size={13} color={GREEN} />
-            <Text style={s.donePillText}>{t('Avklarat')}</Text>
-          </View>
         </View>
 
         {/* Titel, kommentar och foto från granskningen */}
@@ -217,7 +213,7 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
                       <Text style={s.th}>{t('VIKT & REPS')}</Text>
                     </View>
                     {w.data.sets.map((set, j) => (
-                      <View key={j} style={[s.setLine, j % 2 === 1 && s.setLineAlt]}>
+                      <View key={j} style={s.setLine}>
                         <Text style={s.setNum}>{j + 1}</Text>
                         <Text style={s.setVal}>
                           {set.weight_kg > 0 ? `${set.weight_kg} kg × ${set.reps}` : `${set.reps} reps`}
@@ -410,7 +406,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 9, paddingHorizontal: 8, marginHorizontal: -8, borderRadius: 10,
   },
-  setLineAlt: { backgroundColor: 'rgba(128,128,128,0.09)' },
   setNum: { width: 40, color: TEXT_PRIMARY, fontSize: 16, fontFamily: NUM_FONT_SEMI, paddingLeft: 4 },
   setVal: { color: TEXT_PRIMARY, fontSize: 16, fontFamily: NUM_FONT, fontVariant: ['tabular-nums'] },
   setWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },

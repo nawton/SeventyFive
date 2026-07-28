@@ -9,7 +9,7 @@ export const SLUG_LABELS: Record<Slug, string> = {
   biceps:      'Biceps',
   calves:      'Vader',
   chest:       'Bröst',
-  deltoids:    'Deltoideus',
+  deltoids:    'Axlar',
   feet:        'Fötter',
   forearm:     'Underarm',
   gluteal:     'Säte',
