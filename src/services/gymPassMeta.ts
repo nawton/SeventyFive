@@ -13,6 +13,7 @@ const BUCKET = 'pass-photos'
 export interface GymPassMeta {
   user_id: string
   workout_date: string
+  pass_key: string
   title: string | null
   note: string | null
   photo_path: string | null
@@ -24,12 +25,13 @@ export function passPhotoUrl(path: string): string | null {
   return base ? `${base}/storage/v1/object/public/${BUCKET}/${path}` : null
 }
 
-export async function getPassMeta(userId: string, workoutDate: string): Promise<GymPassMeta | null> {
+export async function getPassMeta(userId: string, workoutDate: string, passKey = ''): Promise<GymPassMeta | null> {
   const { data, error } = await supabase
     .from('gym_pass_meta')
-    .select('user_id, workout_date, title, note, photo_path')
+    .select('user_id, workout_date, pass_key, title, note, photo_path')
     .eq('user_id', userId)
     .eq('workout_date', workoutDate)
+    .eq('pass_key', passKey)
     .maybeSingle()
   if (error) throw error
   return data
@@ -39,6 +41,8 @@ export async function getPassMeta(userId: string, workoutDate: string): Promise<
     upp först så en misslyckad uppladdning aldrig lämnar en rad utan bild. */
 export async function savePassMeta(params: {
   workoutDate: string
+  /** Passets unika nyckel — skiljer två pass samma dag åt */
+  passKey?: string
   title: string
   note: string
   /** Lokal bild-URI från väljaren — utelämnas när inget foto valts */
@@ -58,6 +62,7 @@ export async function savePassMeta(params: {
   const row: Record<string, unknown> = {
     user_id: userId,
     workout_date: params.workoutDate,
+    pass_key: params.passKey ?? '',
     title: params.title.trim() || null,
     note: params.note.trim() || null,
     updated_at: new Date().toISOString(),
@@ -66,6 +71,6 @@ export async function savePassMeta(params: {
 
   const { error } = await supabase
     .from('gym_pass_meta')
-    .upsert(row, { onConflict: 'user_id,workout_date' })
+    .upsert(row, { onConflict: 'user_id,workout_date,pass_key' })
   if (error) throw error
 }

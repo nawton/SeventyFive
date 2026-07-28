@@ -310,14 +310,16 @@ export function SessionFullscreen({
   // snapshotas från det som FAKTISKT sparades (collectSets fyller i
   // platshållarvärden för ibockade rader), inte från råa fältet
   const [review, setReview] = useState<{ effort: number | null } | null>(null)
-  const reviewSnapshotRef = useRef<{ entries: ReviewEntry[]; durationS: number | null }>({ entries: [], durationS: null })
+  const reviewSnapshotRef = useRef<{ entries: ReviewEntry[]; durationS: number | null; passKey: string }>({ entries: [], durationS: null, passKey: '' })
 
   function snapshotReview(
     toSave: ReturnType<typeof collectSets>,
     durationS: number | null,
     savedIds?: Map<string, string>,
+    passKey = '',
   ) {
     reviewSnapshotRef.current = {
+      passKey,
       entries: toSave
         .filter(x => x.validSets.length > 0)
         .map(x => ({
@@ -410,7 +412,7 @@ export function SessionFullscreen({
         setPassDuration(`${session.id}:${date}`, elapsed).catch(() => {})
         clearPassStart(`${session.id}:${date}`).catch(() => {})
         clearPassDraft(`${session.id}:${date}`).catch(() => {})
-        snapshotReview([], elapsed)
+        snapshotReview([], elapsed, undefined, `${session.id}:${date}:${Date.now()}`)
         requestEffort(() => {
           onComplete()
           onClose()
@@ -424,6 +426,8 @@ export function SessionFullscreen({
     if (!session || !userId) return
     setSaving(true)
     const savedWorkoutIds = new Map<string, string>()
+    // En nyckel per slutförande: två pass samma dag blir två inlägg
+    const passKey = `${session.id}:${date}:${Date.now()}`
     try {
       const records = await getPersonalRecords(userId).catch(() => [])
       const prs: string[] = []
@@ -441,6 +445,7 @@ export function SessionFullscreen({
           category: (exInfo?.category === 'mobility' || exInfo?.category === 'hiit') ? exInfo.category : 'strength',
           sets: validSets,
           workoutDate: date,
+          passKey,
         }).catch((e: Error) => { saveErrors.push(t('{name} · set: {msg}', { name: ex.exercise_name, msg: e.message })); return null })
         if (savedId) savedWorkoutIds.set(ex.id, savedId)
         await completeExercise(ex.id, userId, date)
@@ -493,7 +498,7 @@ export function SessionFullscreen({
       }
       if (!isCompleted) {
         // Nytt avklarat pass → betyg + granskning innan vi stänger
-        snapshotReview(toSave, elapsed, savedWorkoutIds)
+        snapshotReview(toSave, elapsed, savedWorkoutIds, passKey)
         requestEffort(() => {
           onComplete()
           wrapUp(false)
@@ -758,6 +763,7 @@ export function SessionFullscreen({
       {review !== null && (
         <PassReviewSheet
           workoutDate={date}
+          passKey={reviewSnapshotRef.current.passKey}
           durationS={reviewSnapshotRef.current.durationS}
           effort={review.effort}
           entries={reviewSnapshotRef.current.entries}

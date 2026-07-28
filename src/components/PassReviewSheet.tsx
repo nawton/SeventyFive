@@ -38,8 +38,10 @@ export type ReviewEntry = {
   sets: Array<{ reps: number; weightKg: number }>
 }
 
-export function PassReviewSheet({ workoutDate, durationS, effort, entries: initialEntries, onDone }: {
+export function PassReviewSheet({ workoutDate, passKey, durationS, effort, entries: initialEntries, onDone }: {
   workoutDate: string
+  /** Passets unika nyckel — skiljer två pass samma dag åt i metadatan */
+  passKey?: string
   durationS: number | null
   effort: number | null
   entries: ReviewEntry[]
@@ -141,7 +143,7 @@ export function PassReviewSheet({ workoutDate, durationS, effort, entries: initi
     if (!title.trim() && !note.trim() && !photoUri) { onDone(); return }
     setSaving(true)
     try {
-      await savePassMeta({ workoutDate, title, note, photoUri })
+      await savePassMeta({ workoutDate, passKey, title, note, photoUri })
       onDone()
     } catch {
       setSaving(false)

@@ -12,6 +12,8 @@ export interface StrengthData {
   exercise_name: string
   sets: StrengthSet[]
   workout_date?: string
+  /** Ett unikt värde per slutfört pass — skiljer två pass samma dag åt */
+  pass_key?: string
 }
 
 export interface StrengthWorkout {
@@ -28,6 +30,7 @@ export async function saveStrengthWorkout(params: {
   category: 'strength' | 'mobility' | 'hiit'
   sets: StrengthSet[]
   workoutDate?: string
+  passKey?: string
 }): Promise<string> {
   const today = toLocalDateString()
   const entry: StrengthData = {
@@ -36,6 +39,7 @@ export async function saveStrengthWorkout(params: {
     exercise_name: params.exerciseName,
     sets: params.sets,
     workout_date: params.workoutDate ?? today,
+    ...(params.passKey ? { pass_key: params.passKey } : {}),
   }
   // Id:t tillbaka: granskningen efter passet redigerar raden vid behov
   const { data, error } = await supabase.from('user_workouts').insert({

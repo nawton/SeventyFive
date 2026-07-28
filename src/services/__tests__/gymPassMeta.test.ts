@@ -23,7 +23,7 @@ describe('gymPassMeta', () => {
     const calls = installTables(fromMock, { gym_pass_meta: { data: { user_id: 'u1', workout_date: '2026-07-28', title: 'Oh snap', note: null, photo_path: null }, error: null } })
     const meta = await getPassMeta('u1', '2026-07-28')
     expect(meta?.title).toBe('Oh snap')
-    expect(argsOf(calls, 'gym_pass_meta', 'eq')).toEqual([['user_id', 'u1'], ['workout_date', '2026-07-28']])
+    expect(argsOf(calls, 'gym_pass_meta', 'eq')).toEqual([['user_id', 'u1'], ['workout_date', '2026-07-28'], ['pass_key', '']])
   })
 
   it('sparar trimmad titel och kommentar, tomt blir null', async () => {
@@ -32,9 +32,9 @@ describe('gymPassMeta', () => {
     const upsert = argsOf(calls, 'gym_pass_meta', 'upsert')[0]
     const row = upsert[0] as Record<string, unknown>
     const opts = upsert[1]
-    expect(row).toMatchObject({ user_id: 'u1', workout_date: '2026-07-28', title: 'Tungt benpass', note: null })
+    expect(row).toMatchObject({ user_id: 'u1', workout_date: '2026-07-28', pass_key: '', title: 'Tungt benpass', note: null })
     expect('photo_path' in row).toBe(false)
-    expect(opts).toEqual({ onConflict: 'user_id,workout_date' })
+    expect(opts).toEqual({ onConflict: 'user_id,workout_date,pass_key' })
     expect(uploadMock).not.toHaveBeenCalled()
   })
 

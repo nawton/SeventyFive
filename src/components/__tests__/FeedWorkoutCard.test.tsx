@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react-native'
-import { FeedWorkoutCard, type StrengthPost } from '../FeedWorkoutCard'
+import { FeedWorkoutCard, strengthToPosts, type StrengthPost } from '../FeedWorkoutCard'
 import type { StrengthWorkout } from '@/services/strengthWorkouts'
 
 jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn(), auth: { getSession: jest.fn() },
@@ -22,9 +22,27 @@ const w = (id: string, name: string): StrengthWorkout => ({
 const POST: StrengthPost = {
   kind: 'strength', id: 'p1', authorId: 'u1', authorName: 'Elin Berg', authorAvatar: null,
   typeLabel: 'Gympass', createdAt: '2026-07-27T10:00:00Z',
-  exercises: 4, sets: 8, volumeKg: 520,
+  exercises: 4, sets: 8, volumeKg: 520, workoutDate: '2026-07-27', passKey: '',
   workouts: [w('w1', 'Bänkpress'), w('w2', 'Knäböj'), w('w3', 'Marklyft'), w('w4', 'Sidolyft')],
 }
+
+describe('strengthToPosts — pass-nyckeln håller isär pass', () => {
+  it('två pass samma dag blir två inlägg, äldre rader utan nyckel grupperas per dag', () => {
+    const mk = (id: string, passKey?: string) => ({
+      ...w(id, 'Bänkpress'),
+      data: { ...w(id, 'Bänkpress').data, ...(passKey ? { pass_key: passKey } : {}) },
+    })
+    const posts = strengthToPosts(
+      [mk('a1', 'pass-1'), mk('a2', 'pass-1'), mk('b1', 'pass-2'), mk('c1'), mk('c2')],
+      'u1', 'Elin Berg', null,
+    )
+    expect(posts).toHaveLength(3)
+    const sizes = posts.map(p => p.workouts.length).sort()
+    expect(sizes).toEqual([1, 2, 2])
+    // Äldre id-formatet utan nyckel är oförändrat så gillanden överlever
+    expect(posts.find(p => p.passKey === '')?.id).toBe('gym-u1-2026-07-27')
+  })
+})
 
 describe('FeedWorkoutCard — gympassets övningsförhandsvisning', () => {
   it('visar de tre första övningarna med setantal och en till-rad', () => {

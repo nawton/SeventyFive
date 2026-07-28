@@ -47,7 +47,10 @@ export interface StrengthPost extends BasePost {
   exercises: number
   sets: number
   volumeKg: number
-  workouts: StrengthWorkout[]   // dagens övningsrader, detaljvyn öppnas härifrån
+  workoutDate: string
+  /** Passets nyckel — tom för äldre rader som grupperas per dag */
+  passKey: string
+  workouts: StrengthWorkout[]   // passets övningsrader, detaljvyn öppnas härifrån
 }
 
 export type FeedPost = CardioPost | StrengthPost
@@ -71,18 +74,22 @@ export function workoutToPost(
   }
 }
 
-/** Grupperar styrkeloggar per träningsdag till gympass-inlägg */
+/** Grupperar styrkeloggar till gympass-inlägg: per pass-nyckel när den
+    finns, annars per träningsdag (äldre rader utan nyckel) */
 export function strengthToPosts(
   workouts: StrengthWorkout[], authorId: string, authorName: string, authorAvatar: string | null,
 ): StrengthPost[] {
-  const byDay = new Map<string, StrengthWorkout[]>()
+  const byPass = new Map<string, StrengthWorkout[]>()
   for (const w of workouts) {
     const day = w.data.workout_date ?? w.created_at.split('T')[0]
-    const list = byDay.get(day)
+    const key = `${day}|${w.data.pass_key ?? ''}`
+    const list = byPass.get(key)
     if (list) list.push(w)
-    else byDay.set(day, [w])
+    else byPass.set(key, [w])
   }
-  return Array.from(byDay.entries()).map(([day, dayWorkouts]) => {
+  return Array.from(byPass.entries()).map(([groupKey, dayWorkouts]) => {
+    const day = groupKey.split('|')[0]
+    const passKey = groupKey.slice(day.length + 1)
     let sets = 0, volumeKg = 0
     for (const w of dayWorkouts) {
       sets += w.data.sets.length
@@ -94,7 +101,8 @@ export function strengthToPosts(
       .sort()[dayWorkouts.length - 1]
     return {
       kind: 'strength' as const,
-      id: `gym-${authorId}-${day}`,
+      // Äldre id-format utan nyckel behålls så gillanden inte tappas
+      id: passKey ? `gym-${authorId}-${day}-${passKey}` : `gym-${authorId}-${day}`,
       authorId,
       authorName,
       authorAvatar,
@@ -103,6 +111,8 @@ export function strengthToPosts(
       exercises: dayWorkouts.length,
       sets,
       volumeKg: Math.round(volumeKg),
+      workoutDate: day,
+      passKey,
       workouts: dayWorkouts,
     }
   })

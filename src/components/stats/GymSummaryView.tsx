@@ -41,13 +41,14 @@ function progressionFor(all: StrengthWorkout[], exerciseName: string) {
 // =============================================================================
 
 
-export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, name, dateLabel, logged, plannedNames, allWorkouts, onClose, social }: {
+export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, passKey, name, dateLabel, logged, plannedNames, allWorkouts, onClose, social }: {
   /** Visar Hevy-toppen med avatar när inläggets ägare är känd */
   authorName?: string
   avatarUrl?: string | null
   /** Tillsammans med workoutDate hämtas titel, kommentar och foto */
   ownerId?: string
   workoutDate?: string
+  passKey?: string
   name: string
   dateLabel: string | null
   /** Loggade övningar med set och vikter */
@@ -67,14 +68,14 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, na
   useEffect(() => {
     let alive = true
     if (ownerId && workoutDate) {
-      getPassMeta(ownerId, workoutDate)
+      getPassMeta(ownerId, workoutDate, passKey ?? '')
         .then(m => { if (alive) setMeta(m) })
         .catch(() => {})
     } else {
       setMeta(null)
     }
     return () => { alive = false }
-  }, [ownerId, workoutDate])
+  }, [ownerId, workoutDate, passKey])
   const insets = useSafeAreaInsets()
   const [progressEx, setProgressEx] = useState<string | null>(null)
   const progression = progressEx && allWorkouts ? progressionFor(allWorkouts, progressEx) : []

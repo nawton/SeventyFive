@@ -436,7 +436,8 @@ export default function CommunityScreen() {
             authorName={selected.authorName}
             avatarUrl={selected.authorAvatar}
             ownerId={selected.authorId}
-            workoutDate={selected.workouts[0]?.data.workout_date ?? selected.createdAt.split('T')[0]}
+            workoutDate={selected.workoutDate}
+            passKey={selected.passKey}
             dateLabel={new Date(selected.createdAt).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
             logged={selected.workouts}
             plannedNames={[]}
