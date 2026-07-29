@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -214,11 +214,15 @@ export function SessionEditor({
   }
 
   // ── Draft exercises ──────────────────────────────────────────────────────────
+  // Löpnummer istället för Date.now(): flera övningar från väljaren läggs
+  // till i samma millisekund och delade då nyckel — att ta bort en rad tog
+  // bort hela batchen
+  const draftSeq = useRef(0)
   function addExercise(exName: string) {
     // Cardio-övningar har varken set eller reps — lämna tomt så inget sparas
     const isCardio = exercises.find(e => e.name === exName)?.category === 'cardio'
     setDrafts(prev => [...prev, {
-      key: Date.now().toString(),
+      key: `draft-${++draftSeq.current}`,
       exercise_name: exName,
       sets: isCardio ? '' : '3',
       reps: isCardio ? '' : '10',

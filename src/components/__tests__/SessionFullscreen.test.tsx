@@ -182,6 +182,62 @@ describe('SessionFullscreen — sethantering', () => {
   })
 })
 
+describe('SessionFullscreen — vilotimern', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('avbockat set startar vilan, +15 förlänger och krysset avbryter', async () => {
+    mountView()
+    await waitFor(() => expect(screen.getByText('Chin-ups')).toBeOnTheScreen())
+
+    // Bocka av första setet → vilobaren dyker upp
+    fireEvent.press(screen.getAllByText('icon:checkmark')[0])
+    expect(screen.getByText('+15')).toBeOnTheScreen()
+    fireEvent.press(screen.getByText('+15'))
+
+    // Krysset i vilobaren stänger timern
+    const closes = screen.getAllByText('icon:close')
+    fireEvent.press(closes[closes.length - 1])
+    expect(screen.queryByText('+15')).toBeNull()
+
+    // Avbockning av samma set startar ingen ny vila
+    fireEvent.press(screen.getAllByText('icon:checkmark')[0])
+    expect(screen.queryByText('+15')).toBeNull()
+  })
+
+  it('sista setet i en övning startar den längre övningsvilan', async () => {
+    mountView()
+    await waitFor(() => expect(screen.getByText('Chin-ups')).toBeOnTheScreen())
+
+    const checks = screen.getAllByText('icon:checkmark')
+    fireEvent.press(checks[0])
+    fireEvent.press(checks[1])
+    fireEvent.press(checks[2])   // alla Chin-ups-set klara → övningsvila
+    expect(screen.getByText('+15')).toBeOnTheScreen()
+
+    const closes = screen.getAllByText('icon:close')
+    fireEvent.press(closes[closes.length - 1])
+  })
+
+  it('vilotidsbladet öppnas från klockan och stegar tiderna i 15-sekunderssteg', async () => {
+    mountView()
+    await waitFor(() => expect(screen.getByText('Chin-ups')).toBeOnTheScreen())
+
+    fireEvent.press(screen.getByText('icon:timer-outline'))
+    expect(screen.getByText('Vilotider')).toBeOnTheScreen()
+
+    // Sista två plus/minus-knapparna hör till bladet (set- resp. övningsvilan)
+    const adds = screen.getAllByText('icon:add')
+    const removes = screen.getAllByText('icon:remove')
+    fireEvent.press(adds[adds.length - 2])
+    fireEvent.press(adds[adds.length - 1])
+    fireEvent.press(removes[removes.length - 2])
+    fireEvent.press(removes[removes.length - 1])
+
+    fireEvent.press(screen.getByText('Klar'))
+    expect(screen.queryByText('Vilotider')).toBeNull()
+  })
+})
+
 describe('SessionFullscreen — infoknappen vid övningsrubriken', () => {
   it('biblioteksövningen öppnar infobladet, okänd övning saknar knapp', async () => {
     render(

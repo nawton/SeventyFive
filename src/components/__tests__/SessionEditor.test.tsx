@@ -160,6 +160,97 @@ describe('SessionEditor — nytt pass', () => {
   })
 })
 
+describe('SessionEditor — veckodagar och upprepning', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('upprepning på: flera dagar kan väljas och blir passnamnet när namn saknas', async () => {
+    const { createWorkoutSession } = jest.requireMock('@/services/workoutSchedule')
+    render(
+      <SessionEditor
+        visible
+        session={null}
+        exercises={EXERCISES}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+        userId="u1"
+        initialDate={new Date('2026-07-29T12:00:00')}
+      />,
+    )
+    // Onsdag (initialdatumets dag) är förvald — lägg till tisdag
+    fireEvent.press(screen.getByText('Upprepa varje vecka'))
+    fireEvent.press(screen.getByText('Tis'))
+    fireEvent.press(screen.getByText('Fre'))
+    fireEvent.press(screen.getByText('Fre'))   // avmarkeras igen
+    fireEvent.press(screen.getByText('Spara pass'))
+    await waitFor(() => expect(createWorkoutSession).toHaveBeenCalled())
+    const [, name, weekdays] = createWorkoutSession.mock.calls[0]
+    expect(name).toBe('Tis, Ons')
+    expect(weekdays).toEqual([2, 3])
+  })
+
+  it('upprepning av: bara en dag i taget och första dagen behålls vid avslag', async () => {
+    const { createWorkoutSession } = jest.requireMock('@/services/workoutSchedule')
+    render(
+      <SessionEditor
+        visible
+        session={null}
+        exercises={EXERCISES}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+        userId="u1"
+        initialDate={new Date('2026-07-29T12:00:00')}
+      />,
+    )
+    // Utan upprepning ersätter varje tryck den valda dagen
+    fireEvent.press(screen.getByText('Tis'))
+    fireEvent.press(screen.getByText('Fre'))
+    // På → välj en dag till, av → bara första dagen kvar
+    fireEvent.press(screen.getByText('Upprepa varje vecka'))
+    fireEvent.press(screen.getByText('Lör'))
+    fireEvent.press(screen.getByText('Upprepa varje vecka'))
+    fireEvent.changeText(screen.getByPlaceholderText('t.ex. Push-dag, Benen…'), 'Fredagspass')
+    fireEvent.press(screen.getByText('Spara pass'))
+    await waitFor(() => expect(createWorkoutSession).toHaveBeenCalled())
+    const [, name, weekdays] = createWorkoutSession.mock.calls[0]
+    expect(name).toBe('ONCE:2026-07-29:Fredagspass')
+    expect(weekdays).toEqual([])
+  })
+})
+
+describe('SessionEditor — övningsutkasten', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('övningar läggs till via väljaren och kan tas bort före sparning', async () => {
+    const { createWorkoutSession } = jest.requireMock('@/services/workoutSchedule')
+    render(
+      <SessionEditor
+        visible
+        session={null}
+        exercises={EXERCISES}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+        userId="u1"
+        initialDate={new Date('2026-07-29T12:00:00')}
+      />,
+    )
+    fireEvent.press(screen.getByText('Lägg till övning'))
+    fireEvent.press(screen.getByText('Bänkpress'))
+    fireEvent.press(screen.getByText('Min egen övning'))
+    fireEvent.press(screen.getByText(/Klar · 2/))
+
+    // Bägge utkasten på plats — ta bort det första
+    fireEvent.press(screen.getAllByText('icon:close-circle')[0])
+    expect(screen.queryByText('Bänkpress')).toBeNull()
+
+    fireEvent.changeText(screen.getByPlaceholderText('t.ex. Push-dag, Benen…'), 'Egetpass')
+    fireEvent.press(screen.getByText('Spara pass'))
+    await waitFor(() => expect(createWorkoutSession).toHaveBeenCalled())
+    expect(createWorkoutSession.mock.calls[0][3]).toEqual([
+      { exercise_name: 'Min egen övning', sets: 3, reps: '10' },
+    ])
+  })
+})
+
 describe('SessionEditor — infoknappen per övning', () => {
   it('biblioteksövningar har infoknapp som öppnar infobladet, egna utan info saknar den', () => {
     render(

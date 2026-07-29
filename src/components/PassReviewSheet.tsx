@@ -78,6 +78,7 @@ export function PassReviewSheet({ workoutDate, passKey, durationS, effort, entri
   }
 
   const editDrag = Gesture.Pan()
+    .withTestId('reviewEditPan')
     .activeOffsetY([-12, 12])
     .onUpdate(e => {
       editTy.value = e.translationY > 0 ? e.translationY : e.translationY * 0.15
