@@ -149,6 +149,39 @@ describe('SessionFullscreen — slutförandeflödet', () => {
   })
 })
 
+describe('SessionFullscreen — sethantering', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('Lägg till set och Ta bort set ändrar antalet rader', async () => {
+    mountView()
+    await waitFor(() => expect(screen.getByText('Chin-ups')).toBeOnTheScreen())
+
+    // 3 planerade set per övning → 6 reps-fält med platshållare 10
+    expect(screen.getAllByPlaceholderText('10')).toHaveLength(6)
+    fireEvent.press(screen.getAllByText('Lägg till set')[0])
+    expect(screen.getAllByPlaceholderText('10')).toHaveLength(7)
+    fireEvent.press(screen.getAllByText('Ta bort set')[0])
+    fireEvent.press(screen.getAllByText('Ta bort set')[0])
+    expect(screen.getAllByPlaceholderText('10')).toHaveLength(5)
+  })
+
+  it('papperskorgen tar bort övningen efter bekräftelse', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert')
+    const { deleteSessionExercise } = jest.requireMock('@/services/workoutSchedule')
+    const onSaved = jest.fn()
+    mountView({ onSaved })
+    await waitFor(() => expect(screen.getByText('Chin-ups')).toBeOnTheScreen())
+
+    fireEvent.press(screen.getAllByText('icon:trash-outline')[0])
+    const ask = alertSpy.mock.calls.at(-1)
+    expect(ask?.[0]).toBe('Ta bort övning')
+    await act(async () => { await ask?.[2]?.find(b => b.text === 'Ta bort')?.onPress?.() })
+    expect(deleteSessionExercise).toHaveBeenCalledWith('x1')
+    expect(onSaved).toHaveBeenCalled()
+    alertSpy.mockRestore()
+  })
+})
+
 describe('SessionFullscreen — infoknappen vid övningsrubriken', () => {
   it('biblioteksövningen öppnar infobladet, okänd övning saknar knapp', async () => {
     render(

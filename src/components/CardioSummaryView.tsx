@@ -119,6 +119,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   function openStyleSheet() { setStyleMenuOpen(true); styleY.value = 420; styleY.value = withTiming(0, { duration: 260 }) }
   function closeStyleSheet() { styleY.value = withTiming(420, { duration: 200 }, (f) => { if (f) runOnJS(setStyleMenuOpen)(false) }) }
   const styleDrag = Gesture.Pan()
+    .withTestId('cardioStylePan')
     .onUpdate(e => { styleY.value = e.translationY > 0 ? e.translationY : e.translationY * 0.15 })
     .onEnd(e => {
       if (e.translationY > 90 || e.velocityY > 600) styleY.value = withTiming(420, { duration: 200 }, (f) => { if (f) runOnJS(setStyleMenuOpen)(false) })
@@ -138,6 +139,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
   const ty = useSharedValue(MID)
   const startY = useSharedValue(MID)
   const detailPan = Gesture.Pan()
+    .withTestId('cardioDetailPan')
     .onStart(() => { startY.value = ty.value })
     .onUpdate(e => { ty.value = clamp(startY.value + e.translationY, FULL, PEEK) })
     .onEnd(e => {

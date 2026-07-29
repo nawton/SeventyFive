@@ -56,6 +56,7 @@ export function LikersSheet({ likers, count, onClose, onPressPerson }: {
 
   // Dra i arket: följer fingret mellan helskärm och botten, snäpper vid släpp
   const pan = Gesture.Pan()
+    .withTestId('likersPan')
     .onStart(() => { startY.value = translateY.value })
     .onUpdate(e => {
       translateY.value = Math.min(CLOSED, Math.max(FULL_TOP, startY.value + e.translationY))

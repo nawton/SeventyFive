@@ -71,6 +71,7 @@ export function GlassSegment<T extends string>({
 
   // Tummen följer fingret fritt under drag och snäpper vid släpp
   const pan = Gesture.Pan()
+    .withTestId('glassSegPan')
     .activeOffsetX([-6, 6])
     .failOffsetY([-14, 14])
     .onStart(() => { runOnJS(beginDrag)() })
@@ -78,8 +79,10 @@ export function GlassSegment<T extends string>({
       if (slotW <= 0) return
       pos.value = Math.min(n - 1, Math.max(0, e.x / slotW - 0.5))
     })
-    .onEnd(e => {
-      if (slotW <= 0) return
+    .onEnd((e, success) => {
+      // Avbruten gest (t.ex. när en scroll tar över) ska inte byta flik —
+      // onFinalize fjädrar då tillbaka tummen via abortDrag
+      if (!success || slotW <= 0) return
       const i = Math.min(n - 1, Math.max(0, Math.round(e.x / slotW - 0.5)))
       pos.value = withSpring(i, SEG_SPRING)
       runOnJS(commitIdx)(i)
@@ -88,7 +91,7 @@ export function GlassSegment<T extends string>({
 
   return (
     <GestureDetector gesture={pan}>
-      <View style={s.segTrack} onLayout={e => setSegW(e.nativeEvent.layout.width - 6)}>
+      <View style={s.segTrack} testID="glassSegTrack" onLayout={e => setSegW(e.nativeEvent.layout.width - 6)}>
         {segW > 0 && (LIQUID_GLASS ? (
           <AnimatedGlassView
             glassEffectStyle="regular"

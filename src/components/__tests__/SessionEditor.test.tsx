@@ -62,7 +62,7 @@ describe('SessionEditor — spara och redigera', () => {
   })
 
   it('övning utan set stoppas med tydligt felmeddelande', async () => {
-    const { Alert } = jest.requireActual('react-native')
+    const { Alert } = jest.requireActual<typeof import('react-native')>('react-native')
     const spy = jest.spyOn(Alert, 'alert')
     const { updateWorkoutSession } = jest.requireMock('@/services/workoutSchedule')
     render(
@@ -85,7 +85,7 @@ describe('SessionEditor — spara och redigera', () => {
   })
 
   it('borttagning bekräftas och går via deleteWorkoutSession', async () => {
-    const { Alert } = jest.requireActual('react-native')
+    const { Alert } = jest.requireActual<typeof import('react-native')>('react-native')
     const spy = jest.spyOn(Alert, 'alert')
     const { deleteWorkoutSession } = jest.requireMock('@/services/workoutSchedule')
     const onSaved = jest.fn()
@@ -102,9 +102,61 @@ describe('SessionEditor — spara och redigera', () => {
     fireEvent.press(screen.getByText('icon:trash-outline'))
     const ask = spy.mock.calls.at(-1)
     expect(ask?.[0]).toBe('Ta bort pass')
-    await waitFor(async () => { await ask?.[2]?.find((b: { text: string }) => b.text === 'Ta bort')?.onPress?.() })
+    await waitFor(async () => { await ask?.[2]?.find(b => b.text === 'Ta bort')?.onPress?.() })
     await waitFor(() => expect(deleteWorkoutSession).toHaveBeenCalledWith('s1'))
     spy.mockRestore()
+  })
+})
+
+describe('SessionEditor — nytt pass', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('nytt engångspass sparas med ONCE-prefix och tomma veckodagar', async () => {
+    const { createWorkoutSession } = jest.requireMock('@/services/workoutSchedule')
+    render(
+      <SessionEditor
+        visible
+        session={null}
+        exercises={EXERCISES}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+        userId="u1"
+        initialDate={new Date('2026-07-29T12:00:00')}
+      />,
+    )
+    fireEvent.changeText(screen.getByPlaceholderText('t.ex. Push-dag, Benen…'), 'Snabbpass')
+    fireEvent.press(screen.getByText('Spara pass'))
+    await waitFor(() => expect(createWorkoutSession).toHaveBeenCalled())
+    const [uid, name, weekdays, exList, notes, type] = createWorkoutSession.mock.calls[0]
+    expect(uid).toBe('u1')
+    expect(name).toBe('ONCE:2026-07-29:Snabbpass')
+    expect(weekdays).toEqual([])
+    expect(exList).toEqual([])
+    expect(notes).toBeNull()
+    expect(type).toBe('gym')
+  })
+
+  it('cardiopass sparar vald cardiotyp och inga set', async () => {
+    const { createWorkoutSession } = jest.requireMock('@/services/workoutSchedule')
+    render(
+      <SessionEditor
+        visible
+        session={null}
+        exercises={EXERCISES}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+        userId="u1"
+        initialDate={new Date('2026-07-29T12:00:00')}
+      />,
+    )
+    fireEvent.changeText(screen.getByPlaceholderText('t.ex. Push-dag, Benen…'), 'Löprunda')
+    fireEvent.press(screen.getByText('Cardio'))
+    fireEvent.press(screen.getByText('Cykling'))
+    fireEvent.press(screen.getByText('Spara pass'))
+    await waitFor(() => expect(createWorkoutSession).toHaveBeenCalled())
+    const call = createWorkoutSession.mock.calls[0]
+    expect(call[5]).toBe('cardio')
+    expect(call[6]).toBe('cycling')
   })
 })
 

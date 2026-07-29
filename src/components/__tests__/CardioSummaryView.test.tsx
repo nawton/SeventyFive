@@ -1,4 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native'
+import { State, type PanGesture } from 'react-native-gesture-handler'
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils'
 import { CardioSummaryView } from '../CardioSummaryView'
 import { updateCardioEffort } from '@/services/workouts'
 import type { CardioWorkout } from '@/services/cardioWorkouts'
@@ -110,6 +112,70 @@ describe('CardioSummaryView — intervaller och splittar', () => {
     renderView(makeWorkout({ splits: [{ label: '1 km', paceSec: 300 }] }))
     expect(await screen.findByText('Kilometersplittar')).toBeOnTheScreen()
     expect(screen.queryByText(/Intervaller ·/)).toBeNull()
+  })
+})
+
+const ROUTE: [number, number][] = [[59.33, 18.06], [59.335, 18.065], [59.34, 18.07]]
+
+describe('CardioSummaryView — kartstil och dragbara ark', () => {
+  it('lagerknappen öppnar kartväljaren och ett stilbyte stänger den', async () => {
+    renderView(makeWorkout({ route: ROUTE }))
+    fireEvent.press(await screen.findByText('glassbtn:layers-outline'))
+    expect(screen.getByText('Välj karta')).toBeOnTheScreen()
+    expect(screen.getByText('Satellit')).toBeOnTheScreen()
+    fireEvent.press(screen.getByText('Satellit'))
+    await waitFor(() => expect(screen.queryByText('Välj karta')).toBeNull())
+  })
+
+  it('liten dragning i väljaren studsar tillbaka, lång dragning stänger', async () => {
+    renderView(makeWorkout({ route: ROUTE }))
+    fireEvent.press(await screen.findByText('glassbtn:layers-outline'))
+
+    fireGestureHandler<PanGesture>(getByGestureTestId('cardioStylePan'), [
+      { state: State.BEGAN, translationY: 0 },
+      { state: State.ACTIVE, translationY: -30 },   // uppåt bromsas med gummiband
+      { state: State.ACTIVE, translationY: 20 },
+      { state: State.END, translationY: 20, velocityY: 0 },
+    ])
+    expect(screen.getByText('Välj karta')).toBeOnTheScreen()
+
+    fireGestureHandler<PanGesture>(getByGestureTestId('cardioStylePan'), [
+      { state: State.BEGAN, translationY: 0 },
+      { state: State.ACTIVE, translationY: 140 },
+      { state: State.END, translationY: 140, velocityY: 900 },
+    ])
+    await waitFor(() => expect(screen.queryByText('Välj karta')).toBeNull())
+  })
+
+  it('detaljarket snäpper mellan helskärm, mitten och botten', async () => {
+    renderView(makeWorkout())
+    await screen.findByText('Morgonrunda')
+
+    // Uppåtfling nära mitten → helskärmsläget tar över nästa fling
+    fireGestureHandler<PanGesture>(getByGestureTestId('cardioDetailPan'), [
+      { state: State.BEGAN, translationY: 0 },
+      { state: State.ACTIVE, translationY: 40 },
+      { state: State.END, translationY: 40, velocityY: -900 },
+    ])
+    // Nedåtfling → botten
+    fireGestureHandler<PanGesture>(getByGestureTestId('cardioDetailPan'), [
+      { state: State.BEGAN, translationY: 0 },
+      { state: State.ACTIVE, translationY: 30 },
+      { state: State.END, translationY: 30, velocityY: 900 },
+    ])
+    // Långsam dragning uppåt från botten → snäpper till mitten
+    fireGestureHandler<PanGesture>(getByGestureTestId('cardioDetailPan'), [
+      { state: State.BEGAN, translationY: 0 },
+      { state: State.ACTIVE, translationY: -600 },
+      { state: State.END, translationY: -600, velocityY: 0 },
+    ])
+    // Liten dragning → tillbaka till närmaste läget
+    fireGestureHandler<PanGesture>(getByGestureTestId('cardioDetailPan'), [
+      { state: State.BEGAN, translationY: 0 },
+      { state: State.ACTIVE, translationY: -10 },
+      { state: State.END, translationY: -10, velocityY: 0 },
+    ])
+    expect(screen.getByText('Morgonrunda')).toBeOnTheScreen()
   })
 })
 
