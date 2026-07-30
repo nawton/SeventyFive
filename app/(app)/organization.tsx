@@ -16,9 +16,12 @@ import { getExercises, type Exercise } from '@/services/exercises'
 import {
   getOrganization, getOrgMembers, getCoachWorkouts, getMyAdoptions,
   adoptCoachWorkout, deleteCoachWorkout, updateMemberRole, removeOrgMember,
-  leaveOrganization, updateMyShareLevel,
+  leaveOrganization, updateMyShareLevel, getOrgGroups, getMyLinkableGroups,
+  linkGroupToOrg, getOrgLeaderboard, getOrgTotals, getAdoptionStatus,
   type Organization, type OrgMember, type CoachWorkout, type ShareLevel,
+  type OrgGroup, type OrgLeaderboardRow, type AdoptionStatus,
 } from '@/services/organizations'
+import { getWeekBounds } from '@/components/stats/statsShared'
 import {
   BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome,
 } from '@/lib/theme'
@@ -56,20 +59,32 @@ export default function OrganizationScreen() {
   const [coachOpen, setCoachOpen] = useState(false)
   const [detail, setDetail] = useState<CoachWorkout | null>(null)
   const [adopting, setAdopting] = useState(false)
+  const [orgGroups, setOrgGroups] = useState<OrgGroup[]>([])
+  const [board, setBoard] = useState<OrgLeaderboardRow[]>([])
+  const [totals, setTotals] = useState<{ km: number; passes: number }>({ km: 0, passes: 0 })
+  const [status, setStatus] = useState<AdoptionStatus[] | null>(null)
 
   const load = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user || !orgId) return
     const uid = session.user.id
     setMeId(uid)
-    const [o, mem, ws] = await Promise.all([
+    const week = getWeekBounds(0)
+    const sinceIso = new Date(`${week.start}T00:00:00`).toISOString()
+    const [o, mem, ws, gs, lb, tot] = await Promise.all([
       getOrganization(orgId),
       getOrgMembers(orgId),
       getCoachWorkouts(orgId),
+      getOrgGroups(orgId),
+      getOrgLeaderboard(orgId, sinceIso),
+      getOrgTotals(orgId, sinceIso),
     ])
     setOrg(o)
     setMembers(mem)
     setWorkouts(ws)
+    setOrgGroups(gs)
+    setBoard(lb)
+    setTotals(tot)
     setAdopted(await getMyAdoptions(uid, ws.map(w => w.id)))
   }, [orgId])
 
@@ -143,6 +158,30 @@ export default function OrganizationScreen() {
     }
   }
 
+  function openDetail(w: CoachWorkout) {
+    setDetail(w)
+    setStatus(null)
+    if (isStaff) getAdoptionStatus(w.id).then(setStatus).catch(() => {})
+  }
+
+  // Koppla en av mina grupper till föreningen — triggern i databasen
+  // kräver att jag är medlem, RLS att jag äger gruppen
+  async function linkGroup() {
+    if (!meId) return
+    const candidates = await getMyLinkableGroups(meId).catch(() => [])
+    if (candidates.length === 0) {
+      Alert.alert(t('Inga grupper att koppla'), t('Du behöver äga en grupp som inte redan hör till en förening.'))
+      return
+    }
+    Alert.alert(t('Koppla grupp'), t('Vilken av dina grupper ska höra till föreningen?'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      ...candidates.slice(0, 3).map(g => ({
+        text: g.name,
+        onPress: () => linkGroupToOrg(g.id, orgId).then(load).catch(() => {}),
+      })),
+    ])
+  }
+
   function workoutMenu(w: CoachWorkout) {
     if (!isStaff) return
     Alert.alert(w.name, undefined, [
@@ -198,7 +237,7 @@ export default function OrganizationScreen() {
           <TouchableOpacity
             key={w.id}
             style={[s.workoutRow, chrome]}
-            onPress={() => setDetail(w)}
+            onPress={() => openDetail(w)}
             onLongPress={() => workoutMenu(w)}
             activeOpacity={0.75}
             testID={`coachWorkout-${w.id}`}
@@ -223,6 +262,71 @@ export default function OrganizationScreen() {
                   <Text style={[s.adoptedText, { color: T.ACCENT }]}>{t('Tillagt')}</Text>
                 </View>
               : <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />}
+          </TouchableOpacity>
+        ))}
+
+        {/* Veckans siffror: föreningens totaler och topplistan */}
+        <Text style={s.sectionLabel}>{t('TILLSAMMANS DENNA VECKA')}</Text>
+        <View style={[s.totalsCard, chrome]}>
+          <View style={s.totalsCell}>
+            <Text style={[s.totalsValue, { color: T.ACCENT }]}>{totals.passes}</Text>
+            <Text style={s.totalsLabel}>{totals.passes === 1 ? t('pass') : t('pass')}</Text>
+          </View>
+          <View style={s.totalsDivider} />
+          <View style={s.totalsCell}>
+            <Text style={[s.totalsValue, { color: T.ACCENT }]}>{totals.km.toFixed(1).replace('.', ',')}</Text>
+            <Text style={s.totalsLabel}>{t('km')}</Text>
+          </View>
+        </View>
+
+        {board.some(r => r.cardio_passes + r.gym_days > 0) && (
+          <>
+            <Text style={s.sectionLabel}>{t('VECKANS TOPPLISTA')}</Text>
+            <View style={[s.memberCard, chrome]}>
+              {[...board]
+                .sort((a, b) => (b.cardio_passes + b.gym_days) - (a.cardio_passes + a.gym_days))
+                .slice(0, 10)
+                .map((r, i, arr) => {
+                  const m = members.find(x => x.id === r.user_id)
+                  return (
+                    <View key={r.user_id} style={[s.memberRow, i < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: hairline }]}>
+                      <Text style={[s.boardRank, i === 0 && { color: T.ACCENT }]}>{i + 1}</Text>
+                      <FeedAvatar url={m?.avatar_url ?? null} fallback={(m?.name ?? '?').charAt(0).toUpperCase()} size={34} />
+                      <Text style={s.memberName} numberOfLines={1}>
+                        {r.user_id === meId ? t('Jag') : m?.name ?? t('Namnlös')}
+                      </Text>
+                      <Text style={s.boardMeta}>
+                        {t('{n} pass', { n: r.cardio_passes + r.gym_days })}
+                        {r.km != null && r.km > 0 ? ` · ${r.km.toFixed(1).replace('.', ',')} km` : ''}
+                      </Text>
+                    </View>
+                  )
+                })}
+            </View>
+          </>
+        )}
+
+        {/* Grupperna som hör till föreningen */}
+        <View style={s.sectionHead}>
+          <Text style={[s.sectionLabel, { marginTop: 0, marginBottom: 0 }]}>{t('GRUPPER I FÖRENINGEN')}</Text>
+          <TouchableOpacity onPress={linkGroup} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="linkGroup">
+            <Ionicons name="link-outline" size={20} color={T.ACCENT} />
+          </TouchableOpacity>
+        </View>
+        {orgGroups.length === 0 && (
+          <Text style={s.emptyText}>{t('Koppla era grupper hit så kan tränarpass riktas till dem.')}</Text>
+        )}
+        {orgGroups.map(g => (
+          <TouchableOpacity
+            key={g.id}
+            style={[s.workoutRow, chrome]}
+            onPress={() => router.push({ pathname: '/(app)/group', params: { groupId: g.id, name: g.name, avatar: g.avatar_url ?? '' } } as never)}
+            activeOpacity={0.75}
+            testID={`orgGroup-${g.id}`}
+          >
+            <FeedAvatar url={g.avatar_url} fallback={g.name.charAt(0).toUpperCase()} size={38} />
+            <Text style={[s.workoutName, { flex: 1 }]} numberOfLines={1}>{g.name}</Text>
+            <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
           </TouchableOpacity>
         ))}
 
@@ -291,6 +395,27 @@ export default function OrganizationScreen() {
                 <Text style={s.detailNotes}>{t('Cardiopass, detaljerna står i beskrivningen ovan.')}</Text>
               )}
             </ScrollView>
+            {isStaff && status !== null && (
+              <>
+                <Text style={s.statusLabel}>{t('MEDLEMMARNAS STATUS')}</Text>
+                {status.length === 0 && (
+                  <Text style={s.detailNotes}>{t('Ingen har lagt till passet ännu.')}</Text>
+                )}
+                {status.map(a => (
+                  <View key={a.id} style={s.statusRow}>
+                    <FeedAvatar url={a.avatar_url} fallback={(a.name ?? '?').charAt(0).toUpperCase()} size={30} />
+                    <Text style={s.statusName} numberOfLines={1}>{a.id === meId ? t('Jag') : a.name ?? t('Namnlös')}</Text>
+                    <View style={[s.statusPill, { backgroundColor: a.completed ? `${T.ACCENT}16` : 'rgba(128,128,128,0.12)' }]}>
+                      <Ionicons name={a.completed ? 'checkmark-circle' : 'time-outline'} size={13}
+                        color={a.completed ? T.ACCENT : TEXT_SECONDARY} />
+                      <Text style={[s.statusPillText, { color: a.completed ? T.ACCENT : TEXT_SECONDARY }]}>
+                        {a.completed ? t('Har kört') : t('Tillagt')}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
             {detail && adopted.has(detail.id) ? (
               <View style={[s.detailAdopted, { backgroundColor: `${T.ACCENT}12` }]}>
                 <Ionicons name="checkmark-circle" size={18} color={T.ACCENT} />
@@ -320,6 +445,7 @@ export default function OrganizationScreen() {
         orgId={orgId}
         userId={meId}
         members={members}
+        groups={orgGroups}
         exercises={exercises}
         onClose={() => setCoachOpen(false)}
         onCreated={() => { setCoachOpen(false); load().catch(() => {}) }}
@@ -378,6 +504,27 @@ const s = StyleSheet.create({
   memberName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
   rolePill: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4 },
   roleText: { fontSize: 12, fontWeight: '700' },
+  totalsCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: CARD, borderRadius: 16, paddingVertical: 16,
+  },
+  totalsCell: { flex: 1, alignItems: 'center', gap: 2 },
+  totalsDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: 'rgba(128,128,128,0.25)' },
+  totalsValue: { fontSize: 26, fontWeight: '800' },
+  totalsLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  boardRank: { width: 20, color: TEXT_SECONDARY, fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  boardMeta: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  statusLabel: {
+    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5,
+    marginTop: 16, marginBottom: 6,
+  },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  statusName: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+  statusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4,
+  },
+  statusPillText: { fontSize: 12, fontWeight: '700' },
   leaveBtn: { alignItems: 'center', marginTop: 26 },
   leaveText: { color: RED, fontSize: 15, fontWeight: '700' },
 

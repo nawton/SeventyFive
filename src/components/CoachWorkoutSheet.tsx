@@ -15,6 +15,7 @@ import { BG, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
 import type { Exercise } from '@/services/exercises'
 import {
   createCoachWorkout, type CoachWorkout, type CoachExercise, type OrgMember,
+  type OrgGroup, type CoachAudience,
 } from '@/services/organizations'
 
 // =============================================================================
@@ -33,12 +34,14 @@ const CARDIO_TYPES: Array<{ key: string; label: string; icon: React.ComponentPro
 
 interface Draft { key: string; exercise_name: string; sets: string; reps: string }
 
-export function CoachWorkoutSheet({ visible, orgId, userId, members, exercises, onClose, onCreated }: {
+export function CoachWorkoutSheet({ visible, orgId, userId, members, groups, exercises, onClose, onCreated }: {
   visible: boolean
   orgId: string
   userId: string | null
   /** Föreningens medlemmar — för handplockade mottagare */
   members: OrgMember[]
+  /** Föreningens kopplade grupper — för grupp-målgruppen */
+  groups: OrgGroup[]
   exercises: Exercise[]
   onClose: () => void
   onCreated: (w: CoachWorkout) => void
@@ -55,7 +58,8 @@ export function CoachWorkoutSheet({ visible, orgId, userId, members, exercises, 
   const [cardioType, setCardioType] = useState('running')
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [everyone, setEveryone] = useState(true)
+  const [audience, setAudience] = useState<CoachAudience>('org')
+  const [groupId, setGroupId] = useState<string | null>(null)
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [seq, setSeq] = useState(0)
@@ -63,7 +67,7 @@ export function CoachWorkoutSheet({ visible, orgId, userId, members, exercises, 
   useEffect(() => {
     if (!visible) return
     setName(''); setNotes(''); setType('gym'); setCardioType('running')
-    setDrafts([]); setPickerOpen(false); setEveryone(true); setPicked(new Set()); setBusy(false)
+    setDrafts([]); setPickerOpen(false); setAudience('org'); setGroupId(null); setPicked(new Set()); setBusy(false)
   }, [visible])
 
   function addExercises(exs: Exercise[]) {
@@ -98,8 +102,12 @@ export function CoachWorkoutSheet({ visible, orgId, userId, members, exercises, 
       Alert.alert(t('Inga övningar'), t('Lägg till minst en övning i passet.'))
       return
     }
-    if (!everyone && picked.size === 0) {
+    if (audience === 'selected' && picked.size === 0) {
       Alert.alert(t('Inga mottagare'), t('Välj minst en medlem, eller skicka till hela föreningen.'))
+      return
+    }
+    if (audience === 'group' && !groupId) {
+      Alert.alert(t('Ingen grupp vald'), t('Välj vilken grupp passet gäller.'))
       return
     }
     const exList: CoachExercise[] = type === 'gym'
@@ -119,8 +127,9 @@ export function CoachWorkoutSheet({ visible, orgId, userId, members, exercises, 
         sessionType: type,
         cardioType: type === 'cardio' ? cardioType : null,
         exercises: exList,
-        audience: everyone ? 'org' : 'selected',
-        recipientIds: everyone ? undefined : [...picked],
+        audience,
+        groupId: audience === 'group' ? groupId : null,
+        recipientIds: audience === 'selected' ? [...picked] : undefined,
       })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       onCreated(w)
@@ -251,32 +260,50 @@ export function CoachWorkoutSheet({ visible, orgId, userId, members, exercises, 
               </>
             )}
 
-            {/* Målgruppen: alla i föreningen eller handplockade */}
+            {/* Målgruppen: alla i föreningen, en grupp eller handplockade */}
             <Text style={s.fieldLabel}>{t('VILKA KAN JOINA PASSET?')}</Text>
-            <TouchableOpacity
-              style={[s.audienceRow, { borderColor: everyone ? T.ACCENT : hairline }, everyone && { backgroundColor: `${T.ACCENT}10` }]}
-              onPress={() => { Haptics.selectionAsync(); setEveryone(true) }}
-              activeOpacity={0.8}
-              testID="audienceOrg"
-            >
-              <Ionicons name="people-outline" size={18} color={everyone ? T.ACCENT : TEXT_PRIMARY} />
-              <Text style={[s.audienceText, everyone && { color: T.ACCENT, fontWeight: '700' }]}>{t('Hela föreningen')}</Text>
-              {everyone && <Ionicons name="checkmark-circle" size={18} color={T.ACCENT} />}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.audienceRow, { borderColor: !everyone ? T.ACCENT : hairline }, !everyone && { backgroundColor: `${T.ACCENT}10` }]}
-              onPress={() => { Haptics.selectionAsync(); setEveryone(false) }}
-              activeOpacity={0.8}
-              testID="audienceSelected"
-            >
-              <Ionicons name="person-outline" size={18} color={!everyone ? T.ACCENT : TEXT_PRIMARY} />
-              <Text style={[s.audienceText, !everyone && { color: T.ACCENT, fontWeight: '700' }]}>
-                {picked.size > 0 ? t('Utvalda medlemmar ({n})', { n: picked.size }) : t('Utvalda medlemmar')}
-              </Text>
-              {!everyone && <Ionicons name="checkmark-circle" size={18} color={T.ACCENT} />}
-            </TouchableOpacity>
+            {([
+              { key: 'org' as const, icon: 'people-outline' as const, label: t('Hela föreningen') },
+              ...(groups.length > 0 ? [{ key: 'group' as const, icon: 'shield-outline' as const, label: t('En grupp') }] : []),
+              { key: 'selected' as const, icon: 'person-outline' as const,
+                label: picked.size > 0 ? t('Utvalda medlemmar ({n})', { n: picked.size }) : t('Utvalda medlemmar') },
+            ]).map(opt => {
+              const on = audience === opt.key
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[s.audienceRow, { borderColor: on ? T.ACCENT : hairline }, on && { backgroundColor: `${T.ACCENT}10` }]}
+                  onPress={() => { Haptics.selectionAsync(); setAudience(opt.key) }}
+                  activeOpacity={0.8}
+                  testID={`audience-${opt.key}`}
+                >
+                  <Ionicons name={opt.icon} size={18} color={on ? T.ACCENT : TEXT_PRIMARY} />
+                  <Text style={[s.audienceText, on && { color: T.ACCENT, fontWeight: '700' }]}>{opt.label}</Text>
+                  {on && <Ionicons name="checkmark-circle" size={18} color={T.ACCENT} />}
+                </TouchableOpacity>
+              )
+            })}
 
-            {!everyone && others.map(m => {
+            {audience === 'group' && (
+              <View style={s.typeRow}>
+                {groups.map(g => {
+                  const on = groupId === g.id
+                  return (
+                    <TouchableOpacity
+                      key={g.id}
+                      style={[s.cardioBtn, { borderColor: on ? T.ACCENT : hairline }, on && { backgroundColor: `${T.ACCENT}14` }]}
+                      onPress={() => { Haptics.selectionAsync(); setGroupId(g.id) }}
+                      activeOpacity={0.8}
+                      testID={`pickGroup-${g.id}`}
+                    >
+                      <Text style={[s.cardioText, on && { color: T.ACCENT, fontWeight: '700' }]}>{g.name}</Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            )}
+
+            {audience === 'selected' && others.map(m => {
               const on = picked.has(m.id)
               return (
                 <TouchableOpacity
@@ -296,7 +323,7 @@ export function CoachWorkoutSheet({ visible, orgId, userId, members, exercises, 
                 </TouchableOpacity>
               )
             })}
-            {!everyone && others.length === 0 && (
+            {audience === 'selected' && others.length === 0 && (
               <Text style={s.hint}>{t('Föreningen har inga andra medlemmar ännu.')}</Text>
             )}
           </ScrollView>

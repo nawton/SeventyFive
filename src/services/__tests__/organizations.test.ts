@@ -1,6 +1,7 @@
 import {
   createOrganization, getMyOrganizations, joinOrganizationByCode, getOrgMembers,
   createCoachWorkout, getMyAdoptions, adoptCoachWorkout, updateMyShareLevel,
+  getOrgLeaderboard, getOrgTotals, getAdoptionStatus, linkGroupToOrg,
   type CoachWorkout,
 } from '../organizations'
 import { supabase } from '@/lib/supabase'
@@ -117,6 +118,44 @@ describe('organizations — tränarpass', () => {
     const set = await getMyAdoptions('u1', ['w1', 'w2', 'w3'])
     expect(set.has('w1')).toBe(true)
     expect(set.has('w2')).toBe(false)
+  })
+
+  it('topplistan behåller dold distans som null och totalerna räknar allt', async () => {
+    rpcMock.mockResolvedValueOnce({ data: [
+      { user_id: 'u1', km: '12.5', cardio_passes: 2, gym_days: 3 },
+      { user_id: 'u2', km: null, cardio_passes: 1, gym_days: 0 },
+    ], error: null })
+    const board = await getOrgLeaderboard('o1', '2026-07-27T00:00:00Z')
+    expect(rpcMock).toHaveBeenCalledWith('get_org_leaderboard', { oid: 'o1', since: '2026-07-27T00:00:00Z' })
+    expect(board[0].km).toBe(12.5)
+    expect(board[1].km).toBeNull()
+
+    rpcMock.mockResolvedValueOnce({ data: [{ km: '31.2', passes: 9 }], error: null })
+    const totals = await getOrgTotals('o1', '2026-07-27T00:00:00Z')
+    expect(totals).toEqual({ km: 31.2, passes: 9 })
+  })
+
+  it('efterlevnaden hämtar profiler och sorterar klara först', async () => {
+    rpcMock
+      .mockResolvedValueOnce({ data: [
+        { user_id: 'u2', adopted_at: '2026-07-29', completed: false },
+        { user_id: 'u3', adopted_at: '2026-07-29', completed: true },
+      ], error: null })
+      .mockResolvedValueOnce({ data: [
+        { id: 'u2', name: 'Elin', avatar_url: null },
+        { id: 'u3', name: 'Hugo', avatar_url: null },
+      ], error: null })
+    const status = await getAdoptionStatus('w1')
+    expect(rpcMock).toHaveBeenNthCalledWith(1, 'get_workout_adoption_status', { wid: 'w1' })
+    expect(status.map(a => a.name)).toEqual(['Hugo', 'Elin'])
+    expect(status[0].completed).toBe(true)
+  })
+
+  it('gruppkopplingen uppdaterar org_id på gruppen', async () => {
+    const calls = installTables(fromMock, { groups: { data: null, error: null } })
+    await linkGroupToOrg('g1', 'o1')
+    expect(argsOf(calls, 'groups', 'update')[0][0]).toEqual({ org_id: 'o1' })
+    expect(argsOf(calls, 'groups', 'eq')).toEqual([['id', 'g1']])
   })
 
   it('adoption skapar ett ONCE-pass i schemat och stämplar adoptionen', async () => {

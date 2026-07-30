@@ -130,6 +130,63 @@ export async function removeOrgMember(orgId: string, userId: string): Promise<vo
   return leaveOrganization(orgId, userId)
 }
 
+// ── Grupper i föreningen ─────────────────────────────────────────────────────
+
+export interface OrgGroup { id: string; name: string; avatar_url: string | null }
+
+export async function getOrgGroups(orgId: string): Promise<OrgGroup[]> {
+  const { data } = await supabase
+    .from('groups')
+    .select('id, name, avatar_url')
+    .eq('org_id', orgId)
+    .order('name')
+  return (data ?? []) as OrgGroup[]
+}
+
+/** Grupper jag äger som ännu inte hör till någon förening — kandidater
+    att koppla. Triggern i databasen kräver att ägaren är föreningsmedlem. */
+export async function getMyLinkableGroups(userId: string): Promise<OrgGroup[]> {
+  const { data } = await supabase
+    .from('groups')
+    .select('id, name, avatar_url')
+    .eq('owner_id', userId)
+    .is('org_id', null)
+    .order('name')
+  return (data ?? []) as OrgGroup[]
+}
+
+export async function linkGroupToOrg(groupId: string, orgId: string | null): Promise<void> {
+  const { error } = await supabase.from('groups').update({ org_id: orgId }).eq('id', groupId)
+  if (error) throw error
+}
+
+// ── Topplista och totaler ────────────────────────────────────────────────────
+
+export interface OrgLeaderboardRow {
+  user_id: string
+  /** null = medlemmen delar bara basnivån (antal pass) */
+  km: number | null
+  cardio_passes: number
+  gym_days: number
+}
+
+export async function getOrgLeaderboard(orgId: string, sinceIso: string): Promise<OrgLeaderboardRow[]> {
+  const { data, error } = await supabase.rpc('get_org_leaderboard', { oid: orgId, since: sinceIso })
+  if (error || !data) return []
+  return (data as Array<Record<string, unknown>>).map(r => ({
+    user_id: String(r.user_id),
+    km: r.km == null ? null : Number(r.km),
+    cardio_passes: Number(r.cardio_passes ?? 0),
+    gym_days: Number(r.gym_days ?? 0),
+  }))
+}
+
+export async function getOrgTotals(orgId: string, sinceIso: string): Promise<{ km: number; passes: number }> {
+  const { data } = await supabase.rpc('get_org_totals', { oid: orgId, since: sinceIso })
+  const row = Array.isArray(data) ? data[0] : data
+  return { km: Number(row?.km ?? 0), passes: Number(row?.passes ?? 0) }
+}
+
 // ── Tränarpass ───────────────────────────────────────────────────────────────
 
 export type CoachAudience = 'org' | 'group' | 'selected'
@@ -216,22 +273,31 @@ export async function getMyAdoptions(userId: string, workoutIds: string[]): Prom
   return new Set((data ?? []).map(r => r.workout_id))
 }
 
-/** Coachens överblick: vilka som lagt in passet i sitt schema */
-export async function getWorkoutAdoptions(workoutId: string): Promise<Array<{ id: string; name: string | null; avatar_url: string | null }>> {
-  const { data } = await supabase
-    .from('coach_workout_adoptions')
-    .select('user_id')
-    .eq('workout_id', workoutId)
-  if (!data || data.length === 0) return []
-  const ids = data.map(r => r.user_id)
+/** Coachens efterlevnadsvy: vilka som lagt in passet och vilka som kört
+    det. Bara staff i passets förening får svar (definer-RPC). */
+export interface AdoptionStatus {
+  id: string
+  name: string | null
+  avatar_url: string | null
+  completed: boolean
+}
+
+export async function getAdoptionStatus(workoutId: string): Promise<AdoptionStatus[]> {
+  const { data } = await supabase.rpc('get_workout_adoption_status', { wid: workoutId })
+  if (!data || (data as unknown[]).length === 0) return []
+  const rows = data as Array<{ user_id: string; completed: boolean }>
+  const ids = rows.map(r => r.user_id)
   const { data: profiles } = await supabase.rpc('follow_profiles', { ids })
   const byId = new Map<string, MiniProfile>(
     ((profiles ?? []) as MiniProfile[]).map(p => [p.id, p]))
-  return ids.map(id => ({
-    id,
-    name: byId.get(id)?.name ?? null,
-    avatar_url: byId.get(id)?.avatar_url ?? null,
-  }))
+  return rows
+    .map(r => ({
+      id: r.user_id,
+      name: byId.get(r.user_id)?.name ?? null,
+      avatar_url: byId.get(r.user_id)?.avatar_url ?? null,
+      completed: !!r.completed,
+    }))
+    .sort((a, b) => Number(b.completed) - Number(a.completed))
 }
 
 /** Lägger in tränarpasset som ett engångspass i mitt schema idag och
