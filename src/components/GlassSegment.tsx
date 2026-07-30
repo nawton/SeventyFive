@@ -3,34 +3,29 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
-import { GlassView } from 'expo-glass-effect'
-import { LIQUID_GLASS } from '@/lib/glass'
-import { TEXT_SECONDARY, ACCENT, useThemeStrings } from '@/lib/theme'
+import { TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
 
 // =============================================================================
-// GLASSLIDER — segmenterad kontroll med orange glastumme (fallback: solid).
+// SEGMENTVÄLJAREN — helrund pill med solid accenttumme och vit text på
+// den aktiva fliken, samma utseende i hela appen och i båda temalägena.
 // Tap för att byta, eller dra: tummen följer fingret och fjädrar fast på
-// närmaste läge när du släpper. Används i Anpassning och på rekordsidan.
+// närmaste läge när du släpper.
 // =============================================================================
 
 const SEG_SPRING = { damping: 17, stiffness: 240, mass: 0.8 } as const
 
-// Glaset måste animeras direkt på den nativa vyn för att linsen ska följa med
-const AnimatedGlassView = Animated.createAnimatedComponent(GlassView)
-
 export function GlassSegment<T extends string>({
-  value, options, onChange, tint,
+  value, options, onChange,
 }: {
   value: T
   options: Array<{ key: T; label: string }>
   onChange: (v: T) => void
-  /** Glastummens färgton — null ger rent otonat glas (Apples egen look).
-      OBS: "transparent" släcker glasmaterialet, därför null → utelämnad prop */
+  /** Kvar för bakåtkompatibilitet — tummen är alltid accentfärgad numera */
   tint?: string | null
 }) {
   const T = useThemeStrings()
-  const resolvedTint = tint === undefined ? T.ACCENT : tint
-  const neutralThumb = T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.08)'
+  const light = T.TEXT_PRIMARY !== '#FFFFFF'
+  const onAccent = light ? '#FFFFFF' : '#000000'
   const n = options.length
   const [segW, setSegW] = useState(0)
   const slotW = segW / n
@@ -91,28 +86,19 @@ export function GlassSegment<T extends string>({
 
   return (
     <GestureDetector gesture={pan}>
-      <View style={s.segTrack} testID="glassSegTrack" onLayout={e => setSegW(e.nativeEvent.layout.width - 6)}>
-        {segW > 0 && (LIQUID_GLASS ? (
-          <AnimatedGlassView
-            glassEffectStyle="regular"
-            tintColor={resolvedTint ?? undefined}
-            style={[s.segThumb, s.segThumbGlass, { width: slotW }, thumbStyle]}
-          />
-        ) : (
+      <View
+        style={[s.segTrack, { backgroundColor: light ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.09)' }]}
+        testID="glassSegTrack"
+        onLayout={e => setSegW(e.nativeEvent.layout.width - 8)}
+      >
+        {segW > 0 && (
           <Animated.View
-            style={[s.segThumb, { backgroundColor: T.ACCENT }, resolvedTint == null && { backgroundColor: neutralThumb }, { width: slotW }, thumbStyle]}
+            style={[s.segThumb, { backgroundColor: T.ACCENT, width: slotW }, thumbStyle]}
           />
-        ))}
+        )}
         {options.map(o => (
           <TouchableOpacity key={o.key} style={s.segBtn} onPress={() => choose(o.key)} activeOpacity={0.8}>
-            <Text style={[
-              s.segText,
-              // Otonat glas: temats textfärg (vit text försvann på ljus tumme);
-              // tonad accenttumme: vit text funkar i båda lägena
-              value === o.key && (resolvedTint == null
-                ? { color: T.TEXT_PRIMARY, fontWeight: '700' as const }
-                : (LIQUID_GLASS ? s.segTextActiveGlass : s.segTextActive)),
-            ]}>
+            <Text style={[s.segText, value === o.key && { color: onAccent, fontWeight: '700' as const }]}>
               {o.label}
             </Text>
           </TouchableOpacity>
@@ -124,19 +110,15 @@ export function GlassSegment<T extends string>({
 
 const s = StyleSheet.create({
   segTrack: {
-    flexDirection: 'row', height: 44,
-    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: 3,
+    flexDirection: 'row', height: 48,
+    borderRadius: 999, padding: 4,
   },
   segThumb: {
-    position: 'absolute', left: 3, top: 3, bottom: 3,
-    borderRadius: 11,
-    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6,
+    position: 'absolute', left: 4, top: 4, bottom: 4,
+    borderRadius: 999,
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
-  segThumbGlass: { backgroundColor: 'transparent', overflow: 'hidden', shadowOpacity: 0 },
-  segThumbNeutral: { backgroundColor: 'rgba(255,255,255,0.16)' },
   segBtn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  segText: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '600' },
-  segTextActive: { color: '#000', fontWeight: '700' },
-  segTextActiveGlass: { color: '#fff', fontWeight: '700' },
+  segText: { color: TEXT_SECONDARY, fontSize: 15, fontWeight: '600' },
 })

@@ -456,4 +456,5 @@ export const EN_STATS: Record<string, string> = {
   "{sets} set · {reps} reps · tyngsta {kg} kg": "{sets} sets · {reps} reps · heaviest {kg} kg",
   "Inga lyft loggade den här veckan.": "No lifts logged this week.",
   "Justerad skala, stora skillnader trycker inte ihop de små värdena": "Adjusted scale, big differences do not squeeze the small values",
+  "1 mån": "1 mo",
 }

@@ -153,8 +153,8 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
               // 1 ÅR togs bort: identiskt med Allt tills appen använts över
               // ett år — en flik som aldrig visar något eget förvirrar bara
               { key: 'sel', label: day ? t('Dag') : t('Vecka') },
-              { key: 'm',   label: t('1 M') },
-              { key: '3m',  label: t('3 M') },
+              { key: 'm',   label: t('1 mån') },
+              { key: '3m',  label: t('3 mån') },
               { key: 'all', label: t('Allt') },
             ]}
             onChange={setPeriod}
