@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  Platform,
+  Platform, Alert,
 } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import { SafeScreen } from '@/components/SafeScreen'
@@ -11,6 +11,7 @@ import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { Ionicons } from '@/components/Icon'
 import { GroupScanSheet } from '@/components/GroupScanSheet'
 import { searchGroups, type Group } from '@/services/groups'
+import { joinOrganizationByCode, type Organization } from '@/services/organizations'
 import {
   BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, useThemeStrings, useCardChrome,
 } from '@/lib/theme'
@@ -21,10 +22,12 @@ import { useT } from '@/lib/i18n'
 // Träffarna leder till gruppsidan där man går med som vanligt.
 // =============================================================================
 
-export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
+export function GroupSearchSheet({ visible, onClose, onOpenGroup, onOrgJoined }: {
   visible: boolean
   onClose: () => void
   onOpenGroup: (group: Group) => void
+  /** Sex tecken i sökfältet kan vara en föreningskod — lyckad join landar här */
+  onOrgJoined?: (org: Organization) => void
 }) {
   const t = useT()
   const T = useThemeStrings()
@@ -33,6 +36,7 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
   const [results, setResults] = useState<Array<Group & { memberCount: number }>>([])
   const [searching, setSearching] = useState(false)
   const [scanOpen, setScanOpen] = useState(false)
+  const [joining, setJoining] = useState(false)
   // Gruppen som väntar på att modalerna ska hinna ner innan den öppnas
   const pendingGroup = useRef<Group | null>(null)
 
@@ -79,6 +83,22 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
   }, [query])
 
   const q = query.trim()
+  // Sex tecken utan mellanslag kan vara en föreningskod — erbjud join
+  const codeCandidate = /^[A-Za-z0-9]{6}$/.test(q) ? q.toUpperCase() : null
+
+  async function joinWithCode() {
+    if (!codeCandidate || joining) return
+    try {
+      setJoining(true)
+      const org = await joinOrganizationByCode(codeCandidate)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      onOrgJoined?.(org)
+    } catch {
+      Alert.alert(t('Kunde inte gå med'), t('Kontrollera koden och försök igen.'))
+    } finally {
+      setJoining(false)
+    }
+  }
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} onDismiss={handleSheetDismissed}>
@@ -95,7 +115,7 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
             style={s.search}
             value={query}
             onChangeText={setQuery}
-            placeholder={t('Sök på gruppens namn')}
+            placeholder={t('Sök grupper eller ange kod')}
             autoFocus
             testID="groupSearchInput"
           />
@@ -106,6 +126,17 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
             <Text style={s.scanText}>{t('Skanna QR-kod')}</Text>
             <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
           </TouchableOpacity>
+
+          {codeCandidate && onOrgJoined && (
+            <TouchableOpacity style={[s.scanRow, chrome]} activeOpacity={0.75} testID="joinByCode"
+              onPress={joinWithCode} disabled={joining}>
+              <Ionicons name="key-outline" size={19} color={T.ACCENT} />
+              <Text style={s.scanText}>
+                {joining ? t('Går med …') : t('Gå med i förening med koden {code}', { code: codeCandidate })}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} />
+            </TouchableOpacity>
+          )}
 
           {searching && <ActivityIndicator style={{ marginTop: 24 }} color={TEXT_SECONDARY} />}
 
@@ -127,7 +158,7 @@ export function GroupSearchSheet({ visible, onClose, onOpenGroup }: {
             </TouchableOpacity>
           ))}
 
-          {!searching && q.length >= 2 && results.length === 0 && (
+          {!searching && q.length >= 2 && results.length === 0 && !codeCandidate && (
             <Text style={s.empty}>{t('Inga grupper matchade "{q}".', { q })}</Text>
           )}
         </ScrollView>

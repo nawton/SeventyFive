@@ -453,4 +453,9 @@ export const EN_SOCIAL: Record<string, string> = {
   "MEDLEMMARNAS STATUS": "MEMBER STATUS",
   "Ingen har lagt till passet ännu.": "No one has added the workout yet.",
   "Har kört": "Done it",
+  "Sök grupper eller ange kod": "Search groups or enter a code",
+  "Du är inte med i någon förening än": "You are not in a club yet",
+  "Vad vill du skapa?": "What do you want to create?",
+  "Gå med i förening med koden {code}": "Join a club with the code {code}",
+  "Går med …": "Joining …",
 }

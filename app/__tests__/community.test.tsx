@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react-native'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native'
 import CommunityScreen, { relativeDayLabel, dayPartTitle } from '../(app)/community'
 
 jest.mock('@/lib/supabase', () => ({
@@ -276,12 +276,18 @@ describe('Community', () => {
     })
   })
 
-  it('Skapa grupp öppnar skaparguiden', async () => {
+  it('Skapa-knappen frågar vad man vill skapa och öppnar skaparguiden för grupp', async () => {
+    const { Alert } = jest.requireActual<typeof import('react-native')>('react-native')
+    const spy = jest.spyOn(Alert, 'alert')
     render(<CommunityScreen />)
     await screen.findByText('Erik Larsson')
     fireEvent.press(screen.getByText('Grupper'))
-    fireEvent.press(await screen.findByTestId('createGroup'))
+    fireEvent.press(await screen.findByTestId('createAny'))
+    const ask = spy.mock.calls.at(-1)
+    expect(ask?.[0]).toBe('Skapa')
+    await waitFor(async () => { await ask?.[2]?.find(b => b.text === 'Grupp')?.onPress?.() })
     expect(screen.getByText('wizard:open')).toBeOnTheScreen()
+    spy.mockRestore()
   })
 
   it('Sök grupper öppnar sökvyn med QR-skanning', async () => {

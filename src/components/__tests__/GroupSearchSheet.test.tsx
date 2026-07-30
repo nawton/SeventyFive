@@ -5,6 +5,9 @@ import { searchGroups, type Group } from '@/services/groups'
 
 const mockScanProps = { current: null as Record<string, any> | null }
 
+jest.mock('@/services/organizations', () => ({
+  joinOrganizationByCode: jest.fn().mockResolvedValue({ id: 'o1', name: 'Växjö LK' }),
+}))
 jest.mock('@/services/groups', () => ({ searchGroups: jest.fn() }))
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }))
 jest.mock('@/components/GroupScanSheet', () => ({

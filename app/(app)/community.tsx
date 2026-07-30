@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, FlatList, Modal, TouchableOpacity, ScrollView,
-  ActivityIndicator,
+  ActivityIndicator, Alert,
 } from 'react-native'
 import { SafeScreen } from '@/components/SafeScreen'
 import { AppRefreshControl, useAppRefresh } from '@/components/AppRefresh'
@@ -201,6 +201,16 @@ export default function CommunityScreen() {
     setMyOrgs(orgs)
   }, [])
   useFocusEffect(useCallback(() => { loadGroups().catch(() => {}) }, [loadGroups]))
+  // En skapa-knapp för båda: valet grupp eller förening görs i dialogen
+  function createMenu() {
+    Haptics.selectionAsync()
+    Alert.alert(t('Skapa'), t('Vad vill du skapa?'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      { text: t('Förening'), onPress: () => setOrgMode('create') },
+      { text: t('Grupp'), onPress: () => setWizardOpen(true) },
+    ])
+  }
+
   // Chipramar som strängar per schema — dynamiska ramfärger fryser i modaler
   const T = useThemeStrings()
   const chipEdge = T.TEXT_PRIMARY === '#FFFFFF' ? THEME_DARK.BORDER : 'transparent'
@@ -274,61 +284,65 @@ export default function CommunityScreen() {
 
       {segment === 'groups' ? (
         <ScrollView contentContainerStyle={s.groupsScroll} showsVerticalScrollIndicator={false}>
-          {/* Föreningen överst — join via tränarens kod eller skapa en egen */}
-          <Text style={[s.groupsLabel, { marginTop: 0 }]}>{t('FÖRENING')}</Text>
-          {myOrgs.map(o => (
-            <TouchableOpacity
-              key={o.id}
-              style={[s.groupRow, chrome]}
-              activeOpacity={0.75}
-              testID={`org-${o.id}`}
-              onPress={() => router.push({ pathname: '/(app)/organization', params: { orgId: o.id, name: o.name } } as never)}
-            >
-              <View style={[s.orgIcon, { backgroundColor: `${T.ACCENT}14` }]}>
-                <Ionicons name="shield-outline" size={22} color={ACCENT} />
+          {/* Stor sökruta — grupper och föreningskoder i samma fält */}
+          <TouchableOpacity
+            style={[s.searchField, chrome]}
+            onPress={() => setGroupSearchOpen(true)}
+            activeOpacity={0.8}
+            testID="searchGroups"
+          >
+            <Ionicons name="search" size={18} color={TEXT_SECONDARY} />
+            <Text style={s.searchFieldText}>{t('Sök grupper eller ange kod')}</Text>
+          </TouchableOpacity>
+
+          {/* Föreningskortet — medlemskap eller gå med via kod */}
+          <View style={[s.orgCard, chrome]}>
+            <View style={s.orgCardHead}>
+              <View style={[s.orgIcon, { backgroundColor: `${T.ACCENT}12` }]}>
+                <Ionicons name="home-outline" size={20} color={ACCENT} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.groupName} numberOfLines={1}>{o.name}</Text>
-                <Text style={s.groupMeta}>
-                  {o.memberCount === 1 ? t('1 medlem') : t('{n} medlemmar', { n: o.memberCount })}
-                  {o.myRole !== 'member' ? ` · ${o.myRole === 'admin' ? t('Admin') : t('Coach')}` : ''}
-                </Text>
+                <Text style={s.groupName}>{t('Förening')}</Text>
+                {myOrgs.length === 0 && (
+                  <Text style={s.groupMeta}>{t('Du är inte med i någon förening än')}</Text>
+                )}
               </View>
-              <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
-            </TouchableOpacity>
-          ))}
-          <View style={s.groupActions}>
-            <TouchableOpacity
-              style={[s.groupActionBtn, { borderColor: T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)' }]}
-              onPress={() => setOrgMode('join')} activeOpacity={0.8} testID="joinOrg">
-              <Ionicons name="key-outline" size={15} color={TEXT_PRIMARY} />
-              <Text style={s.groupActionText}>{t('Gå med via kod')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.groupActionBtn, { borderColor: T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)' }]}
-              onPress={() => setOrgMode('create')} activeOpacity={0.8} testID="createOrg">
-              <Ionicons name="add" size={16} color={TEXT_PRIMARY} />
-              <Text style={s.groupActionText}>{t('Skapa förening')}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.joinCodeBtn, { backgroundColor: `${T.ACCENT}12` }]}
+                onPress={() => setOrgMode('join')}
+                activeOpacity={0.8}
+                testID="joinOrg"
+              >
+                <Text style={[s.joinCodeText, { color: T.ACCENT }]}>{t('Gå med via kod')}</Text>
+              </TouchableOpacity>
+            </View>
+            {myOrgs.map(o => (
+              <TouchableOpacity
+                key={o.id}
+                style={s.orgRow}
+                activeOpacity={0.75}
+                testID={`org-${o.id}`}
+                onPress={() => router.push({ pathname: '/(app)/organization', params: { orgId: o.id, name: o.name } } as never)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={s.groupName} numberOfLines={1}>{o.name}</Text>
+                  <Text style={s.groupMeta}>
+                    {o.memberCount === 1 ? t('1 medlem') : t('{n} medlemmar', { n: o.memberCount })}
+                    {o.myRole !== 'member' ? ` · ${o.myRole === 'admin' ? t('Admin') : t('Coach')}` : ''}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            ))}
           </View>
 
-          <Text style={s.groupsLabel}>{t('GRUPPER')}</Text>
-          {/* Sök och skapa som små knappar överst — skanningen bor i sökvyn */}
-          <View style={s.groupActions}>
-            <TouchableOpacity
-              style={[s.groupActionBtn, { borderColor: T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)' }]}
-              onPress={() => setGroupSearchOpen(true)} activeOpacity={0.8} testID="searchGroups">
-              <Ionicons name="search" size={15} color={TEXT_PRIMARY} />
-              <Text style={s.groupActionText}>{t('Sök grupper')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[s.groupActionBtn, s.groupActionAccent]}
-              onPress={() => setWizardOpen(true)} activeOpacity={0.85} testID="createGroup">
-              <Ionicons name="add" size={17} color={ACCENT_CONTRAST} />
+          <View style={s.myGroupsHead}>
+            <Text style={[s.groupsLabel, { marginTop: 0 }]}>{t('MINA GRUPPER')}</Text>
+            <TouchableOpacity style={s.createChip} onPress={createMenu} activeOpacity={0.85} testID="createAny">
+              <Ionicons name="add" size={16} color={ACCENT_CONTRAST} />
               <Text style={[s.groupActionText, { color: ACCENT_CONTRAST }]}>{t('Skapa')}</Text>
             </TouchableOpacity>
           </View>
-
-          {myGroups.length > 0 && <Text style={s.groupsLabel}>{t('MINA GRUPPER')}</Text>}
           {myGroups.map(g => (
             <TouchableOpacity
               key={g.id}
@@ -510,6 +524,11 @@ export default function CommunityScreen() {
           setGroupSearchOpen(false)
           router.push({ pathname: '/(app)/group', params: { groupId: g.id, name: g.name, avatar: g.avatar_url ?? '' } } as never)
         }}
+        onOrgJoined={o => {
+          setGroupSearchOpen(false)
+          loadGroups().catch(() => {})
+          router.push({ pathname: '/(app)/organization', params: { orgId: o.id, name: o.name } } as never)
+        }}
       />
 
       <OrgSheet
@@ -539,13 +558,31 @@ const s = StyleSheet.create({
   groupsEmpty: { alignItems: 'center', gap: 8, paddingTop: 60, paddingHorizontal: 30 },
   groupsEmptyTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700', marginTop: 4 },
   groupsEmptyBody: { color: TEXT_SECONDARY, fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  groupActions: { flexDirection: 'row', gap: 10 },
-  groupActionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, borderWidth: 1.5, borderRadius: 999, paddingVertical: 10,
-  },
-  groupActionAccent: { backgroundColor: ACCENT, borderWidth: 0 },
   groupActionText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700' },
+  searchField: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: CARD, borderRadius: 999,
+    paddingHorizontal: 18, paddingVertical: 15,
+  },
+  searchFieldText: { color: TEXT_SECONDARY, fontSize: 15.5 },
+  orgCard: { backgroundColor: CARD, borderRadius: 20, padding: 14 },
+  orgCardHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  joinCodeBtn: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
+  joinCodeText: { fontSize: 13.5, fontWeight: '700' },
+  orgRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginTop: 12, paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.2)',
+  },
+  myGroupsHead: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  createChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: ACCENT, borderRadius: 999,
+    paddingHorizontal: 13, paddingVertical: 7,
+  },
   groupsLabel: {
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
     letterSpacing: 1.5, marginTop: 8, paddingHorizontal: 4,
