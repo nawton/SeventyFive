@@ -186,26 +186,27 @@ describe('organizations — tränarpass', () => {
 describe('organizations — medlemsstatistik', () => {
   it('mappar RPC-svaret och behåller dolda fält som null', async () => {
     rpcMock.mockResolvedValueOnce({ data: {
-      share_level: 'base', passes_week: 3, passes_month: '9',
+      share_level: 'base', staff_only: true, last_active: null,
+      passes_week: 3, passes_month: '9',
       km_week: null, km_month: null, volume_week: null, volume_month: null,
-      top_lift: null, top_exercises: null,
+      last_gym: null, coach_progress: null,
     }, error: null })
     const st = await getOrgMemberStats('o1', 'u2')
     expect(rpcMock).toHaveBeenCalledWith('get_org_member_stats', { oid: 'o1', member: 'u2' })
-    expect(st).toMatchObject({ share_level: 'base', passes_week: 3, passes_month: 9, km_month: null, top_exercises: null })
+    expect(st).toMatchObject({ share_level: 'base', staff_only: true, passes_week: 3, passes_month: 9, km_month: null, coach_progress: null })
   })
 
-  it('full delning ger volym, tyngsta lyft och toppövningar', async () => {
+  it('full delning ger senaste passet och coachprogressionen', async () => {
     rpcMock.mockResolvedValueOnce({ data: {
-      share_level: 'full', passes_week: 4, passes_month: 12,
+      share_level: 'full', staff_only: false, last_active: '2026-07-31',
+      passes_week: 4, passes_month: 12,
       km_week: '5.2', km_month: '21.4', volume_week: '8200', volume_month: '31000',
-      top_lift: { name: 'Marklyft', kg: 140 },
-      top_exercises: [{ name: 'Marklyft', sets: 12, top_kg: 140, volume: 9800 }],
+      last_gym: { date: '2026-07-29', title: 'Bröst & rygg', exercises: 8, sets: 24, volume: '4200' },
+      coach_progress: [{ name: 'Bänkpress', kg: '45', delta: '5' }],
     }, error: null })
     const st = await getOrgMemberStats('o1', 'u2')
     expect(st?.km_month).toBe(21.4)
-    expect(st?.volume_month).toBe(31000)
-    expect(st?.top_lift?.kg).toBe(140)
-    expect(st?.top_exercises?.[0].name).toBe('Marklyft')
+    expect(st?.last_gym).toEqual({ date: '2026-07-29', title: 'Bröst & rygg', exercises: 8, sets: 24, volume: 4200 })
+    expect(st?.coach_progress).toEqual([{ name: 'Bänkpress', kg: 45, delta: 5 }])
   })
 })

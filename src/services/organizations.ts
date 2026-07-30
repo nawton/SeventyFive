@@ -320,6 +320,8 @@ export interface OrgMemberStats {
   share_level: ShareLevel
   /** true = medlemmen delar detaljer bara med coacherna och du är inte coach */
   staff_only: boolean
+  /** Senaste passdatum (ISO), null om inget pass de senaste 12 veckorna */
+  last_active: string | null
   passes_week: number
   passes_month: number
   /** null = medlemmen delar inte nivån som krävs */
@@ -327,8 +329,9 @@ export interface OrgMemberStats {
   km_month: number | null
   volume_week: number | null
   volume_month: number | null
-  top_lift: { name: string; kg: number } | null
-  top_exercises: Array<{ name: string; sets: number; top_kg: number; volume: number }> | null
+  last_gym: { date: string; title: string | null; exercises: number; sets: number; volume: number } | null
+  /** Progression på övningarna ur föreningens tränarpass */
+  coach_progress: Array<{ name: string; kg: number; delta: number }> | null
 }
 
 /** Statistiken en medlem delar med föreningen — definer-RPC:n filtrerar
@@ -337,17 +340,29 @@ export async function getOrgMemberStats(orgId: string, userId: string): Promise<
   const { data, error } = await supabase.rpc('get_org_member_stats', { oid: orgId, member: userId })
   if (error || !data) return null
   const d = data as Record<string, unknown>
+  const lg = d.last_gym as Record<string, unknown> | null
   return {
     share_level: (d.share_level ?? 'base') as ShareLevel,
     staff_only: !!d.staff_only,
+    last_active: (d.last_active as string) ?? null,
     passes_week: Number(d.passes_week ?? 0),
     passes_month: Number(d.passes_month ?? 0),
     km_week: d.km_week == null ? null : Number(d.km_week),
     km_month: d.km_month == null ? null : Number(d.km_month),
     volume_week: d.volume_week == null ? null : Number(d.volume_week),
     volume_month: d.volume_month == null ? null : Number(d.volume_month),
-    top_lift: (d.top_lift as OrgMemberStats['top_lift']) ?? null,
-    top_exercises: (d.top_exercises as OrgMemberStats['top_exercises']) ?? null,
+    last_gym: lg ? {
+      date: String(lg.date),
+      title: (lg.title as string) ?? null,
+      exercises: Number(lg.exercises ?? 0),
+      sets: Number(lg.sets ?? 0),
+      volume: Number(lg.volume ?? 0),
+    } : null,
+    coach_progress: Array.isArray(d.coach_progress)
+      ? (d.coach_progress as Array<Record<string, unknown>>).map(r => ({
+          name: String(r.name), kg: Number(r.kg ?? 0), delta: Number(r.delta ?? 0),
+        }))
+      : null,
   }
 }
 

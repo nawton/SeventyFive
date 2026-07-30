@@ -10,7 +10,6 @@ import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassSegment } from '@/components/GlassSegment'
-import { OrgMemberSheet } from '@/components/OrgMemberSheet'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { CoachWorkoutSheet } from '@/components/CoachWorkoutSheet'
 import { useT, dateLocale } from '@/lib/i18n'
@@ -66,7 +65,7 @@ export default function OrganizationScreen() {
   const [totals, setTotals] = useState<{ km: number; passes: number }>({ km: 0, passes: 0 })
   const [status, setStatus] = useState<AdoptionStatus[] | null>(null)
   const [tab, setTab] = useState<'overview' | 'workouts' | 'members'>('overview')
-  const [statsMember, setStatsMember] = useState<OrgMember | null>(null)
+
 
   const load = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -192,6 +191,16 @@ export default function OrganizationScreen() {
         onPress: () => linkGroupToOrg(g.id, orgId).then(load).catch(() => {}),
       })),
     ])
+  }
+
+  function openMemberPage(m: OrgMember) {
+    router.push({
+      pathname: '/(app)/org-member',
+      params: {
+        orgId, memberId: m.id, name: m.name ?? '', avatar: m.avatar_url ?? '',
+        role: m.role, staff: isStaff ? '1' : '0',
+      },
+    } as never)
   }
 
   function workoutMenu(w: CoachWorkout) {
@@ -358,7 +367,7 @@ export default function OrganizationScreen() {
               <TouchableOpacity
                 key={r.user_id}
                 style={[s.innerRow, i > 0 && s.innerRowBorder]}
-                onPress={() => m && setStatsMember(m)}
+                onPress={() => m && openMemberPage(m)}
                 activeOpacity={0.7}
                 testID={`boardRow-${r.user_id}`}
               >
@@ -435,7 +444,7 @@ export default function OrganizationScreen() {
             <TouchableOpacity
               key={m.id}
               style={[s.innerRow, s.innerRowBorder]}
-              onPress={() => setStatsMember(m)}
+              onPress={() => openMemberPage(m)}
               onLongPress={() => memberMenu(m)}
               activeOpacity={0.7}
               testID={`orgMember-${m.id}`}
@@ -522,13 +531,6 @@ export default function OrganizationScreen() {
           </View>
         </View>
       </Modal>
-
-      <OrgMemberSheet
-        orgId={orgId}
-        member={statsMember}
-        isMe={statsMember?.id === meId}
-        onClose={() => setStatsMember(null)}
-      />
 
       <CoachWorkoutSheet
         visible={coachOpen}
