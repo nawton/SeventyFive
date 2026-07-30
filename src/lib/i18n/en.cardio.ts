@@ -273,4 +273,5 @@ export const EN_CARDIO: Record<string, string> = {
   'Förbättrad': 'Enhanced',
   'Standard': 'Standard',
   'Så här låter jag. En kilometer avklarad, håll tempot!': "This is how I sound. One kilometer done, keep the pace!",
+  "Gul": "Yellow",
 }

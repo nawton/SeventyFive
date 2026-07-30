@@ -16,17 +16,16 @@ export const SEG_W     = TAB_BAR_W / 3      // en flik-kolumns bredd
 export const BLUE   = '#3FBBFF'
 export const RED    = '#FF3D73'
 export const YELLOW = '#FFE60A'
-export const PURPLE = '#D65CFF'
 export const TEAL   = '#40F5E9'
 export const LIME   = '#BDFF3B'
 
 // Neonfärgerna skriker på vit botten — ljust läge får dämpade, mörkare
 // varianter. Som strängar via hook: funkar i SVG, konkatenering och
 // reanimated, till skillnad från dynamiska färgobjekt.
-const NEON_DARK  = { BLUE, RED, YELLOW, PURPLE, TEAL, LIME, GREEN }
+const NEON_DARK  = { BLUE, RED, YELLOW, TEAL, LIME, GREEN }
 const NEON_LIGHT = {
   BLUE: '#2E86C9', RED: '#CE4568', YELLOW: '#D68F00',
-  PURPLE: '#9A4CC4', TEAL: '#1FA89C', LIME: '#7CA92F',
+  TEAL: '#1FA89C', LIME: '#7CA92F',
   GREEN: '#2E9E57',
 }
 export function useStatsColors() {

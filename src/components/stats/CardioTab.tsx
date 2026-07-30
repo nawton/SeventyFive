@@ -19,7 +19,7 @@ import { buildIntervalTrend } from '@/lib/intervalTrend'
 import type { CardioWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
 import {
-  GRID_PADDING, STATS_SCREEN_W, BLUE, RED, YELLOW, PURPLE, TEAL, LIME,
+  GRID_PADDING, STATS_SCREEN_W, BLUE, RED, YELLOW, TEAL, LIME,
   monthLabel, sessDateLabel, s,
   useStatsColors,
 } from './statsShared'
@@ -735,7 +735,7 @@ export function CardioTab({
                 { label: t('Antal pass'), value: String(cardioW.length), color: P.GREEN },
                 { label: t('Aktiva dagar'), value: String(activeCardioDays), color: TEXT_PRIMARY },
                 { label: t('Snittempo'), value: `${avgPace} /${unitLabel}`, color: P.TEAL },
-                { label: t('Bästa tempo'), value: `${bestPace} /${unitLabel}`, color: P.PURPLE },
+                { label: t('Bästa tempo'), value: `${bestPace} /${unitLabel}`, color: P.BLUE },
                 { label: t('Snittdistans'), value: `${toDisplayDistance(avgDistKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: P.LIME },
                 { label: t('Längsta pass'), value: `${toDisplayDistance(longestPassKm, unit).toFixed(2).replace('.', ',')} ${unitLabel}`, color: ACCENT },
                 {

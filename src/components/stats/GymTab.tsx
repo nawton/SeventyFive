@@ -30,7 +30,7 @@ import {
 } from '@/services/workoutSchedule'
 import type { StrengthWorkout } from '@/services/workouts'
 import {
-  GRID_PADDING, STATS_SCREEN_W, BLUE, YELLOW, PURPLE, TEAL,
+  GRID_PADDING, STATS_SCREEN_W, BLUE, YELLOW, TEAL,
   getWeekBounds, s, type GymSession,
   useStatsColors,
 } from './statsShared'

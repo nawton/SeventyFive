@@ -21,10 +21,10 @@ export const TASK_COLORS: Record<TaskType, string> = {
   workout: '#FFA817',
   water:   '#00BCD4',
   diet:    '#66BB6A',
-  reading: '#AB47BC',
+  reading: '#FFE60A',
   photo:   '#EC407A',
   cold_shower: '#7EC8FF',
-  custom:  '#9B6DFF',
+  custom:  '#BDFF3B',
 }
 
 // Ljust läge: samma identitet per uppgift men djupare, lugnare toner —
@@ -33,10 +33,10 @@ export const TASK_COLORS_LIGHT: Record<TaskType, string> = {
   workout: '#C77F00',
   water:   '#0097AB',
   diet:    '#3E9A4E',
-  reading: '#8E3AA6',
+  reading: '#D68F00',
   photo:   '#C42D63',
   cold_shower: '#2E7DB8',
-  custom:  '#7A50D6',
+  custom:  '#7CA92F',
 }
 
 export const TASK_ICONS: Record<TaskType, React.ComponentProps<typeof Ionicons>['name']> = {

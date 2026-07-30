@@ -12,7 +12,7 @@ export const ROUTE_COLORS = [
   { key: 'orange', label: 'Orange', hex: '#FC4C02' },
   { key: 'red',    label: 'Röd',    hex: '#FF3B4A' },
   { key: 'green',  label: 'Grön',   hex: '#2EBF6B' },
-  { key: 'purple', label: 'Lila',   hex: '#B45CFF' },
+  { key: 'yellow', label: 'Gul',    hex: '#FFD60A' },
 ] as const
 
 export type RouteColorKey = typeof ROUTE_COLORS[number]['key']

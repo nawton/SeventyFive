@@ -37,16 +37,16 @@ describe('useRouteColor', () => {
     const a = renderHook(() => useRouteColor())
     const b = renderHook(() => useRouteColor())
 
-    act(() => setRouteColorKey('purple'))
-    expect(a.result.current).toBe('#B45CFF')
-    expect(b.result.current).toBe('#B45CFF')
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('routeColor', 'purple')
+    act(() => setRouteColorKey('yellow'))
+    expect(a.result.current).toBe('#FFD60A')
+    expect(b.result.current).toBe('#FFD60A')
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('routeColor', 'yellow')
 
     // Avmonterade kartor slutar lyssna
     b.unmount()
     act(() => setRouteColorKey('orange'))
     expect(a.result.current).toBe('#FC4C02')
-    expect(b.result.current).toBe('#B45CFF')
+    expect(b.result.current).toBe('#FFD60A')
   })
 
   it('skrivfel mot lagringen sväljs, färgen byts ändå', async () => {

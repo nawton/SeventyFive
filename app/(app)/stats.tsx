@@ -20,7 +20,7 @@ import { getCardioWorkouts, getStrengthWorkouts, type CardioWorkout, type Streng
 import { getCompletedSessionsHistory, deleteCompletion, type CompletedSessionItem } from '@/services/workoutSchedule'
 import { CardioSummaryView } from '@/components/CardioSummaryView'
 import {
-  GRID_PADDING, STATS_SCREEN_W, BLUE, RED, YELLOW, PURPLE, TEAL, LIME,
+  GRID_PADDING, STATS_SCREEN_W, BLUE, RED, YELLOW, TEAL, LIME,
   getWeekBounds, monthLabel, sessDateLabel, s, type GymSession,
   useStatsColors,
 } from '@/components/stats/statsShared'

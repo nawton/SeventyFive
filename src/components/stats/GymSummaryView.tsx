@@ -6,6 +6,10 @@ import Svg, { Polyline, Circle, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { PostSocialBar } from '@/components/PostSocialBar'
 import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
+
+// Gymmets signaturorange (samma som gympass-fliken) — styrkedata är
+// orange i BÅDA lägena; blått är reserverat för cardio
+const GYM = '#EE7C4B'
 import { exerciseStillUrlFor, EXERCISE_IMAGES } from '@/lib/exerciseInfo/images'
 import { EXERCISE_INFO } from '@/lib/exerciseInfo'
 import { ExerciseInfoSheet } from '@/components/ExerciseInfoSheet'
@@ -121,7 +125,7 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
             <FeedAvatar url={avatarUrl ?? null} fallback={authorName.charAt(0).toUpperCase()} size={46} />
           ) : (
             <View style={s.heroIcon}>
-              <Ionicons name="barbell-outline" size={24} color={ACCENT} />
+              <Ionicons name="barbell-outline" size={24} color={GYM} />
             </View>
           )}
           <View style={{ flex: 1 }}>
@@ -149,15 +153,15 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
           <View style={s.dtlRow}>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>{t('Övningar')}</Text>
-              <Text style={[s.dtlVal, { color: ACCENT }]}>{exerciseCount}</Text>
+              <Text style={s.dtlVal}>{exerciseCount}</Text>
             </View>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>Set</Text>
-              <Text style={[s.dtlVal, { color: P.PURPLE }]}>{totalSets}</Text>
+              <Text style={s.dtlVal}>{totalSets}</Text>
             </View>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>{t('Volym')}</Text>
-              <Text style={[s.dtlVal, { color: P.BLUE }]}>
+              <Text style={[s.dtlVal, { color: GYM }]}>
                 {Math.round(totalKg).toLocaleString(dateLocale())}
                 <Text style={s.dtlUnit}> KG</Text>
               </Text>
@@ -288,10 +292,10 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
                         ))}
                         <Polyline
                           points={pts.map((p, i) => `${px(i)},${py(p.topKg)}`).join(' ')}
-                          fill="none" stroke={ACCENT} strokeWidth={2.5} strokeLinejoin="round"
+                          fill="none" stroke={GYM} strokeWidth={2.5} strokeLinejoin="round"
                         />
                         {pts.map((p, i) => (
-                          <Circle key={p.date} cx={px(i)} cy={py(p.topKg)} r={4} fill={ACCENT} stroke={CARD} strokeWidth={2} />
+                          <Circle key={p.date} cx={px(i)} cy={py(p.topKg)} r={4} fill={GYM} stroke={CARD} strokeWidth={2} />
                         ))}
                       </Svg>
                       <View style={s.progAxisRow}>
@@ -384,7 +388,7 @@ const s = StyleSheet.create({
   exHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   exHeadLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   exHeadRight: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  exName: { color: ACCENT, fontSize: 17, fontWeight: '800', flex: 1 },
+  exName: { color: GYM, fontSize: 17, fontWeight: '800', flex: 1 },
   // exHeadLeft äger flexen — namnet fyller vänstersidan
   metaWrap: { paddingHorizontal: 2, gap: 8, marginTop: 2 },
   metaTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800' },
@@ -398,7 +402,7 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF', resizeMode: 'contain',
     borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(128,128,128,0.16)',
   },
-  exTop: { color: ACCENT, fontSize: 12, fontFamily: NUM_FONT_SEMI },
+  exTop: { color: GYM, fontSize: 12, fontFamily: NUM_FONT_SEMI },
   exUnlogged: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
   tableHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
   th: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
