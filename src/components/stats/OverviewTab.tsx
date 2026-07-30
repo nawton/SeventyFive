@@ -37,55 +37,55 @@ const HERO = {
 
 function HeroRing({ currentDay, completedDays }: { currentDay: number; completedDays: number }) {
   const t = useT()
-  const R = 44
+  const R = 38
   const C = 2 * Math.PI * R
   const completedArc = (completedDays / 75) * C
   const elapsedArc   = (currentDay / 75) * C
   const missedArc    = Math.max(0, elapsedArc - completedArc)
 
   return (
-    <Svg width={108} height={108} viewBox="0 0 108 108">
-      <Circle cx={54} cy={54} r={R} fill="none" stroke={HERO.track} strokeWidth={9} />
+    <Svg width={92} height={92} viewBox="0 0 92 92">
+      <Circle cx={46} cy={46} r={R} fill="none" stroke={HERO.track} strokeWidth={7.5} />
       {completedArc > 0 && (
         <Circle
-          cx={54} cy={54} r={R}
-          fill="none" stroke={HERO.arc} strokeWidth={9}
+          cx={46} cy={46} r={R}
+          fill="none" stroke={HERO.arc} strokeWidth={7.5}
           strokeDasharray={`${Math.max(completedArc, 2)} ${C}`}
           strokeLinecap="round"
-          rotation={-90} origin="54,54"
+          rotation={-90} origin="46,46"
         />
       )}
       {missedArc > 0 && (
         <Circle
-          cx={54} cy={54} r={R}
-          fill="none" stroke={HERO.missed} strokeWidth={9}
+          cx={46} cy={46} r={R}
+          fill="none" stroke={HERO.missed} strokeWidth={7.5}
           strokeDasharray={`${Math.max(missedArc, 2)} ${C}`}
           strokeDashoffset={-Math.max(completedArc, 2)}
           strokeLinecap="round"
-          rotation={-90} origin="54,54"
+          rotation={-90} origin="46,46"
           opacity={0.5}
         />
       )}
       {/* Dagens position: liten prick på ringen även innan något är klart */}
       {completedArc === 0 && missedArc === 0 && (
         <Circle
-          cx={54} cy={54} r={R}
-          fill="none" stroke={HERO.arc} strokeWidth={9}
+          cx={46} cy={46} r={R}
+          fill="none" stroke={HERO.arc} strokeWidth={7.5}
           strokeDasharray={`2 ${C}`}
           strokeLinecap="round"
-          rotation={-90 + (elapsedArc / C) * 360} origin="54,54"
+          rotation={-90 + (elapsedArc / C) * 360} origin="46,46"
         />
       )}
       <SvgText
-        x={54} y={51}
-        textAnchor="middle" fontSize={26} fontWeight="900"
+        x={46} y={44}
+        textAnchor="middle" fontSize={22} fontWeight="900"
         fill="#FFFFFF" fontFamily="-apple-system,sans-serif"
       >
         {currentDay}
       </SvgText>
       <SvgText
-        x={54} y={69}
-        textAnchor="middle" fontSize={11}
+        x={46} y={60}
+        textAnchor="middle" fontSize={10}
         fill={HERO.sub} fontFamily="-apple-system,sans-serif"
       >
         {t('av 75')}
@@ -201,16 +201,18 @@ export function OverviewTab({
             <View style={l.hero}>
               <HeroRing currentDay={currentDay} completedDays={completedDays} />
               <View style={l.heroBody}>
-                <Text style={l.heroTitle}>{t('Dag {n} är igång!', { n: currentDay })}</Text>
-                <Text style={l.heroSub}>{t('Klara dagens uppgifter för att tända din streak.')}</Text>
+                <Text style={l.heroTitle} numberOfLines={1} adjustsFontSizeToFit>
+                  {t('Dag {n} är igång!', { n: currentDay })}
+                </Text>
+                <Text style={l.heroSub} numberOfLines={2}>{t('Klara dagens uppgifter för att tända din streak.')}</Text>
                 <TouchableOpacity
                   style={l.heroCta}
                   onPress={() => router.push('/(app)/dashboard' as never)}
                   activeOpacity={0.85}
                   testID="heroCta"
                 >
-                  <Text style={l.heroCtaText}>{t('Dagens uppgifter')}</Text>
-                  <Ionicons name="arrow-forward" size={15} color={HERO.ctaText} />
+                  <Text style={l.heroCtaText} numberOfLines={1}>{t('Dagens uppgifter')}</Text>
+                  <Ionicons name="arrow-forward" size={14} color={HERO.ctaText} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -366,19 +368,19 @@ export function OverviewTab({
 
 const l = StyleSheet.create({
   hero: {
-    flexDirection: 'row', alignItems: 'center', gap: 16,
-    backgroundColor: HERO.bg, borderRadius: 24,
-    paddingVertical: 22, paddingHorizontal: 18, marginBottom: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: HERO.bg, borderRadius: 22,
+    paddingVertical: 16, paddingHorizontal: 16, marginBottom: 14,
   },
-  heroBody: { flex: 1, gap: 6 },
-  heroTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
-  heroSub: { color: HERO.sub, fontSize: 14, lineHeight: 19 },
+  heroBody: { flex: 1, gap: 4 },
+  heroTitle: { color: '#FFFFFF', fontSize: 19, fontWeight: '800' },
+  heroSub: { color: HERO.sub, fontSize: 13, lineHeight: 18 },
   heroCta: {
-    flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start',
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
     backgroundColor: HERO.cta, borderRadius: 999,
-    paddingHorizontal: 18, paddingVertical: 11, marginTop: 6,
+    paddingHorizontal: 15, paddingVertical: 9, marginTop: 5,
   },
-  heroCtaText: { color: HERO.ctaText, fontSize: 15, fontWeight: '800' },
+  heroCtaText: { color: HERO.ctaText, fontSize: 14, fontWeight: '800' },
 
   card: { backgroundColor: CARD, borderRadius: 20, padding: 16, marginBottom: 14 },
   cardTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800' },
