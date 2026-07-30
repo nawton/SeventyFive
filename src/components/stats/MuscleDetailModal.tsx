@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { View, Text, StyleSheet, Modal, ScrollView, Dimensions, ActivityIndicator, useColorScheme } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import Svg, { Text as SvgText, Polygon, Line as SvgLine } from 'react-native-svg'
+import Svg, { Text as SvgText, Polygon, Line as SvgLine, Circle, G } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassSegment } from '@/components/GlassSegment'
 import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
@@ -26,11 +26,6 @@ function addDays(iso: string, n: number): string {
   const d = parseLocalDate(iso)
   d.setDate(d.getDate() + n)
   return toLocalDateString(d)
-}
-
-function groupHits(names: string[]): number[] {
-  return MUSCLE_GROUPS_6.map(g =>
-    names.reduce((s, n) => s + (getMusclesForName(n).some(sl => g.slugs.includes(sl)) ? 1 : 0), 0))
 }
 
 export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStart, weekLabel, day, dayLabel }: {
@@ -119,9 +114,6 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
     return () => { active = false }
   }, [visible, userId, range, period])
 
-  const radarCur  = groupHits(curNames)
-  const radarPrev = prevNames ? groupHits(prevNames) : null
-
   // Loggade set i perioden — vikterna man faktiskt skrivit in
   const setsPerGroup = useMemo(() => {
     const inRange = workouts.filter(w => {
@@ -132,6 +124,16 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
       inRange.reduce((s, w) =>
         s + (getMusclesForName(w.data.exercise_name).some(sl => g.slugs.includes(sl)) ? w.data.sets.length : 0), 0))
   }, [workouts, range])
+  const prevSetsPerGroup = useMemo(() => {
+    if (period === 'all') return null
+    const inPrev = workouts.filter(w => {
+      const d = w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
+      return (range.prevFrom === null || d >= range.prevFrom) && (range.prevTo === null || d < range.prevTo)
+    })
+    return MUSCLE_GROUPS_6.map(g =>
+      inPrev.reduce((s, w) =>
+        s + (getMusclesForName(w.data.exercise_name).some(sl => g.slugs.includes(sl)) ? w.data.sets.length : 0), 0))
+  }, [workouts, range, period])
   const totalSets = setsPerGroup.reduce((a, b) => a + b, 0)
   const maxGroupSets = Math.max(...setsPerGroup, 1)
 
@@ -159,27 +161,30 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
           />
           <Text style={s.periodLabel}>{range.label}</Text>
 
-          {/* Radar — övningar per muskelgrupp, samma räkning som kroppskartan */}
+          {/* Radar — set per muskelgrupp med justerad (rot-)skala så små
+              värden inte trycks ihop av stora, som förlagan */}
           <View style={[s.card, { alignItems: 'center', paddingVertical: 12, marginTop: 14 }]}>
             {loading ? (
               <ActivityIndicator color={ACCENT} style={{ marginVertical: 110 }} />
             ) : (() => {
               const W = SCREEN_W - 72
-              const H = 260
+              const H = 300
               const cx = W / 2
               const cy = H / 2
-              const R = 90
-              const prevVals = radarPrev ?? MUSCLE_GROUPS_6.map(() => 0)
-              const maxV = Math.max(...radarCur, ...prevVals, 1)
+              const R = 86
+              const prevVals = prevSetsPerGroup ?? MUSCLE_GROUPS_6.map(() => 0)
+              const maxV = Math.max(...setsPerGroup, ...prevVals, 1)
+              // Justerad skala: kvadratroten ger små värden synlig plats
               const pt = (i: number, v: number) => {
                 const a = (-90 + i * 60) * (Math.PI / 180)
-                const r = (v / maxV) * R
+                const r = Math.sqrt(Math.max(0, v) / maxV) * R
                 return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`
               }
-              const ring = (f: number) => MUSCLE_GROUPS_6.map((_, i) => pt(i, maxV * f)).join(' ')
+              const ring = (f: number) => MUSCLE_GROUPS_6.map((_, i) => pt(i, maxV * f * f)).join(' ')
+              const nameFill = radarLight ? 'rgba(15,17,21,0.92)' : 'rgba(255,255,255,0.92)'
               return (
                 <Svg width={W} height={H}>
-                  {[0.25, 0.5, 0.75, 1].map(f => (
+                  {[1 / 3, 2 / 3, 1].map(f => (
                     <Polygon key={f} points={ring(f)} fill="none" stroke={webStroke} strokeWidth={1} />
                   ))}
                   {MUSCLE_GROUPS_6.map((_, i) => {
@@ -193,29 +198,46 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
                       />
                     )
                   })}
-                  {radarPrev && radarPrev.some(v => v > 0) && (
+                  {prevSetsPerGroup && prevSetsPerGroup.some(v => v > 0) && (
                     <Polygon
-                      points={radarPrev.map((v, i) => pt(i, v)).join(' ')}
+                      points={prevSetsPerGroup.map((v, i) => pt(i, v)).join(' ')}
                       fill={prevFill} stroke={prevLine} strokeWidth={1.5}
                     />
                   )}
-                  {radarCur.some(v => v > 0) && (
-                    <Polygon
-                      points={radarCur.map((v, i) => pt(i, v)).join(' ')}
-                      fill={accentAlpha('33')} stroke={ACCENT} strokeWidth={2}
-                    />
+                  {setsPerGroup.some(v => v > 0) && (
+                    <>
+                      <Polygon
+                        points={setsPerGroup.map((v, i) => pt(i, v)).join(' ')}
+                        fill={accentAlpha('26')} stroke={ACCENT} strokeWidth={2.5}
+                        strokeLinejoin="round"
+                      />
+                      {setsPerGroup.map((v, i) => {
+                        const [x, y] = pt(i, v).split(',').map(Number)
+                        return <Circle key={i} cx={x} cy={y} r={4.5} fill={ACCENT} />
+                      })}
+                    </>
                   )}
                   {MUSCLE_GROUPS_6.map((g, i) => {
                     const a = (-90 + i * 60) * (Math.PI / 180)
+                    const lx = cx + (R + 34) * Math.cos(a)
+                    const ly = cy + (R + 34) * Math.sin(a)
                     return (
-                      <SvgText
-                        key={g.label}
-                        x={cx + (R + 24) * Math.cos(a)} y={cy + (R + 24) * Math.sin(a) + 4}
-                        fontSize={12} fontWeight="600" textAnchor="middle"
-                        fill={axisText}
-                      >
-                        {t(g.label)}
-                      </SvgText>
+                      <G key={g.label}>
+                        <SvgText
+                          x={lx} y={ly - 2}
+                          fontSize={13} fontWeight="700" textAnchor="middle"
+                          fill={nameFill}
+                        >
+                          {t(g.label)}
+                        </SvgText>
+                        <SvgText
+                          x={lx} y={ly + 14}
+                          fontSize={13} fontWeight="700" textAnchor="middle"
+                          fill={ACCENT as never}
+                        >
+                          {String(setsPerGroup[i])}
+                        </SvgText>
+                      </G>
                     )
                   })}
                 </Svg>
@@ -226,13 +248,16 @@ export function MuscleDetailModal({ visible, onClose, userId, workouts, weekStar
                 <View style={[s.legDot, { backgroundColor: ACCENT }]} />
                 <Text style={s.legText}>{range.curLegend}</Text>
               </View>
-              {radarPrev && !!range.prevLegend && (
+              {prevSetsPerGroup && !!range.prevLegend && (
                 <View style={s.legItem}>
                   <View style={[s.legDot, { backgroundColor: prevLine }]} />
                   <Text style={s.legText}>{range.prevLegend}</Text>
                 </View>
               )}
             </View>
+            <Text style={s.scaleNote}>
+              {t('Justerad skala, stora skillnader trycker inte ihop de små värdena')}
+            </Text>
           </View>
           {!loading && curNames.length === 0 && (
             <Text style={s.hint}>{t('Inga avbockade övningar i perioden.')}</Text>
@@ -290,6 +315,10 @@ const s = StyleSheet.create({
   legend: { flexDirection: 'row', gap: 16, paddingBottom: 6 },
   legItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legDot: { width: 8, height: 8, borderRadius: 2 },
+  scaleNote: {
+    color: TEXT_SECONDARY, fontSize: 12.5, textAlign: 'center',
+    marginTop: 10, paddingHorizontal: 24, lineHeight: 17,
+  },
   legText: { color: TEXT_SECONDARY, fontSize: 11 },
 
   grpRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
