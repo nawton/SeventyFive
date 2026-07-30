@@ -7,7 +7,9 @@ import { SafeScreen } from '@/components/SafeScreen'
 import { AppRefreshControl, useAppRefresh } from '@/components/AppRefresh'
 import { GroupWizard } from '@/components/GroupWizard'
 import { GroupSearchSheet } from '@/components/GroupSearchSheet'
+import { OrgSheet } from '@/components/OrgSheet'
 import { getMyGroups } from '@/services/groups'
+import { getMyOrganizations } from '@/services/organizations'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import * as Haptics from 'expo-haptics'
@@ -179,17 +181,24 @@ export default function CommunityScreen() {
   }, [loadFeed]))
 
   const { refreshing, onRefresh } = useAppRefresh(loadFeed)
-  // Grupper: mina grupper + skaparguiden
+  // Grupper: mina grupper + skaparguiden. Föreningar: join via kod/skapa.
   const [myGroups, setMyGroups] = useState<Awaited<ReturnType<typeof getMyGroups>>>([])
+  const [myOrgs, setMyOrgs] = useState<Awaited<ReturnType<typeof getMyOrganizations>>>([])
   const [wizardOpen, setWizardOpen] = useState(false)
   const [groupSearchOpen, setGroupSearchOpen] = useState(false)
+  const [orgMode, setOrgMode] = useState<'join' | 'create' | null>(null)
   const [meId, setMeId] = useState<string | null>(null)
   const chrome = useCardChrome()
   const loadGroups = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return
     setMeId(session.user.id)
-    setMyGroups(await getMyGroups(session.user.id))
+    const [groups, orgs] = await Promise.all([
+      getMyGroups(session.user.id),
+      getMyOrganizations(session.user.id).catch(() => []),
+    ])
+    setMyGroups(groups)
+    setMyOrgs(orgs)
   }, [])
   useFocusEffect(useCallback(() => { loadGroups().catch(() => {}) }, [loadGroups]))
   // Chipramar som strängar per schema — dynamiska ramfärger fryser i modaler
@@ -265,6 +274,45 @@ export default function CommunityScreen() {
 
       {segment === 'groups' ? (
         <ScrollView contentContainerStyle={s.groupsScroll} showsVerticalScrollIndicator={false}>
+          {/* Föreningen överst — join via tränarens kod eller skapa en egen */}
+          <Text style={[s.groupsLabel, { marginTop: 0 }]}>{t('FÖRENING')}</Text>
+          {myOrgs.map(o => (
+            <TouchableOpacity
+              key={o.id}
+              style={[s.groupRow, chrome]}
+              activeOpacity={0.75}
+              testID={`org-${o.id}`}
+              onPress={() => router.push({ pathname: '/(app)/organization', params: { orgId: o.id, name: o.name } } as never)}
+            >
+              <View style={[s.orgIcon, { backgroundColor: `${T.ACCENT}14` }]}>
+                <Ionicons name="shield-outline" size={22} color={ACCENT} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.groupName} numberOfLines={1}>{o.name}</Text>
+                <Text style={s.groupMeta}>
+                  {o.memberCount === 1 ? t('1 medlem') : t('{n} medlemmar', { n: o.memberCount })}
+                  {o.myRole !== 'member' ? ` · ${o.myRole === 'admin' ? t('Admin') : t('Coach')}` : ''}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
+            </TouchableOpacity>
+          ))}
+          <View style={s.groupActions}>
+            <TouchableOpacity
+              style={[s.groupActionBtn, { borderColor: T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)' }]}
+              onPress={() => setOrgMode('join')} activeOpacity={0.8} testID="joinOrg">
+              <Ionicons name="key-outline" size={15} color={TEXT_PRIMARY} />
+              <Text style={s.groupActionText}>{t('Gå med via kod')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.groupActionBtn, { borderColor: T.TEXT_PRIMARY === '#FFFFFF' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)' }]}
+              onPress={() => setOrgMode('create')} activeOpacity={0.8} testID="createOrg">
+              <Ionicons name="add" size={16} color={TEXT_PRIMARY} />
+              <Text style={s.groupActionText}>{t('Skapa förening')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={s.groupsLabel}>{t('GRUPPER')}</Text>
           {/* Sök och skapa som små knappar överst — skanningen bor i sökvyn */}
           <View style={s.groupActions}>
             <TouchableOpacity
@@ -464,6 +512,18 @@ export default function CommunityScreen() {
         }}
       />
 
+      <OrgSheet
+        visible={orgMode !== null}
+        mode={orgMode ?? 'join'}
+        userId={meId}
+        onClose={() => setOrgMode(null)}
+        onDone={o => {
+          setOrgMode(null)
+          loadGroups().catch(() => {})
+          router.push({ pathname: '/(app)/organization', params: { orgId: o.id, name: o.name } } as never)
+        }}
+      />
+
     </SafeScreen>
   )
 }
@@ -489,6 +549,10 @@ const s = StyleSheet.create({
   groupsLabel: {
     color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700',
     letterSpacing: 1.5, marginTop: 8, paddingHorizontal: 4,
+  },
+  orgIcon: {
+    width: 48, height: 48, borderRadius: 24,
+    alignItems: 'center', justifyContent: 'center',
   },
 
   screen: { flex: 1, backgroundColor: BG },
