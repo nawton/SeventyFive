@@ -46,24 +46,37 @@ export function getWeekBounds(offset: number): { start: string; end: string; lab
   }
 }
 
+/** Alla milstolpar med texterna till milstolpssidan — label är rubriken,
+ *  short är listradens undertext och desc hjältepanelens beskrivning.
+ *  Texterna översätts med t() vid användning. */
+export const MILESTONES = [
+  { day: 7,  label: 'Första veckan klar!',      short: 'Sju dagar i rad',
+    desc: 'Klara alla dagliga uppgifter 7 dagar i rad. Den första veckan är den viktigaste, det är här vanan byggs.' },
+  { day: 10, label: '10 dagar klara!',          short: '10 klarade dagar',
+    desc: 'Tvåsiffrigt! Rutinen börjar sätta sig.' },
+  { day: 19, label: 'En fjärdedel klar!',       short: '19 klarade dagar',
+    desc: 'En fjärdedel av utmaningen ligger bakom dig.' },
+  { day: 25, label: 'En tredjedel klar!',       short: '25 klarade dagar',
+    desc: 'En tredjedel av vägen. Nu rullar det.' },
+  { day: 38, label: 'Halvvägs!',                short: 'Du har passerat mitten',
+    desc: 'Du har passerat mitten. Härifrån räknar du ner.' },
+  { day: 50, label: 'Två tredjedelar klara!',   short: '50 klarade dagar',
+    desc: 'Två tredjedelar avklarade. Det tyngsta är bakom dig.' },
+  { day: 60, label: '60 dagar klara!',          short: 'Bara 15 dagar kvar',
+    desc: 'Slutspurten börjar, bara 15 dagar kvar.' },
+  { day: 68, label: 'Sista veckan!',            short: 'Sju dagar kvar',
+    desc: 'Sju dagar kvar. Håll i hela vägen in i mål.' },
+  { day: 75, label: 'MÅLET: 75 dagar!',         short: 'Hela utmaningen i mål',
+    desc: 'Hela utmaningen genomförd. 75 dagar, ett starkare liv.' },
+] as const
+
 export /** Nästa milstolpe utifrån dagarna bakom en (dag 19 = 18 avklarade).
  *  Databasens logg-räknare funkar inte här: den som börjat mitt i utmaningen
  *  saknar loggar för dagarna innan appen. "Halvvägs" på riktiga mitten (38). */
 function nextMilestone(completed: number): { day: number; label: string; daysLeft: number } | null {
-  const stones = [
-    { day: 7,  label: 'Första veckan klar!' },
-    { day: 10, label: '10 dagar klara!' },
-    { day: 19, label: 'En fjärdedel klar!' },
-    { day: 25, label: 'En tredjedel klar!' },
-    { day: 38, label: 'Halvvägs!' },
-    { day: 50, label: 'Två tredjedelar klara!' },
-    { day: 60, label: '60 dagar klara!' },
-    { day: 68, label: 'Sista veckan!' },
-    { day: 75, label: 'MÅLET: 75 dagar!' },
-  ]
-  const next = stones.find(s => s.day > completed)
+  const next = MILESTONES.find(s => s.day > completed)
   if (!next) return null
-  return { ...next, label: t(next.label), daysLeft: next.day - completed }
+  return { day: next.day, label: t(next.label), daysLeft: next.day - completed }
 }
 
 export function monthLabel(dateStr: string): string {

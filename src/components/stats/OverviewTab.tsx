@@ -19,7 +19,6 @@ import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
 import { STATS_SCREEN_W, nextMilestone, s, useStatsColors } from './statsShared'
 import { DayWorkoutsModal } from './DayWorkoutsModal'
-import { MilestoneAnalysisModal } from './MilestoneAnalysisModal'
 import { useT, dateLocale } from '@/lib/i18n'
 
 // Hjältepanelen är mörk marinblå i BÅDA lägena (som förlagan) — färgerna
@@ -125,7 +124,6 @@ export function OverviewTab({
   const T = useThemeStrings()
   const chrome = useCardChrome()
   const [selectedDay, setSelectedDay]     = useState<DaySummary | null>(null)
-  const [milestoneOpen, setMilestoneOpen] = useState(false)
 
   const completedDays = days.filter(d => d.status === 'completed').length
 
@@ -293,7 +291,7 @@ export function OverviewTab({
 
             {/* ── Nästa milstolpe med progressbar ── */}
             {milestone && (
-              <TouchableOpacity style={[l.card, l.msRow, chrome]} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)} testID="milestoneCard">
+              <TouchableOpacity style={[l.card, l.msRow, chrome]} activeOpacity={0.8} onPress={() => router.push('/(app)/milestones' as never)} testID="milestoneCard">
                 <View style={[l.msIcon, { backgroundColor: accentAlpha('12') }]}>
                   <Ionicons name="flag-outline" size={22} color={ACCENT} />
                 </View>
@@ -327,18 +325,6 @@ export function OverviewTab({
           />
         )}
       </Modal>
-      <MilestoneAnalysisModal
-        visible={milestoneOpen}
-        onClose={() => setMilestoneOpen(false)}
-        days={days}
-        currentDay={currentDay}
-        streak={streak}
-        milestone={milestone}
-        startDate={startDate}
-        workouts={workouts}
-        completedSessions={completedSessions}
-        unit={unit}
-      />
     </>
   )
 }
