@@ -37,6 +37,29 @@ export function useThemeStrings() {
   return useColorScheme() === 'light' ? THEME_LIGHT : THEME_DARK
 }
 
+/** Hjältekortens ytor (marinblå highlight-kort): navy i ljust läge; i
+    mörkt ett steg LJUSARE än vanliga kort med subtil varm kant — det är
+    ljushetsskillnaden som gör hierarkin, inte färgen. Accenterna inuti
+    (orange bågar, knappar) ändras inte. */
+export function useHeroChrome() {
+  const dark = useColorScheme() !== 'light'
+  return dark
+    ? {
+        card: { backgroundColor: '#26282F', borderWidth: 1, borderColor: 'rgba(255,138,80,0.18)' } as const,
+        sub: '#9AA2B5',
+        divider: 'rgba(255,255,255,0.08)',
+        track: 'rgba(255,255,255,0.10)',
+        iconBg: 'rgba(255,255,255,0.08)',
+      }
+    : {
+        card: { backgroundColor: '#151B33', borderWidth: 0, borderColor: 'transparent' } as const,
+        sub: '#9AA3BC',
+        divider: 'rgba(255,255,255,0.18)',
+        track: '#2B3352',
+        iconBg: '#262C4A',
+      }
+}
+
 /** Kortens "chrome": 1px-ram i mörkt läge (designspråket), mjuk skugga i
     ljust. Som STRÄNGAR per schema, iOS fryser dynamiska färger i
     border/skugga (CGColor) när fönstertraits växlar (t.ex. efter modaler),

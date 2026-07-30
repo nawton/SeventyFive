@@ -10,7 +10,7 @@ import Svg, { Circle, Text as SvgText } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import {
   GREEN, CARD, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, ACCENT_CONTRAST,
-  accentAlpha, useThemeStrings, useCardChrome,
+  accentAlpha, useThemeStrings, useCardChrome, useHeroChrome,
 } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek } from '@/lib/date'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
@@ -21,8 +21,8 @@ import { STATS_SCREEN_W, nextMilestone, s, useStatsColors } from './statsShared'
 import { DayWorkoutsModal } from './DayWorkoutsModal'
 import { useT, dateLocale } from '@/lib/i18n'
 
-// Hjältepanelen är mörk marinblå i BÅDA lägena (som förlagan) — färgerna
-// är statiska strängar, inte temafärger
+// Hjältepanelens accenter (orange båge/CTA) är statiska strängar —
+// ytan i sig kommer från useHeroChrome: navy i ljust, upplyst i mörkt
 const HERO = {
   bg: '#151B33',
   track: '#2B3352',
@@ -35,6 +35,7 @@ const HERO = {
 
 function HeroRing({ currentDay, completedDays }: { currentDay: number; completedDays: number }) {
   const t = useT()
+  const H = useHeroChrome()
   const R = 38
   const C = 2 * Math.PI * R
   const completedArc = (completedDays / 75) * C
@@ -43,7 +44,7 @@ function HeroRing({ currentDay, completedDays }: { currentDay: number; completed
 
   return (
     <Svg width={92} height={92} viewBox="0 0 92 92">
-      <Circle cx={46} cy={46} r={R} fill="none" stroke={HERO.track} strokeWidth={7.5} />
+      <Circle cx={46} cy={46} r={R} fill="none" stroke={H.track} strokeWidth={7.5} />
       {completedArc > 0 && (
         <Circle
           cx={46} cy={46} r={R}
@@ -84,7 +85,7 @@ function HeroRing({ currentDay, completedDays }: { currentDay: number; completed
       <SvgText
         x={46} y={60}
         textAnchor="middle" fontSize={10}
-        fill={HERO.sub} fontFamily="-apple-system,sans-serif"
+        fill={H.sub} fontFamily="-apple-system,sans-serif"
       >
         {t('av 75')}
       </SvgText>
@@ -123,6 +124,7 @@ export function OverviewTab({
   const unitLabel = distanceUnitLabel(unit)
   const T = useThemeStrings()
   const chrome = useCardChrome()
+  const H = useHeroChrome()
   const [selectedDay, setSelectedDay]     = useState<DaySummary | null>(null)
 
   const completedDays = days.filter(d => d.status === 'completed').length
@@ -194,13 +196,13 @@ export function OverviewTab({
         >
           <>
             {/* ── Hjältepanelen: ring, dagsläge och CTA till dagens uppgifter ── */}
-            <View style={l.hero}>
+            <View style={[l.hero, H.card]}>
               <HeroRing currentDay={currentDay} completedDays={completedDays} />
               <View style={l.heroBody}>
                 <Text style={l.heroTitle} numberOfLines={1} adjustsFontSizeToFit>
                   {t('Dag {n} är igång!', { n: currentDay })}
                 </Text>
-                <Text style={l.heroSub} numberOfLines={2}>{t('Klara dagens uppgifter för att tända din streak.')}</Text>
+                <Text style={[l.heroSub, { color: H.sub }]} numberOfLines={2}>{t('Klara dagens uppgifter för att tända din streak.')}</Text>
                 <TouchableOpacity
                   style={l.heroCta}
                   onPress={() => router.push('/(app)/dashboard' as never)}
@@ -332,7 +334,7 @@ export function OverviewTab({
 const l = StyleSheet.create({
   hero: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: HERO.bg, borderRadius: 22,
+    borderRadius: 22,
     paddingVertical: 16, paddingHorizontal: 16, marginBottom: 14,
   },
   heroBody: { flex: 1, gap: 4 },

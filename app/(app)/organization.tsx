@@ -24,7 +24,7 @@ import {
 } from '@/services/organizations'
 import { getWeekBounds } from '@/components/stats/statsShared'
 import {
-  BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome,
+  BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, RED, useThemeStrings, useCardChrome, useHeroChrome,
 } from '@/lib/theme'
 
 // =============================================================================
@@ -47,6 +47,7 @@ export default function OrganizationScreen() {
   const t = useT()
   const T = useThemeStrings()
   const chrome = useCardChrome()
+  const H = useHeroChrome()
   const params = useLocalSearchParams<{ orgId?: string; name?: string }>()
   const orgId = params.orgId ?? ''
   const hairline = 'rgba(128,128,128,0.18)'
@@ -248,24 +249,24 @@ export default function OrganizationScreen() {
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {tab === 'overview' && (<>
         {/* Marinblå panel: veckans totaler + koden att bjuda in med */}
-        <View style={s.hero}>
+        <View style={[s.hero, H.card]}>
           <Text maxFontSizeMultiplier={1.15} style={s.heroLabel}>{t('TILLSAMMANS DENNA VECKA')}</Text>
           <View style={s.heroStatsRow}>
             <Text maxFontSizeMultiplier={1.15} style={s.heroStat}>
               {totals.passes}
-              <Text style={s.heroStatUnit}> {t('pass')}</Text>
+              <Text style={[s.heroStatUnit, { color: H.sub }]}> {t('pass')}</Text>
             </Text>
             <Text maxFontSizeMultiplier={1.15} style={s.heroStat}>
               {totals.km.toFixed(1).replace('.', ',')}
-              <Text style={s.heroStatUnit}> km</Text>
+              <Text style={[s.heroStatUnit, { color: H.sub }]}> km</Text>
             </Text>
           </View>
           {isStaff && org && (
             <>
-              <View style={s.heroDivider} />
+              <View style={[s.heroDivider, { backgroundColor: H.divider }]} />
               <View style={s.heroCodeRow}>
                 <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.15} style={s.heroLabel}>{t('BJUD IN MED KOD')}</Text>
+                  <Text maxFontSizeMultiplier={1.15} style={[s.heroLabel, { color: H.sub }]}>{t('BJUD IN MED KOD')}</Text>
                   <Text maxFontSizeMultiplier={1.15} style={s.heroCode}>{org.join_code}</Text>
                 </View>
                 <TouchableOpacity style={s.shareBtn} onPress={shareCode} activeOpacity={0.8} testID="shareCode">
@@ -564,7 +565,7 @@ const s = StyleSheet.create({
   stepNumText: { fontSize: 13, fontWeight: '800' },
   stepText: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, lineHeight: 20 },
 
-  hero: { backgroundColor: '#151B33', borderRadius: 22, padding: 18 },
+  hero: { borderRadius: 22, padding: 18 },
   heroLabel: { color: '#9AA3BC', fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
   heroStatsRow: { flexDirection: 'row', gap: 28, marginTop: 8 },
   heroStat: { color: '#FFFFFF', fontSize: 26, fontWeight: '800' },

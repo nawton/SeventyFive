@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, useThemeStrings, useCardChrome } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, useThemeStrings, useCardChrome, useHeroChrome } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import { fmtPace, fmtDuration } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
@@ -67,6 +67,7 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
   const t = useT()
   const T = useThemeStrings()
   const chrome = useCardChrome()
+  const H = useHeroChrome()
   const insets = useSafeAreaInsets()
   const unitLabel = distanceUnitLabel(unit)
   const [range, setRange] = useState<Range>(6)
@@ -117,27 +118,27 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
             onChange={k => setRange(Number(k) as Range)}
           />
 
-          {/* Totalpanelen — mörk marinblå i båda lägena, som översikten */}
-          <View style={s.hero}>
-            <Text style={s.heroLabel}>
+          {/* Totalpanelen — hjältekortets yta via useHeroChrome */}
+          <View style={[s.hero, H.card]}>
+            <Text style={[s.heroLabel, { color: H.sub }]}>
               {range === 12 ? t('Totalt senaste året') : t('Totalt senaste {n} månaderna', { n: range })}
             </Text>
             <Text style={s.heroValue}>
               {fmtKm(totalKm)}
-              <Text style={s.heroUnit}> {unitLabel}</Text>
+              <Text style={[s.heroUnit, { color: H.sub }]}> {unitLabel}</Text>
             </Text>
-            <View style={s.heroDivider} />
+            <View style={[s.heroDivider, { backgroundColor: H.divider }]} />
             <View style={s.heroRow}>
               <View style={s.heroCell}>
-                <Text style={s.heroCellLbl}>{t('PASS')}</Text>
+                <Text style={[s.heroCellLbl, { color: H.sub }]}>{t('PASS')}</Text>
                 <Text style={s.heroCellVal}>{totalPasses}</Text>
               </View>
               <View style={s.heroCell}>
-                <Text style={s.heroCellLbl}>{t('TID')}</Text>
+                <Text style={[s.heroCellLbl, { color: H.sub }]}>{t('TID')}</Text>
                 <Text style={s.heroCellVal}>{fmtDuration(totalSecs)}</Text>
               </View>
               <View style={[s.heroCell, { flex: 1.4 }]}>
-                <Text style={s.heroCellLbl}>{t('SNITTEMPO')}</Text>
+                <Text style={[s.heroCellLbl, { color: H.sub }]}>{t('SNITTEMPO')}</Text>
                 <Text style={s.heroCellVal}>{avgPace} /{unitLabel}</Text>
               </View>
             </View>
@@ -218,7 +219,7 @@ const s = StyleSheet.create({
   topTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
   scroll: { paddingHorizontal: 16, paddingTop: 8, gap: 14 },
 
-  hero: { backgroundColor: HERO.bg, borderRadius: 22, padding: 20 },
+  hero: { borderRadius: 22, padding: 20 },
   heroLabel: { color: HERO.sub, fontSize: 14, fontWeight: '600' },
   heroValue: { color: '#FFFFFF', fontSize: 44, fontFamily: NUM_FONT, letterSpacing: -0.5, marginTop: 2 },
   heroUnit: { fontSize: 20, color: HERO.sub },

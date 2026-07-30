@@ -9,14 +9,14 @@ import { getActiveChallenge, calculateCurrentDay } from '@/services/challenge'
 import { MILESTONES } from '@/components/stats/statsShared'
 import { useT } from '@/lib/i18n'
 import {
-  BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, useCardChrome,
+  BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, useCardChrome, useHeroChrome,
 } from '@/lib/theme'
 
 // =============================================================================
 // MILSTOLPSSIDAN — öppnas från milstolpekortet på översikten. Mörk
 // hjältepanel med nästa milstolpe (beskrivning + progressbar) och listan
 // med alla nio: uppnådda med grön bock, pågående med accentbricka,
-// kommande låsta. Samma marinblå panel som översiktens hjälte.
+// kommande låsta. Samma hjältepanelyta som översikten (useHeroChrome).
 // =============================================================================
 
 const HERO = {
@@ -30,6 +30,7 @@ const HERO = {
 export default function MilestonesScreen() {
   const t = useT()
   const chrome = useCardChrome()
+  const H = useHeroChrome()
   const [currentDay, setCurrentDay] = useState(0)
 
   const load = useCallback(async () => {
@@ -58,18 +59,18 @@ export default function MilestonesScreen() {
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* Hjältepanelen: nästa milstolpe */}
-        <View style={s.hero}>
-          <View style={s.heroIcon}>
+        <View style={[s.hero, H.card]}>
+          <View style={[s.heroIcon, { backgroundColor: H.iconBg }]}>
             <Ionicons name="flag-outline" size={30} color={HERO.arc} />
           </View>
           <Text style={s.heroTitle}>{t(active.label).replace(/!$/, '')}</Text>
-          <Text style={s.heroDesc}>{t(active.desc)}</Text>
-          <View style={s.heroTrack}>
+          <Text style={[s.heroDesc, { color: H.sub }]}>{t(active.desc)}</Text>
+          <View style={[s.heroTrack, { backgroundColor: H.track }]}>
             <View style={[s.heroFill, { width: `${Math.round(progress * 100)}%` as never }]} />
           </View>
           <View style={s.heroFoot}>
-            <Text style={s.heroFootText}>{t('Dag {n} av {m}', { n: currentDay, m: active.day })}</Text>
-            <Text style={s.heroFootText}>
+            <Text style={[s.heroFootText, { color: H.sub }]}>{t('Dag {n} av {m}', { n: currentDay, m: active.day })}</Text>
+            <Text style={[s.heroFootText, { color: H.sub }]}>
               {daysLeft === 1 ? t('1 dag kvar') : t('{n} dagar kvar', { n: daysLeft })}
             </Text>
           </View>
@@ -127,7 +128,7 @@ const s = StyleSheet.create({
   scroll: { paddingHorizontal: 16, paddingBottom: 60, paddingTop: 6 },
 
   hero: {
-    alignItems: 'center', backgroundColor: HERO.bg, borderRadius: 24,
+    alignItems: 'center', borderRadius: 24,
     paddingVertical: 24, paddingHorizontal: 22, marginBottom: 20,
   },
   heroIcon: {

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, useCardChrome } from '@/lib/theme'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, useCardChrome, useHeroChrome } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate } from '@/lib/date'
 import type { StrengthWorkout } from '@/services/workouts'
 import { getWeekBounds } from './statsShared'
@@ -29,6 +29,7 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
 }) {
   const t = useT()
   const chrome = useCardChrome()
+  const H = useHeroChrome()
   const insets = useSafeAreaInsets()
   const [offset, setOffset] = useState(0)
 
@@ -104,30 +105,30 @@ export function VolumeDetailModal({ visible, onClose, workouts }: {
           </View>
 
           {/* Totalpanelen */}
-          <View style={s.hero}>
-            <Text style={s.heroLabel}>
+          <View style={[s.hero, H.card]}>
+            <Text style={[s.heroLabel, { color: H.sub }]}>
               {offset === 0 ? t('Totalt denna vecka') : t('Totalt {w}', { w: bounds.label.toLowerCase() })}
             </Text>
             <Text style={[s.heroValue, { color: GYM }]}>
               {Math.round(volume).toLocaleString(dateLocale())}
               <Text style={s.heroUnit}> kg</Text>
             </Text>
-            <View style={s.heroDivider} />
+            <View style={[s.heroDivider, { backgroundColor: H.divider }]} />
             <View style={s.heroRow}>
               <View style={s.heroCell}>
-                <Text style={s.heroCellLbl}>{t('PASS')}</Text>
+                <Text style={[s.heroCellLbl, { color: H.sub }]}>{t('PASS')}</Text>
                 <Text style={s.heroCellVal}>{passes}</Text>
               </View>
               <View style={s.heroCell}>
-                <Text style={s.heroCellLbl}>SET</Text>
+                <Text style={[s.heroCellLbl, { color: H.sub }]}>SET</Text>
                 <Text style={s.heroCellVal}>{sets}</Text>
               </View>
               <View style={s.heroCell}>
-                <Text style={s.heroCellLbl}>REPS</Text>
+                <Text style={[s.heroCellLbl, { color: H.sub }]}>REPS</Text>
                 <Text style={s.heroCellVal}>{reps.toLocaleString(dateLocale())}</Text>
               </View>
               <View style={[s.heroCell, { flex: 1.3 }]}>
-                <Text style={s.heroCellLbl}>{t('SNITT/SET')}</Text>
+                <Text style={[s.heroCellLbl, { color: H.sub }]}>{t('SNITT/SET')}</Text>
                 <Text style={s.heroCellVal}>{fmtKg(perSet)}</Text>
               </View>
             </View>
@@ -197,7 +198,7 @@ const s = StyleSheet.create({
   },
   navLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
 
-  hero: { backgroundColor: HERO.bg, borderRadius: 22, padding: 20 },
+  hero: { borderRadius: 22, padding: 20 },
   heroLabel: { color: HERO.sub, fontSize: 14, fontWeight: '600' },
   heroValue: { fontSize: 42, fontFamily: NUM_FONT, letterSpacing: -0.5, marginTop: 2 },
   heroUnit: { fontSize: 20 },

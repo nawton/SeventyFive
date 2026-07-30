@@ -64,7 +64,7 @@ import { registerPushToken } from '@/services/pushTokens'
 import { getNotifSeenAt, getRaceDate } from '@/lib/prefs'
 import { isoDate, todayMidnight } from '@/lib/scheduleDates'
 import { weekdayOf } from '@/lib/date'
-import { ORANGE, TEXT_SECONDARY, CARDIO_BLUE, useCardChrome } from '@/lib/theme'
+import { ORANGE, TEXT_SECONDARY, CARDIO_BLUE, useCardChrome , useHeroChrome } from '@/lib/theme'
 import { createCustomRule, deleteCustomRule } from '@/services/rules'
 import { FailModal } from '@/components/FailModal'
 import { ReadingLogModal } from '@/components/ReadingLogModal'
@@ -141,6 +141,7 @@ function getGreeting(): string {
 // ── Progress Ring ──────────────────────────────────────────────────────────────
 function ProgressRing({ completed, total }: { completed: number; total: number }) {
   const t = useT()
+  const H = useHeroChrome()
   const progress   = useSharedValue(0)
   const isComplete = total > 0 && completed === total
   // Ringen bor i den mörka hjältepanelen — fasta färger i båda lägena
@@ -166,7 +167,7 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
       >
         <Circle
           cx={R_SIZE / 2} cy={R_SIZE / 2} r={R_RADIUS}
-          stroke="#2B3352" strokeWidth={R_STROKE} fill="none"
+          stroke={H.track} strokeWidth={R_STROKE} fill="none"
         />
         <AnimatedCircle
           cx={R_SIZE / 2} cy={R_SIZE / 2} r={R_RADIUS}
@@ -178,9 +179,9 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
       </Svg>
       <View style={s.ringCenter}>
         <Text style={[s.ringNum, { color: '#FFFFFF' }]}>
-          {completed}<Text style={{ color: '#9AA3BC', fontSize: 16 }}>/{total}</Text>
+          {completed}<Text style={{ color: H.sub, fontSize: 16 }}>/{total}</Text>
         </Text>
-        <Text style={[s.ringLabel, { color: '#9AA3BC' }]}>{t('KLART')}</Text>
+        <Text style={[s.ringLabel, { color: H.sub }]}>{t('KLART')}</Text>
       </View>
     </View>
   )
@@ -190,6 +191,7 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
 export default function DashboardScreen() {
   const t = useT()
   const onScrollShrink = useTabBarShrinkOnScroll()
+  const HERO_CHROME = useHeroChrome()
   // Gradienter kräver strängfärger — välj par efter aktuellt tema
   const lightMode = useColorScheme() === 'light'
   const heroShadow = lightMode ? '#101425' : '#FFA817'
@@ -707,25 +709,25 @@ export default function DashboardScreen() {
 
         {/* ── Hjältepanelen — mörk marinblå som förlagan ── */}
         <Animated.View style={[s.heroOuter, { shadowColor: '#0A0E20' }, heroAnimStyle]}>
-          <View style={h.card}>
+          <View style={[h.card, HERO_CHROME.card]}>
             <View style={h.topRow}>
               {levelName ? (
                 <View style={h.levelPill}>
                   <Text style={h.levelPillText}>{levelName.toUpperCase()}</Text>
                 </View>
               ) : <View />}
-              <Text style={h.daysLeft}>
+              <Text style={[h.daysLeft, { color: HERO_CHROME.sub }]}>
                 {75 - currentDay === 1 ? t('1 dag kvar') : t('{n} dagar kvar', { n: Math.max(0, 75 - currentDay) })}
               </Text>
             </View>
             <View style={h.mainRow}>
               <View style={{ flex: 1 }}>
                 <Text style={h.dayBig}>{t('Dag {n}', { n: currentDay })}</Text>
-                <Text style={h.subText}>{t('av 75 · utmaningen pågår')}</Text>
+                <Text style={[h.subText, { color: HERO_CHROME.sub }]}>{t('av 75 · utmaningen pågår')}</Text>
               </View>
               <ProgressRing completed={completedCount} total={standardTasks.length} />
             </View>
-            <View style={h.track}>
+            <View style={[h.track, { backgroundColor: HERO_CHROME.track }]}>
               <View style={[h.fill, { width: `${Math.max(2, challengePct)}%` as never }]} />
             </View>
           </View>
@@ -1197,9 +1199,10 @@ const s = StyleSheet.create({
   dayFailedText: { color: '#3A3A40', fontSize: 13, textAlign: 'center', paddingVertical: 8 },
 })
 
-// Hjältepanelens stilar — mörk marinblå i båda temalägena, som förlagan
+// Hjältepanelens stilar — ytan sätts av useHeroChrome (navy i ljust läge,
+// upplyst kort med varm kant i mörkt)
 const h = StyleSheet.create({
-  card: { backgroundColor: '#151B33', borderRadius: 24, padding: 18 },
+  card: { borderRadius: 24, padding: 18 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   levelPill: {
     backgroundColor: 'rgba(242,162,95,0.16)', borderRadius: 999,
