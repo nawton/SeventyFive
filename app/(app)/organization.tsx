@@ -37,9 +37,9 @@ const SHARE_LABELS: Record<ShareLevel, string> = {
   base: 'Bas', detailed: 'Detaljerad', full: 'Full',
 }
 const SHARE_HINTS: Record<ShareLevel, string> = {
-  base: 'Streak och antal pass',
-  detailed: 'Även volym, distans och PR',
-  full: 'Även progression per övning',
+  base: 'Föreningen ser din streak och antal pass',
+  detailed: 'Föreningen ser även volym, distans och PR',
+  full: 'Föreningen ser även progression per övning',
 }
 
 export default function OrganizationScreen() {
@@ -193,177 +193,202 @@ export default function OrganizationScreen() {
     ])
   }
 
+  const onAccent = T.TEXT_PRIMARY === '#FFFFFF' ? '#000000' : '#FFFFFF'
+  const myName = members.find(m => m.id === meId)?.name ?? t('Jag')
+  const sortedBoard = [...board].sort((a, b) => (b.cardio_passes + b.gym_days) - (a.cardio_passes + a.gym_days)).slice(0, 10)
+
   return (
     <SafeScreen style={s.screen}>
       <View style={s.topBar}>
         <GlassCircleButton icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
           onPress={() => router.back()} fallbackStyle={{ backgroundColor: CARD }} />
-        <Text style={s.topTitle} numberOfLines={1}>{org?.name ?? params.name ?? t('Förening')}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={s.topTitle} numberOfLines={1}>{org?.name ?? params.name ?? t('Förening')}</Text>
+          <Text style={s.topSub} numberOfLines={1}>
+            {t('Förening')} · {members.length === 1 ? t('1 medlem') : t('{n} medlemmar', { n: members.length })}
+            {me ? ` · ${me.role === 'admin' ? t('du är admin') : me.role === 'coach' ? t('du är coach') : t('du är medlem')}` : ''}
+          </Text>
+        </View>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        {org?.description ? <Text style={s.desc}>{org.description}</Text> : null}
-
-        {/* Koden — admin och coach delar ut den */}
-        {isStaff && org && (
-          <TouchableOpacity style={[s.codeCard, chrome]} onPress={shareCode} activeOpacity={0.8} testID="shareCode">
-            <View style={{ flex: 1 }}>
-              <Text style={s.codeLabel}>{t('FÖRENINGENS KOD')}</Text>
-              <Text style={[s.codeValue, { color: T.ACCENT }]}>{org.join_code}</Text>
-              <Text style={s.codeHint}>{t('Tryck för att dela med medlemmarna')}</Text>
-            </View>
-            <Ionicons name="share-outline" size={22} color={T.ACCENT} />
-          </TouchableOpacity>
-        )}
-
-        {/* Tränarpassen */}
-        <View style={s.sectionHead}>
-          <Text style={s.sectionLabel}>{t('TRÄNARPASS')}</Text>
-          {isStaff && (
-            <TouchableOpacity onPress={() => setCoachOpen(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="newCoachWorkout">
-              <Ionicons name="add-circle-outline" size={24} color={T.ACCENT} />
-            </TouchableOpacity>
+        {/* Marinblå panel: veckans totaler + koden att bjuda in med */}
+        <View style={s.hero}>
+          <Text style={s.heroLabel}>{t('TILLSAMMANS DENNA VECKA')}</Text>
+          <View style={s.heroStatsRow}>
+            <Text style={s.heroStat}>
+              {totals.passes}
+              <Text style={s.heroStatUnit}> {t('pass')}</Text>
+            </Text>
+            <Text style={s.heroStat}>
+              {totals.km.toFixed(1).replace('.', ',')}
+              <Text style={s.heroStatUnit}> km</Text>
+            </Text>
+          </View>
+          {isStaff && org && (
+            <>
+              <View style={s.heroDivider} />
+              <View style={s.heroCodeRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.heroLabel}>{t('BJUD IN MED KOD')}</Text>
+                  <Text style={s.heroCode}>{org.join_code}</Text>
+                </View>
+                <TouchableOpacity style={s.shareBtn} onPress={shareCode} activeOpacity={0.8} testID="shareCode">
+                  <Ionicons name="share-outline" size={15} color="#FFFFFF" />
+                  <Text style={s.shareBtnText}>{t('Dela')}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
         </View>
-        {workouts.length === 0 && (
-          <Text style={s.emptyText}>
-            {isStaff
-              ? t('Publicera ett pass så kan medlemmarna lägga in det i sina scheman.')
-              : t('Inga tränarpass ännu. De dyker upp här när din coach publicerar dem.')}
-          </Text>
-        )}
-        {workouts.map(w => (
-          <TouchableOpacity
-            key={w.id}
-            style={[s.workoutRow, chrome]}
-            onPress={() => openDetail(w)}
-            onLongPress={() => workoutMenu(w)}
-            activeOpacity={0.75}
-            testID={`coachWorkout-${w.id}`}
-          >
-            <View style={[s.workoutIcon, { backgroundColor: `${T.ACCENT}14` }]}>
-              <Ionicons name={w.session_type === 'gym' ? 'barbell-outline' : 'fitness-outline'} size={19} color={T.ACCENT} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.workoutName} numberOfLines={1}>{w.name}</Text>
-              <Text style={s.workoutMeta} numberOfLines={1}>
-                {w.session_type === 'gym'
-                  ? t('{n} övningar', { n: w.exercises.length })
-                  : t('Cardio')}
-                {w.audience === 'selected' ? ` · ${t('Utvalda')}` : ''}
-                {' · '}
-                {new Date(w.created_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}
-              </Text>
-            </View>
-            {adopted.has(w.id)
-              ? <View style={[s.adoptedPill, { backgroundColor: `${T.ACCENT}16` }]}>
-                  <Ionicons name="checkmark" size={13} color={T.ACCENT} />
-                  <Text style={[s.adoptedText, { color: T.ACCENT }]}>{t('Tillagt')}</Text>
-                </View>
-              : <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />}
-          </TouchableOpacity>
-        ))}
 
-        {/* Veckans siffror: föreningens totaler och topplistan */}
-        <Text style={s.sectionLabel}>{t('TILLSAMMANS DENNA VECKA')}</Text>
-        <View style={[s.totalsCard, chrome]}>
-          <View style={s.totalsCell}>
-            <Text style={[s.totalsValue, { color: T.ACCENT }]}>{totals.passes}</Text>
-            <Text style={s.totalsLabel}>{totals.passes === 1 ? t('pass') : t('pass')}</Text>
+        {/* Tränarpassen */}
+        <View style={[s.card, chrome]}>
+          <View style={s.cardHead}>
+            <Text style={s.cardTitle}>{t('Tränarpass')}</Text>
+            {isStaff && (
+              <TouchableOpacity
+                style={[s.solidBtn, { backgroundColor: T.ACCENT }]}
+                onPress={() => setCoachOpen(true)}
+                activeOpacity={0.85}
+                testID="newCoachWorkout"
+              >
+                <Text style={[s.solidBtnText, { color: onAccent }]}>+ {t('Publicera')}</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <View style={s.totalsDivider} />
-          <View style={s.totalsCell}>
-            <Text style={[s.totalsValue, { color: T.ACCENT }]}>{totals.km.toFixed(1).replace('.', ',')}</Text>
-            <Text style={s.totalsLabel}>{t('km')}</Text>
-          </View>
+          <Text style={s.cardSub}>
+            {isStaff
+              ? t('Pass du publicerar kan medlemmarna lägga in i sina scheman.')
+              : t('Pass från din coach kan läggas in i ditt schema.')}
+          </Text>
+          {workouts.length === 0 ? (
+            <View style={s.emptyInset}>
+              <Ionicons name="calendar-outline" size={17} color={TEXT_SECONDARY} />
+              <Text style={s.emptyInsetText}>{t('Inga pass publicerade än')}</Text>
+            </View>
+          ) : workouts.map((w, i) => (
+            <TouchableOpacity
+              key={w.id}
+              style={[s.innerRow, i > 0 && s.innerRowBorder]}
+              onPress={() => openDetail(w)}
+              onLongPress={() => workoutMenu(w)}
+              activeOpacity={0.75}
+              testID={`coachWorkout-${w.id}`}
+            >
+              <View style={[s.workoutIcon, { backgroundColor: `${T.ACCENT}14` }]}>
+                <Ionicons name={w.session_type === 'gym' ? 'barbell-outline' : 'fitness-outline'} size={19} color={T.ACCENT} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.workoutName} numberOfLines={1}>{w.name}</Text>
+                <Text style={s.workoutMeta} numberOfLines={1}>
+                  {w.session_type === 'gym'
+                    ? t('{n} övningar', { n: w.exercises.length })
+                    : t('Cardio')}
+                  {w.audience === 'selected' ? ` · ${t('Utvalda')}` : ''}
+                  {' · '}
+                  {new Date(w.created_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}
+                </Text>
+              </View>
+              {adopted.has(w.id)
+                ? <View style={[s.adoptedPill, { backgroundColor: `${T.ACCENT}16` }]}>
+                    <Ionicons name="checkmark" size={13} color={T.ACCENT} />
+                    <Text style={[s.adoptedText, { color: T.ACCENT }]}>{t('Tillagt')}</Text>
+                  </View>
+                : <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />}
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {board.some(r => r.cardio_passes + r.gym_days > 0) && (
-          <>
-            <Text style={s.sectionLabel}>{t('VECKANS TOPPLISTA')}</Text>
-            <View style={[s.memberCard, chrome]}>
-              {[...board]
-                .sort((a, b) => (b.cardio_passes + b.gym_days) - (a.cardio_passes + a.gym_days))
-                .slice(0, 10)
-                .map((r, i, arr) => {
-                  const m = members.find(x => x.id === r.user_id)
-                  return (
-                    <View key={r.user_id} style={[s.memberRow, i < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: hairline }]}>
-                      <Text style={[s.boardRank, i === 0 && { color: T.ACCENT }]}>{i + 1}</Text>
-                      <FeedAvatar url={m?.avatar_url ?? null} fallback={(m?.name ?? '?').charAt(0).toUpperCase()} size={34} />
-                      <Text style={s.memberName} numberOfLines={1}>
-                        {r.user_id === meId ? t('Jag') : m?.name ?? t('Namnlös')}
-                      </Text>
-                      <Text style={s.boardMeta}>
-                        {t('{n} pass', { n: r.cardio_passes + r.gym_days })}
-                        {r.km != null && r.km > 0 ? ` · ${r.km.toFixed(1).replace('.', ',')} km` : ''}
-                      </Text>
-                    </View>
-                  )
-                })}
+        {/* Veckans topplista */}
+        <View style={[s.card, chrome]}>
+          <Text style={s.cardTitle}>{t('Veckans topplista')}</Text>
+          {sortedBoard.map((r, i) => {
+            const m = members.find(x => x.id === r.user_id)
+            const name = m?.name ?? t('Namnlös')
+            return (
+              <View key={r.user_id} style={[s.innerRow, i > 0 && s.innerRowBorder]}>
+                <Text style={[s.boardRank, i === 0 && { color: '#D6A319' }]}>{i + 1}</Text>
+                <FeedAvatar url={m?.avatar_url ?? null} fallback={name.charAt(0).toUpperCase()} size={36} />
+                <Text style={s.memberName} numberOfLines={1}>
+                  {r.user_id === meId ? `${name} (${t('du')})` : name}
+                </Text>
+                <Text style={[s.boardMeta, { color: T.ACCENT }]}>
+                  {r.cardio_passes + r.gym_days === 1 ? t('1 pass') : t('{n} pass', { n: r.cardio_passes + r.gym_days })}
+                  {r.km != null && r.km > 0 ? <Text style={s.boardKm}>{` · ${r.km.toFixed(1).replace('.', ',')} km`}</Text> : null}
+                </Text>
+              </View>
+            )
+          })}
+          {members.length === 1 && (
+            <View style={[s.infoInset, { backgroundColor: `${T.ACCENT}0E` }]}>
+              <Ionicons name="people-outline" size={17} color={T.ACCENT} />
+              <Text style={s.infoInsetText}>{t('Bjud in fler med koden så blir det en riktig liga.')}</Text>
             </View>
-          </>
-        )}
+          )}
+        </View>
 
         {/* Grupperna som hör till föreningen */}
-        <View style={s.sectionHead}>
-          <Text style={[s.sectionLabel, { marginTop: 0, marginBottom: 0 }]}>{t('GRUPPER I FÖRENINGEN')}</Text>
-          <TouchableOpacity onPress={linkGroup} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="linkGroup">
-            <Ionicons name="link-outline" size={20} color={T.ACCENT} />
-          </TouchableOpacity>
-        </View>
-        {orgGroups.length === 0 && (
-          <Text style={s.emptyText}>{t('Koppla era grupper hit så kan tränarpass riktas till dem.')}</Text>
-        )}
-        {orgGroups.map(g => (
-          <TouchableOpacity
-            key={g.id}
-            style={[s.workoutRow, chrome]}
-            onPress={() => router.push({ pathname: '/(app)/group', params: { groupId: g.id, name: g.name, avatar: g.avatar_url ?? '' } } as never)}
-            activeOpacity={0.75}
-            testID={`orgGroup-${g.id}`}
-          >
-            <FeedAvatar url={g.avatar_url} fallback={g.name.charAt(0).toUpperCase()} size={38} />
-            <Text style={[s.workoutName, { flex: 1 }]} numberOfLines={1}>{g.name}</Text>
-            <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
-          </TouchableOpacity>
-        ))}
-
-        {/* Min delning — vad andra i föreningen ser av min statistik */}
-        {me && (
-          <>
-            <Text style={s.sectionLabel}>{t('MIN DELNING')}</Text>
-            <TouchableOpacity style={[s.shareRow, chrome]} onPress={cycleShareLevel} activeOpacity={0.8} testID="shareLevel">
-              <Ionicons name="eye-outline" size={19} color={T.ACCENT} />
-              <View style={{ flex: 1 }}>
-                <Text style={s.shareValue}>{t(SHARE_LABELS[me.share_level])}</Text>
-                <Text style={s.shareHint}>{t(SHARE_HINTS[me.share_level])}</Text>
-              </View>
-              <Ionicons name="swap-horizontal" size={17} color={TEXT_SECONDARY} />
+        <View style={[s.card, chrome]}>
+          <View style={s.cardHead}>
+            <Text style={s.cardTitle}>{t('Grupper i föreningen')}</Text>
+            <TouchableOpacity
+              style={[s.tintBtn, { backgroundColor: `${T.ACCENT}12` }]}
+              onPress={linkGroup}
+              activeOpacity={0.8}
+              testID="linkGroup"
+            >
+              <Text style={[s.tintBtnText, { color: T.ACCENT }]}>{t('Koppla grupp')}</Text>
             </TouchableOpacity>
-          </>
-        )}
+          </View>
+          <Text style={s.cardSub}>{t('Kopplade grupper kan få tränarpass riktade till sig.')}</Text>
+          {orgGroups.length === 0 ? (
+            <View style={s.emptyInset}>
+              <Ionicons name="link-outline" size={17} color={TEXT_SECONDARY} />
+              <Text style={s.emptyInsetText}>{t('Inga grupper kopplade än')}</Text>
+            </View>
+          ) : orgGroups.map((g, i) => (
+            <TouchableOpacity
+              key={g.id}
+              style={[s.innerRow, i > 0 && s.innerRowBorder]}
+              onPress={() => router.push({ pathname: '/(app)/group', params: { groupId: g.id, name: g.name, avatar: g.avatar_url ?? '' } } as never)}
+              activeOpacity={0.75}
+              testID={`orgGroup-${g.id}`}
+            >
+              <FeedAvatar url={g.avatar_url} fallback={g.name.charAt(0).toUpperCase()} size={38} />
+              <Text style={[s.workoutName, { flex: 1 }]} numberOfLines={1}>{g.name}</Text>
+              <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
+            </TouchableOpacity>
+          ))}
+        </View>
 
-        {/* Medlemmarna */}
-        <Text style={s.sectionLabel}>
-          {members.length === 1 ? t('1 MEDLEM') : t('{n} MEDLEMMAR', { n: members.length })}
-        </Text>
-        <View style={[s.memberCard, chrome]}>
-          {members.map((m, i) => (
+        {/* Min delning + medlemmarna i samma kort */}
+        <View style={[s.card, chrome]}>
+          {me && (
+            <TouchableOpacity style={s.shareHead} onPress={cycleShareLevel} activeOpacity={0.8} testID="shareLevel">
+              <Ionicons name="eye-outline" size={19} color={TEXT_SECONDARY} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.shareTitle}>{t('Min delning: {level}', { level: t(SHARE_LABELS[me.share_level]) })}</Text>
+                <Text style={s.cardSub2}>{t(SHARE_HINTS[me.share_level])}</Text>
+              </View>
+              <Text style={[s.tintBtnText, { color: T.ACCENT }]}>{t('Ändra')}</Text>
+            </TouchableOpacity>
+          )}
+          {members.map(m => (
             <TouchableOpacity
               key={m.id}
-              style={[s.memberRow, i < members.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: hairline }]}
+              style={[s.innerRow, s.innerRowBorder]}
               onPress={() => memberMenu(m)}
               activeOpacity={isAdmin && m.id !== meId ? 0.7 : 1}
               testID={`orgMember-${m.id}`}
             >
               <FeedAvatar url={m.avatar_url} fallback={(m.name ?? '?').charAt(0).toUpperCase()} size={40} />
               <Text style={s.memberName} numberOfLines={1}>
-                {m.id === meId ? t('Jag') : m.name ?? t('Namnlös')}
+                {m.id === meId ? `${myName} (${t('du')})` : m.name ?? t('Namnlös')}
               </Text>
               {m.role !== 'member' && (
-                <View style={[s.rolePill, { backgroundColor: `${T.ACCENT}16` }]}>
+                <View style={[s.rolePill, { backgroundColor: `${T.ACCENT}14` }]}>
                   <Text style={[s.roleText, { color: T.ACCENT }]}>{t(ROLE_LABELS[m.role])}</Text>
                 </View>
               )}
@@ -457,32 +482,52 @@ export default function OrganizationScreen() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
   topBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 8, gap: 12,
-  },
-  topTitle: { flex: 1, color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800', textAlign: 'center' },
-  scroll: { paddingHorizontal: 20, paddingBottom: 60 },
-  desc: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 20, marginBottom: 14 },
-  codeCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: CARD, borderRadius: 16, padding: 16, marginBottom: 6,
+    paddingHorizontal: 16, paddingVertical: 8,
   },
-  codeLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
-  codeValue: { fontSize: 28, fontWeight: '800', letterSpacing: 6, marginVertical: 2 },
-  codeHint: { color: TEXT_SECONDARY, fontSize: 12 },
-  sectionHead: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginTop: 18, marginBottom: 8,
+  topTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800' },
+  topSub: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 1 },
+  scroll: { paddingHorizontal: 16, paddingBottom: 60, paddingTop: 6, gap: 14 },
+
+  hero: { backgroundColor: '#151B33', borderRadius: 22, padding: 18 },
+  heroLabel: { color: '#9AA3BC', fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
+  heroStatsRow: { flexDirection: 'row', gap: 28, marginTop: 8 },
+  heroStat: { color: '#FFFFFF', fontSize: 30, fontWeight: '800' },
+  heroStatUnit: { color: '#9AA3BC', fontSize: 15, fontWeight: '700' },
+  heroDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.18)', marginVertical: 14 },
+  heroCodeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  heroCode: { color: '#F2A25F', fontSize: 24, fontWeight: '800', letterSpacing: 6, marginTop: 4 },
+  shareBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 999,
+    paddingHorizontal: 16, paddingVertical: 10,
   },
-  sectionLabel: {
-    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5,
-    marginTop: 18, marginBottom: 8,
+  shareBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+
+  card: { backgroundColor: CARD, borderRadius: 20, padding: 16 },
+  cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800' },
+  cardSub: { color: TEXT_SECONDARY, fontSize: 13.5, lineHeight: 19, marginTop: 6 },
+  cardSub2: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
+  solidBtn: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  solidBtnText: { fontSize: 13.5, fontWeight: '800' },
+  tintBtn: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  tintBtnText: { fontSize: 13.5, fontWeight: '700' },
+
+  emptyInset: {
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    backgroundColor: 'rgba(128,128,128,0.09)', borderRadius: 14,
+    padding: 14, marginTop: 12,
   },
-  emptyText: { color: TEXT_SECONDARY, fontSize: 14, lineHeight: 20 },
-  workoutRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: CARD, borderRadius: 16, padding: 14, marginBottom: 8,
+  emptyInsetText: { color: TEXT_SECONDARY, fontSize: 14 },
+  infoInset: {
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    borderRadius: 14, padding: 13, marginTop: 12,
   },
+  infoInsetText: { flex: 1, color: TEXT_PRIMARY, fontSize: 13.5, lineHeight: 18 },
+
+  innerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, marginTop: 2 },
+  innerRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.18)' },
   workoutIcon: {
     width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center',
   },
@@ -493,39 +538,21 @@ const s = StyleSheet.create({
     borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5,
   },
   adoptedText: { fontSize: 12, fontWeight: '700' },
-  shareRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: CARD, borderRadius: 16, padding: 14,
-  },
-  shareValue: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700' },
-  shareHint: { color: TEXT_SECONDARY, fontSize: 12.5, marginTop: 1 },
-  memberCard: { backgroundColor: CARD, borderRadius: 16, paddingHorizontal: 14 },
-  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
+
+  boardRank: { width: 18, color: TEXT_SECONDARY, fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  boardMeta: { fontSize: 14, fontWeight: '800' },
+  boardKm: { color: TEXT_SECONDARY, fontSize: 12.5, fontWeight: '600' },
   memberName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
-  rolePill: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4 },
-  roleText: { fontSize: 12, fontWeight: '700' },
-  totalsCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: CARD, borderRadius: 16, paddingVertical: 16,
+  rolePill: { borderRadius: 999, paddingHorizontal: 11, paddingVertical: 5 },
+  roleText: { fontSize: 12.5, fontWeight: '700' },
+
+  shareHead: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 12 },
+  shareTitle: { color: TEXT_PRIMARY, fontSize: 15.5, fontWeight: '800' },
+
+  leaveBtn: {
+    alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(229,72,77,0.45)',
+    borderRadius: 999, paddingVertical: 14, marginTop: 6,
   },
-  totalsCell: { flex: 1, alignItems: 'center', gap: 2 },
-  totalsDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: 'rgba(128,128,128,0.25)' },
-  totalsValue: { fontSize: 26, fontWeight: '800' },
-  totalsLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
-  boardRank: { width: 20, color: TEXT_SECONDARY, fontSize: 14, fontWeight: '800', textAlign: 'center' },
-  boardMeta: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  statusLabel: {
-    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5,
-    marginTop: 16, marginBottom: 6,
-  },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  statusName: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
-  statusPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4,
-  },
-  statusPillText: { fontSize: 12, fontWeight: '700' },
-  leaveBtn: { alignItems: 'center', marginTop: 26 },
   leaveText: { color: RED, fontSize: 15, fontWeight: '700' },
 
   detailBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
@@ -554,4 +581,15 @@ const s = StyleSheet.create({
     borderRadius: 16, paddingVertical: 14, marginTop: 16,
   },
   detailAdoptedText: { fontSize: 15, fontWeight: '700' },
+  statusLabel: {
+    color: TEXT_SECONDARY, fontSize: 11, fontWeight: '700', letterSpacing: 1.5,
+    marginTop: 16, marginBottom: 6,
+  },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  statusName: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+  statusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4,
+  },
+  statusPillText: { fontSize: 12, fontWeight: '700' },
 })
