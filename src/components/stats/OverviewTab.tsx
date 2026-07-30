@@ -24,8 +24,6 @@ import { useT, dateLocale } from '@/lib/i18n'
 // Hjältepanelens accenter (orange båge/CTA) är statiska strängar —
 // ytan i sig kommer från useHeroChrome: navy i ljust, upplyst i mörkt
 const HERO = {
-  bg: '#151B33',
-  track: '#2B3352',
   arc: '#F2A25F',
   cta: '#F2A25F',
   ctaText: '#16204A',

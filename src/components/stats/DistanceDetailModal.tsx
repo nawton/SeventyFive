@@ -17,7 +17,7 @@ import { useT, dateLocale } from '@/lib/i18n'
 // staplar per månad och listan månad för månad med en insiktsrad.
 // =============================================================================
 
-const HERO = { bg: '#151B33', sub: '#9AA3BC' }
+const HERO = { sub: '#9AA3BC' }
 
 type Range = 3 | 6 | 12
 

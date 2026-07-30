@@ -15,7 +15,7 @@ import { useT, dateLocale } from '@/lib/i18n'
 // veckans tyngsta övningar sorterade på volym.
 // =============================================================================
 
-const HERO = { bg: '#151B33', sub: '#9AA3BC' }
+const HERO = { sub: '#9AA3BC' }
 const GYM = '#EE7C4B'
 
 function workoutDate(w: StrengthWorkout): string {
