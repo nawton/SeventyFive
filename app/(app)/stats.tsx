@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector, ScrollView as GHScrollView, type GestureType } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
-import { useFocusEffect } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { getActiveChallenge, calculateCurrentDay, levelDisplayName } from '@/services/challenge'
 import { getAllDays, getStreak, type DaySummary } from '@/services/dailyLog'
@@ -31,7 +31,7 @@ import { OverviewTab } from '@/components/stats/OverviewTab'
 import { getProfile } from '@/services/profile'
 import { getUnitSystem, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import { deleteCardioWorkout } from '@/services/workouts'
-import { BG, ACCENT, useThemeStrings } from '@/lib/theme'
+import { BG, ACCENT, TEXT_SECONDARY, useThemeStrings } from '@/lib/theme'
 import { toLocalDateString } from '@/lib/date'
 import { useTabBarShrinkOnScroll } from '@/lib/tabBar'
 import { useT, dateLocale } from '@/lib/i18n'
@@ -256,11 +256,23 @@ export default function StatsScreen() {
 
   return (
     <SafeScreen style={s.screen} edges={['top']}>
-      <View style={s.header}>
-        <Text style={s.title}>{t('Framsteg')}</Text>
-        <Text style={s.subtitle}>
-          {currentDay > 0 ? `${t('Dag {n} av 75', { n: currentDay })}${levelName ? ` · ${levelName}` : ''}` : levelName}
-        </Text>
+      <View style={[s.header, { flexDirection: 'row', alignItems: 'center' }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>{t('Framsteg')}</Text>
+          <Text style={s.subtitle}>
+            {currentDay > 0 ? `${t('Dag {n} av 75', { n: currentDay })}${levelName ? ` · ${levelName}` : ''}` : levelName}
+          </Text>
+        </View>
+        {/* Streakpillen — flamman tänds med streaken, trycket öppnar streaksidan */}
+        <TouchableOpacity
+          style={[st.streakPill, { backgroundColor: streak > 0 ? 'rgba(238,124,75,0.14)' : 'rgba(128,128,128,0.10)' }]}
+          onPress={() => router.push('/(app)/streak' as never)}
+          activeOpacity={0.75}
+          testID="streakPill"
+        >
+          <Ionicons name="flame" size={16} color={streak > 0 ? '#EE7C4B' : TEXT_SECONDARY} />
+          <Text style={[st.streakNum, { color: streak > 0 ? '#EE7C4B' : TEXT_SECONDARY }]}>{streak}</Text>
+        </TouchableOpacity>
       </View>
 
       <GestureDetector gesture={tabPan}>
@@ -372,3 +384,12 @@ export default function StatsScreen() {
 }
 
 // ─── styles ────────────────────────────────────────────────────────────────────
+
+// Streakpillen i headern
+const st = StyleSheet.create({
+  streakPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7,
+  },
+  streakNum: { fontSize: 15, fontWeight: '800' },
+})
