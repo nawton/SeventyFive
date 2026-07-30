@@ -143,8 +143,8 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
   const t = useT()
   const progress   = useSharedValue(0)
   const isComplete = total > 0 && completed === total
-  const T = useThemeStrings()
-  const ringColor  = isComplete ? '#3BE862' : T.ACCENT
+  // Ringen bor i den mörka hjältepanelen — fasta färger i båda lägena
+  const ringColor  = isComplete ? '#3BE862' : '#F2A25F'
 
   useEffect(() => {
     progress.value = withTiming(
@@ -166,7 +166,7 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
       >
         <Circle
           cx={R_SIZE / 2} cy={R_SIZE / 2} r={R_RADIUS}
-          stroke={T.BORDER} strokeWidth={R_STROKE} fill="none"
+          stroke="#2B3352" strokeWidth={R_STROKE} fill="none"
         />
         <AnimatedCircle
           cx={R_SIZE / 2} cy={R_SIZE / 2} r={R_RADIUS}
@@ -177,9 +177,10 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
         />
       </Svg>
       <View style={s.ringCenter}>
-        <Text style={[s.ringNum, { color: ringColor }]}>{completed}</Text>
-        <Text style={s.ringDenom}>/{total}</Text>
-        <Text style={s.ringLabel}>{t('KLART')}</Text>
+        <Text style={[s.ringNum, { color: '#FFFFFF' }]}>
+          {completed}<Text style={{ color: '#9AA3BC', fontSize: 16 }}>/{total}</Text>
+        </Text>
+        <Text style={[s.ringLabel, { color: '#9AA3BC' }]}>{t('KLART')}</Text>
       </View>
     </View>
   )
@@ -663,15 +664,6 @@ export default function DashboardScreen() {
   return (
     <SafeScreen style={s.screen} edges={['top']}>
 
-      {/* Atmospheric background glow */}
-      <LinearGradient
-        colors={['rgba(255,143,0,0.08)', 'transparent']}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.5 }}
-        pointerEvents="none"
-      />
-
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={s.scroll}
@@ -713,38 +705,30 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Hero Card — 3D floating ── */}
-        <Animated.View style={[s.heroOuter, { shadowColor: heroShadow }, lightMode && { shadowOpacity: 0.10, shadowRadius: 14 }, heroAnimStyle]}>
-          <LinearGradient
-            colors={heroGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[s.heroCard, lightMode && { borderWidth: 0 }]}
-          >
-            <View style={s.heroLeft}>
+        {/* ── Hjältepanelen — mörk marinblå som förlagan ── */}
+        <Animated.View style={[s.heroOuter, { shadowColor: '#0A0E20' }, heroAnimStyle]}>
+          <View style={h.card}>
+            <View style={h.topRow}>
               {levelName ? (
-                <View style={s.levelBadge}>
-                  <Text style={s.levelBadgeText}>{levelName.toUpperCase()}</Text>
+                <View style={h.levelPill}>
+                  <Text style={h.levelPillText}>{levelName.toUpperCase()}</Text>
                 </View>
-              ) : null}
-              <Text style={s.dayLabel}>{t('DAG')}</Text>
-              <View style={s.dayRow}>
-                <Text style={s.dayNum}>{currentDay}</Text>
-                <Text style={s.dayOf}>/75</Text>
-              </View>
-              <View style={s.heroPctRow}>
-                <Text style={s.heroPct}>{challengePct}%</Text>
-                <Text style={s.heroPctSuffix}> {t('av utmaningen')}</Text>
-              </View>
-              <View style={s.heroBar}>
-                <View style={[s.heroBarFill, { width: `${challengePct}%` as any }]} />
-              </View>
+              ) : <View />}
+              <Text style={h.daysLeft}>
+                {75 - currentDay === 1 ? t('1 dag kvar') : t('{n} dagar kvar', { n: Math.max(0, 75 - currentDay) })}
+              </Text>
             </View>
-
-            <View style={s.heroRight}>
+            <View style={h.mainRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={h.dayBig}>{t('Dag {n}', { n: currentDay })}</Text>
+                <Text style={h.subText}>{t('av 75 · utmaningen pågår')}</Text>
+              </View>
               <ProgressRing completed={completedCount} total={standardTasks.length} />
             </View>
-          </LinearGradient>
+            <View style={h.track}>
+              <View style={[h.fill, { width: `${Math.max(2, challengePct)}%` as never }]} />
+            </View>
+          </View>
         </Animated.View>
 
         {/* ── Social puls — visas bara när något faktiskt hänt ── */}
@@ -1211,4 +1195,21 @@ const s = StyleSheet.create({
   },
   failBtnText:   { color: '#FF3B4A', fontSize: 14, fontWeight: '600' },
   dayFailedText: { color: '#3A3A40', fontSize: 13, textAlign: 'center', paddingVertical: 8 },
+})
+
+// Hjältepanelens stilar — mörk marinblå i båda temalägena, som förlagan
+const h = StyleSheet.create({
+  card: { backgroundColor: '#151B33', borderRadius: 24, padding: 18 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  levelPill: {
+    backgroundColor: 'rgba(242,162,95,0.16)', borderRadius: 999,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  levelPillText: { color: '#F2A25F', fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  daysLeft: { color: '#9AA3BC', fontSize: 13.5, fontWeight: '600' },
+  mainRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10, marginBottom: 16 },
+  dayBig: { color: '#FFFFFF', fontSize: 44, fontWeight: '800', letterSpacing: -0.5 },
+  subText: { color: '#9AA3BC', fontSize: 14, marginTop: 2 },
+  track: { height: 6, borderRadius: 3, backgroundColor: '#2B3352', overflow: 'hidden' },
+  fill: { height: 6, borderRadius: 3, backgroundColor: '#F2A25F' },
 })

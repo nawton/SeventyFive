@@ -104,25 +104,22 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
         )}
         <View style={s.taskCardTop}>
           <View style={[s.taskIconBox, { backgroundColor: color + '1C' }]}>
-            <Ionicons name={icon} size={17} color={color} />
+            <Ionicons name={icon} size={20} color={color} />
           </View>
           <View style={[
             s.taskCheck,
-            light && { borderColor: 'rgba(0,0,0,0.22)' },
-            task.completed && (light
-              ? { backgroundColor: DONE_GREEN, borderColor: DONE_GREEN }
-              : { backgroundColor: color, borderColor: color }),
+            light && { borderColor: 'rgba(0,0,0,0.18)' },
+            task.completed && { backgroundColor: DONE_GREEN, borderColor: DONE_GREEN },
           ]}>
-            {task.completed && <Ionicons name="checkmark" size={10} color={light ? '#fff' : '#000'} />}
+            {task.completed && <Ionicons name="checkmark" size={14} color="#fff" />}
           </View>
         </View>
         <View style={s.taskBody}>
           <Text
             style={[
               s.taskName,
-              light && { color: '#26272B' },
-              task.completed && s.taskNameDone,
-              task.completed && light && { color: '#8A8A90', textDecorationLine: 'line-through' as const },
+              light && { color: '#1E2026' },
+              task.completed && { color: light ? '#9A9AA2' : '#5A5A62', textDecorationLine: 'line-through' as const },
             ]}
             numberOfLines={metaLabel || counter ? 1 : 2}
           >
@@ -148,21 +145,23 @@ export function TaskGridCard({ task, onPress, counter, metaLabel, fullWidth }: {
                 >
                   <Ionicons name="remove" size={15} color={counter.value === 0 ? (light ? 'rgba(0,0,0,0.30)' : '#2A2A2E') : color} />
                 </TouchableOpacity>
-                <Text style={[s.counterLabel, task.completed && { color }]}>
+                <Text style={[s.counterLabel, light && { color: '#1E2026' }, task.completed && { color }]}>
                   {counter.value}/{counter.goal} {counter.unit}
                 </Text>
                 <TouchableOpacity
-                  style={[s.counterBtn, { backgroundColor: color }]}
+                  style={[s.counterBtn, { backgroundColor: color, borderColor: color }]}
                   onPress={counter.onPlus}
                   hitSlop={8}
                 >
-                  <Ionicons name="add" size={15} color="#000" />
+                  <Ionicons name="add" size={17} color="#fff" />
                 </TouchableOpacity>
               </View>
             </>
           )}
-          {metaLabel && (
-            <Text style={s.taskMeta} numberOfLines={1}>{metaLabel}</Text>
+          {(metaLabel || (!counter && task.description)) && (
+            <Text style={[s.taskMeta, light && { color: '#8A8B93' }]} numberOfLines={1}>
+              {metaLabel ?? t(task.description ?? '')}
+            </Text>
           )}
         </View>
       </TouchableOpacity>
@@ -181,11 +180,11 @@ const LIGHT_SHADOW = {
 const s = StyleSheet.create({
   taskCard: {
     backgroundColor: CARD_BG,
-    borderRadius: 16, padding: 14,
+    borderRadius: 20, padding: 16,
     borderWidth: 1, borderColor: CARD_BORDER,
     // Fast höjd så alla kort i rutnätet är lika stora oavsett innehåll
     // (vattenkortet har räknare + progress-bar, övriga bara namn)
-    overflow: 'hidden', height: 134, gap: 10,
+    overflow: 'hidden', height: 150, gap: 12,
   },
   taskSidebar: {
     position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
@@ -204,29 +203,28 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   counterBtn: {
-    width: 26, height: 26, borderRadius: 13,
+    width: 30, height: 30, borderRadius: 15,
     borderWidth: 1.5, borderColor: '#2A2A2E',
     alignItems: 'center', justifyContent: 'center',
   },
   counterBtnDim: { opacity: 0.4 },
-  counterLabel: { color: '#8A8A90', fontSize: 12, fontWeight: '700' },
+  counterLabel: { color: '#DDDDDF', fontSize: 13.5, fontWeight: '800' },
   taskBar: {
     height: 3, backgroundColor: BORDER,
     borderRadius: 2, overflow: 'hidden',
   },
   taskBarFill: { height: '100%', borderRadius: 2 },
-  taskMeta: { color: '#4A4A50', fontSize: 11, fontWeight: '600' },
+  taskMeta: { color: '#6A6B73', fontSize: 12.5, fontWeight: '600' },
   taskIconBox: {
-    width: 34, height: 34, borderRadius: 10,
+    width: 44, height: 44, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
   },
   taskCheck: {
-    width: 21, height: 21, borderRadius: 11,
+    width: 27, height: 27, borderRadius: 14,
     borderWidth: 1.5, borderColor: '#2A2A2E',
     alignItems: 'center', justifyContent: 'center',
   },
   taskName: {
-    color: '#BBBBBB', fontSize: 13, fontWeight: '600', lineHeight: 18,
+    color: '#DDDDDF', fontSize: 16, fontWeight: '700', lineHeight: 20,
   },
-  taskNameDone: { color: '#3A3A40' },
 })

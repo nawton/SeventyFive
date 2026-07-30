@@ -178,4 +178,5 @@ export const EN_DASHBOARD: Record<string, string> = {
   'Kväll och inget klart ännu, nu kör vi.': "It's evening and nothing's done yet, let's go.",
   'En uppgift kvar, spurta hem.': 'One task left, sprint to the finish.',
   '{n} uppgifter kvar, kom igen.': '{n} tasks left, come on.',
+  "av 75 · utmaningen pågår": "of 75 · challenge in progress",
 }
