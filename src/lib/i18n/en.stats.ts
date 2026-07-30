@@ -448,4 +448,11 @@ export const EN_STATS: Record<string, string> = {
   "est. 1RM {n} kg": "est. 1RM {n} kg",
   "Från dina avbockade övningar denna vecka": "From your checked-off exercises this week",
   "Från dina avbockade övningar vald vecka": "From your checked-off exercises the selected week",
+  "Totalt denna vecka": "Total this week",
+  "Totalt {w}": "Total {w}",
+  "SNITT/SET": "AVG/SET",
+  "kg lyft per dag": "kg lifted per day",
+  "Tyngsta övningar": "Heaviest exercises",
+  "{sets} set · {reps} reps · tyngsta {kg} kg": "{sets} sets · {reps} reps · heaviest {kg} kg",
+  "Inga lyft loggade den här veckan.": "No lifts logged this week.",
 }
