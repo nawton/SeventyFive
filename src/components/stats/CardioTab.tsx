@@ -2,7 +2,7 @@
 // tempo- och distansgrafer, rekordkort och sessionslistan — med sina
 // detaljmodaler. Skalet (stats.tsx) äger rådatan och skickar in den.
 import { useMemo, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Modal } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
 import { router } from 'expo-router'
@@ -25,7 +25,6 @@ import {
 } from './statsShared'
 import { SwipeRow } from './SwipeRow'
 import { DistanceDetailModal } from './DistanceDetailModal'
-import { DistanceAreaChart } from './DistanceAreaChart'
 import { useT, dateLocale } from '@/lib/i18n'
 
 interface WeekBar {
@@ -110,8 +109,8 @@ export function CardioTab({
   const [cardioOffset, setCardioOffset]         = useState(0)
   const [cardioDetailsOpen, setCardioDetailsOpen] = useState(false)
   const [distDetailOpen, setDistDetailOpen]     = useState(false)
-  // Scrub på distansgrafen: punkten visas medan fingret ligger kvar
-  const [distScrubKey, setDistScrubKey]         = useState<string | null>(null)
+  // Totalt-läget visar bara senaste månadens sessioner tills Alla trycks
+  const [showAllSessions, setShowAllSessions]   = useState(false)
 
   // Optimistisk radering — skalet äger listorna och databasanropen
   function performDeleteSessionRow(r: { key: string; name: string; workout?: CardioWorkout }) {
@@ -290,6 +289,8 @@ export function CardioTab({
     key: string
     name: string
     value: string
+    valueSub: string
+    sub: string
     icon: React.ComponentProps<typeof Ionicons>['name']
     color: string
     sortKey: number
@@ -299,11 +300,19 @@ export function CardioTab({
   const sessionRows: SessRow[] = useMemo(() => [
     ...cardioW.map((w): SessRow => {
       const meta = CARDIO_META[w.data.type] ?? { icon: 'fitness' as const, color: T.ACCENT }
+      const km = w.data.distance_km
+      const time = new Date(w.created_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' })
       return {
         key: `c:${w.id}`,
         name: w.name,
-        // Alltid distans — aldrig tid — som stort värde
-        value: `${toDisplayDistance(w.data.distance_km, unit).toFixed(2).replace('.', ',')} ${unitLabel.toUpperCase()}`,
+        // Distanspass: km stort + tempo under; pass utan GPS-distans: tiden
+        value: km > 0.1
+          ? `${toDisplayDistance(km, unit).toFixed(2).replace('.', ',')} ${unitLabel}`
+          : fmtDuration(w.data.duration_seconds),
+        valueSub: km > 0.1
+          ? `${fmtPace(paceForUnit(w.data.duration_seconds / km, unit))} /${unitLabel}`
+          : t('utan GPS'),
+        sub: `${sessDateLabel(toLocalDateString(new Date(w.created_at)))} · ${time}`,
         icon: meta.icon,
         color: meta.color,
         sortKey: new Date(w.created_at).getTime(),
@@ -323,7 +332,9 @@ export function CardioTab({
         return {
           key: `g:${c.id}`,
           name: c.name,
-          value: t('Klart'),
+          value: c.durationSeconds ? fmtDuration(c.durationSeconds) : t('Klart'),
+          valueSub: t('utan GPS'),
+          sub: sessDateLabel(c.completedDate),
           icon: meta.icon,
           color: meta.color,
           sortKey: new Date(`${c.completedDate}T12:00:00`).getTime(),
@@ -364,7 +375,7 @@ export function CardioTab({
                 { key: 'month', label: t('Månad') },
                 { key: 'all',   label: t('Totalt') },
               ]}
-              onChange={k => { setCardioRange(k); setCardioOffset(0) }}
+              onChange={k => { setCardioRange(k); setCardioOffset(0); setShowAllSessions(false) }}
             />
 
             {/* Bläddra bakåt i tiden — samma pilar som på gympass-fliken */}
@@ -385,44 +396,133 @@ export function CardioTab({
               </View>
             )}
 
-            {/* Träningsdetaljer — kompakt på fliken, tryck för alla detaljer */}
-            <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setCardioDetailsOpen(true)}>
-              <Text style={[s.sectionHead, s.sectionHeadInline]}>{t('Träningsdetaljer')}</Text>
-              <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.card, s.cardPlain]}
-              activeOpacity={0.85}
-              onPress={() => setCardioDetailsOpen(true)}
-            >
-              <View style={[s.dtlRow, { paddingTop: 0 }]}>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Träningstid')}</Text>
-                  <Text style={[s.dtlVal, { color: P.YELLOW }]}>{fmtDuration(totalSecs)}</Text>
-                </View>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Distans')}</Text>
-                  <Text style={[s.dtlVal, { color: P.BLUE }]}>
+            {/* Nyckeltalen 2x2 som förlagan — tryck öppnar alla detaljer */}
+            <TouchableOpacity style={[l.statCard, chrome]} activeOpacity={0.85} onPress={() => setCardioDetailsOpen(true)} testID="cardioStats">
+              <View style={l.statRow}>
+                <View style={l.statCell}>
+                  <Text style={l.statLbl}>{t('Distans')}</Text>
+                  <Text style={[l.statVal, { color: P.BLUE }]}>
                     {toDisplayDistance(totalKm, unit).toFixed(2).replace('.', ',')}
-                    <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
+                    <Text style={[l.statUnit, { color: P.BLUE }]}> {unitLabel}</Text>
                   </Text>
                 </View>
-              </View>
-              <View style={s.dtlSep} />
-              <View style={[s.dtlRow, { paddingBottom: 0 }]}>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Antal pass')}</Text>
-                  <Text style={[s.dtlVal, { color: P.GREEN }]}>{cardioW.length}</Text>
+                <View style={l.statCell}>
+                  <Text style={l.statLbl}>{t('Träningstid')}</Text>
+                  <Text style={[l.statVal, { color: P.BLUE }]}>{fmtDuration(totalSecs)}</Text>
                 </View>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Snittempo')}</Text>
-                  <Text style={[s.dtlVal, { color: P.TEAL }]}>
+              </View>
+              <View style={[l.statRow, { marginTop: 18 }]}>
+                <View style={l.statCell}>
+                  <Text style={l.statLbl}>{t('Antal pass')}</Text>
+                  <Text style={l.statVal}>{cardioW.length}</Text>
+                </View>
+                <View style={l.statCell}>
+                  <Text style={l.statLbl}>{t('Snittempo')}</Text>
+                  <Text style={l.statVal}>
                     {avgPace}
-                    <Text style={s.dtlUnit}> /{unitLabel}</Text>
+                    <Text style={l.statUnit}> /{unitLabel}</Text>
                   </Text>
                 </View>
               </View>
             </TouchableOpacity>
+
+            {/* Distansstaplar — per dag/vecka/månad efter periodfiltret */}
+            <TouchableOpacity style={[l.chartCard, chrome]} activeOpacity={0.85} onPress={() => setDistDetailOpen(true)} testID="distChart">
+              <View style={l.chartHead}>
+                <Text style={l.chartTitle}>
+                  {cardioRange === 'week' ? t('Distans per dag')
+                    : cardioRange === 'month' ? t('Distans per vecka')
+                    : t('Distans per månad')}
+                </Text>
+                {cardioRange === 'all' && <Text style={l.chartHint}>{t('senaste 6 mån')}</Text>}
+              </View>
+              <View style={l.barRow}>
+                {(() => {
+                  const max = Math.max(...distBuckets.map(x => x.total), 0.01)
+                  return distBuckets.map(b => (
+                    <View key={b.key} style={l.barCell}>
+                      <View style={l.barSlot}>
+                        {b.total > 0
+                          ? <View style={[l.bar, { height: Math.max(16, (b.total / max) * 150), backgroundColor: b.isCurrent ? T.ACCENT : `${T.ACCENT}55` }]} />
+                          : <View style={l.barEmpty} />}
+                      </View>
+                      <Text style={[l.barLbl, b.isCurrent && { color: T.ACCENT, fontWeight: '700' }]}>{b.label}</Text>
+                    </View>
+                  ))
+                })()}
+              </View>
+            </TouchableOpacity>
+
+            {/* Sessioner — kortrader som förlagan; Totalt visar senaste
+                månaden tills Alla trycks */}
+            {sessionRows.length > 0 ? (() => {
+              const latestMonth = monthLabel(sessionRows[0].dateStr)
+              const hasOlder = sessionRows.some(r => monthLabel(r.dateStr) !== latestMonth)
+              const shown = cardioRange === 'all' && !showAllSessions
+                ? sessionRows.filter(r => monthLabel(r.dateStr) === latestMonth)
+                : sessionRows
+              return (
+                <View style={{ gap: 10 }}>
+                  <View style={l.sessHead}>
+                    <Text style={l.sessTitle}>
+                      {cardioRange === 'all' ? `${t('Sessioner')} · ${latestMonth.split(' ')[0]}` : t('Sessioner')}
+                    </Text>
+                    {cardioRange === 'all' && hasOlder && (
+                      <TouchableOpacity onPress={() => setShowAllSessions(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="toggleSessions">
+                        <Text style={[l.sessLink, { color: T.ACCENT }]}>
+                          {showAllSessions ? t('Visa färre') : `${t('Alla')} ›`}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {shown.map((r, i) => {
+                    const m = monthLabel(r.dateStr)
+                    const showMonth = showAllSessions && i > 0 && monthLabel(shown[i - 1].dateStr) !== m
+                    return (
+                      <Animated.View
+                        key={r.key}
+                        style={{ gap: 10 }}
+                        layout={LinearTransition.duration(220)}
+                        exiting={FadeOut.duration(160)}
+                      >
+                        {showMonth && <Text style={s.sessMonth}>{m}</Text>}
+                        <SwipeRow
+                          name={r.name}
+                          onDelete={() => performDeleteSessionRow(r)}
+                          pagerRef={pagerRef}
+                        >
+                          <TouchableOpacity
+                            style={[l.sessRow, chrome]}
+                            activeOpacity={0.7}
+                            onPress={r.workout ? () => onOpenWorkout(r.workout!) : undefined}
+                            disabled={!r.workout}
+                          >
+                            <View style={[l.sessIcon, { backgroundColor: r.color + '1E' }]}>
+                              <Ionicons name={r.icon} size={20} color={r.color} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={l.sessName} numberOfLines={1}>{r.name}</Text>
+                              <Text style={l.sessSub}>{r.sub}</Text>
+                            </View>
+                            <View style={{ alignItems: 'flex-end' }}>
+                              <Text style={[l.sessVal, { color: P.BLUE }]}>{r.value}</Text>
+                              <Text style={l.sessSub}>{r.valueSub}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        </SwipeRow>
+                      </Animated.View>
+                    )
+                  })}
+                </View>
+              )
+            })() : (
+              <View style={s.empty}>
+                <Ionicons name="walk-outline" size={40} color="rgba(255,255,255,0.12)" />
+                <Text style={s.emptyText}>
+                  {workouts.length === 0 ? t('Inga pass sparade ännu') : t('Inga pass under vald period')}
+                </Text>
+              </View>
+            )}
 
             {/* Tempoutveckling */}
             {paceWeeks.length >= 2 && (() => {
@@ -552,40 +652,6 @@ export function CardioTab({
               )
             })()}
 
-            {/* Distansgraf — linje med fylld yta och adaptiv skala; tryck för detaljvyn
-                (fördelningen per aktivitet bor därinne) */}
-            {distBuckets.some(b => b.total > 0) && (
-              <>
-              <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setDistDetailOpen(true)}>
-                <Text style={[s.sectionHead, s.sectionHeadInline]}>{t('Distans')}</Text>
-                <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.card, s.cardPlain]}
-                activeOpacity={0.85}
-                onPress={() => setDistDetailOpen(true)}
-              >
-                <Text style={[s.cardSub, { marginTop: 0 }]}>
-                  {cardioRange === 'week'
-                    ? t('{u} per dag, vald vecka', { u: unitLabel })
-                    : cardioRange === 'month'
-                      ? t('{u} per vecka, vald månad', { u: unitLabel })
-                      : t('{u} per månad, senaste 6 månaderna', { u: unitLabel })}
-                </Text>
-                <DistanceAreaChart
-                  buckets={distBuckets}
-                  width={STATS_SCREEN_W - 80}
-                  height={170}
-                  unit={unit}
-                  selectedKey={distScrubKey}
-                  onSelect={key => setDistScrubKey(k => k === key ? null : key)}
-                  onScrub={setDistScrubKey}
-                  pagerRef={pagerRef}
-                />
-              </TouchableOpacity>
-              </>
-            )}
-
             {/* Cardiorekord (all-time) — lista med ikon, etikett och färgat värde */}
             {hasRecords && (
               <>
@@ -641,54 +707,6 @@ export function CardioTab({
               </>
             )}
 
-            {/* Sessioner — blandad lista i Apple Fitness-stil */}
-            {sessionRows.length > 0 ? (
-              <View style={{ gap: 10 }}>
-                <Text style={[s.sectionHead, { marginBottom: -14 }]}>{t('Sessioner')}</Text>
-                {sessionRows.map((r, i) => {
-                  const m = monthLabel(r.dateStr)
-                  const showMonth = i === 0 || monthLabel(sessionRows[i - 1].dateStr) !== m
-                  return (
-                    <Animated.View
-                      key={r.key}
-                      style={{ gap: 10 }}
-                      layout={LinearTransition.duration(220)}
-                      exiting={FadeOut.duration(160)}
-                    >
-                      {showMonth && <Text style={s.sessMonth}>{m}</Text>}
-                      <SwipeRow
-                        name={r.name}
-                        onDelete={() => performDeleteSessionRow(r)}
-                        pagerRef={pagerRef}
-                      >
-                        <TouchableOpacity
-                          style={[s.sessRow, chrome]}
-                          activeOpacity={0.7}
-                          onPress={r.workout ? () => onOpenWorkout(r.workout!) : undefined}
-                          disabled={!r.workout}
-                        >
-                          <View style={[s.sessIcon, { backgroundColor: r.color + '1E' }]}>
-                            <Ionicons name={r.icon} size={20} color={r.color} />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={s.sessName} numberOfLines={1}>{r.name}</Text>
-                            <Text style={s.sessValue}>{r.value}</Text>
-                          </View>
-                          <Text style={s.sessDate}>{sessDateLabel(r.dateStr)}</Text>
-                        </TouchableOpacity>
-                      </SwipeRow>
-                    </Animated.View>
-                  )
-                })}
-              </View>
-            ) : (
-              <View style={s.empty}>
-                <Ionicons name="walk-outline" size={40} color="rgba(255,255,255,0.12)" />
-                <Text style={s.emptyText}>
-                  {workouts.length === 0 ? t('Inga pass sparade ännu') : t('Inga pass under vald period')}
-                </Text>
-              </View>
-            )}
           </>
           )}
         </ScrollView>
@@ -738,3 +756,43 @@ export function CardioTab({
     </>
   )
 }
+
+
+// Lokala stilar för den nya kostymen — delade s-stilar rörs inte (GymTab)
+const l = StyleSheet.create({
+  statCard: { backgroundColor: CARD, borderRadius: 20, padding: 18, marginBottom: 14 },
+  statRow: { flexDirection: 'row' },
+  statCell: { flex: 1, gap: 3 },
+  statLbl: { color: TEXT_SECONDARY, fontSize: 14 },
+  statVal: { color: TEXT_PRIMARY, fontSize: 26, fontWeight: '800' },
+  statUnit: { fontSize: 14, fontWeight: '700', color: TEXT_SECONDARY },
+
+  chartCard: { backgroundColor: CARD, borderRadius: 20, padding: 16, marginBottom: 14 },
+  chartHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  chartTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800' },
+  chartHint: { color: TEXT_SECONDARY, fontSize: 13 },
+  barRow: { flexDirection: 'row', alignItems: 'flex-end' },
+  barCell: { flex: 1, alignItems: 'center', gap: 8 },
+  barSlot: { height: 150, justifyContent: 'flex-end', alignItems: 'center' },
+  bar: { width: 26, borderRadius: 13 },
+  barEmpty: { width: 22, height: 5, borderRadius: 3, backgroundColor: 'rgba(128,128,128,0.22)' },
+  barLbl: { color: TEXT_SECONDARY, fontSize: 12.5, fontWeight: '600' },
+
+  sessHead: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 8, paddingHorizontal: 2,
+  },
+  sessTitle: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800' },
+  sessLink: { fontSize: 14, fontWeight: '700' },
+  sessRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: CARD, borderRadius: 18, padding: 14,
+  },
+  sessIcon: {
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sessName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700' },
+  sessSub: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
+  sessVal: { fontSize: 16, fontWeight: '800' },
+})

@@ -416,4 +416,10 @@ export const EN_STATS: Record<string, string> = {
   "Slutspurten börjar, bara 15 dagar kvar.": "The final stretch begins, only 15 days left.",
   "Sju dagar kvar. Håll i hela vägen in i mål.": "Seven days left. Hold on all the way to the finish.",
   "Hela utmaningen genomförd. 75 dagar, ett starkare liv.": "The whole challenge completed. 75 days, a stronger life.",
+  "Distans per dag": "Distance per day",
+  "Distans per vecka": "Distance per week",
+  "Distans per månad": "Distance per month",
+  "senaste 6 mån": "last 6 months",
+  "Visa färre": "Show fewer",
+  "utan GPS": "no GPS",
 }
