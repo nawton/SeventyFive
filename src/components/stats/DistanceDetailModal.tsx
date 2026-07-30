@@ -1,135 +1,62 @@
 import { useMemo, useState } from 'react'
-import { View, Text, StyleSheet, Modal, ScrollView, Dimensions, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
 import { GlassSegment } from '@/components/GlassSegment'
 import { GlassCircleButton } from '@/components/GlassButton'
-import { DistanceAreaChart } from './DistanceAreaChart'
-import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT } from '@/lib/theme'
-import { toLocalDateString, parseLocalDate, startOfWeek, isoWeekNum } from '@/lib/date'
+import { BG, CARD, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, useThemeStrings, useCardChrome } from '@/lib/theme'
+import { toLocalDateString } from '@/lib/date'
 import { fmtPace, fmtDuration } from '@/lib/format'
 import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } from '@/lib/units'
 import type { CardioWorkout } from '@/services/workouts'
-import { useStatsColors } from '@/components/stats/statsShared'
-import { t, useT, dateLocale } from '@/lib/i18n'
+import { useT, dateLocale } from '@/lib/i18n'
 
 // =============================================================================
-// DISTANS I DETALJ — öppnas när man trycker på distansgrafen på Framsteg.
-// Apple Hälsa-känsla: växla upplösning (dag/vecka/månad), tryck på staplar
-// för att inspektera en period, med fördelning och nyckeltal under grafen.
+// DISTANS I DETALJ — månadsvyn efter förlagan: räckviddsväljare
+// (3 mån/6 mån/1 år), mörk totalpanel med pass/tid/snittempo,
+// staplar per månad och listan månad för månad med en insiktsrad.
 // =============================================================================
 
-const SCREEN_W = Dimensions.get('window').width
+const HERO = { bg: '#151B33', sub: '#9AA3BC' }
 
-type Res = 'day' | 'week' | 'month'
+type Range = 3 | 6 | 12
 
-interface Bucket {
+interface MonthBucket {
   key: string
-  label: string        // kort etikett under stapeln
-  fullLabel: string    // rubrik när stapeln är vald
-  run: number
-  cycle: number
-  walk: number
-  total: number
+  /** Kort etikett under stapeln, t.ex. "juli" */
+  short: string
+  /** Radnamn i listan, t.ex. "Juli" */
+  name: string
+  km: number
   passes: number
   secs: number
-  cals: number
-  longest: number      // längsta enskilda pass (km) i perioden
   isCurrent: boolean
 }
 
-/** Bygger staplarna för en "sida": offset 0 = nu, -1 = föregående sida osv. */
-function buildBuckets(workouts: CardioWorkout[], res: Res, offset: number): Bucket[] {
-  const catOf = (t: string) => t === 'cycling' ? 'cycle' as const : t === 'walking' ? 'walk' as const : 'run' as const
-  const add = (buckets: Bucket[], key: string, w: CardioWorkout) => {
-    const b = buckets.find(x => x.key === key)
-    if (!b) return
-    b[catOf(w.data.type ?? 'running')] += w.data.distance_km
-    b.total += w.data.distance_km
-    b.passes += 1
-    b.secs += w.data.duration_seconds
-    b.cals += w.data.calories
-    b.longest = Math.max(b.longest, w.data.distance_km)
-  }
-
-  if (res === 'day') {
-    // En vecka i taget, Mån–Sön — som i träningsappar
-    const mon = startOfWeek()
-    mon.setDate(mon.getDate() + offset * 7)
-    const today = toLocalDateString(new Date())
-    const buckets = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(mon); d.setDate(d.getDate() + i)
-      const key = toLocalDateString(d)
-      return {
-        key,
-        label: t(['M', 'T', 'O', 'T', 'F', 'L', 'S'][i]),
-        fullLabel: d.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }),
-        run: 0, cycle: 0, walk: 0, total: 0, passes: 0, secs: 0, cals: 0, longest: 0,
-        isCurrent: key === today,
-      }
-    })
-    workouts.forEach(w => add(buckets, toLocalDateString(new Date(w.created_at)), w))
-    return buckets
-  }
-
-  if (res === 'week') {
-    const cur = startOfWeek()
-    cur.setDate(cur.getDate() + offset * 7 * 7)
-    const thisMon = toLocalDateString(startOfWeek())
-    const buckets = Array.from({ length: 7 }, (_, i) => {
-      const mon = new Date(cur); mon.setDate(mon.getDate() - (6 - i) * 7)
-      const wn = isoWeekNum(mon)
-      const key = toLocalDateString(mon)
-      return {
-        key,
-        label: String(wn),
-        fullLabel: t('Vecka {n}', { n: wn }),
-        run: 0, cycle: 0, walk: 0, total: 0, passes: 0, secs: 0, cals: 0, longest: 0,
-        isCurrent: key === thisMon,
-      }
-    })
-    workouts.forEach(w => add(buckets, toLocalDateString(startOfWeek(new Date(w.created_at))), w))
-    return buckets
-  }
-
+function buildMonths(workouts: CardioWorkout[], count: Range): MonthBucket[] {
   const now = new Date()
   const nowKey = `${now.getFullYear()}-${now.getMonth()}`
-  const buckets = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() + offset * 6 - (5 - i), 1)
-    const key = `${d.getFullYear()}-${d.getMonth()}`
+  const buckets: MonthBucket[] = Array.from({ length: count }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (count - 1 - i), 1)
+    const name = d.toLocaleDateString(dateLocale(), { month: 'long' })
     return {
-      key,
-      label: d.toLocaleDateString(dateLocale(), { month: 'short' }).replace('.', ''),
-      fullLabel: d.toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' }),
-      run: 0, cycle: 0, walk: 0, total: 0, passes: 0, secs: 0, cals: 0, longest: 0,
-      isCurrent: key === nowKey,
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      short: d.toLocaleDateString(dateLocale(), { month: 'short' }).replace('.', ''),
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      km: 0, passes: 0, secs: 0,
+      isCurrent: `${d.getFullYear()}-${d.getMonth()}` === nowKey,
     }
   })
-  workouts.forEach(w => {
+  for (const w of workouts) {
     const d = new Date(w.created_at)
-    add(buckets, `${d.getFullYear()}-${d.getMonth()}`, w)
-  })
+    const b = buckets.find(x => x.key === `${d.getFullYear()}-${d.getMonth()}`)
+    if (!b) continue
+    b.km += w.data.distance_km
+    b.passes += 1
+    b.secs += w.data.duration_seconds
+  }
   return buckets
 }
-
-/** Rubrik för sidan man bläddrat till, t.ex. "14–20 juli" eller "V18 – V29" */
-function pageLabel(res: Res, buckets: Bucket[], offset: number): string {
-  if (res === 'day') {
-    if (offset === 0) return t('Denna vecka')
-    const first = parseLocalDate(buckets[0].key)
-    const last  = parseLocalDate(buckets[6].key)
-    const sameMonth = first.getMonth() === last.getMonth()
-    const fmt = (d: Date, withMonth: boolean) =>
-      withMonth ? d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }).replace('.', '') : String(d.getDate())
-    return `${fmt(first, !sameMonth)}–${fmt(last, true)}`
-  }
-  const last = buckets[buckets.length - 1]
-  if (res === 'week') return t('V{a} – V{b}', { a: buckets[0].label, b: last.label })
-  const short = (b: Bucket) => b.fullLabel.replace(/^(\w{3})\w*/, '$1')
-  return `${short(buckets[0])} – ${short(last)}`
-}
-
-
 
 export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
   visible: boolean
@@ -138,47 +65,37 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
   unit: UnitSystem
 }) {
   const t = useT()
-  const P = useStatsColors()
+  const T = useThemeStrings()
+  const chrome = useCardChrome()
   const insets = useSafeAreaInsets()
-  const [res, setRes] = useState<Res>('day')
-  const [offset, setOffset] = useState(0)
-  const [selKey, setSelKey] = useState<string | null>(null)
-
-  const buckets = useMemo(() => buildBuckets(workouts, res, offset), [workouts, res, offset])
   const unitLabel = distanceUnitLabel(unit)
+  const [range, setRange] = useState<Range>(6)
 
-  const sel = selKey ? buckets.find(b => b.key === selKey) ?? null : null
-  const periodTotal  = buckets.reduce((s, b) => s + b.total, 0)
-  const periodPasses = buckets.reduce((s, b) => s + b.passes, 0)
-  const periodSecs   = buckets.reduce((s, b) => s + b.secs, 0)
-  const periodCals   = buckets.reduce((s, b) => s + b.cals, 0)
-  const pageLongest  = buckets.reduce((s, b) => Math.max(s, b.longest), 0)
-  const activeCount  = buckets.filter(b => b.total > 0).length
-  const best = buckets.reduce<Bucket | null>((b, x) => (x.total > (b?.total ?? 0) ? x : b), null)
+  const months = useMemo(() => buildMonths(workouts, range), [workouts, range])
 
-  // Det som visas i rubriken + fördelningen: vald stapel eller hela sidan
-  const shown = sel ?? {
-    fullLabel: t('Totalt'),
-    run:   buckets.reduce((s, b) => s + b.run, 0),
-    cycle: buckets.reduce((s, b) => s + b.cycle, 0),
-    walk:  buckets.reduce((s, b) => s + b.walk, 0),
-    total: periodTotal,
-    passes: periodPasses,
-    secs: periodSecs,
-    cals: periodCals,
-  }
+  const totalKm = months.reduce((s, b) => s + b.km, 0)
+  const totalPasses = months.reduce((s, b) => s + b.passes, 0)
+  const totalSecs = months.reduce((s, b) => s + b.secs, 0)
+  const avgPace = totalKm > 0.1 ? fmtPace(paceForUnit(totalSecs / totalKm, unit)) : '--:--'
+  const fmtKm = (v: number) => toDisplayDistance(v, unit).toFixed(2).replace('.', ',')
 
-  const resAvgLabel = res === 'day' ? t('Snitt per aktiv dag') : res === 'week' ? t('Snitt per aktiv vecka') : t('Snitt per aktiv månad')
+  // Insiktsraden: ärlig jämförelse istället för dekoration
+  const active = months.filter(b => b.passes > 0)
+  const current = months[months.length - 1]
+  const prevActive = [...months].slice(0, -1).reverse().find(b => b.passes > 0)
+  const insight = active.length === 0
+    ? t('Inga cardiopass under perioden ännu.')
+    : active.length === 1 && current.passes > 0
+      ? t('{m} är din första aktiva månad. Fortsätt logga så växer trenden fram här.', { m: current.name })
+      : prevActive && current.passes > 0
+        ? current.km >= prevActive.km
+          ? t('Du ligger {d} {u} före {m}.', { d: fmtKm(current.km - prevActive.km), u: unitLabel, m: prevActive.name.toLowerCase() })
+          : t('Du ligger {d} {u} efter {m}.', { d: fmtKm(prevActive.km - current.km), u: unitLabel, m: prevActive.name.toLowerCase() })
+        : t('Senast aktiva månad: {m}.', { m: active[active.length - 1].name })
 
-  function changeRes(r: Res) {
-    setRes(r)
-    setOffset(0)
-    setSelKey(null)
-  }
-  function nav(dir: -1 | 1) {
-    setOffset(o => Math.min(0, o + dir))
-    setSelKey(null)
-  }
+  // Värdesiffran över stapeln: aktuella månaden om den har distans, annars den högsta
+  const maxKm = Math.max(...months.map(b => b.km), 0.01)
+  const labeledKey = current.km > 0 ? current.key : (active.length ? active.reduce((b, x) => x.km > b.km ? x : b).key : null)
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -191,115 +108,100 @@ export function DistanceDetailModal({ visible, onClose, workouts, unit }: {
 
         <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
           <GlassSegment
-            value={res}
+            value={String(range)}
             options={[
-              { key: 'day',   label: t('Dag') },
-              { key: 'week',  label: t('Vecka') },
-              { key: 'month', label: t('Månad') },
+              { key: '3',  label: t('3 mån') },
+              { key: '6',  label: t('6 mån') },
+              { key: '12', label: t('1 år') },
             ]}
-            onChange={changeRes}
+            onChange={k => setRange(Number(k) as Range)}
           />
 
-          {/* Bläddra bakåt/framåt i tiden — som i träningsappar */}
-          <View style={s.navRow}>
-            <TouchableOpacity style={s.navBtn} onPress={() => nav(-1)} activeOpacity={0.7}>
-              <Ionicons name="chevron-back" size={20} color={TEXT_PRIMARY} />
-            </TouchableOpacity>
-            <Text style={s.navLabel}>{pageLabel(res, buckets, offset)}</Text>
-            <TouchableOpacity
-              style={s.navBtn}
-              onPress={() => nav(1)}
-              disabled={offset >= 0}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chevron-forward" size={20} color={offset >= 0 ? 'rgba(128,128,128,0.35)' : TEXT_PRIMARY} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Rubrik: vald stapel eller hela perioden */}
-          <View style={s.readout}>
-            <Text style={s.readoutLabel}>{shown.fullLabel}</Text>
-            <Text style={s.readoutValue}>
-              {toDisplayDistance(shown.total, unit).toFixed(2).replace('.', ',')}
-              <Text style={s.readoutUnit}> {unitLabel.toUpperCase()}</Text>
+          {/* Totalpanelen — mörk marinblå i båda lägena, som översikten */}
+          <View style={s.hero}>
+            <Text style={s.heroLabel}>
+              {range === 12 ? t('Totalt senaste året') : t('Totalt senaste {n} månaderna', { n: range })}
             </Text>
-            <Text style={s.readoutSub}>
-              {t('{n} pass', { n: shown.passes })} · {fmtDuration(shown.secs)}
-              {shown.total > 0.1 ? ` · ${fmtPace(paceForUnit(shown.secs / shown.total, unit))} /${unitLabel}` : ''}
+            <Text style={s.heroValue}>
+              {fmtKm(totalKm)}
+              <Text style={s.heroUnit}> {unitLabel}</Text>
             </Text>
+            <View style={s.heroDivider} />
+            <View style={s.heroRow}>
+              <View style={s.heroCell}>
+                <Text style={s.heroCellLbl}>{t('PASS')}</Text>
+                <Text style={s.heroCellVal}>{totalPasses}</Text>
+              </View>
+              <View style={s.heroCell}>
+                <Text style={s.heroCellLbl}>{t('TID')}</Text>
+                <Text style={s.heroCellVal}>{fmtDuration(totalSecs)}</Text>
+              </View>
+              <View style={[s.heroCell, { flex: 1.4 }]}>
+                <Text style={s.heroCellLbl}>{t('SNITTEMPO')}</Text>
+                <Text style={s.heroCellVal}>{avgPace} /{unitLabel}</Text>
+              </View>
+            </View>
           </View>
 
-          {/* Graf — linje med fylld yta och adaptiv skala; tryck på en punkt
-              för att inspektera perioden */}
-          <View style={s.chartCard}>
-            <DistanceAreaChart
-              buckets={buckets}
-              width={SCREEN_W - 40 - 32}
-              height={220}
-              unit={unit}
-              selectedKey={selKey}
-              onSelect={key => setSelKey(k => k === key ? null : key)}
-              onScrub={setSelKey}
-            />
-          </View>
-
-          {/* Fördelning per aktivitet — för valet eller hela perioden */}
-          <Text style={s.sectionHead}>{t('Fördelning')}</Text>
-          <View style={s.card}>
-            {([
-              { color: ACCENT, label: 'Löpning',  v: shown.run },
-              { color: P.BLUE,   label: 'Cykling',  v: shown.cycle },
-              { color: GREEN,  label: 'Promenad', v: shown.walk },
-            ] as const).map((r, i) => {
-              const pct = shown.total > 0 ? (r.v / shown.total) * 100 : 0
-              return (
-                <View key={r.label} style={[s.splitRow, i > 0 && s.rowBorder]}>
-                  <View style={[s.dot, { backgroundColor: r.color }]} />
-                  <Text style={s.splitLbl}>{t(r.label)}</Text>
-                  <View style={s.splitTrack}>
-                    <View style={[s.splitFill, { width: `${Math.max(pct, r.v > 0 ? 4 : 0)}%` as never, backgroundColor: r.color }]} />
+          {/* Staplar per månad */}
+          <View style={[s.chartCard, chrome]}>
+            <Text style={s.cardTitle}>{t('{u} per månad', { u: unitLabel })}</Text>
+            <View style={s.barRow}>
+              {months.map((b, i) => {
+                const showLabel = range <= 6 || b.isCurrent || i % 2 === (months.length - 1) % 2
+                return (
+                  <View key={b.key} style={s.barCell}>
+                    <View style={s.barSlot}>
+                      {b.key === labeledKey && b.km > 0 && (
+                        <Text style={[s.barValue, { color: T.ACCENT }]} numberOfLines={1}>
+                          {toDisplayDistance(b.km, unit).toFixed(2).replace('.', ',')}
+                        </Text>
+                      )}
+                      {b.km > 0
+                        ? <View style={[s.bar, {
+                            height: Math.max(18, (b.km / maxKm) * 170),
+                            backgroundColor: b.isCurrent ? T.ACCENT : `${T.ACCENT}55`,
+                            width: range === 12 ? 14 : 26,
+                          }]} />
+                        : <View style={s.barEmpty} />}
+                    </View>
+                    <Text style={[s.barLbl, b.isCurrent && { color: T.ACCENT, fontWeight: '700' }]} numberOfLines={1}>
+                      {showLabel ? b.short : ''}
+                    </Text>
                   </View>
-                  <Text style={[s.splitVal, { color: r.color }]}>
-                    {toDisplayDistance(r.v, unit).toFixed(1)}
-                  </Text>
-                </View>
-              )
-            })}
+                )
+              })}
+            </View>
           </View>
 
-          {/* Nyckeltal för hela perioden */}
-          <Text style={s.sectionHead}>{t('Nyckeltal')}</Text>
-          <View style={s.card}>
-            {([
-              { label: t('Total tid'), value: periodSecs > 0 ? fmtDuration(periodSecs) : '–' },
-              { label: t('Kalorier'), value: periodCals > 0 ? `${periodCals.toLocaleString(dateLocale())} kcal` : '–' },
-              {
-                label: t('Snittempo'),
-                value: periodTotal > 0.1 ? `${fmtPace(paceForUnit(periodSecs / periodTotal, unit))} /${unitLabel}` : '–',
-              },
-              {
-                label: t('Längsta pass'),
-                value: pageLongest > 0 ? `${toDisplayDistance(pageLongest, unit).toFixed(2)} ${unitLabel}` : '–',
-              },
-              {
-                label: resAvgLabel,
-                value: activeCount > 0 ? `${toDisplayDistance(periodTotal / activeCount, unit).toFixed(1)} ${unitLabel}` : '–',
-              },
-              {
-                label: res === 'day' ? t('Bästa dagen') : res === 'week' ? t('Bästa veckan') : t('Bästa månaden'),
-                value: best && best.total > 0 ? `${best.fullLabel} · ${toDisplayDistance(best.total, unit).toFixed(1)} ${unitLabel}` : '–',
-              },
-              {
-                label: res === 'day' ? t('Aktiva dagar') : res === 'week' ? t('Aktiva veckor') : t('Aktiva månader'),
-                value: t('{a} av {b}', { a: activeCount, b: buckets.length }),
-              },
-              { label: t('Pass under perioden'), value: String(periodPasses) },
-            ]).map((r, i) => (
-              <View key={r.label} style={[s.kpiRow, i > 0 && s.rowBorder]}>
-                <Text style={s.kpiLbl}>{r.label}</Text>
-                <Text style={s.kpiVal} numberOfLines={1}>{r.value}</Text>
+          {/* Månad för månad — nyaste överst, aktuell månad markerad */}
+          <View style={[s.listCard, chrome]}>
+            <Text style={s.cardTitle}>{t('Månad för månad')}</Text>
+            {[...months].reverse().map(b => (
+              <View
+                key={b.key}
+                style={[s.monthRow, b.isCurrent && { backgroundColor: `${T.ACCENT}10`, borderRadius: 12 }]}
+              >
+                <Text style={[s.monthName, b.passes === 0 && { color: TEXT_SECONDARY }, b.isCurrent && { fontWeight: '800' }]}>
+                  {b.name}
+                </Text>
+                <Text style={s.monthPasses}>
+                  {b.passes === 1 ? t('1 pass') : t('{n} pass', { n: b.passes })}
+                </Text>
+                <Text style={[
+                  s.monthKm,
+                  b.passes > 0 ? { color: T.ACCENT } : { color: TEXT_SECONDARY },
+                  b.isCurrent && { fontWeight: '800' },
+                ]}>
+                  {b.km > 0 ? fmtKm(b.km) : '0'} {unitLabel}
+                </Text>
               </View>
             ))}
+
+            <View style={[s.insight, { backgroundColor: `${T.ACCENT}0E` }]}>
+              <Ionicons name="trending-up" size={17} color={T.ACCENT} />
+              <Text style={s.insightText}>{insight}</Text>
+            </View>
           </View>
         </ScrollView>
       </View>
@@ -314,35 +216,40 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingBottom: 8,
   },
   topTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '700' },
-  scroll: { paddingHorizontal: 20, paddingTop: 8, gap: 16 },
+  scroll: { paddingHorizontal: 16, paddingTop: 8, gap: 14 },
 
-  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
-  navBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: CARD, alignItems: 'center', justifyContent: 'center' },
-  navLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
-
-  readout: { gap: 2, marginTop: -4 },
-  readoutLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
-  readoutValue: { color: TEXT_PRIMARY, fontSize: 40, fontFamily: NUM_FONT, letterSpacing: -0.5 },
-  readoutUnit: { fontSize: 18, fontFamily: NUM_FONT_SEMI, color: TEXT_SECONDARY },
-  readoutSub: { color: TEXT_SECONDARY, fontSize: 12 },
+  hero: { backgroundColor: HERO.bg, borderRadius: 22, padding: 20 },
+  heroLabel: { color: HERO.sub, fontSize: 14, fontWeight: '600' },
+  heroValue: { color: '#FFFFFF', fontSize: 44, fontFamily: NUM_FONT, letterSpacing: -0.5, marginTop: 2 },
+  heroUnit: { fontSize: 20, color: HERO.sub },
+  heroDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.18)', marginVertical: 14 },
+  heroRow: { flexDirection: 'row' },
+  heroCell: { flex: 1, gap: 3 },
+  heroCellLbl: { color: HERO.sub, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  heroCellVal: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
 
   chartCard: { backgroundColor: CARD, borderRadius: 20, padding: 16 },
+  cardTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800', marginBottom: 14 },
+  barRow: { flexDirection: 'row', alignItems: 'flex-end' },
+  barCell: { flex: 1, alignItems: 'center', gap: 8 },
+  barSlot: { height: 196, justifyContent: 'flex-end', alignItems: 'center', gap: 6 },
+  barValue: { fontSize: 13, fontWeight: '800' },
+  bar: { borderRadius: 13 },
+  barEmpty: { width: 22, height: 5, borderRadius: 3, backgroundColor: 'rgba(128,128,128,0.22)' },
+  barLbl: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
 
-  sectionHead: {
-    color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800', letterSpacing: -0.4,
-    marginTop: 6, marginBottom: -6,
+  listCard: { backgroundColor: CARD, borderRadius: 20, padding: 16 },
+  monthRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 11, paddingHorizontal: 10, marginHorizontal: -10,
   },
-  card: { backgroundColor: CARD, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 6 },
-  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: DIVIDER },
+  monthName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15.5, fontWeight: '600' },
+  monthPasses: { width: 74, color: TEXT_SECONDARY, fontSize: 14 },
+  monthKm: { minWidth: 76, textAlign: 'right', fontSize: 15.5, fontWeight: '700' },
 
-  splitRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13 },
-  dot: { width: 9, height: 9, borderRadius: 3 },
-  splitLbl: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500', width: 82 },
-  splitTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(128,128,128,0.15)', overflow: 'hidden' },
-  splitFill: { height: '100%', borderRadius: 5 },
-  splitVal: { fontSize: 16, fontFamily: NUM_FONT, width: 52, textAlign: 'right', fontVariant: ['tabular-nums'] },
-
-  kpiRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 13 },
-  kpiLbl: { color: TEXT_SECONDARY, fontSize: 14, fontWeight: '500' },
-  kpiVal: { color: TEXT_PRIMARY, fontSize: 15, fontFamily: NUM_FONT, flexShrink: 1, textAlign: 'right', textTransform: 'capitalize' },
+  insight: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderRadius: 14, padding: 13, marginTop: 10,
+  },
+  insightText: { flex: 1, color: TEXT_PRIMARY, fontSize: 13.5, lineHeight: 19 },
 })
