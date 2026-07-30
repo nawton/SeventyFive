@@ -21,7 +21,7 @@ import Body from 'react-native-body-highlighter'
 const GYM = '#EE7C4B'
 import { supabase } from '@/lib/supabase'
 import { useBodyGender } from '@/lib/bodyGender'
-import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings, useCardChrome } from '@/lib/theme'
+import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, ACCENT_CONTRAST, useThemeStrings, useCardChrome } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek } from '@/lib/date'
 import { getMusclesForName, MUSCLE_GROUPS_6, type Slug } from '@/lib/muscles'
 import {
@@ -478,29 +478,31 @@ export function GymTab({
               </TouchableOpacity>
             )}
 
-            {/* Body map — rubriken öppnar muskeldetaljen (radar + set per grupp) */}
-            <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setMuscleOpen(true)}>
-              <Text style={[s.sectionHead, s.sectionHeadInline]}>{t('Tränade muskler')}</Text>
-              <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
-            </TouchableOpacity>
-            <View style={[s.card, s.cardPlain]}>
-              <View style={s.muscleHeader}>
-                <Text style={s.muscleAuto}>{t('Från dina avbockade övningar')}</Text>
-                <View style={s.bodyToggle}>
+            {/* Body map — titeln i kortet, fram/bak-pillret till höger och
+                undertexten på egen rad, som förlagan */}
+            <View style={[l.secCard, chrome]}>
+              <View style={l.bodyHead}>
+                <Text style={l.secTitle}>{t('Tränade muskler')}</Text>
+                <View style={l.bodyToggle}>
                   {(['front', 'back'] as const).map(side => (
                     <TouchableOpacity
                       key={side}
-                      style={[s.bodyToggleBtn, bodyView === side && s.bodyToggleBtnActive]}
+                      style={[l.bodyToggleBtn, bodyView === side && { backgroundColor: T.ACCENT }]}
                       onPress={() => bodyView !== side && animateFlip(side === 'back' ? 1 : -1)}
                       activeOpacity={0.8}
                     >
-                      <Text style={[s.bodyToggleText, bodyView === side && s.bodyToggleTextActive]}>
+                      <Text style={[l.bodyToggleText, bodyView === side && { color: ACCENT_CONTRAST, fontWeight: '700' }]}>
                         {side === 'front' ? t('Fram') : t('Bak')}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
+              <Text style={l.bodySub}>
+                {weekOffset === 0
+                  ? t('Från dina avbockade övningar denna vecka')
+                  : t('Från dina avbockade övningar vald vecka')}
+              </Text>
 
               {weekLoading ? (
                 <View style={s.bodyWrap}><ActivityIndicator color={ACCENT} /></View>
@@ -788,6 +790,15 @@ const l = StyleSheet.create({
     borderRadius: 14, padding: 13, marginTop: 10,
   },
   mgInsightText: { flex: 1, color: TEXT_PRIMARY, fontSize: 13.5, lineHeight: 19 },
+
+  bodyHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bodyToggle: {
+    flexDirection: 'row', backgroundColor: 'rgba(128,128,128,0.12)',
+    borderRadius: 999, padding: 3,
+  },
+  bodyToggleBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 999 },
+  bodyToggleText: { color: TEXT_SECONDARY, fontSize: 13.5, fontWeight: '600' },
+  bodySub: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 6 },
 
   prRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   prIcon: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },

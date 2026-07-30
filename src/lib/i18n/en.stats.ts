@@ -446,4 +446,6 @@ export const EN_STATS: Record<string, string> = {
   "{g} ligger efter, lägg in ett pass för balans.": "{g} lagging behind, add a session for balance.",
   "Tyngsta lyft: {n} kg": "Heaviest lift: {n} kg",
   "est. 1RM {n} kg": "est. 1RM {n} kg",
+  "Från dina avbockade övningar denna vecka": "From your checked-off exercises this week",
+  "Från dina avbockade övningar vald vecka": "From your checked-off exercises the selected week",
 }
