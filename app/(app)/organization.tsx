@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { GlassCircleButton } from '@/components/GlassButton'
+import { GlassSegment } from '@/components/GlassSegment'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { CoachWorkoutSheet } from '@/components/CoachWorkoutSheet'
 import { useT, dateLocale } from '@/lib/i18n'
@@ -63,6 +64,7 @@ export default function OrganizationScreen() {
   const [board, setBoard] = useState<OrgLeaderboardRow[]>([])
   const [totals, setTotals] = useState<{ km: number; passes: number }>({ km: 0, passes: 0 })
   const [status, setStatus] = useState<AdoptionStatus[] | null>(null)
+  const [tab, setTab] = useState<'overview' | 'workouts' | 'members'>('overview')
 
   const load = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -212,7 +214,20 @@ export default function OrganizationScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      <View style={s.segmentWrap}>
+        <GlassSegment
+          value={tab}
+          options={[
+            { key: 'overview', label: t('Översikt') },
+            { key: 'workouts', label: t('Pass') },
+            { key: 'members', label: t('Medlemmar') },
+          ]}
+          onChange={setTab}
+        />
+      </View>
+
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        {tab === 'overview' && (<>
         {/* Marinblå panel: veckans totaler + koden att bjuda in med */}
         <View style={s.hero}>
           <Text maxFontSizeMultiplier={1.15} style={s.heroLabel}>{t('TILLSAMMANS DENNA VECKA')}</Text>
@@ -243,6 +258,9 @@ export default function OrganizationScreen() {
           )}
         </View>
 
+        </>)}
+
+        {tab === 'workouts' && (<>
         {/* Tränarpassen */}
         <View style={[s.card, chrome]}>
           <View style={s.cardHead}>
@@ -301,6 +319,25 @@ export default function OrganizationScreen() {
           ))}
         </View>
 
+        {/* Så funkar tränarpass — tre steg */}
+        <View style={[s.card, chrome]}>
+          <Text maxFontSizeMultiplier={1.15} style={s.cardTitle}>{t('Så funkar tränarpass')}</Text>
+          {[
+            t('Bygg passet: namn, typ och övningar'),
+            t('Välj vilka som ser det: hela föreningen eller en kopplad grupp'),
+            t('Medlemmarna lägger in passet i sitt eget veckoschema med ett tryck'),
+          ].map((step, i) => (
+            <View key={i} style={s.stepRow}>
+              <View style={[s.stepNum, { backgroundColor: `${T.ACCENT}14` }]}>
+                <Text style={[s.stepNumText, { color: T.ACCENT }]}>{i + 1}</Text>
+              </View>
+              <Text style={s.stepText}>{step}</Text>
+            </View>
+          ))}
+        </View>
+        </>)}
+
+        {tab === 'overview' && (<>
         {/* Veckans topplista */}
         <View style={[s.card, chrome]}>
           <Text maxFontSizeMultiplier={1.15} style={s.cardTitle}>{t('Veckans topplista')}</Text>
@@ -363,6 +400,9 @@ export default function OrganizationScreen() {
           ))}
         </View>
 
+        </>)}
+
+        {tab === 'members' && (<>
         {/* Min delning + medlemmarna i samma kort */}
         <View style={[s.card, chrome]}>
           {me && (
@@ -399,6 +439,7 @@ export default function OrganizationScreen() {
         <TouchableOpacity style={s.leaveBtn} onPress={confirmLeave} activeOpacity={0.7} testID="leaveOrg">
           <Text maxFontSizeMultiplier={1.2} style={s.leaveText}>{t('Lämna föreningen')}</Text>
         </TouchableOpacity>
+        </>)}
       </ScrollView>
 
       {/* Passdetaljen: övningarna, coachens notering och joina-knappen */}
@@ -488,6 +529,14 @@ const s = StyleSheet.create({
   topTitle: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800' },
   topSub: { color: TEXT_SECONDARY, fontSize: 12.5, marginTop: 1 },
   scroll: { paddingHorizontal: 16, paddingBottom: 60, paddingTop: 6, gap: 14 },
+  segmentWrap: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 14 },
+  stepNum: {
+    width: 26, height: 26, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center', marginTop: 1,
+  },
+  stepNumText: { fontSize: 13, fontWeight: '800' },
+  stepText: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, lineHeight: 20 },
 
   hero: { backgroundColor: '#151B33', borderRadius: 22, padding: 18 },
   heroLabel: { color: '#9AA3BC', fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },

@@ -477,4 +477,8 @@ export const EN_SOCIAL: Record<string, string> = {
   "Föreningen ser din streak och antal pass": "The club sees your streak and workout count",
   "Föreningen ser även volym, distans och PR": "The club also sees volume, distance and PRs",
   "Föreningen ser även progression per övning": "The club also sees progression per exercise",
+  "Så funkar tränarpass": "How coach workouts work",
+  "Bygg passet: namn, typ och övningar": "Build the workout: name, type and exercises",
+  "Välj vilka som ser det: hela föreningen eller en kopplad grupp": "Choose who sees it: the whole club or a linked group",
+  "Medlemmarna lägger in passet i sitt eget veckoschema med ett tryck": "Members add the workout to their own weekly schedule with one tap",
 }
