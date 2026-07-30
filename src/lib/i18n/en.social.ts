@@ -491,4 +491,10 @@ export const EN_SOCIAL: Record<string, string> = {
   "{name} delar inte progression per övning.": "{name} does not share progression per exercise.",
   "Medlemmen": "The member",
   "Kunde inte hämta statistiken just nu.": "Couldn't fetch the stats right now.",
+  "Visas för: {who}": "Visible to: {who}",
+  "bara coacher": "coaches only",
+  "hela föreningen": "the whole club",
+  "Detaljerna ses av coacher och admin, passantalet av alla": "Details are seen by coaches and admin, workout counts by everyone",
+  "Alla i föreningen ser det du delar": "Everyone in the club sees what you share",
+  "{name} delar detaljerna bara med coacherna.": "{name} shares the details with the coaches only.",
 }

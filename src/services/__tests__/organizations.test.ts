@@ -55,9 +55,9 @@ describe('organizations — förening och medlemmar', () => {
   it('medlemslistan hämtar profiler och sorterar admin först', async () => {
     installTables(fromMock, {
       organization_members: { data: [
-        { user_id: 'u2', role: 'member', share_level: 'base' },
-        { user_id: 'u1', role: 'admin', share_level: 'full' },
-        { user_id: 'u3', role: 'coach', share_level: 'detailed' },
+        { user_id: 'u2', role: 'member', share_level: 'base', share_with: 'staff' },
+        { user_id: 'u1', role: 'admin', share_level: 'full', share_with: 'org' },
+        { user_id: 'u3', role: 'coach', share_level: 'detailed', share_with: 'staff' },
       ], error: null },
     })
     rpcMock.mockResolvedValue({ data: [

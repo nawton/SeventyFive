@@ -11,6 +11,8 @@ import { toLocalDateString } from '@/lib/date'
 
 export type OrgRole = 'admin' | 'coach' | 'member'
 export type ShareLevel = 'base' | 'detailed' | 'full'
+/** Vem som ser detaljerna: bara coacher/admin eller hela föreningen */
+export type ShareWith = 'staff' | 'org'
 
 export interface Organization {
   id: string
@@ -28,6 +30,7 @@ export interface OrgMember {
   avatar_url: string | null
   role: OrgRole
   share_level: ShareLevel
+  share_with: ShareWith
 }
 
 interface MiniProfile { id: string; name: string | null; avatar_url: string | null }
@@ -78,7 +81,7 @@ export async function getOrganization(orgId: string): Promise<Organization | nul
 export async function getOrgMembers(orgId: string): Promise<OrgMember[]> {
   const { data, error } = await supabase
     .from('organization_members')
-    .select('user_id, role, share_level')
+    .select('user_id, role, share_level, share_with')
     .eq('org_id', orgId)
   if (error || !data || data.length === 0) return []
   const ids = data.map(m => m.user_id)
@@ -94,6 +97,7 @@ export async function getOrgMembers(orgId: string): Promise<OrgMember[]> {
       avatar_url: p?.avatar_url ?? null,
       role: m.role as OrgRole,
       share_level: m.share_level as ShareLevel,
+      share_with: (m.share_with ?? 'staff') as ShareWith,
     }
   }).sort((a, b) => rank[a.role] - rank[b.role])
 }
@@ -112,6 +116,16 @@ export async function updateMyShareLevel(orgId: string, userId: string, level: S
   const { error } = await supabase
     .from('organization_members')
     .update({ share_level: level })
+    .eq('org_id', orgId)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+/** Vem detaljerna visas för: coacherna eller hela föreningen */
+export async function updateMyShareWith(orgId: string, userId: string, shareWith: ShareWith): Promise<void> {
+  const { error } = await supabase
+    .from('organization_members')
+    .update({ share_with: shareWith })
     .eq('org_id', orgId)
     .eq('user_id', userId)
   if (error) throw error
@@ -304,6 +318,8 @@ export async function getAdoptionStatus(workoutId: string): Promise<AdoptionStat
 
 export interface OrgMemberStats {
   share_level: ShareLevel
+  /** true = medlemmen delar detaljer bara med coacherna och du är inte coach */
+  staff_only: boolean
   passes_week: number
   passes_month: number
   /** null = medlemmen delar inte nivån som krävs */
@@ -323,6 +339,7 @@ export async function getOrgMemberStats(orgId: string, userId: string): Promise<
   const d = data as Record<string, unknown>
   return {
     share_level: (d.share_level ?? 'base') as ShareLevel,
+    staff_only: !!d.staff_only,
     passes_week: Number(d.passes_week ?? 0),
     passes_month: Number(d.passes_month ?? 0),
     km_week: d.km_week == null ? null : Number(d.km_week),

@@ -18,10 +18,10 @@ import { getExercises, type Exercise } from '@/services/exercises'
 import {
   getOrganization, getOrgMembers, getCoachWorkouts, getMyAdoptions,
   adoptCoachWorkout, deleteCoachWorkout, updateMemberRole, removeOrgMember,
-  leaveOrganization, updateMyShareLevel, getOrgGroups, getMyLinkableGroups,
+  leaveOrganization, updateMyShareLevel, updateMyShareWith, getOrgGroups, getMyLinkableGroups,
   linkGroupToOrg, getOrgLeaderboard, getOrgTotals, getAdoptionStatus,
   type Organization, type OrgMember, type CoachWorkout, type ShareLevel,
-  type OrgGroup, type OrgLeaderboardRow, type AdoptionStatus,
+  type OrgGroup, type OrgLeaderboardRow, type AdoptionStatus, type ShareWith,
 } from '@/services/organizations'
 import { getWeekBounds } from '@/components/stats/statsShared'
 import {
@@ -144,6 +144,14 @@ export default function OrganizationScreen() {
     Haptics.selectionAsync()
     setMembers(prev => prev.map(m => m.id === meId ? { ...m, share_level: next } : m))
     updateMyShareLevel(orgId, meId, next).catch(() => load())
+  }
+
+  function toggleShareWith() {
+    if (!me || !meId) return
+    const next: ShareWith = me.share_with === 'staff' ? 'org' : 'staff'
+    Haptics.selectionAsync()
+    setMembers(prev => prev.map(m => m.id === meId ? { ...m, share_with: next } : m))
+    updateMyShareWith(orgId, meId, next).catch(() => load())
   }
 
   async function adopt(w: CoachWorkout) {

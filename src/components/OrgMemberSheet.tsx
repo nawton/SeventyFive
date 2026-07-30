@@ -135,7 +135,9 @@ export function OrgMemberSheet({ orgId, member, isMe, onClose }: {
                 <View style={s.noteInset}>
                   <Ionicons name="eye-off-outline" size={16} color={TEXT_SECONDARY} />
                   <Text style={s.noteText}>
-                    {t('{name} delar bara basnivån med föreningen.', { name: member.name ?? t('Medlemmen') })}
+                    {stats.staff_only
+                      ? t('{name} delar detaljerna bara med coacherna.', { name: member.name ?? t('Medlemmen') })
+                      : t('{name} delar bara basnivån med föreningen.', { name: member.name ?? t('Medlemmen') })}
                   </Text>
                 </View>
               )}
