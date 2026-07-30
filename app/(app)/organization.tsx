@@ -203,8 +203,8 @@ export default function OrganizationScreen() {
         <GlassCircleButton icon="chevron-back" size={40} iconColor={TEXT_PRIMARY}
           onPress={() => router.back()} fallbackStyle={{ backgroundColor: CARD }} />
         <View style={{ flex: 1 }}>
-          <Text style={s.topTitle} numberOfLines={1}>{org?.name ?? params.name ?? t('Förening')}</Text>
-          <Text style={s.topSub} numberOfLines={1}>
+          <Text maxFontSizeMultiplier={1.15} style={s.topTitle} numberOfLines={1}>{org?.name ?? params.name ?? t('Förening')}</Text>
+          <Text maxFontSizeMultiplier={1.15} style={s.topSub} numberOfLines={1}>
             {t('Förening')} · {members.length === 1 ? t('1 medlem') : t('{n} medlemmar', { n: members.length })}
             {me ? ` · ${me.role === 'admin' ? t('du är admin') : me.role === 'coach' ? t('du är coach') : t('du är medlem')}` : ''}
           </Text>
@@ -215,13 +215,13 @@ export default function OrganizationScreen() {
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* Marinblå panel: veckans totaler + koden att bjuda in med */}
         <View style={s.hero}>
-          <Text style={s.heroLabel}>{t('TILLSAMMANS DENNA VECKA')}</Text>
+          <Text maxFontSizeMultiplier={1.15} style={s.heroLabel}>{t('TILLSAMMANS DENNA VECKA')}</Text>
           <View style={s.heroStatsRow}>
-            <Text style={s.heroStat}>
+            <Text maxFontSizeMultiplier={1.15} style={s.heroStat}>
               {totals.passes}
               <Text style={s.heroStatUnit}> {t('pass')}</Text>
             </Text>
-            <Text style={s.heroStat}>
+            <Text maxFontSizeMultiplier={1.15} style={s.heroStat}>
               {totals.km.toFixed(1).replace('.', ',')}
               <Text style={s.heroStatUnit}> km</Text>
             </Text>
@@ -231,8 +231,8 @@ export default function OrganizationScreen() {
               <View style={s.heroDivider} />
               <View style={s.heroCodeRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.heroLabel}>{t('BJUD IN MED KOD')}</Text>
-                  <Text style={s.heroCode}>{org.join_code}</Text>
+                  <Text maxFontSizeMultiplier={1.15} style={s.heroLabel}>{t('BJUD IN MED KOD')}</Text>
+                  <Text maxFontSizeMultiplier={1.15} style={s.heroCode}>{org.join_code}</Text>
                 </View>
                 <TouchableOpacity style={s.shareBtn} onPress={shareCode} activeOpacity={0.8} testID="shareCode">
                   <Ionicons name="share-outline" size={15} color="#FFFFFF" />
@@ -246,7 +246,7 @@ export default function OrganizationScreen() {
         {/* Tränarpassen */}
         <View style={[s.card, chrome]}>
           <View style={s.cardHead}>
-            <Text style={s.cardTitle}>{t('Tränarpass')}</Text>
+            <Text maxFontSizeMultiplier={1.15} style={s.cardTitle}>{t('Tränarpass')}</Text>
             {isStaff && (
               <TouchableOpacity
                 style={[s.solidBtn, { backgroundColor: T.ACCENT }]}
@@ -254,7 +254,7 @@ export default function OrganizationScreen() {
                 activeOpacity={0.85}
                 testID="newCoachWorkout"
               >
-                <Text style={[s.solidBtnText, { color: onAccent }]}>+ {t('Publicera')}</Text>
+                <Text maxFontSizeMultiplier={1.15} style={[s.solidBtnText, { color: onAccent }]}>+ {t('Publicera')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -303,7 +303,7 @@ export default function OrganizationScreen() {
 
         {/* Veckans topplista */}
         <View style={[s.card, chrome]}>
-          <Text style={s.cardTitle}>{t('Veckans topplista')}</Text>
+          <Text maxFontSizeMultiplier={1.15} style={s.cardTitle}>{t('Veckans topplista')}</Text>
           {sortedBoard.map((r, i) => {
             const m = members.find(x => x.id === r.user_id)
             const name = m?.name ?? t('Namnlös')
@@ -314,7 +314,7 @@ export default function OrganizationScreen() {
                 <Text style={s.memberName} numberOfLines={1}>
                   {r.user_id === meId ? `${name} (${t('du')})` : name}
                 </Text>
-                <Text style={[s.boardMeta, { color: T.ACCENT }]}>
+                <Text maxFontSizeMultiplier={1.2} style={[s.boardMeta, { color: T.ACCENT }]}>
                   {r.cardio_passes + r.gym_days === 1 ? t('1 pass') : t('{n} pass', { n: r.cardio_passes + r.gym_days })}
                   {r.km != null && r.km > 0 ? <Text style={s.boardKm}>{` · ${r.km.toFixed(1).replace('.', ',')} km`}</Text> : null}
                 </Text>
@@ -332,14 +332,14 @@ export default function OrganizationScreen() {
         {/* Grupperna som hör till föreningen */}
         <View style={[s.card, chrome]}>
           <View style={s.cardHead}>
-            <Text style={s.cardTitle}>{t('Grupper i föreningen')}</Text>
+            <Text maxFontSizeMultiplier={1.15} style={s.cardTitle}>{t('Grupper i föreningen')}</Text>
             <TouchableOpacity
               style={[s.tintBtn, { backgroundColor: `${T.ACCENT}12` }]}
               onPress={linkGroup}
               activeOpacity={0.8}
               testID="linkGroup"
             >
-              <Text style={[s.tintBtnText, { color: T.ACCENT }]}>{t('Koppla grupp')}</Text>
+              <Text maxFontSizeMultiplier={1.15} style={[s.tintBtnText, { color: T.ACCENT }]}>{t('Koppla grupp')}</Text>
             </TouchableOpacity>
           </View>
           <Text style={s.cardSub}>{t('Kopplade grupper kan få tränarpass riktade till sig.')}</Text>
@@ -369,10 +369,10 @@ export default function OrganizationScreen() {
             <TouchableOpacity style={s.shareHead} onPress={cycleShareLevel} activeOpacity={0.8} testID="shareLevel">
               <Ionicons name="eye-outline" size={19} color={TEXT_SECONDARY} />
               <View style={{ flex: 1 }}>
-                <Text style={s.shareTitle}>{t('Min delning: {level}', { level: t(SHARE_LABELS[me.share_level]) })}</Text>
+                <Text maxFontSizeMultiplier={1.2} style={s.shareTitle}>{t('Min delning: {level}', { level: t(SHARE_LABELS[me.share_level]) })}</Text>
                 <Text style={s.cardSub2}>{t(SHARE_HINTS[me.share_level])}</Text>
               </View>
-              <Text style={[s.tintBtnText, { color: T.ACCENT }]}>{t('Ändra')}</Text>
+              <Text maxFontSizeMultiplier={1.15} style={[s.tintBtnText, { color: T.ACCENT }]}>{t('Ändra')}</Text>
             </TouchableOpacity>
           )}
           {members.map(m => (
@@ -397,7 +397,7 @@ export default function OrganizationScreen() {
         </View>
 
         <TouchableOpacity style={s.leaveBtn} onPress={confirmLeave} activeOpacity={0.7} testID="leaveOrg">
-          <Text style={s.leaveText}>{t('Lämna föreningen')}</Text>
+          <Text maxFontSizeMultiplier={1.2} style={s.leaveText}>{t('Lämna föreningen')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -485,18 +485,18 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingVertical: 8,
   },
-  topTitle: { color: TEXT_PRIMARY, fontSize: 22, fontWeight: '800' },
-  topSub: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 1 },
+  topTitle: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '800' },
+  topSub: { color: TEXT_SECONDARY, fontSize: 12.5, marginTop: 1 },
   scroll: { paddingHorizontal: 16, paddingBottom: 60, paddingTop: 6, gap: 14 },
 
   hero: { backgroundColor: '#151B33', borderRadius: 22, padding: 18 },
   heroLabel: { color: '#9AA3BC', fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
   heroStatsRow: { flexDirection: 'row', gap: 28, marginTop: 8 },
-  heroStat: { color: '#FFFFFF', fontSize: 30, fontWeight: '800' },
-  heroStatUnit: { color: '#9AA3BC', fontSize: 15, fontWeight: '700' },
+  heroStat: { color: '#FFFFFF', fontSize: 26, fontWeight: '800' },
+  heroStatUnit: { color: '#9AA3BC', fontSize: 13.5, fontWeight: '700' },
   heroDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.18)', marginVertical: 14 },
   heroCodeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  heroCode: { color: '#F2A25F', fontSize: 24, fontWeight: '800', letterSpacing: 6, marginTop: 4 },
+  heroCode: { color: '#F2A25F', fontSize: 21, fontWeight: '800', letterSpacing: 5, marginTop: 4 },
   shareBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 999,
@@ -506,8 +506,8 @@ const s = StyleSheet.create({
 
   card: { backgroundColor: CARD, borderRadius: 20, padding: 16 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800' },
-  cardSub: { color: TEXT_SECONDARY, fontSize: 13.5, lineHeight: 19, marginTop: 6 },
+  cardTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '800' },
+  cardSub: { color: TEXT_SECONDARY, fontSize: 13, lineHeight: 18, marginTop: 6 },
   cardSub2: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
   solidBtn: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   solidBtnText: { fontSize: 13.5, fontWeight: '800' },
@@ -524,7 +524,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 9,
     borderRadius: 14, padding: 13, marginTop: 12,
   },
-  infoInsetText: { flex: 1, color: TEXT_PRIMARY, fontSize: 13.5, lineHeight: 18 },
+  infoInsetText: { flex: 1, color: TEXT_PRIMARY, fontSize: 13, lineHeight: 18 },
 
   innerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, marginTop: 2 },
   innerRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.18)' },
@@ -540,20 +540,20 @@ const s = StyleSheet.create({
   adoptedText: { fontSize: 12, fontWeight: '700' },
 
   boardRank: { width: 18, color: TEXT_SECONDARY, fontSize: 14, fontWeight: '800', textAlign: 'center' },
-  boardMeta: { fontSize: 14, fontWeight: '800' },
+  boardMeta: { fontSize: 13.5, fontWeight: '800' },
   boardKm: { color: TEXT_SECONDARY, fontSize: 12.5, fontWeight: '600' },
-  memberName: { flex: 1, color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  memberName: { flex: 1, color: TEXT_PRIMARY, fontSize: 14.5, fontWeight: '600' },
   rolePill: { borderRadius: 999, paddingHorizontal: 11, paddingVertical: 5 },
   roleText: { fontSize: 12.5, fontWeight: '700' },
 
   shareHead: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 12 },
-  shareTitle: { color: TEXT_PRIMARY, fontSize: 15.5, fontWeight: '800' },
+  shareTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '800' },
 
   leaveBtn: {
     alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(229,72,77,0.45)',
     borderRadius: 999, paddingVertical: 14, marginTop: 6,
   },
-  leaveText: { color: RED, fontSize: 15, fontWeight: '700' },
+  leaveText: { color: RED, fontSize: 14.5, fontWeight: '700' },
 
   detailBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
   detailSheet: {
