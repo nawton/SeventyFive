@@ -209,10 +209,45 @@ CREATE TABLE IF NOT EXISTS coach_workouts (
   cardio_type  TEXT,
   -- Samma form som createWorkoutSession tar emot: [{exercise_name, sets, reps}]
   exercises    JSONB       NOT NULL DEFAULT '[]',
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  -- Vilka som ser och kan joina passet: hela föreningen, en av
+  -- föreningens grupper, eller handplockade medlemmar (recipients-tabellen)
+  audience     TEXT        NOT NULL DEFAULT 'org' CHECK (audience IN ('org', 'group', 'selected')),
+  group_id     UUID        REFERENCES groups(id) ON DELETE CASCADE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CHECK ((audience = 'group') = (group_id IS NOT NULL))
 );
 
 CREATE INDEX IF NOT EXISTS coach_workouts_org_idx ON coach_workouts (org_id, created_at DESC);
+
+-- Gruppen måste höra till samma förening som passet
+CREATE OR REPLACE FUNCTION check_coach_workout_group()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.group_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM groups g WHERE g.id = NEW.group_id AND g.org_id = NEW.org_id
+  ) THEN
+    RAISE EXCEPTION 'Gruppen hör inte till föreningen';
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS coach_workouts_check_group ON coach_workouts;
+CREATE TRIGGER coach_workouts_check_group
+  BEFORE INSERT OR UPDATE OF group_id, org_id ON coach_workouts
+  FOR EACH ROW EXECUTE FUNCTION check_coach_workout_group();
+
+-- Handplockade mottagare när audience = 'selected'
+CREATE TABLE IF NOT EXISTS coach_workout_recipients (
+  workout_id UUID NOT NULL REFERENCES coach_workouts(id) ON DELETE CASCADE,
+  user_id    UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+
+  PRIMARY KEY (workout_id, user_id)
+);
 
 -- Vilka som lagt in passet i sitt schema — session_id pekar på medlemmens
 -- egen workout_sessions-rad så efterlevnad kan härledas ur befintlig data
@@ -225,15 +260,87 @@ CREATE TABLE IF NOT EXISTS coach_workout_adoptions (
   PRIMARY KEY (workout_id, user_id)
 );
 
-ALTER TABLE coach_workouts          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE coach_workout_adoptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coach_workouts           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coach_workout_adoptions  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coach_workout_recipients ENABLE ROW LEVEL SECURITY;
 
+-- Synlighet enligt målgruppen: coach/admin i föreningen ser alltid sina
+-- pass; medlemmar ser org-pass, grupp-pass om de är accepterade i gruppen,
+-- och riktade pass bara om de står som mottagare
 DROP POLICY IF EXISTS "Tränarpass syns för föreningens medlemmar" ON coach_workouts;
-CREATE POLICY "Tränarpass syns för föreningens medlemmar"
+DROP POLICY IF EXISTS "Tränarpass syns för sin målgrupp" ON coach_workouts;
+CREATE POLICY "Tränarpass syns för sin målgrupp"
   ON coach_workouts FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_members m
+      WHERE m.org_id = coach_workouts.org_id
+        AND m.user_id = auth.uid() AND m.role IN ('admin', 'coach')
+    )
+    OR (
+      audience = 'org'
+      AND EXISTS (
+        SELECT 1 FROM organization_members m
+        WHERE m.org_id = coach_workouts.org_id AND m.user_id = auth.uid()
+      )
+    )
+    OR (
+      audience = 'group'
+      AND EXISTS (
+        SELECT 1 FROM group_members gm
+        WHERE gm.group_id = coach_workouts.group_id
+          AND gm.user_id = auth.uid() AND gm.status = 'accepted'
+      )
+    )
+    OR (
+      audience = 'selected'
+      AND EXISTS (
+        SELECT 1 FROM coach_workout_recipients r
+        WHERE r.workout_id = coach_workouts.id AND r.user_id = auth.uid()
+      )
+    )
+  );
+
+-- Mottagarlistan: skaparen (eller admin) hanterar den, mottagaren ser sin rad
+DROP POLICY IF EXISTS "Mottagare ser sin rad, tränaren hela listan" ON coach_workout_recipients;
+CREATE POLICY "Mottagare ser sin rad, tränaren hela listan"
+  ON coach_workout_recipients FOR SELECT
+  USING (
+    user_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM coach_workouts w
+      JOIN organization_members m ON m.org_id = w.org_id
+      WHERE w.id = coach_workout_recipients.workout_id
+        AND m.user_id = auth.uid() AND m.role IN ('admin', 'coach')
+    )
+  );
+
+DROP POLICY IF EXISTS "Tränaren väljer mottagare" ON coach_workout_recipients;
+CREATE POLICY "Tränaren väljer mottagare"
+  ON coach_workout_recipients FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM coach_workouts w
+      JOIN organization_members m ON m.org_id = w.org_id
+      WHERE w.id = workout_id
+        AND m.user_id = auth.uid() AND m.role IN ('admin', 'coach')
+    )
+    -- Mottagaren måste själv vara medlem i föreningen
+    AND EXISTS (
+      SELECT 1 FROM coach_workouts w
+      JOIN organization_members m2 ON m2.org_id = w.org_id
+      WHERE w.id = workout_id AND m2.user_id = coach_workout_recipients.user_id
+    )
+  );
+
+DROP POLICY IF EXISTS "Tränaren tar bort mottagare" ON coach_workout_recipients;
+CREATE POLICY "Tränaren tar bort mottagare"
+  ON coach_workout_recipients FOR DELETE
   USING (EXISTS (
-    SELECT 1 FROM organization_members m
-    WHERE m.org_id = coach_workouts.org_id AND m.user_id = auth.uid()
+    SELECT 1 FROM coach_workouts w
+    JOIN organization_members m ON m.org_id = w.org_id
+    WHERE w.id = coach_workout_recipients.workout_id
+      AND m.user_id = auth.uid() AND m.role IN ('admin', 'coach')
   ));
 
 DROP POLICY IF EXISTS "Coach och admin publicerar tränarpass" ON coach_workouts;
@@ -287,16 +394,14 @@ CREATE POLICY "Egna adoptioner och tränarens överblick"
     )
   );
 
+-- Subfrågan mot coach_workouts går genom RLS, så "passet är synligt för
+-- mig" täcker automatiskt alla tre målgruppslägena
 DROP POLICY IF EXISTS "Medlemmen lägger in passet själv" ON coach_workout_adoptions;
 CREATE POLICY "Medlemmen lägger in passet själv"
   ON coach_workout_adoptions FOR INSERT
   WITH CHECK (
     user_id = auth.uid()
-    AND EXISTS (
-      SELECT 1 FROM coach_workouts w
-      JOIN organization_members m ON m.org_id = w.org_id
-      WHERE w.id = workout_id AND m.user_id = auth.uid()
-    )
+    AND EXISTS (SELECT 1 FROM coach_workouts w WHERE w.id = workout_id)
   );
 
 DROP POLICY IF EXISTS "Medlemmen ångrar sin adoption" ON coach_workout_adoptions;
