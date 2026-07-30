@@ -18,7 +18,6 @@ import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
 import { STATS_SCREEN_W, nextMilestone, s, useStatsColors } from './statsShared'
-import { CalendarView } from './CalendarView'
 import { DayWorkoutsModal } from './DayWorkoutsModal'
 import { MilestoneAnalysisModal } from './MilestoneAnalysisModal'
 import { useT, dateLocale } from '@/lib/i18n'
@@ -127,7 +126,6 @@ export function OverviewTab({
   const chrome = useCardChrome()
   const [selectedDay, setSelectedDay]     = useState<DaySummary | null>(null)
   const [milestoneOpen, setMilestoneOpen] = useState(false)
-  const [calOpen, setCalOpen]             = useState(false)
 
   const completedDays = days.filter(d => d.status === 'completed').length
 
@@ -221,10 +219,8 @@ export function OverviewTab({
             <View style={[l.card, chrome]}>
               <View style={l.weekHead}>
                 <Text style={l.cardTitle}>{t('Denna vecka')}</Text>
-                <TouchableOpacity onPress={() => setCalOpen(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="toggleCalendar">
-                  <Text style={[l.weekLink, { color: T.ACCENT }]}>
-                    {calOpen ? t('Dölj kalendern') : `${t('Hela kalendern')} ›`}
-                  </Text>
+                <TouchableOpacity onPress={() => router.push('/(app)/calendar' as never)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="openCalendar">
+                  <Text style={[l.weekLink, { color: T.ACCENT }]}>{t('Hela kalendern')} ›</Text>
                 </TouchableOpacity>
               </View>
               <View style={l.weekRow}>
@@ -255,25 +251,6 @@ export function OverviewTab({
                 ))}
               </View>
             </View>
-
-            {/* Hela kalendern — utfälld under veckokortet */}
-            {calOpen && (
-              <CalendarView
-                days={days}
-                startDate={startDate}
-                currentDay={currentDay}
-                challengeId={challengeId}
-                onPressDay={setSelectedDay}
-                gestureRef={calSwipeRef}
-                onDayEdited={onDayEdited}
-                workouts={workouts}
-                strengthWorkouts={strengthWorkouts}
-                completedSessions={completedSessions}
-                unit={unit}
-                avatarUrl={avatarUrl}
-                onDeleteWorkout={onRemoveWorkoutLocal}
-              />
-            )}
 
             {/* ── Fyra nyckeltal i rutnät ── */}
             <View style={l.grid}>

@@ -388,4 +388,8 @@ export const EN_STATS: Record<string, string> = {
   "{sets} set · {reps} reps": "{sets} sets · {reps} reps",
   "Dag {n} pågår": "Day {n} in progress",
   "Dag {n} av {m}": "Day {n} of {m}",
+  "klara": "done",
+  "missade": "missed",
+  "kvar": "left",
+  "Inga uppgifter loggade den här dagen.": "No tasks logged this day.",
 }
