@@ -437,4 +437,13 @@ export const EN_STATS: Record<string, string> = {
   "Du ligger {d} {u} före {m}.": "You are {d} {u} ahead of {m}.",
   "Du ligger {d} {u} efter {m}.": "You are {d} {u} behind {m}.",
   "Senast aktiva månad: {m}.": "Last active month: {m}.",
+  "Välj vecka": "Pick week",
+  "förra: {n}": "last: {n}",
+  "Volym per dag": "Volume per day",
+  "kg lyft, denna vecka": "kg lifted, this week",
+  "kg lyft, vald vecka": "kg lifted, selected week",
+  "Detaljer": "Details",
+  "{g} ligger efter, lägg in ett pass för balans.": "{g} lagging behind, add a session for balance.",
+  "Tyngsta lyft: {n} kg": "Heaviest lift: {n} kg",
+  "est. 1RM {n} kg": "est. 1RM {n} kg",
 }

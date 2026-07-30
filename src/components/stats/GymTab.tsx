@@ -2,7 +2,7 @@
 // volymgraf, kroppskarta, genomförda pass och styrkerekord — med sina
 // detaljmodaler. Skalet (stats.tsx) äger rådatan och skickar in den.
 import { useEffect, useMemo, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator , useColorScheme,
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, ActivityIndicator , useColorScheme,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@/components/Icon'
@@ -15,9 +15,13 @@ import Animated, {
 } from 'react-native-reanimated'
 import Svg, { Text as SvgText, Line as SvgLine, Rect, G } from 'react-native-svg'
 import Body from 'react-native-body-highlighter'
+
+// Gymmets signaturfärg i den nya kostymen — orange i båda temalägena
+// (cardio är blått, gym är orange)
+const GYM = '#EE7C4B'
 import { supabase } from '@/lib/supabase'
 import { useBodyGender } from '@/lib/bodyGender'
-import { BG, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings } from '@/lib/theme'
+import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, useThemeStrings, useCardChrome } from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek } from '@/lib/date'
 import { getMusclesForName, MUSCLE_GROUPS_6, type Slug } from '@/lib/muscles'
 import {
@@ -63,6 +67,7 @@ export function GymTab({
   const bodyBorder = bodyLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.10)'
   const P = useStatsColors()
   const T = useThemeStrings()
+  const chrome = useCardChrome()
   const insets = useSafeAreaInsets()
 
   const [bodyView, setBodyView]                 = useState<'front' | 'back'>('front')
@@ -71,6 +76,7 @@ export function GymTab({
   const [sessionsOpen, setSessionsOpen] = useState(false)
   const [volumeOpen, setVolumeOpen] = useState(false)
   const [weekOffset, setWeekOffset]             = useState(0)
+  const [weekNavOpen, setWeekNavOpen]           = useState(false)
   const [weekExNames, setWeekExNames]           = useState<string[]>([])
   const [weekExByDay, setWeekExByDay]           = useState<Record<string, string[]>>({})
   const [prevWeekExNames, setPrevWeekExNames]   = useState<string[]>([])
@@ -231,7 +237,7 @@ export function GymTab({
   // ── Styrkerekord (all-time) — från loggade set, klickbara till passet.
   // Tung loop över hela historiken → räknas bara om när datan ändras
   type LiftRec = { name: string; kg: number; date: string }
-  const { recTopLift, recOneRm, recBigDay, recWeekSets } = useMemo(() => {
+  const { recTopLift, topLiftOneRm } = useMemo(() => {
     let recTopLift: LiftRec | null = null
     let recOneRm: LiftRec | null = null
     const volByDate = new Map<string, number>()
@@ -260,9 +266,36 @@ export function GymTab({
     }
     let recWeekSets = 0
     for (const v of setsByWeekMap.values()) recWeekSets = Math.max(recWeekSets, v)
-    return { recTopLift, recOneRm, recBigDay, recWeekSets }
+    // Est. 1RM (Epley) för just den övning där tyngsta lyftet sattes
+    let topLiftOneRm = 0
+    if (recTopLift !== null) {
+      const liftName = (recTopLift as LiftRec).name
+      for (const w of strengthWorkouts) {
+        if (w.data.exercise_name !== liftName) continue
+        for (const st of w.data.sets) {
+          if (st.weight_kg > 0 && st.reps > 0) {
+            topLiftOneRm = Math.max(topLiftOneRm, st.weight_kg * (1 + st.reps / 30))
+          }
+        }
+      }
+    }
+    return { recTopLift, recOneRm, recBigDay, recWeekSets, topLiftOneRm }
   }, [strengthWorkouts])
-  const hasGymRecords = recTopLift !== null || recWeekSets > 0
+
+  // "65,5 t" när volymen är stor nog — som förlagan
+  const fmtVol = (kg: number) => kg >= 1000
+    ? `${(kg / 1000).toFixed(1).replace('.', ',')} t`
+    : `${Math.round(kg).toLocaleString(dateLocale())} kg`
+
+  // Set per muskelgrupp (samma sextaxonomi som kroppskartan) — en övning
+  // som träffar flera grupper räknas i varje grupp den träffar
+  const groupSets = MUSCLE_GROUPS_6.map(g => ({
+    label: t(g.label),
+    sets: scopedStrength.reduce((sum, w) => {
+      const slugs = getMusclesForName(w.data.exercise_name)
+      return slugs.some(sl => g.slugs.includes(sl)) ? sum + w.data.sets.length : sum
+    }, 0),
+  }))
 
   // Öppnar gympassdetaljen för alla loggade övningar ett visst datum.
   // Delar alla rader en pass-nyckel följer titel/kommentar/foto med.
@@ -320,22 +353,6 @@ export function GymTab({
             </View>
           ) : (
           <>
-            {/* Veckobläddring — samma pilnavigering som i Distans-detaljvyn */}
-            <View style={s.weekNav}>
-              <TouchableOpacity style={s.weekNavBtn} onPress={() => setWeekOffset(o => o - 1)} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={20} color={TEXT_PRIMARY} />
-              </TouchableOpacity>
-              <Text style={s.weekNavLabel}>{weekBounds.label}</Text>
-              <TouchableOpacity
-                style={s.weekNavBtn}
-                onPress={() => setWeekOffset(o => o + 1)}
-                disabled={weekOffset >= 0}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="chevron-forward" size={20} color={weekOffset >= 0 ? 'rgba(255,255,255,0.18)' : TEXT_PRIMARY} />
-              </TouchableOpacity>
-            </View>
-
             {/* Dagval — veckovyn är standard; knappen fäller ut dagrutorna
                 när man vill zooma in på en specifik dag */}
             <TouchableOpacity
@@ -384,121 +401,81 @@ export function GymTab({
               </View>
             )}
 
-            {/* Veckostatistik — samma Apple-rutnät, med förra veckan som jämförelse */}
-            <Text style={s.sectionHead}>{dayIdx === null ? t('Veckans träning') : t('Dagens träning')}</Text>
-            <View style={[s.card, s.cardPlain]}>
-              <View style={[s.dtlRow, { paddingTop: 0 }]}>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Pass')}</Text>
-                  <Text style={[s.dtlVal, { color: ACCENT }]}>{scopedPassCount}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: prevPassCount })}</Text>}
-                </View>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl} numberOfLines={1} adjustsFontSizeToFit>{t('Muskelgrupper')}</Text>
-                  <Text style={[s.dtlVal, { color: P.PURPLE }]}>
-                    {scopedGroupCount}
-                    <Text style={s.dtlUnit}> AV 6</Text>
-                  </Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: prevGroupCount })}</Text>}
-                </View>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Övningar')}</Text>
-                  <Text style={[s.dtlVal, { color: GREEN }]}>{scopedExNames.length}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: prevWeekExNames.length })}</Text>}
-                </View>
+            {/* Veckans träning — rutnät med förra veckan som jämförelse */}
+            <View style={[l.secCard, chrome]}>
+              <View style={l.secHead}>
+                <Text style={l.secTitle}>{dayIdx === null ? t('Veckans träning') : t('Dagens träning')}</Text>
+                <TouchableOpacity onPress={() => setWeekNavOpen(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="pickWeek">
+                  <Text style={[l.secLink, { color: T.ACCENT }]}>{t('Välj vecka')} ›</Text>
+                </TouchableOpacity>
               </View>
-              <View style={s.dtlSep} />
-              <View style={[s.dtlRow, { paddingBottom: 0 }]}>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Set</Text>
-                  <Text style={[s.dtlVal, { color: P.BLUE }]}>{weekSums.sets}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: prevSums.sets })}</Text>}
+              {(weekNavOpen || weekOffset !== 0) && (
+                <View style={l.weekNavRow}>
+                  <TouchableOpacity style={l.weekNavBtn} onPress={() => setWeekOffset(o => o - 1)} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={18} color={TEXT_PRIMARY} />
+                  </TouchableOpacity>
+                  <Text style={l.weekNavLbl}>{weekBounds.label}</Text>
+                  <TouchableOpacity style={l.weekNavBtn} onPress={() => setWeekOffset(o => o + 1)} disabled={weekOffset >= 0} activeOpacity={0.7}>
+                    <Ionicons name="chevron-forward" size={18} color={weekOffset >= 0 ? 'rgba(128,128,128,0.35)' : TEXT_PRIMARY} />
+                  </TouchableOpacity>
                 </View>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>Reps</Text>
-                  <Text style={[s.dtlVal, { color: P.TEAL }]}>{weekSums.reps}</Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: prevSums.reps })}</Text>}
-                </View>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Volym')}</Text>
-                  <Text style={[s.dtlVal, { color: P.YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {Math.round(weekSums.volume).toLocaleString(dateLocale())}
-                    <Text style={s.dtlUnit}> KG</Text>
-                  </Text>
-                  {dayIdx === null && <Text style={s.dtlPrev} numberOfLines={1} adjustsFontSizeToFit>{t('förra veckan {n}', { n: Math.round(prevSums.volume).toLocaleString(dateLocale()) })}</Text>}
-                </View>
+              )}
+              <View style={l.statGrid}>
+                {([
+                  { lbl: t('Pass'), val: String(scopedPassCount), cur: scopedPassCount, prev: prevPassCount, prevStr: String(prevPassCount) },
+                  { lbl: t('Muskler'), val: String(scopedGroupCount), suffix: ' /6', cur: scopedGroupCount, prev: prevGroupCount, prevStr: String(prevGroupCount) },
+                  { lbl: t('Övningar'), val: String(scopedExNames.length), cur: scopedExNames.length, prev: prevWeekExNames.length, prevStr: String(prevWeekExNames.length) },
+                  { lbl: 'Set', val: String(weekSums.sets), cur: weekSums.sets, prev: prevSums.sets, prevStr: String(prevSums.sets) },
+                  { lbl: 'Reps', val: weekSums.reps.toLocaleString(dateLocale()), cur: weekSums.reps, prev: prevSums.reps, prevStr: prevSums.reps.toLocaleString(dateLocale()) },
+                  { lbl: t('Volym'), val: fmtVol(weekSums.volume), color: GYM, cur: weekSums.volume, prev: prevSums.volume, prevStr: fmtVol(prevSums.volume) },
+                ] as Array<{ lbl: string; val: string; suffix?: string; color?: string; cur: number; prev: number; prevStr: string }>).map(c => (
+                  <View key={c.lbl} style={l.statCell}>
+                    <Text style={l.statLbl}>{c.lbl}</Text>
+                    <Text style={[l.statVal, c.color ? { color: c.color } : null]} numberOfLines={1} adjustsFontSizeToFit>
+                      {c.val}
+                      {c.suffix ? <Text style={l.statSuffix}>{c.suffix}</Text> : null}
+                    </Text>
+                    {dayIdx === null && (
+                      <Text style={[l.statPrev, c.cur > c.prev && { color: GREEN }]} numberOfLines={1} adjustsFontSizeToFit>
+                        {t('förra: {n}', { n: c.prevStr })}
+                      </Text>
+                    )}
+                  </View>
+                ))}
               </View>
             </View>
 
-            {/* Volym per dag i vald vecka — tryck för fullständig historik */}
+            {/* Volym per dag — staplar i vald vecka; tryck för historiken */}
             {weekStrength.some(w => w.data.sets.some(st => st.weight_kg > 0)) && (
-              <>
-              <TouchableOpacity style={s.sectionHeadRow} activeOpacity={0.7} onPress={() => setVolumeOpen(true)}>
-                <Text style={[s.sectionHead, s.sectionHeadInline]}>{t('Volym')}</Text>
-                <Ionicons name="chevron-forward" size={19} color={TEXT_SECONDARY} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.card, s.cardPlain]}
-                activeOpacity={0.85}
-                onPress={() => setVolumeOpen(true)}
-              >
-                <Text style={[s.cardSub, { marginTop: 0 }]}>{t('kg lyft per dag, vald vecka')}</Text>
-                {(() => {
-                  const CH_W = STATS_SCREEN_W - 80
-                  const CH_H = 130
-                  const slot = CH_W / 7
-                  const barW = Math.min(30, Math.round(slot * 0.5))
-                  const dayVols = Array.from({ length: 7 }, (_, i) => {
-                    const d = parseLocalDate(weekBounds.start)
-                    d.setDate(d.getDate() + i)
-                    const iso = toLocalDateString(d)
-                    return weekStrength
-                      .filter(w => (w.data.workout_date ?? toLocalDateString(new Date(w.created_at))) === iso)
-                      .reduce((sum, w) => sum + w.data.sets.reduce((x, r) => x + r.reps * (r.weight_kg || 0), 0), 0)
-                  })
-                  const maxV = Math.max(...dayVols, 1)
-                  const scale = (CH_H - 28) / maxV
-                  return (
-                    <>
-                      <Svg width={CH_W} height={CH_H}>
-                        {[0.5, 1].map(f => (
-                          <SvgLine
-                            key={f}
-                            x1={0} x2={CH_W}
-                            y1={CH_H - 4 - f * (CH_H - 28)} y2={CH_H - 4 - f * (CH_H - 28)}
-                            stroke="rgba(255,255,255,0.06)" strokeWidth={1}
-                          />
-                        ))}
-                        {dayVols.map((v, i) => {
-                          const x = i * slot + (slot - barW) / 2
-                          if (v <= 0) {
-                            return <Rect key={i} x={x} y={CH_H - 7} width={barW} height={3} rx={1.5} fill="rgba(255,255,255,0.10)" />
-                          }
-                          const h = Math.max(3, v * scale)
-                          return (
-                            <G key={i}>
-                              <Rect x={x} y={CH_H - 4 - h} width={barW} height={h} rx={3} fill={ACCENT} opacity={dayIdx === null || dayIdx === i ? 1 : 0.35} />
-                              <SvgText
-                                x={x + barW / 2} y={CH_H - 8 - h}
-                                fontSize={9} fontWeight="700" textAnchor="middle"
-                                fill="rgba(255,255,255,0.55)"
-                              >
-                                {Math.round(v).toLocaleString(dateLocale())}
-                              </SvgText>
-                            </G>
-                          )
-                        })}
-                      </Svg>
-                      <View style={s.distLblRow}>
-                        {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((l, i) => (
-                          <Text key={i} style={[s.distLbl, dayIdx === i && { color: ACCENT }]}>{t(l)}</Text>
-                        ))}
+              <TouchableOpacity style={[l.secCard, chrome]} activeOpacity={0.85} onPress={() => setVolumeOpen(true)} testID="volumeCard">
+                <View style={l.secHead}>
+                  <Text style={l.secTitle}>{t('Volym per dag')}</Text>
+                  <Text style={l.secHint}>{weekOffset === 0 ? t('kg lyft, denna vecka') : t('kg lyft, vald vecka')}</Text>
+                </View>
+                <View style={l.barRow}>
+                  {(() => {
+                    const dayVols = Array.from({ length: 7 }, (_, i) => {
+                      const d = parseLocalDate(weekBounds.start)
+                      d.setDate(d.getDate() + i)
+                      const iso = toLocalDateString(d)
+                      return weekStrength
+                        .filter(w => (w.data.workout_date ?? toLocalDateString(new Date(w.created_at))) === iso)
+                        .reduce((sum, w) => sum + w.data.sets.reduce((x, r) => x + r.reps * (r.weight_kg || 0), 0), 0)
+                    })
+                    const maxV = Math.max(...dayVols, 1)
+                    return dayVols.map((v, i) => (
+                      <View key={i} style={l.barCell}>
+                        <View style={l.barSlot}>
+                          {v > 0
+                            ? <View style={[l.bar, { height: Math.max(16, (v / maxV) * 120), backgroundColor: GYM, opacity: dayIdx === null || dayIdx === i ? 1 : 0.35 }]} />
+                            : <View style={l.barEmpty} />}
+                        </View>
+                        <Text style={[l.barLbl, dayIdx === i && { color: GYM, fontWeight: '700' }]}>{t(['M', 'T', 'O', 'T', 'F', 'L', 'S'][i])}</Text>
                       </View>
-                    </>
-                  )
-                })()}
+                    ))
+                  })()}
+                </View>
               </TouchableOpacity>
-              </>
             )}
 
             {/* Body map — rubriken öppnar muskeldetaljen (radar + set per grupp) */}
@@ -576,6 +553,73 @@ export function GymTab({
 
             </View>
 
+            {/* Set per muskelgrupp — obalans flaggas ärligt, Detaljer öppnar radarn */}
+            <View style={[l.secCard, chrome]}>
+              <View style={l.secHead}>
+                <Text style={l.secTitle}>{t('Set per muskelgrupp')}</Text>
+                <TouchableOpacity onPress={() => setMuscleOpen(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="muscleDetails">
+                  <Text style={[l.secLink, { color: T.ACCENT }]}>{t('Detaljer')} ›</Text>
+                </TouchableOpacity>
+              </View>
+              {(() => {
+                const max = Math.max(...groupSets.map(g => g.sets), 1)
+                const laggards = groupSets.filter(g => g.sets < max * 0.33)
+                const hasAny = groupSets.some(g => g.sets > 0)
+                const lagNames = laggards.map((g, i) => i === 0 ? g.label : g.label.toLowerCase())
+                const joined = lagNames.length > 1
+                  ? `${lagNames.slice(0, -1).join(', ')} ${t('och')} ${lagNames[lagNames.length - 1]}`
+                  : lagNames[0]
+                return (
+                  <>
+                    {groupSets.map(g => (
+                      <View key={g.label} style={l.mgRow}>
+                        <Text style={l.mgName}>{g.label}</Text>
+                        <View style={l.mgTrack}>
+                          {g.sets > 0 && (
+                            <View style={[l.mgFill, {
+                              width: `${Math.max(6, (g.sets / max) * 100)}%` as never,
+                              backgroundColor: g.sets < max * 0.33 ? GYM : P.BLUE,
+                            }]} />
+                          )}
+                        </View>
+                        <Text style={l.mgVal}>{g.sets}</Text>
+                      </View>
+                    ))}
+                    {hasAny && laggards.length > 0 && laggards.length <= 3 && (
+                      <View style={[l.mgInsight, { backgroundColor: `${GYM}14` }]}>
+                        <Ionicons name="alert-circle-outline" size={17} color={GYM} />
+                        <Text style={l.mgInsightText}>
+                          {t('{g} ligger efter, lägg in ett pass för balans.', { g: joined })}
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                )
+              })()}
+            </View>
+
+            {/* Tyngsta lyftet — trycket öppnar passet där det sattes */}
+            {recTopLift !== null && (
+              <TouchableOpacity
+                style={[l.secCard, l.prRow, chrome]}
+                activeOpacity={0.75}
+                onPress={() => openGymDay((recTopLift as LiftRec).date, (recTopLift as LiftRec).name)}
+                testID="topLiftCard"
+              >
+                <View style={[l.prIcon, { backgroundColor: `${GYM}1C` }]}>
+                  <Ionicons name="trophy-outline" size={22} color={GYM} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={l.prTitle}>{t('Tyngsta lyft: {n} kg', { n: (recTopLift as LiftRec).kg })}</Text>
+                  <Text style={l.prSub} numberOfLines={1}>
+                    {t((recTopLift as LiftRec).name)}
+                    {topLiftOneRm > 0 ? ` · ${t('est. 1RM {n} kg', { n: Math.round(topLiftOneRm) })}` : ''}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
+              </TouchableOpacity>
+            )}
+
             {/* Genomförda pass — arkivet bakom en enkel rad */}
             <TouchableOpacity
               style={[s.card, s.cardPlain, s.muscleLinkRow]}
@@ -595,68 +639,6 @@ export function GymTab({
               </View>
               <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
             </TouchableOpacity>
-
-            {/* Styrkerekord — all-time, klickbara till passet där rekordet sattes */}
-            {hasGymRecords && (
-              <>
-              <Text style={s.sectionHead}>{t('Styrkerekord')}</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ marginHorizontal: -GRID_PADDING }}
-                contentContainerStyle={s.recScroll}
-              >
-                {([
-                  recTopLift && {
-                    icon: 'barbell-outline' as const, color: ACCENT,
-                    label: t('Tyngsta lyft · {name}', { name: recTopLift.name }),
-                    value: `${recTopLift.kg} kg`,
-                    onPress: () => openGymDay(recTopLift!.date, recTopLift!.name),
-                  },
-                  recOneRm && {
-                    icon: 'speedometer-outline' as const, color: P.PURPLE,
-                    label: t('Bästa 1RM · {name}', { name: recOneRm.name }),
-                    value: `${Math.round(recOneRm.kg)} kg`,
-                    onPress: () => openGymDay(recOneRm!.date, recOneRm!.name),
-                  },
-                  recBigDay && {
-                    icon: 'trophy-outline' as const, color: P.YELLOW,
-                    label: t('Största passet (volym)'),
-                    value: `${Math.round(recBigDay.vol).toLocaleString(dateLocale())} kg`,
-                    onPress: () => openGymDay(recBigDay!.date, t('Största passet')),
-                  },
-                  recWeekSets > 0 && {
-                    icon: 'layers-outline' as const, color: P.BLUE,
-                    label: t('Flest set en vecka'),
-                    value: `${recWeekSets} set`,
-                    onPress: undefined,
-                  },
-                ].filter(Boolean) as Array<{
-                  icon: React.ComponentProps<typeof Ionicons>['name']
-                  color: string; label: string; value: string; onPress?: () => void
-                }>).map(r => (
-                  <TouchableOpacity
-                    key={r.label}
-                    style={s.recCard}
-                    activeOpacity={0.75}
-                    disabled={!r.onPress}
-                    onPress={r.onPress}
-                  >
-                    <View style={s.recCardTop}>
-                      <View style={[s.recIconWrap, { backgroundColor: r.color + '1A' }]}>
-                        <Ionicons name={r.icon} size={16} color={r.color} />
-                      </View>
-                      {r.onPress && <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.28)" />}
-                    </View>
-                    <Text style={[s.recCardVal, { color: r.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                      {r.value}
-                    </Text>
-                    <Text style={s.recCardLbl} numberOfLines={2}>{r.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              </>
-            )}
 
           </>
           )}
@@ -759,3 +741,56 @@ export function GymTab({
     </>
   )
 }
+
+
+// Lokala stilar för nya kostymen — delade s-stilar rörs inte (andra flikar)
+const l = StyleSheet.create({
+  secCard: { backgroundColor: CARD, borderRadius: 20, padding: 16, marginBottom: 14 },
+  secHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  secTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800' },
+  secLink: { fontSize: 14, fontWeight: '700' },
+  secHint: { color: TEXT_SECONDARY, fontSize: 13 },
+
+  weekNavRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  weekNavBtn: {
+    width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(128,128,128,0.12)',
+  },
+  weekNavLbl: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '700', textTransform: 'capitalize' },
+
+  statGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 16 },
+  statCell: { width: '33.3%' as never, gap: 2, paddingRight: 8 },
+  statLbl: { color: TEXT_SECONDARY, fontSize: 13.5 },
+  statVal: { color: TEXT_PRIMARY, fontSize: 24, fontWeight: '800' },
+  statSuffix: { fontSize: 14, fontWeight: '700', color: TEXT_SECONDARY },
+  statPrev: { color: TEXT_SECONDARY, fontSize: 12.5 },
+
+  barRow: { flexDirection: 'row', alignItems: 'flex-end' },
+  barCell: { flex: 1, alignItems: 'center', gap: 8 },
+  barSlot: { height: 122, justifyContent: 'flex-end', alignItems: 'center' },
+  bar: { width: 26, borderRadius: 13 },
+  barEmpty: { width: 22, height: 5, borderRadius: 3, backgroundColor: 'rgba(128,128,128,0.22)' },
+  barLbl: { color: TEXT_SECONDARY, fontSize: 12.5, fontWeight: '600' },
+
+  mgRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 7 },
+  mgName: { width: 56, color: TEXT_PRIMARY, fontSize: 14.5, fontWeight: '600' },
+  mgTrack: {
+    flex: 1, height: 10, borderRadius: 5,
+    backgroundColor: 'rgba(128,128,128,0.14)', overflow: 'hidden',
+  },
+  mgFill: { height: 10, borderRadius: 5 },
+  mgVal: { minWidth: 34, textAlign: 'right', color: TEXT_PRIMARY, fontSize: 15, fontWeight: '800' },
+  mgInsight: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderRadius: 14, padding: 13, marginTop: 10,
+  },
+  mgInsightText: { flex: 1, color: TEXT_PRIMARY, fontSize: 13.5, lineHeight: 19 },
+
+  prRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  prIcon: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  prTitle: { color: TEXT_PRIMARY, fontSize: 16.5, fontWeight: '800' },
+  prSub: { color: TEXT_SECONDARY, fontSize: 13, marginTop: 2 },
+})
