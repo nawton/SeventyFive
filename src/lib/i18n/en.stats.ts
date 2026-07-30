@@ -375,4 +375,17 @@ export const EN_STATS: Record<string, string> = {
   'Cardiopass': 'Cardio session',
   'Styrkepass': 'Strength sessions',
   'Personliga rekord': 'Personal records',
+
+  // Nya översikten
+  "Dag {n} är igång!": "Day {n} is on!",
+  "Klara dagens uppgifter för att tända din streak.": "Complete today's tasks to light up your streak.",
+  "Hela kalendern": "Full calendar",
+  "Dölj kalendern": "Hide calendar",
+  "Samma som förra veckan": "Same as last week",
+  "{n} mot förra veckan": "{n} vs last week",
+  "1 cardiopass": "1 cardio workout",
+  "{n} cardiopass": "{n} cardio workouts",
+  "{sets} set · {reps} reps": "{sets} sets · {reps} reps",
+  "Dag {n} pågår": "Day {n} in progress",
+  "Dag {n} av {m}": "Day {n} of {m}",
 }

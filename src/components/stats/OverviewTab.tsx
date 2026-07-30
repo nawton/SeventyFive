@@ -1,66 +1,92 @@
-// ÖVERSIKT-fliken på Framsteg: utmaningsring, milstolpe, Din vecka,
-// kalender och deras detaljvyer. Skalet (stats.tsx) äger rådatan.
+// ÖVERSIKT-fliken på Framsteg: mörk hjältepanel med dagsring och CTA,
+// veckoremsan, fyra nyckeltalskort och nästa milstolpe. Hela kalendern
+// fälls ut via länken i veckokortet. Skalet (stats.tsx) äger rådatan.
 import { useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Modal } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native'
+import { router } from 'expo-router'
 import { Ionicons } from '@/components/Icon'
 import type { GestureType } from 'react-native-gesture-handler'
 import Svg, { Circle, Text as SvgText } from 'react-native-svg'
-import { GREEN, BORDER, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, ACCENT, accentAlpha, useThemeStrings, useCardChrome } from '@/lib/theme'
+import * as Haptics from 'expo-haptics'
+import {
+  GREEN, CARD, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT, ACCENT_CONTRAST,
+  accentAlpha, useThemeStrings, useCardChrome,
+} from '@/lib/theme'
 import { toLocalDateString, parseLocalDate, startOfWeek } from '@/lib/date'
 import { toDisplayDistance, distanceUnitLabel, type UnitSystem } from '@/lib/units'
 import type { DaySummary } from '@/services/dailyLog'
 import type { CardioWorkout, StrengthWorkout } from '@/services/workouts'
 import type { CompletedSessionItem } from '@/services/workoutSchedule'
-import { STATS_SCREEN_W, BLUE, RED, YELLOW, nextMilestone, s , useStatsColors} from './statsShared'
+import { STATS_SCREEN_W, nextMilestone, s, useStatsColors } from './statsShared'
 import { CalendarView } from './CalendarView'
 import { DayWorkoutsModal } from './DayWorkoutsModal'
 import { MilestoneAnalysisModal } from './MilestoneAnalysisModal'
 import { useT, dateLocale } from '@/lib/i18n'
 
+// Hjältepanelen är mörk marinblå i BÅDA lägena (som förlagan) — färgerna
+// är statiska strängar, inte temafärger
+const HERO = {
+  bg: '#151B33',
+  track: '#2B3352',
+  arc: '#F2A25F',
+  cta: '#F2A25F',
+  ctaText: '#16204A',
+  sub: '#9AA3BC',
+  missed: '#E5484D',
+}
 
-function RingChart({ currentDay, completedDays }: { currentDay: number; completedDays: number }) {
+function HeroRing({ currentDay, completedDays }: { currentDay: number; completedDays: number }) {
   const t = useT()
-  const P = useStatsColors()
-  const R = 48
+  const R = 44
   const C = 2 * Math.PI * R
   const completedArc = (completedDays / 75) * C
   const elapsedArc   = (currentDay / 75) * C
   const missedArc    = Math.max(0, elapsedArc - completedArc)
 
   return (
-    <Svg width={120} height={120} viewBox="0 0 120 120">
-      <Circle cx={60} cy={60} r={R} fill="none" stroke={BORDER} strokeWidth={11} />
+    <Svg width={108} height={108} viewBox="0 0 108 108">
+      <Circle cx={54} cy={54} r={R} fill="none" stroke={HERO.track} strokeWidth={9} />
       {completedArc > 0 && (
         <Circle
-          cx={60} cy={60} r={R}
-          fill="none" stroke={ACCENT} strokeWidth={11}
-          strokeDasharray={`${completedArc} ${C}`}
+          cx={54} cy={54} r={R}
+          fill="none" stroke={HERO.arc} strokeWidth={9}
+          strokeDasharray={`${Math.max(completedArc, 2)} ${C}`}
           strokeLinecap="round"
-          rotation={-90} origin="60,60"
+          rotation={-90} origin="54,54"
         />
       )}
       {missedArc > 0 && (
         <Circle
-          cx={60} cy={60} r={R}
-          fill="none" stroke={P.RED} strokeWidth={11}
-          strokeDasharray={`${missedArc} ${C}`}
-          strokeDashoffset={-completedArc}
+          cx={54} cy={54} r={R}
+          fill="none" stroke={HERO.missed} strokeWidth={9}
+          strokeDasharray={`${Math.max(missedArc, 2)} ${C}`}
+          strokeDashoffset={-Math.max(completedArc, 2)}
           strokeLinecap="round"
-          rotation={-90} origin="60,60"
-          opacity={0.45}
+          rotation={-90} origin="54,54"
+          opacity={0.5}
+        />
+      )}
+      {/* Dagens position: liten prick på ringen även innan något är klart */}
+      {completedArc === 0 && missedArc === 0 && (
+        <Circle
+          cx={54} cy={54} r={R}
+          fill="none" stroke={HERO.arc} strokeWidth={9}
+          strokeDasharray={`2 ${C}`}
+          strokeLinecap="round"
+          rotation={-90 + (elapsedArc / C) * 360} origin="54,54"
         />
       )}
       <SvgText
-        x={60} y={53}
+        x={54} y={51}
         textAnchor="middle" fontSize={26} fontWeight="900"
-        fill={TEXT_PRIMARY} fontFamily="-apple-system,sans-serif"
+        fill="#FFFFFF" fontFamily="-apple-system,sans-serif"
       >
         {currentDay}
       </SvgText>
       <SvgText
-        x={60} y={73}
+        x={54} y={69}
         textAnchor="middle" fontSize={11}
-        fill={TEXT_SECONDARY} fontFamily="-apple-system,sans-serif"
+        fill={HERO.sub} fontFamily="-apple-system,sans-serif"
       >
         {t('av 75')}
       </SvgText>
@@ -97,44 +123,68 @@ export function OverviewTab({
   const t = useT()
   const P = useStatsColors()
   const unitLabel = distanceUnitLabel(unit)
-  // Milstolpekortet: orange ton hör mörka läget till — i ljust blir det ett
-  // vitt kort med mjuk skugga och blå accent som resten av appen
   const T = useThemeStrings()
   const chrome = useCardChrome()
-  const msLight = T.TEXT_PRIMARY !== '#FFFFFF'
-  const msCardOverride = msLight ? [{ backgroundColor: '#FFFFFF' }, chrome] : null
-  const msIconOverride = msLight ? { backgroundColor: accentAlpha('14') } : null
-  const msEyebrowColor = msLight ? { color: T.ACCENT } : null
-  const [selectedDay, setSelectedDay]           = useState<DaySummary | null>(null)
-  const [milestoneOpen, setMilestoneOpen]       = useState(false)
+  const [selectedDay, setSelectedDay]     = useState<DaySummary | null>(null)
+  const [milestoneOpen, setMilestoneOpen] = useState(false)
+  const [calOpen, setCalOpen]             = useState(false)
 
   const completedDays = days.filter(d => d.status === 'completed').length
-  const missedDays    = days.filter(d => d.status === 'failed').length
 
-  // ── Din vecka: tvärsummering över cardio + gym, innevarande kalendervecka ──
-  const nowWeekStart = toLocalDateString(startOfWeek())
-  const nowWeekEnd = (() => { const d = startOfWeek(); d.setDate(d.getDate() + 7); return toLocalDateString(d) })()
-  const inNowWeek = (iso: string) => iso >= nowWeekStart && iso < nowWeekEnd
-  const reportCardio = workouts.filter(w => inNowWeek(toLocalDateString(new Date(w.created_at))))
-  const weekReport = {
-    passes: reportCardio.length
-      + completedSessions.filter(c => c.sessionType === 'gym' && inNowWeek(c.completedDate)).length,
-    km: reportCardio.reduce((s, w) => s + w.data.distance_km, 0),
-    volume: strengthWorkouts
-      .filter(w => inNowWeek(w.data.workout_date ?? toLocalDateString(new Date(w.created_at))))
-      .reduce((s, w) => s + w.data.sets.reduce((x, r) => x + r.reps * (r.weight_kg || 0), 0), 0),
-    daysCleared: startDate
-      ? days.filter(d => {
-          if (d.status !== 'completed') return false
-          const dt = parseLocalDate(startDate)
-          dt.setDate(dt.getDate() + d.dayNumber - 1)
-          return inNowWeek(toLocalDateString(dt))
-        }).length
-      : 0,
+  // ── Veckans nyckeltal + jämförelsen mot förra veckan ──────────────────────
+  const weekStartOf = (offset: number) => {
+    const d = startOfWeek()
+    d.setDate(d.getDate() + offset * 7)
+    return toLocalDateString(d)
+  }
+  const nowWeekStart = weekStartOf(0)
+  const nowWeekEnd   = weekStartOf(1)
+  const prevWeekStart = weekStartOf(-1)
+  const inRange = (iso: string, from: string, to: string) => iso >= from && iso < to
+
+  const cardioIso = (w: CardioWorkout) => toLocalDateString(new Date(w.created_at))
+  const gymIso    = (w: StrengthWorkout) => w.data.workout_date ?? toLocalDateString(new Date(w.created_at))
+
+  const weekCardio = workouts.filter(w => inRange(cardioIso(w), nowWeekStart, nowWeekEnd))
+  const weekGym    = strengthWorkouts.filter(w => inRange(gymIso(w), nowWeekStart, nowWeekEnd))
+  const passes = weekCardio.length
+    + completedSessions.filter(c => c.sessionType === 'gym' && inRange(c.completedDate, nowWeekStart, nowWeekEnd)).length
+  const prevPasses = workouts.filter(w => inRange(cardioIso(w), prevWeekStart, nowWeekStart)).length
+    + completedSessions.filter(c => c.sessionType === 'gym' && inRange(c.completedDate, prevWeekStart, nowWeekStart)).length
+  const passDiff = passes - prevPasses
+
+  const km = weekCardio.reduce((sum, w) => sum + w.data.distance_km, 0)
+  const volume    = weekGym.reduce((sum, w) => sum + w.data.sets.reduce((x, r) => x + r.reps * (r.weight_kg || 0), 0), 0)
+  const totalSets = weekGym.reduce((sum, w) => sum + w.data.sets.length, 0)
+  const totalReps = weekGym.reduce((sum, w) => sum + w.data.sets.reduce((x, r) => x + r.reps, 0), 0)
+
+  // ── Veckoremsan: må-sö med idag markerad, framtiden streckad ──────────────
+  const todayIso = toLocalDateString(new Date())
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = startOfWeek()
+    d.setDate(d.getDate() + i)
+    const iso = toLocalDateString(d)
+    return {
+      iso,
+      letter: d.toLocaleDateString(dateLocale(), { weekday: 'narrow' }).toUpperCase(),
+      num: d.getDate(),
+      isToday: iso === todayIso,
+      isPast: iso < todayIso,
+    }
+  })
+
+  function openDayFor(iso: string) {
+    if (!startDate) return
+    const diff = Math.round((parseLocalDate(iso).getTime() - parseLocalDate(startDate).getTime()) / 86400000)
+    const day = days.find(d => d.dayNumber === diff + 1)
+    if (day) {
+      Haptics.selectionAsync()
+      setSelectedDay(day)
+    }
   }
 
-  const milestone   = nextMilestone(Math.max(0, currentDay - 1))
-  const isEarlyDays = currentDay <= 7
+  const milestone = nextMilestone(Math.max(0, currentDay - 1))
+  const msProgress = milestone ? Math.min(1, Math.max(0.02, currentDay / milestone.day)) : 0
 
   return (
     <>
@@ -147,121 +197,138 @@ export function OverviewTab({
           scrollEventThrottle={16}
         >
           <>
-            {/* Ring chart */}
-            <Text style={s.sectionHead}>{t('Utmaningen')}</Text>
-            <View style={[s.card, s.cardPlain]}>
-              <View style={s.ringWrap}>
-                <RingChart currentDay={currentDay} completedDays={completedDays} />
-                <View style={s.ringInfo}>
-                  <View>
-                    <Text style={s.ringDay}>{t('Dag {n}', { n: currentDay })}</Text>
-                    <Text style={s.ringOfN}>
-                      {t('{pct}% av utmaningen', { pct: currentDay > 0 ? Math.round((currentDay / 75) * 100) : 0 })}
-                    </Text>
-                  </View>
-                  <View style={s.ringRows}>
-                    <View style={s.ringRow}>
-                      <Text style={s.ringRowLabel}>{t('Klarade dagar')}</Text>
-                      <Text style={[s.ringRowVal, { color: GREEN }]}>{completedDays} ✓</Text>
+            {/* ── Hjältepanelen: ring, dagsläge och CTA till dagens uppgifter ── */}
+            <View style={l.hero}>
+              <HeroRing currentDay={currentDay} completedDays={completedDays} />
+              <View style={l.heroBody}>
+                <Text style={l.heroTitle}>{t('Dag {n} är igång!', { n: currentDay })}</Text>
+                <Text style={l.heroSub}>{t('Klara dagens uppgifter för att tända din streak.')}</Text>
+                <TouchableOpacity
+                  style={l.heroCta}
+                  onPress={() => router.push('/(app)/dashboard' as never)}
+                  activeOpacity={0.85}
+                  testID="heroCta"
+                >
+                  <Text style={l.heroCtaText}>{t('Dagens uppgifter')}</Text>
+                  <Ionicons name="arrow-forward" size={15} color={HERO.ctaText} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* ── Denna vecka: må-sö med idag markerad ── */}
+            <View style={[l.card, chrome]}>
+              <View style={l.weekHead}>
+                <Text style={l.cardTitle}>{t('Denna vecka')}</Text>
+                <TouchableOpacity onPress={() => setCalOpen(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="toggleCalendar">
+                  <Text style={[l.weekLink, { color: T.ACCENT }]}>
+                    {calOpen ? t('Dölj kalendern') : `${t('Hela kalendern')} ›`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View style={l.weekRow}>
+                {weekDays.map(d => (
+                  <TouchableOpacity
+                    key={d.iso}
+                    style={l.weekCell}
+                    onPress={() => openDayFor(d.iso)}
+                    activeOpacity={0.7}
+                    testID={`weekDay-${d.iso}`}
+                  >
+                    <Text style={l.weekLetter}>{d.letter}</Text>
+                    <View style={[
+                      l.weekCircle,
+                      d.isPast && l.weekCirclePast,
+                      !d.isPast && !d.isToday && l.weekCircleFuture,
+                      d.isToday && { backgroundColor: T.ACCENT },
+                    ]}>
+                      <Text style={[
+                        l.weekNum,
+                        d.isPast && { color: TEXT_SECONDARY },
+                        d.isToday && { color: ACCENT_CONTRAST, fontWeight: '800' },
+                      ]}>
+                        {d.num}
+                      </Text>
                     </View>
-                    {!isEarlyDays && (
-                      <>
-                        <View style={s.ringRow}>
-                          <Text style={s.ringRowLabel}>{t('Missade dagar')}</Text>
-                          <Text style={[s.ringRowVal, { color: P.RED }]}>{missedDays}</Text>
-                        </View>
-                        <View style={s.ringRow}>
-                          <Text style={s.ringRowLabel}>{t('Framgång')}</Text>
-                          <Text style={[s.ringRowVal, { color: ACCENT }]}>
-                            {currentDay > 1 ? Math.round((completedDays / (currentDay - 1)) * 100) : 0}%
-                          </Text>
-                        </View>
-                      </>
-                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Hela kalendern — utfälld under veckokortet */}
+            {calOpen && (
+              <CalendarView
+                days={days}
+                startDate={startDate}
+                currentDay={currentDay}
+                challengeId={challengeId}
+                onPressDay={setSelectedDay}
+                gestureRef={calSwipeRef}
+                onDayEdited={onDayEdited}
+                workouts={workouts}
+                strengthWorkouts={strengthWorkouts}
+                completedSessions={completedSessions}
+                unit={unit}
+                avatarUrl={avatarUrl}
+                onDeleteWorkout={onRemoveWorkoutLocal}
+              />
+            )}
+
+            {/* ── Fyra nyckeltal i rutnät ── */}
+            <View style={l.grid}>
+              <View style={[l.card, l.gridCell, chrome]}>
+                <Text style={l.cellLabel}>{t('Träningspass')}</Text>
+                <Text style={l.cellValue}>{passes}</Text>
+                <Text style={[l.cellSub, passDiff > 0 && { color: GREEN }]}>
+                  {passDiff === 0
+                    ? t('Samma som förra veckan')
+                    : t('{n} mot förra veckan', { n: passDiff > 0 ? `+${passDiff}` : passDiff })}
+                </Text>
+              </View>
+              <View style={[l.card, l.gridCell, chrome]}>
+                <Text style={l.cellLabel}>{t('Distans')}</Text>
+                <Text style={[l.cellValue, { color: P.BLUE }]}>
+                  {toDisplayDistance(km, unit).toFixed(2).replace('.', ',')}
+                  <Text style={l.cellUnit}> {unitLabel}</Text>
+                </Text>
+                <Text style={l.cellSub}>
+                  {weekCardio.length === 1 ? t('1 cardiopass') : t('{n} cardiopass', { n: weekCardio.length })}
+                </Text>
+              </View>
+              <View style={[l.card, l.gridCell, chrome]}>
+                <Text style={l.cellLabel}>{t('Volym')}</Text>
+                <Text style={[l.cellValue, { color: P.YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {Math.round(volume).toLocaleString(dateLocale())}
+                  <Text style={l.cellUnit}> kg</Text>
+                </Text>
+                <Text style={l.cellSub}>{t('{sets} set · {reps} reps', { sets: totalSets, reps: totalReps.toLocaleString(dateLocale()) })}</Text>
+              </View>
+              <View style={[l.card, l.gridCell, chrome]}>
+                <Text style={l.cellLabel}>{t('Klarade dagar')}</Text>
+                <Text style={[l.cellValue, { color: GREEN }]}>
+                  {completedDays}
+                  <Text style={l.cellUnit}> {t('av 75')}</Text>
+                </Text>
+                <Text style={l.cellSub}>{t('Dag {n} pågår', { n: currentDay })}</Text>
+              </View>
+            </View>
+
+            {/* ── Nästa milstolpe med progressbar ── */}
+            {milestone && (
+              <TouchableOpacity style={[l.card, l.msRow, chrome]} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)} testID="milestoneCard">
+                <View style={[l.msIcon, { backgroundColor: accentAlpha('12') }]}>
+                  <Ionicons name="flag-outline" size={22} color={ACCENT} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[l.msEyebrow, { color: T.ACCENT }]}>{t('NÄSTA MILSTOLPE')}</Text>
+                  <Text style={l.msTitle}>{milestone.label}</Text>
+                  <View style={l.msTrack}>
+                    <View style={[l.msFill, { backgroundColor: T.ACCENT, width: `${Math.round(msProgress * 100)}%` as never }]} />
                   </View>
+                  <Text style={l.msSub}>{t('Dag {n} av {m}', { n: currentDay, m: milestone.day })}</Text>
                 </View>
-              </View>
-            </View>
-
-            {/* Milestone — framträdande dag 1–7 */}
-            {isEarlyDays && milestone && (
-              <TouchableOpacity style={[s.milestone, msCardOverride]} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)}>
-                <View style={[s.msIcon, msIconOverride]}><Text style={s.msEmoji}>🏔</Text></View>
-                <View style={s.msBody}>
-                  <Text style={[s.msEyebrow, msEyebrowColor]}>{t('NÄSTA MILSTOLPE')}</Text>
-                  <Text style={s.msTitle}>{milestone.label}</Text>
-                  <Text style={s.msSub}>
-                    {milestone.daysLeft === 1 ? t('1 dag kvar') : t('{n} dagar kvar', { n: milestone.daysLeft })} · {t('Du är på väg!')}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={17} color={ACCENT} />
+                <Ionicons name="chevron-forward" size={17} color={TEXT_SECONDARY} />
               </TouchableOpacity>
             )}
-
-            {/* Din vecka — tvärsummering över cardio och gym */}
-            <Text style={s.sectionHead}>{t('Din vecka')}</Text>
-            <View style={[s.card, s.cardPlain]}>
-              <View style={[s.dtlRow, { paddingTop: 0 }]}>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Träningspass')}</Text>
-                  <Text style={[s.dtlVal, { color: ACCENT }]}>{weekReport.passes}</Text>
-                </View>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Distans')}</Text>
-                  <Text style={[s.dtlVal, { color: P.BLUE }]}>
-                    {toDisplayDistance(weekReport.km, unit).toFixed(1).replace('.', ',')}
-                    <Text style={s.dtlUnit}> {unitLabel.toUpperCase()}</Text>
-                  </Text>
-                </View>
-              </View>
-              <View style={s.dtlSep} />
-              <View style={[s.dtlRow, { paddingBottom: 0 }]}>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Volym')}</Text>
-                  <Text style={[s.dtlVal, { color: P.YELLOW }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {Math.round(weekReport.volume).toLocaleString(dateLocale())}
-                    <Text style={s.dtlUnit}> KG</Text>
-                  </Text>
-                </View>
-                <View style={s.dtlCell}>
-                  <Text style={s.dtlLbl}>{t('Klarade dagar')}</Text>
-                  <Text style={[s.dtlVal, { color: GREEN }]}>{weekReport.daysCleared}</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Milestone — normal position dag 8+ */}
-            {!isEarlyDays && milestone && (
-              <TouchableOpacity style={[s.milestone, msCardOverride]} activeOpacity={0.8} onPress={() => setMilestoneOpen(true)}>
-                <View style={[s.msIcon, msIconOverride]}><Text style={s.msEmoji}>🏔</Text></View>
-                <View style={s.msBody}>
-                  <Text style={[s.msEyebrow, msEyebrowColor]}>{t('NÄSTA MILSTOLPE')}</Text>
-                  <Text style={s.msTitle}>{milestone.label}</Text>
-                  <Text style={s.msSub}>
-                    {milestone.daysLeft === 1 ? t('1 dag kvar') : t('{n} dagar kvar', { n: milestone.daysLeft })} · {t('Håll ut')}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={17} color={ACCENT} />
-              </TouchableOpacity>
-            )}
-
-            {/* Calendar */}
-            <Text style={s.sectionHead}>{t('Kalender')}</Text>
-            <CalendarView
-              days={days}
-              startDate={startDate}
-              currentDay={currentDay}
-              challengeId={challengeId}
-              onPressDay={setSelectedDay}
-              gestureRef={calSwipeRef}
-              onDayEdited={onDayEdited}
-              workouts={workouts}
-              strengthWorkouts={strengthWorkouts}
-              completedSessions={completedSessions}
-              unit={unit}
-              avatarUrl={avatarUrl}
-              onDeleteWorkout={onRemoveWorkoutLocal}
-            />
           </>
         </ScrollView>
 
@@ -296,3 +363,54 @@ export function OverviewTab({
     </>
   )
 }
+
+const l = StyleSheet.create({
+  hero: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: HERO.bg, borderRadius: 24,
+    paddingVertical: 22, paddingHorizontal: 18, marginBottom: 14,
+  },
+  heroBody: { flex: 1, gap: 6 },
+  heroTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
+  heroSub: { color: HERO.sub, fontSize: 14, lineHeight: 19 },
+  heroCta: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start',
+    backgroundColor: HERO.cta, borderRadius: 999,
+    paddingHorizontal: 18, paddingVertical: 11, marginTop: 6,
+  },
+  heroCtaText: { color: HERO.ctaText, fontSize: 15, fontWeight: '800' },
+
+  card: { backgroundColor: CARD, borderRadius: 20, padding: 16, marginBottom: 14 },
+  cardTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '800' },
+
+  weekHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  weekLink: { fontSize: 14, fontWeight: '700' },
+  weekRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  weekCell: { alignItems: 'center', gap: 8, flex: 1 },
+  weekLetter: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
+  weekCircle: {
+    width: 38, height: 38, borderRadius: 19,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  weekCirclePast: { backgroundColor: 'rgba(128,128,128,0.14)' },
+  weekCircleFuture: { borderWidth: 1.5, borderColor: 'rgba(128,128,128,0.4)', borderStyle: 'dashed' },
+  weekNum: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  gridCell: { width: '48.4%', gap: 4 },
+  cellLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600' },
+  cellValue: { color: TEXT_PRIMARY, fontSize: 27, fontWeight: '800' },
+  cellUnit: { fontSize: 14, fontWeight: '700', color: TEXT_SECONDARY },
+  cellSub: { color: TEXT_SECONDARY, fontSize: 12.5 },
+
+  msRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  msIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  msEyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  msTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '800', marginTop: 2 },
+  msTrack: {
+    height: 6, borderRadius: 3, backgroundColor: 'rgba(128,128,128,0.18)',
+    marginTop: 8, overflow: 'hidden',
+  },
+  msFill: { height: 6, borderRadius: 3 },
+  msSub: { color: TEXT_SECONDARY, fontSize: 12.5, marginTop: 6 },
+})
