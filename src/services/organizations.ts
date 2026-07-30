@@ -300,6 +300,40 @@ export async function getAdoptionStatus(workoutId: string): Promise<AdoptionStat
     .sort((a, b) => Number(b.completed) - Number(a.completed))
 }
 
+// ── Medlemsstatistik enligt delningsnivån ────────────────────────────────────
+
+export interface OrgMemberStats {
+  share_level: ShareLevel
+  passes_week: number
+  passes_month: number
+  /** null = medlemmen delar inte nivån som krävs */
+  km_week: number | null
+  km_month: number | null
+  volume_week: number | null
+  volume_month: number | null
+  top_lift: { name: string; kg: number } | null
+  top_exercises: Array<{ name: string; sets: number; top_kg: number; volume: number }> | null
+}
+
+/** Statistiken en medlem delar med föreningen — definer-RPC:n filtrerar
+    efter medlemmens delningsnivå, egen statistik är alltid full */
+export async function getOrgMemberStats(orgId: string, userId: string): Promise<OrgMemberStats | null> {
+  const { data, error } = await supabase.rpc('get_org_member_stats', { oid: orgId, member: userId })
+  if (error || !data) return null
+  const d = data as Record<string, unknown>
+  return {
+    share_level: (d.share_level ?? 'base') as ShareLevel,
+    passes_week: Number(d.passes_week ?? 0),
+    passes_month: Number(d.passes_month ?? 0),
+    km_week: d.km_week == null ? null : Number(d.km_week),
+    km_month: d.km_month == null ? null : Number(d.km_month),
+    volume_week: d.volume_week == null ? null : Number(d.volume_week),
+    volume_month: d.volume_month == null ? null : Number(d.volume_month),
+    top_lift: (d.top_lift as OrgMemberStats['top_lift']) ?? null,
+    top_exercises: (d.top_exercises as OrgMemberStats['top_exercises']) ?? null,
+  }
+}
+
 /** Lägger in tränarpasset som ett engångspass i mitt schema idag och
     stämplar adoptionen så coachen ser att jag tagit det */
 export async function adoptCoachWorkout(userId: string, workout: CoachWorkout, date?: Date): Promise<void> {

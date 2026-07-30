@@ -10,6 +10,7 @@ import { Ionicons } from '@/components/Icon'
 import { supabase } from '@/lib/supabase'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { GlassSegment } from '@/components/GlassSegment'
+import { OrgMemberSheet } from '@/components/OrgMemberSheet'
 import { FeedAvatar } from '@/components/FeedWorkoutCard'
 import { CoachWorkoutSheet } from '@/components/CoachWorkoutSheet'
 import { useT, dateLocale } from '@/lib/i18n'
@@ -65,6 +66,7 @@ export default function OrganizationScreen() {
   const [totals, setTotals] = useState<{ km: number; passes: number }>({ km: 0, passes: 0 })
   const [status, setStatus] = useState<AdoptionStatus[] | null>(null)
   const [tab, setTab] = useState<'overview' | 'workouts' | 'members'>('overview')
+  const [statsMember, setStatsMember] = useState<OrgMember | null>(null)
 
   const load = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -345,7 +347,13 @@ export default function OrganizationScreen() {
             const m = members.find(x => x.id === r.user_id)
             const name = m?.name ?? t('Namnlös')
             return (
-              <View key={r.user_id} style={[s.innerRow, i > 0 && s.innerRowBorder]}>
+              <TouchableOpacity
+                key={r.user_id}
+                style={[s.innerRow, i > 0 && s.innerRowBorder]}
+                onPress={() => m && setStatsMember(m)}
+                activeOpacity={0.7}
+                testID={`boardRow-${r.user_id}`}
+              >
                 <Text style={[s.boardRank, i === 0 && { color: '#D6A319' }]}>{i + 1}</Text>
                 <FeedAvatar url={m?.avatar_url ?? null} fallback={name.charAt(0).toUpperCase()} size={36} />
                 <Text style={s.memberName} numberOfLines={1}>
@@ -355,7 +363,7 @@ export default function OrganizationScreen() {
                   {r.cardio_passes + r.gym_days === 1 ? t('1 pass') : t('{n} pass', { n: r.cardio_passes + r.gym_days })}
                   {r.km != null && r.km > 0 ? <Text style={s.boardKm}>{` · ${r.km.toFixed(1).replace('.', ',')} km`}</Text> : null}
                 </Text>
-              </View>
+              </TouchableOpacity>
             )
           })}
           {members.length === 1 && (
@@ -419,8 +427,9 @@ export default function OrganizationScreen() {
             <TouchableOpacity
               key={m.id}
               style={[s.innerRow, s.innerRowBorder]}
-              onPress={() => memberMenu(m)}
-              activeOpacity={isAdmin && m.id !== meId ? 0.7 : 1}
+              onPress={() => setStatsMember(m)}
+              onLongPress={() => memberMenu(m)}
+              activeOpacity={0.7}
               testID={`orgMember-${m.id}`}
             >
               <FeedAvatar url={m.avatar_url} fallback={(m.name ?? '?').charAt(0).toUpperCase()} size={40} />
@@ -505,6 +514,13 @@ export default function OrganizationScreen() {
           </View>
         </View>
       </Modal>
+
+      <OrgMemberSheet
+        orgId={orgId}
+        member={statsMember}
+        isMe={statsMember?.id === meId}
+        onClose={() => setStatsMember(null)}
+      />
 
       <CoachWorkoutSheet
         visible={coachOpen}

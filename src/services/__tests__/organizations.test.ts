@@ -1,7 +1,7 @@
 import {
   createOrganization, getMyOrganizations, joinOrganizationByCode, getOrgMembers,
   createCoachWorkout, getMyAdoptions, adoptCoachWorkout, updateMyShareLevel,
-  getOrgLeaderboard, getOrgTotals, getAdoptionStatus, linkGroupToOrg,
+  getOrgLeaderboard, getOrgTotals, getAdoptionStatus, linkGroupToOrg, getOrgMemberStats,
   type CoachWorkout,
 } from '../organizations'
 import { supabase } from '@/lib/supabase'
@@ -180,5 +180,32 @@ describe('organizations — tränarpass', () => {
     const upsert = argsOf(calls, 'coach_workout_adoptions', 'upsert')[0]
     expect(upsert[0]).toEqual({ workout_id: 'w1', user_id: 'u1', session_id: 'sess-1' })
     expect(upsert[1]).toEqual({ onConflict: 'workout_id,user_id' })
+  })
+})
+
+describe('organizations — medlemsstatistik', () => {
+  it('mappar RPC-svaret och behåller dolda fält som null', async () => {
+    rpcMock.mockResolvedValueOnce({ data: {
+      share_level: 'base', passes_week: 3, passes_month: '9',
+      km_week: null, km_month: null, volume_week: null, volume_month: null,
+      top_lift: null, top_exercises: null,
+    }, error: null })
+    const st = await getOrgMemberStats('o1', 'u2')
+    expect(rpcMock).toHaveBeenCalledWith('get_org_member_stats', { oid: 'o1', member: 'u2' })
+    expect(st).toMatchObject({ share_level: 'base', passes_week: 3, passes_month: 9, km_month: null, top_exercises: null })
+  })
+
+  it('full delning ger volym, tyngsta lyft och toppövningar', async () => {
+    rpcMock.mockResolvedValueOnce({ data: {
+      share_level: 'full', passes_week: 4, passes_month: 12,
+      km_week: '5.2', km_month: '21.4', volume_week: '8200', volume_month: '31000',
+      top_lift: { name: 'Marklyft', kg: 140 },
+      top_exercises: [{ name: 'Marklyft', sets: 12, top_kg: 140, volume: 9800 }],
+    }, error: null })
+    const st = await getOrgMemberStats('o1', 'u2')
+    expect(st?.km_month).toBe(21.4)
+    expect(st?.volume_month).toBe(31000)
+    expect(st?.top_lift?.kg).toBe(140)
+    expect(st?.top_exercises?.[0].name).toBe('Marklyft')
   })
 })
