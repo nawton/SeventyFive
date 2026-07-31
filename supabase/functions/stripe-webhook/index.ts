@@ -7,41 +7,12 @@
 //          (Stripe skickar ingen Supabase-JWT — signaturen ÄR autentiseringen)
 // Secrets: STRIPE_WEBHOOK_SECRET (whsec_… från Stripes webhook-inställning)
 // Events:  customer.subscription.created / updated / deleted
+//
+// Signaturverifiering och event→rad-mappning bor i logic.ts (ren logik,
+// testad med Jest) — den här filen sköter bara HTTP/env/DB.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-/** Verifierar Stripe-signaturen: HMAC-SHA256 över "t.payload" med whsec-nyckeln */
-async function verifySignature(payload: string, header: string, secret: string): Promise<boolean> {
-  const parts = Object.fromEntries(header.split(',').map(p => p.split('=') as [string, string]))
-  const t = parts['t']
-  const v1 = parts['v1']
-  if (!t || !v1) return false
-  // Replay-skydd: äldre än 5 min avvisas
-  if (Math.abs(Date.now() / 1000 - Number(t)) > 300) return false
-
-  const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
-  )
-  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${t}.${payload}`))
-  const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('')
-
-  // Konstanttidsjämförelse
-  if (expected.length !== v1.length) return false
-  let diff = 0
-  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ v1.charCodeAt(i)
-  return diff === 0
-}
-
-interface StripeSubscription {
-  id: string
-  customer: string
-  status: string
-  cancel_at_period_end: boolean
-  current_period_end: number
-  metadata?: { user_id?: string }
-  items?: { data?: Array<{ price?: { id?: string } }> }
-}
+import { verifySignature, isSubscriptionEvent, subscriptionRowFromEvent, type StripeSubscriptionEvent } from './logic.ts'
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
@@ -55,9 +26,9 @@ Deno.serve(async (req: Request) => {
     return new Response('Ogiltig signatur', { status: 400 })
   }
 
-  const event = JSON.parse(payload) as { type: string; data: { object: StripeSubscription } }
+  const event = JSON.parse(payload) as StripeSubscriptionEvent
 
-  if (!event.type.startsWith('customer.subscription.')) {
+  if (!isSubscriptionEvent(event.type)) {
     return new Response(JSON.stringify({ received: true }), { status: 200 })
   }
 
@@ -80,13 +51,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const { error } = await admin.from('subscriptions').upsert({
-    user_id: userId,
-    stripe_customer_id: sub.customer,
-    stripe_subscription_id: sub.id,
-    status: event.type === 'customer.subscription.deleted' ? 'canceled' : sub.status,
-    price_id: sub.items?.data?.[0]?.price?.id ?? null,
-    current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-    cancel_at_period_end: sub.cancel_at_period_end,
+    ...subscriptionRowFromEvent(event, userId),
     updated_at: new Date().toISOString(),
   })
   if (error) {
