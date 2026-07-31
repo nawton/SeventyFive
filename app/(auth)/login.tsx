@@ -77,6 +77,10 @@ export default function LoginScreen() {
       Alert.alert(t('Fyll i email och lösenord'))
       return
     }
+    if (mode === 'register' && password.length < 8) {
+      Alert.alert(t('Lösenordet är för kort'), t('Använd minst 8 tecken.'))
+      return
+    }
 
     setLoading(true)
 

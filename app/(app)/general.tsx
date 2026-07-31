@@ -13,6 +13,7 @@ import { scheduleDailyReminders, cancelDailyReminders, areRemindersActive } from
 import { registerPushToken } from '@/services/pushTokens'
 import { getActiveChallenge, calculateCurrentDay, levelDisplayName, changeLevel } from '@/services/challenge'
 import { deleteRepeatingSessions } from '@/services/workoutSchedule'
+import { deleteAccount } from '@/services/account'
 import { generateScheduleFromWizard } from '@/services/scheduleGenerator'
 import { ScheduleWizard } from '@/components/ScheduleWizard'
 import { GlassCircleButton } from '@/components/GlassButton'
@@ -157,22 +158,11 @@ export default function GeneralScreen() {
       const { data: { session } } = await supabase.auth.getSession()
       const uid = session?.user?.id
       if (uid) {
-        // Radera storage-filer best-effort
-        await Promise.allSettled([
-          supabase.storage.from('progress-photos').list(uid).then(({ data }) =>
-            data?.length
-              ? supabase.storage.from('progress-photos').remove(data.map(f => `${uid}/${f.name}`))
-              : null
-          ),
-          supabase.storage.from('avatars').list(uid).then(({ data }) =>
-            data?.length
-              ? supabase.storage.from('avatars').remove(data.map(f => `${uid}/${f.name}`))
-              : null
-          ),
-        ])
+        await deleteAccount(uid)
+      } else {
+        const { error } = await supabase.rpc('delete_user_account')
+        if (error) throw error
       }
-      const { error } = await supabase.rpc('delete_user_account')
-      if (error) throw error
       await supabase.auth.signOut()
       router.replace('/(auth)/welcome')
     } catch (e: any) {
