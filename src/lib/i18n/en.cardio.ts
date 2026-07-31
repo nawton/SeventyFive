@@ -274,4 +274,10 @@ export const EN_CARDIO: Record<string, string> = {
   'Standard': 'Standard',
   'Så här låter jag. En kilometer avklarad, håll tempot!': "This is how I sound. One kilometer done, keep the pace!",
   "Gul": "Yellow",
+  "Byt namn": "Rename",
+  "Radera aktivitet": "Delete activity",
+  "Byt namn på passet": "Rename the workout",
+  "Ta bort foto": "Remove photo",
+  "Ta bort fotot från passet?": "Remove the photo from the workout?",
+  "Fotot kunde inte laddas upp. Försök igen.": "The photo could not be uploaded. Try again.",
 }

@@ -30,6 +30,8 @@ export interface CardioData {
   intervals_planned?: number
   /** Upplevd ansträngning (RPE) 1–10 — sätts av användaren efter passet */
   effort?: number
+  /** Foton kopplade till passet — sökvägar i pass-photos-bucketen */
+  photos?: string[]
 }
 
 export interface CardioWorkout {
@@ -208,6 +210,35 @@ export async function getCardioWorkouts(userId: string, limit = 30): Promise<Car
 }
 
 /** Uppdaterar ansträngningsbetyget (RPE 1–10) på ett redan sparat cardio-pass */
+/** Byter passets namn — t.ex. "Löpning på natten" istället för "Löpning" */
+export async function updateCardioName(id: string, name: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_workouts')
+    .update({ name: name.trim() })
+    .eq('id', id)
+  if (error) throw error
+}
+
+/** Lägger till eller tar bort ett foto på passet (sökväg i pass-photos) */
+export async function updateCardioPhotos(id: string, photos: string[]): Promise<void> {
+  const { data, error } = await supabase
+    .from('user_workouts')
+    .select('exercises')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  if (!data || !Array.isArray(data.exercises) || data.exercises[0]?.category !== 'cardio') {
+    throw new Error('Passet hittades inte')
+  }
+  const exercises = [...data.exercises]
+  exercises[0] = { ...exercises[0], photos }
+  const { error: upError } = await supabase
+    .from('user_workouts')
+    .update({ exercises })
+    .eq('id', id)
+  if (upError) throw upError
+}
+
 export async function updateCardioEffort(id: string, effort: number): Promise<void> {
   const { data, error } = await supabase
     .from('user_workouts')

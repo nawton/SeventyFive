@@ -5,7 +5,7 @@ import { Ionicons } from '@/components/Icon'
 import Svg, { Polyline, Circle, Line as SvgLine } from 'react-native-svg'
 import { GlassCircleButton } from '@/components/GlassButton'
 import { PostSocialBar } from '@/components/PostSocialBar'
-import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT, accentAlpha } from '@/lib/theme'
+import { BG, CARD, GREEN, TEXT_PRIMARY, TEXT_SECONDARY, NUM_FONT, NUM_FONT_SEMI, DIVIDER, ACCENT, accentAlpha, useThemeStrings } from '@/lib/theme'
 
 // Gymmets signaturorange (samma som gympass-fliken) — styrkedata är
 // orange i BÅDA lägena; blått är reserverat för cardio
@@ -69,6 +69,7 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
   social?: { postKey: string; ownerId: string; onOpenComments?: () => void }
 }) {
   const t = useT()
+  const T = useThemeStrings()
   const P = useStatsColors()
   // Titel, kommentar och foto från granskningen — hämtas när ägaren är känd
   const [meta, setMeta] = useState<GymPassMeta | null>(null)
@@ -153,11 +154,11 @@ export function GymSummaryView({ authorName, avatarUrl, ownerId, workoutDate, pa
           <View style={s.dtlRow}>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>{t('Övningar')}</Text>
-              <Text style={s.dtlVal}>{exerciseCount}</Text>
+              <Text style={[s.dtlVal, { color: T.TEXT_PRIMARY }]}>{exerciseCount}</Text>
             </View>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>Set</Text>
-              <Text style={s.dtlVal}>{totalSets}</Text>
+              <Text style={[s.dtlVal, { color: T.TEXT_PRIMARY }]}>{totalSets}</Text>
             </View>
             <View style={s.dtlCell}>
               <Text style={s.dtlLbl}>{t('Volym')}</Text>

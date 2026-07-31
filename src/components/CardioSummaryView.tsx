@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, Pressable,
-  useColorScheme,
+  useColorScheme, ActionSheetIOS, Platform, Alert, Modal, ScrollView as RNScrollView,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
@@ -13,6 +13,13 @@ import { toDisplayDistance, distanceUnitLabel, paceForUnit, type UnitSystem } fr
 import { fmtTime, fmtPace } from '@/lib/format'
 import type { CardioWorkout } from '@/services/workouts'
 import { updateCardioEffort } from '@/services/workouts'
+import { updateCardioName, updateCardioPhotos } from '@/services/cardioWorkouts'
+import { passPhotoUrl } from '@/services/gymPassMeta'
+import { uploadImage } from '@/lib/storage'
+import { compressImage } from '@/lib/image'
+import { supabase } from '@/lib/supabase'
+import * as ImagePicker from 'expo-image-picker'
+import { postReportMenu } from '@/lib/report'
 import { EffortRating, effortColor, effortLabel } from '@/components/EffortRating'
 import { PostSocialBar } from '@/components/PostSocialBar'
 import { getDefaultMapStyle } from '@/lib/prefs'
@@ -101,6 +108,103 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
       await updateCardioEffort(workout.id, val)
     } catch {
       setEffort(prev)
+    }
+  }
+
+  // Foton, namn och trepricksmenyn — egna pass kan kompletteras i efterhand
+  const [photos, setPhotos] = useState<string[]>(d.photos ?? [])
+  const [shownTitle, setShownTitle] = useState(title)
+  const [viewerPhoto, setViewerPhoto] = useState<string | null>(null)
+  const isOwn = !effortReadOnly
+
+  async function addPhoto() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert(t('Åtkomst nekad'), t('Tillåt åtkomst till fotobiblioteket i Inställningar.'))
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 })
+    if (result.canceled || !result.assets[0]) return
+    try {
+      const a = result.assets[0]
+      const uri = await compressImage(a.uri, a.width, 1280)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const path = `${session.user.id}/cardio-${workout.id}-${Date.now()}.jpg`
+      await uploadImage('pass-photos', path, uri)
+      const next = [...photos, path]
+      await updateCardioPhotos(workout.id, next)
+      setPhotos(next)
+    } catch {
+      Alert.alert(t('Kunde inte spara'), t('Fotot kunde inte laddas upp. Försök igen.'))
+    }
+  }
+
+  function removePhoto(path: string) {
+    if (!isOwn) return
+    Alert.alert(t('Ta bort foto'), t('Ta bort fotot från passet?'), [
+      { text: t('Avbryt'), style: 'cancel' },
+      {
+        text: t('Ta bort'), style: 'destructive',
+        onPress: () => {
+          const next = photos.filter(x => x !== path)
+          updateCardioPhotos(workout.id, next).then(() => setPhotos(next)).catch(() => {})
+        },
+      },
+    ])
+  }
+
+  function renameActivity() {
+    Alert.prompt(
+      t('Byt namn på passet'),
+      undefined,
+      [
+        { text: t('Avbryt'), style: 'cancel' },
+        {
+          text: t('Spara'),
+          onPress: (value?: string) => {
+            const name = value?.trim()
+            if (!name) return
+            updateCardioName(workout.id, name).then(() => setShownTitle(name)).catch(() => {})
+          },
+        },
+      ],
+      'plain-text',
+      shownTitle,
+    )
+  }
+
+  // Trepricksmenyn: egna pass får åtgärder, andras pass kan rapporteras
+  function openMenu() {
+    if (!isOwn) {
+      if (social) postReportMenu(social.postKey, social.ownerId, shownTitle)
+      return
+    }
+    const options = [
+      t('Lägg till foto'),
+      t('Byt namn'),
+      ...(onDelete ? [t('Radera aktivitet')] : []),
+      t('Avbryt'),
+    ]
+    const destructiveButtonIndex = onDelete ? 2 : undefined
+    const cancelButtonIndex = options.length - 1
+    const handle = (i?: number) => {
+      if (i === 0) addPhoto()
+      else if (i === 1) renameActivity()
+      else if (onDelete && i === 2) onDelete()
+    }
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex, destructiveButtonIndex },
+        handle,
+      )
+    } else {
+      Alert.alert(shownTitle, undefined, [
+        { text: t('Lägg till foto'), onPress: () => addPhoto() },
+        { text: t('Byt namn'), onPress: () => renameActivity() },
+        ...(onDelete ? [{ text: t('Radera aktivitet'), style: 'destructive' as const, onPress: onDelete }] : []),
+        { text: t('Avbryt'), style: 'cancel' as const },
+      ])
     }
   }
 
@@ -225,11 +329,11 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
       <View style={[s.controls, { top: insets.top + 12 }]} pointerEvents="box-none">
         <GlassCircleButton icon="chevron-back" onPress={onClose} />
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          {onDelete && (
-            <GlassCircleButton icon="trash-outline" iconColor={RED} onPress={onDelete} />
-          )}
           {hasRoute && (
             <GlassCircleButton icon="layers-outline" draggable onPress={openStyleSheet} />
+          )}
+          {(isOwn || social) && (
+            <GlassCircleButton icon="ellipsis-horizontal" onPress={openMenu} testID="cardioMenu" />
           )}
         </View>
       </View>
@@ -252,7 +356,7 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{title}</Text>
+              <Text style={s.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{shownTitle}</Text>
               {dateLabel && <Text style={s.heroDate}>{dateLabel}</Text>}
             </View>
           </View>
@@ -265,6 +369,28 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
               </View>
             ))}
           </View>
+
+          {/* Foton — tryck för helskärm, långtryck tar bort (egna pass) */}
+          {photos.length > 0 && (
+            <View style={s.photoStrip}>
+              <RNScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 20 }}>
+                {photos.map(p => {
+                  const url = passPhotoUrl(p)
+                  return url ? (
+                    <TouchableOpacity
+                      key={p}
+                      onPress={() => setViewerPhoto(url)}
+                      onLongPress={() => removePhoto(p)}
+                      activeOpacity={0.85}
+                      testID={`cardioPhoto-${p.split('/').pop()}`}
+                    >
+                      <Image source={{ uri: url }} style={s.photoThumb} />
+                    </TouchableOpacity>
+                  ) : null
+                })}
+              </RNScrollView>
+            </View>
+          )}
 
           {/* Intervallresultat — guidade pass, snabbaste markerad */}
           {intervals.length > 0 && (
@@ -383,6 +509,13 @@ export function CardioSummaryView({ workout, title, dateLabel, avatarUrl, unit, 
         <EffortRating visible initial={effort} onDone={handleEffortDone} />
       )}
 
+      {/* Helskärmsfotot — tryck var som helst för att stänga */}
+      <Modal visible={!!viewerPhoto} transparent animationType="fade" onRequestClose={() => setViewerPhoto(null)}>
+        <Pressable style={s.viewerBackdrop} onPress={() => setViewerPhoto(null)}>
+          {viewerPhoto && <Image source={{ uri: viewerPhoto }} style={s.viewerImg} resizeMode="contain" />}
+        </Pressable>
+      </Modal>
+
       {styleMenuOpen && (
         <>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeStyleSheet} />
@@ -467,6 +600,14 @@ const s = StyleSheet.create({
   },
   heroTitle: { color: TEXT_PRIMARY, fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
   heroDate: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500', marginTop: 3, textTransform: 'capitalize' },
+  photoStrip: { marginTop: 4, marginBottom: 10, marginHorizontal: -20 },
+  photoThumb: { width: 96, height: 96, borderRadius: 14 },
+  viewerBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  viewerImg: { width: '100%', height: '80%' },
+
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 20, paddingHorizontal: 4, marginTop: 14 },
   effortCard: {
     backgroundColor: CARD, borderRadius: 20,

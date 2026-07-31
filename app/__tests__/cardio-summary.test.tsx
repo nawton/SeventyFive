@@ -80,8 +80,18 @@ describe('cardio-summary — historikdetaljen', () => {
     await screen.findByText('Morgonrunda')
 
     const { fireEvent } = require('@testing-library/react-native')
-    fireEvent.press(screen.getByText('glassbtn:trash-outline'))
+    // Raderingen bor numera i trepricksmenyn (ActionSheet på iOS)
+    const { ActionSheetIOS } = require('react-native')
+    const sheetSpy = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions')
+      .mockImplementation((...args: unknown[]) => {
+        const o = args[0] as { options: string[] }
+        const cb = args[1] as (i: number) => void
+        cb(o.options.indexOf('Radera aktivitet'))
+      })
+    fireEvent.press(screen.getByTestId('cardioMenu'))
+    expect(sheetSpy).toHaveBeenCalled()
     expect(alertSpy).toHaveBeenCalledWith('Radera träning', expect.any(String), expect.any(Array))
+    sheetSpy.mockRestore()
 
     // Bekräfta via dialogens Radera-knapp
     const buttons = alertSpy.mock.calls[0][2] as { text: string; onPress?: () => Promise<void> }[]
