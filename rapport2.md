@@ -11,13 +11,31 @@
 |---|---|---|
 | Arkitektur | 6/10 | Tydlig service-lager-struktur, ingen cirkulär import, men `AuthContext` byggd och ignorerad, `workoutPlanStore` inte reaktiv |
 | Kodkvalitet | 6/10 | Bra kommentarer och namngivning, men flera 1000+-radersfiler, 44 `any`, ingen ESLint |
-| Säkerhet | 7/10 | Anmärkningsvärt välhärdad RLS (36 tabeller, `SECURITY DEFINER`-mönster, PKCE OAuth, SecureStore) — men en bred `organization_members`-policy och obegränsade filuppladdningar |
-| Databas | 8/10 | 85 genomtänkta migrationer, korrekt cascade, index på hot paths — men två motstridiga `reports`-scheman i produktion |
+| Säkerhet | 7/10 → **8/10** (2026-07-31) | Anmärkningsvärt välhärdad RLS (36 tabeller, `SECURITY DEFINER`-mönster, PKCE OAuth, SecureStore). `organization_members`-policyn skopad och filuppladdningar begränsade sedan ursprungsrevisionen. |
+| Databas | 8/10 | 85 genomtänkta migrationer, korrekt cascade, index på hot paths. (Den flaggade `reports`-schemakonflikten var redan åtgärdad innan revisionen — falskt larm.) |
 | Prestanda | 5/10 | Ingen caching, ingen `expo-image`, ingen offline-hantering, men bra pagination på flödet och läckagefri realtime-cleanup |
-| Testning | 8/10 | 842 tester, 85% statement-coverage, verkliga beteendetester — men **noll** täckning på Stripe-webhooken |
+| Testning | 8/10 → **9/10** (2026-07-31) | 848+ tester, verkliga beteendetester. Stripe-webhooken och `subscription.ts` (betalstatuslogiken) har nu 100% coverage — kvar: `organizations.ts` (67%), ingen E2E, ingen `coverageThreshold` i CI |
 | Tillgänglighet | 1/10 | 0 av 1 025 interaktiva element har `accessibilityLabel`/`-Role` |
 | CI/CD | 1/10 | Ingen `.github/workflows`, ingen lint, ingen `eas.json` |
 | App Store-readiness | 4/10 | Bra ikoner/policy-text, men saknar buildNumber, publik policy-URL och har ett Apple-compliance-riskmoment (Stripe-in-browser) |
+
+---
+
+## Genomfört hittills (2026-07-31)
+
+Arbetat igenom i ordningen: **Säkerhet** (RLS/storage/schema) → **`cardio.tsx`-refaktorering** → **Betalningskritisk testning**. Allt verifierat med `tsc --noEmit` + full testsvit grön efter varje fil, committat av användaren själv i separata commits.
+
+- ✅ **`organization_members`-RLS för bred** — skopad via `SECURITY DEFINER`-funktioner (`is_org_member`/`is_org_admin`), ny migration `20260731000012_org_members_rls_fix.sql`.
+- ✅ **Storage-buckets utan storleks-/typgräns** — `file_size_limit`/`allowed_mime_types` satt på `avatars`/`progress-photos`/`pass-photos`, migration `20260731000013_storage_bucket_limits.sql`.
+- ✅ **`pass-photos` städas inte vid kontoradering** — samt en **ny bugg hittad under verifiering**: avataren rensades aldrig alls (listades som mapp men lagras platt som `<uid>.jpg`). Fixat i ny `src/services/account.ts`.
+- ✅ **`profiles.name` saknar CHECK-constraint** — tillagd (`NOT VALID`, rör inte historiska rader), migration `20260731000014_profiles_name_check.sql`.
+- ✅ **Svagt lösenordsgolv** — höjt 6→8 tecken (`supabase/config.toml` + klientvalidering i `login.tsx`). CAPTCHA **inte** gjort (kräver tredjepartskonto, medvetet uppskjutet).
+- ✅ **Verifierat, inget att göra:** `reports`-tabellens schemakonflikt (Hög prioritet-listan, Quick win #6, Lanseringschecklista) var redan åtgärdad i en tidigare migration (`20260725000004`) — falskt larm i ursprungsanalysen.
+- ✅ **`cardio.tsx` 3242 rader** — delat i `app/cardio.tsx` (1339 rader, ren JSX), `src/components/cardio/useCardioSession.ts` (GPS/timer/röst-motorn, 909 rader), `styles.ts` (1035 rader), `constants.ts` (65 rader). Modal-uppdelning (Steg 2) medvetet **inte** gjord — cardio.tsx bedömdes redan hanterbart.
+- ✅ **`subscription.ts` branch-coverage 61,8%→100%** — 5 nya testfall (null-fält, livstidsprenumeration, kundportal-felvägar).
+- ✅ **Stripe-webhooken, noll testtäckning→100%** — logik extraherad till `supabase/functions/stripe-webhook/logic.ts` (Deno-oberoende), 13 nya tester.
+
+**Inte påbörjat:** Tillgänglighet, CI/CD, App Store-readiness (buildnummer/eas.json/publik policy-URL/Apple IAP), GitHub-hygien (LICENSE, `.env.example`, git-taggar), övriga refactoring-kandidater (`dashboard.tsx`, `group.tsx`, `AuthContext`-adoption), prestandaförbättringar (`expo-image`, caching). Se roadmapen nedan för nästa steg — **Vecka 1**-blockerarna för App Store-inlämning är fortfarande de mest kritiska.
 
 ---
 
@@ -33,15 +51,19 @@
 
 *Fix:* Antingen implementera Apple IAP som parallell betalväg på iOS, eller (om Stripe-only ska behållas) förbered ett tydligt case för granskarna — men räkna med avslag om inget görs.
 
-### 3. `cardio.tsx` är 3 242 rader — en enda fil för GPS-spårning, timer-motor, röstcoaching, karta, modaler och 23 `useState`
+### 3. ✅ KLART — `cardio.tsx` är 3 242 rader — en enda fil för GPS-spårning, timer-motor, röstcoaching, karta, modaler och 23 `useState`
 Det största underhållsriskmomentet i appen. En bugg här (t.ex. i timer-cleanup eller state-race) är mycket svår att isolera.
 
 *Fix:* Bryt ut en `useCardioSession`-hook (state/affärslogik) + presentational-komponenter för karta/HUD/kontroller/modaler — samma mönster som redan används för gympass (`SessionEditor`/`SessionFullscreen`).
 
-### 4. Stripe-webhooken har noll automatiserad testtäckning
+*Status:* `useCardioSession`-hooken extraherad (`src/components/cardio/useCardioSession.ts`), `cardio.tsx` nu 1339 rader. Modal-uppdelningen till presentational-komponenter är medvetet inte gjord (bedömdes tillräckligt hanterbart efter hook-extraktionen).
+
+### 4. ✅ KLART — Stripe-webhooken har noll automatiserad testtäckning
 `supabase/functions/stripe-webhook` är exkluderad från `tsconfig.json` (`exclude: supabase/functions`) och finns inte i något av de 105 testfilerna. Detta är koden som faktiskt växlar en användares betalstatus — den mest kritiska koden i hela appen för intäkter, och den är helt otestad, inte ens typkontrollerad.
 
 *Fix:* Lägg till Deno-test för webhook-signaturverifiering + status-mappning, och inkludera `supabase/functions` i en separat `tsc`-körning i CI.
+
+*Status:* Logiken extraherad till `logic.ts` (Deno-oberoende) och testad — 100% coverage, 13 tester. `supabase/functions` är fortfarande exkluderad från `tsc --noEmit` (kvarstår, hör ihop med CI/CD-arbetet).
 
 ### 5. Saknar `ios.buildNumber`/`android.versionCode` och `eas.json` — blockerar faktisk inlämning
 `app.json` har bara `"version": "1.0.0"`, ingen build-räknare. Ingen `eas.json` alls finns i repot, så det finns idag inget sätt att bygga en produktionsversion.
@@ -61,10 +83,10 @@ Koden själv (`app/(app)/privacy-policy.tsx:11`, kommentar) säger explicit att 
 - **Ingen CI/CD.** `.github/workflows/` existerar inte. Inget stoppar en trasig commit från att nå `main`. Se konkret pipeline nedan.
 - **`AuthContext` byggd men oanvänd.** `src/lib/auth.tsx` exporterar `useAuth()` men har **0 konsumenter** — istället anropar **36 filer** `supabase.auth.getSession()` var för sig i egna `useEffect`. Slöseri + inkonsekvent state.
 - **Ingen caching, varje skärmbyte hämtar om allt från Supabase.** T.ex. `getProfile()` anropas oberoende från 18 olika ställen. Ingen React Query/SWR i projektet.
-- **`organization_members`-policyn är för bred:** `USING (auth.uid() IS NOT NULL)` gör att vilken inloggad användare som helst kan läsa medlemskap, roller och delningsinställningar för *alla* föreningar, inte bara sina egna (`supabase/migrations/20260731000002_foreningar.sql:44-47`). Jämför med `group_members` som är korrekt scopad.
-- **Filuppladdningsbuckets saknar storleks-/typbegränsning.** Varken `avatars`, `progress-photos` eller `pass-photos` har `file_size_limit`/`allowed_mime_types` satt — RLS begränsar *var* man får ladda upp, inte *vad*.
-- **`pass-photos` städas inte vid kontoradering.** Bucketen är publik och rensas inte i `general.tsx`s raderingsflöde (till skillnad från `progress-photos`/`avatars`) — en raderad användares gympassfoton förblir publikt nåbara för alltid.
-- **Schemakonflikt i `reports`-tabellen — trolig live-bugg.** Två migrationer (`20260722000011_reports.sql` och `20260723000005_reports.sql`) definierar olika kolumnnamn (`target_type`/`reason` vs `target_kind`/`details`), medan `push-notify/index.ts:94-102` läser det äldre namnschemat. Rapport-pushnotiser producerar sannolikt `undefined`-värden just nu.
+- ✅ **KLART** — ~~**`organization_members`-policyn är för bred:**~~ `USING (auth.uid() IS NOT NULL)` gjorde att vilken inloggad användare som helst kunde läsa medlemskap, roller och delningsinställningar för *alla* föreningar. Skopad via `is_org_member`/`is_org_admin`.
+- ✅ **KLART** — ~~**Filuppladdningsbuckets saknar storleks-/typbegränsning.**~~ `file_size_limit`/`allowed_mime_types` satt på alla tre buckets.
+- ✅ **KLART** — ~~**`pass-photos` städas inte vid kontoradering.**~~ Fixat i `src/services/account.ts`, som samtidigt löste en tidigare okänd bugg (avataren rensades aldrig).
+- ✅ **VERIFIERAT, INGET ATT GÖRA** — ~~**Schemakonflikt i `reports`-tabellen — trolig live-bugg.**~~ Redan åtgärdad i migration `20260725000004` innan denna rapport skrevs; klient och edge-funktion använder konsekvent `target_kind`/`details`. Falskt larm i ursprungsanalysen.
 - **`npm audit`: 15 sårbarheter (13 moderate, 2 high)** via en transitiv `uuid`-brist i `@expo/config-plugins`. `npm audit fix --force` skulle tvinga en brytande uppgradering till Expo 57 — gör **inte** det blint, planera en skopad uppgradering.
 - **Ingen `expo-image`.** Alla 25+ bildvisande filer använder RN:s inbyggda `Image` utan disk-/minnescache eller blurhash-placeholder — påtagligt för en app centrerad kring dagliga framstegsfoton.
 - **`FeedWorkoutCard` är inte memoiserad** och får 4 nyskapade inline-callbacks per render i `community.tsx` — varje state-ändring i föräldern re-renderar hela flödet.
@@ -83,8 +105,8 @@ Koden själv (`app/(app)/privacy-policy.tsx:11`, kommentar) säger explicit att 
 - **285 hårdkodade hex-färger** utanför `src/lib/theme.ts`, flera dupliceringar av redan definierade temavärden — drift-risk när paletten ändras.
 - **Otillräcklig kontrast i ljust tema:** `TEXT_SECONDARY #75777D` på `BG #F5F5F7` ger 4,11:1 — under WCAG AA-gränsen (4,5:1) för normal text.
 - **`Dimensions.get('window')` på modul-nivå i 22 filer** istället för `useWindowDimensions` — layoutvärden fryser vid första laddning, uppdateras inte vid rotation/foldables.
-- **Svagt lösenordsgolv (6 tecken) och ingen CAPTCHA vid registrering** (`supabase/config.toml`) — rimligt för tidig fas men värt att skärpa inför bredare lansering.
-- **`profiles.name` saknar `CHECK`-constraint** för längd, till skillnad från `groups.name`/`organizations.name` som har det.
+- 🟡 **DELVIS KLART** — ~~**Svagt lösenordsgolv (6 tecken) och ingen CAPTCHA vid registrering**~~ (`supabase/config.toml`) — golvet höjt till 8 tecken. CAPTCHA kvarstår (kräver tredjepartskonto hos hCaptcha/Turnstile).
+- ✅ **KLART** — ~~**`profiles.name` saknar `CHECK`-constraint**~~ för längd, till skillnad från `groups.name`/`organizations.name` som har det.
 - **Behörighetssträng-kollision:** både `expo-image-picker` och `expo-camera` sätter kameratillstånd med olika texter ("progressfoton" vs "skanna QR-koder") — endast en vinner i den slutgiltiga `Info.plist`, bör verifieras med en faktisk EAS-build.
 - **`isIosBackgroundLocationEnabled: true` utan `UIBackgroundModes`/`NSLocationAlwaysAndWhenInUseUsageDescription`** — bakgrundsspårning är deklarerad men sannolikt icke-fungerande som konfigurerad.
 - **Ingen support-/marketing-URL i `app.json`.**
@@ -111,10 +133,10 @@ Låg kostnad, hög effekt — gör dessa först:
 2. Fixa `LICENSE`/`package.json`-licensfältet.
 3. Lägg till `ios.buildNumber`/`android.versionCode` i `app.json`.
 4. Installera `eslint-config-expo`, lägg till `lint`-script och `tsc --noEmit`-script.
-5. Fixa `organization_members`-RLS-policyn (en rads scope-tillägg).
-6. Reconcilea `reports`-tabellens kolumnnamn mellan de två migrationerna.
-7. Sätt `file_size_limit`/`allowed_mime_types` på storage-buckets via Supabase dashboard.
-8. Lägg till `pass-photos`-rensning i kontoraderingsflödet.
+5. ✅ **KLART** — ~~Fixa `organization_members`-RLS-policyn~~
+6. ✅ **VERIFIERAT, INGET ATT GÖRA** — ~~Reconcilea `reports`-tabellens kolumnnamn~~ (redan gjort i tidigare migration)
+7. ✅ **KLART** — ~~Sätt `file_size_limit`/`allowed_mime_types` på storage-buckets~~ (via migration, inte dashboard)
+8. ✅ **KLART** — ~~Lägg till `pass-photos`-rensning i kontoraderingsflödet~~
 9. Tagga release-commiten (`git tag v1.0.0-rc1`).
 10. Ring `Sentry.setUser({id})` efter inloggning för att koppla krascher till användare.
 11. Lägg till `coverageThreshold` i jest-konfigurationen.
@@ -123,7 +145,7 @@ Låg kostnad, hög effekt — gör dessa först:
 
 ## Refactoring
 
-- **Dela upp `cardio.tsx` (3 242 rader)** — se Kritiska problem #3.
+- ✅ **KLART** — ~~**Dela upp `cardio.tsx` (3 242 rader)**~~ — se Kritiska problem #3.
 - Dela upp `dashboard.tsx` (1 218 rader, 19 `useState`), `group.tsx` (1 054 rader), `records.tsx` (974 rader), `ScheduleWizard.tsx` (984 rader, 12 flata `useState` — kandidat för `useReducer`), `SessionFullscreen.tsx` (917 rader), `ExercisePickerSheet.tsx` (809 rader).
 - Flytta hooks utspridda i `src/lib/*.ts` (t.ex. `useHeroChrome`, `useCardChrome` i `theme.ts`) till en dedikerad `src/hooks/`.
 - Ersätt de 36 dubblerade `getSession()`-anropen med det redan byggda `useAuth()`.
@@ -136,12 +158,12 @@ Låg kostnad, hög effekt — gör dessa först:
 
 | Risk | Nivå | Beskrivning |
 |---|---|---|
-| `organization_members` SELECT-policy för bred | **Medium** | Alla inloggade kan läsa medlemskap/roller i alla föreningar |
-| Filuppladdning utan storlek/typ-validering på bucket-nivå | **Medium** | RLS skyddar plats, inte innehåll — en klient som kringgår appen kan ladda upp godtyckliga filer |
-| `pass-photos` rensas inte vid kontoradering | **Medium** | Publika filer överlever raderat konto |
-| Historiskt läckt webhook-secret i git-historik | **Medium (åtgärdat, men kvar i historik)** | Roterat och flyttat till Vault, men gamla värdet finns kvar i git-loggen permanent om inte historiken rensas |
-| Svagt lösenordsgolv (6 tecken), ingen CAPTCHA | **Low/Medium** | Standard för tidig fas, värt att skärpa |
-| `profiles.name` utan CHECK-constraint | **Low** | Ingen injektionsrisk (parametriserat), bara hygien |
+| `organization_members` SELECT-policy för bred | **Medium** | ✅ **KLART** — skopad via `is_org_member`/`is_org_admin` |
+| Filuppladdning utan storlek/typ-validering på bucket-nivå | **Medium** | ✅ **KLART** — `file_size_limit`/`allowed_mime_types` satt |
+| `pass-photos` rensas inte vid kontoradering | **Medium** | ✅ **KLART** — samt en tidigare okänd avatar-bugg fixad samtidigt |
+| Historiskt läckt webhook-secret i git-historik | **Medium (åtgärdat, men kvar i historik)** | Kvarstår — kräver destruktiv git-historik-rensning, inte gjort utan explicit godkännande |
+| Svagt lösenordsgolv (6 tecken), ingen CAPTCHA | **Low/Medium** | 🟡 Golv höjt till 8 tecken, CAPTCHA kvarstår |
+| `profiles.name` utan CHECK-constraint | **Low** | ✅ **KLART** |
 
 **Positivt att notera** (ovanligt bra för teamets storlek): 36 tabeller har RLS aktiverat, `SECURITY DEFINER`-funktioner används korrekt för att undvika RLS-rekursion, PKCE-flöde på OAuth, tokens i SecureStore (inte AsyncStorage), Stripe-webhook har HMAC-verifiering med replay-skydd, `advance_challenge_days` är korrekt spärrad mot anon-nyckel-anrop, inga N+1-mönster hittades i service-lagret, ingen SQL-injektionsyta (allt parametriserat via `.rpc()`).
 
@@ -238,8 +260,8 @@ Förutsättningar som måste vara på plats innan pipelinen är körbar: `eas.js
 **Nuläge (starkt):** 842 tester, 103 test-suiter, 85,4% statement-coverage / 75,8% branch-coverage. Verkliga beteendetester (inte ytliga snapshot-tester) — t.ex. `subscription.test.ts` täcker faktiska edge-cases i premium-status. `jest.setup.js` har en välorganiserad mockstrategi.
 
 **Kritiska luckor:**
-1. **Stripe-webhooken har noll testtäckning** — se Kritiska problem.
-2. **`subscription.ts` har bara 64,7% branch-coverage** på just betalningsstatuslogiken (rader 31-33, 42, 58-71 otestade) — detta är källkoden för vem som räknas som betalande.
+1. ✅ **KLART** — ~~**Stripe-webhooken har noll testtäckning**~~ — logik extraherad + 100% coverage, 13 tester.
+2. ✅ **KLART** — ~~**`subscription.ts` har bara 64,7% branch-coverage**~~ på just betalningsstatuslogiken — nu 100% statement/branch/function-coverage.
 3. **`organizations.ts` svagast testade servicen** (67,3% statements / 58,7% branch).
 4. **Ingen E2E** för hela flödet registrering → provperiod → betalvägg → köp → premiuminnehåll.
 5. Ingen `coverageThreshold` betyder att dessa luckor kan växa tyst utan att något stoppar det.
@@ -259,11 +281,11 @@ Förutsättningar som måste vara på plats innan pipelinen är körbar: `eas.js
 
 **Bör göras före lansering (hög risk annars):**
 - [ ] Minimal tillgänglighetspass (accessibilityLabel på ikonknappar minst)
-- [ ] Fixa `organization_members`-RLS
-- [ ] Sätt storleksgränser på storage-buckets
-- [ ] Rensa `pass-photos` vid kontoradering
-- [ ] Reconcilea `reports`-tabellschemat
-- [ ] Testa Stripe-webhooken
+- [x] Fixa `organization_members`-RLS
+- [x] Sätt storleksgränser på storage-buckets
+- [x] Rensa `pass-photos` vid kontoradering
+- [x] Reconcilea `reports`-tabellschemat (verifierat redan gjort)
+- [x] Testa Stripe-webhooken
 - [ ] `npm audit`-plan (inte blint `--force`)
 
 **Kan vänta till strax efter lansering:**
@@ -290,7 +312,9 @@ Sammanfattat, i fallande storleksordning på "ränta" (kostnad om det inte åtg�
 ## Prioriterad roadmap
 
 **Vecka 1 (blockerare för inlämning):**
-`eas.json` + buildnummer → publicera policy-URL → lös Apple IAP-frågan → fixa RLS-policyn för föreningar → sätt bucket-gränser → rensa pass-photos vid radering → reconcilea reports-schemat → testa Stripe-webhooken.
+`eas.json` + buildnummer → publicera policy-URL → lös Apple IAP-frågan → ~~fixa RLS-policyn för föreningar~~ ✅ → ~~sätt bucket-gränser~~ ✅ → ~~rensa pass-photos vid radering~~ ✅ → ~~reconcilea reports-schemat~~ ✅ (redan klart) → ~~testa Stripe-webhooken~~ ✅.
+
+**Kvar av Vecka 1:** `eas.json` + buildnummer, publik policy-URL, Apple IAP-beslut. Dessa tre är fortfarande de enda kvarstående hårda blockerarna för App Store-inlämning.
 
 **Vecka 2 (risk-reduktion inför granskning):**
 Minimal tillgänglighetspass på ikonknappar → verifiera kamerabehörighetssträng i faktisk build → npm audit-plan → `.env.example` → git-tagg release-kandidaten.
